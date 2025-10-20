@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Dual License (MIT + Commercial)"}
 authors = [
-    {name = "Narapa LLC", email = "sales@narapa.com"}
+    {name = "Narapa LLC", email = "sales@narapallc.com"}
 ]
 maintainers = [
-    {name = "Narapa LLC", email = "sales@narapa.com"}
+    {name = "Narapa LLC", email = "sales@narapallc.com"}
 ]
 keywords = ["ai", "code-quality", "refactoring", "security", "gemini", "llm", "devtools"]
 

@@ -146,6 +146,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 For issues, feature requests, or questions:
 - GitHub Issues: https://github.com/artvepa80/Agents-Hefesto/issues
-- Email: support@narapa.com
-- Pro Support: sales@narapa.com
+- Email: support@narapallc.com
+- Pro Support: sales@narapallc.com
 

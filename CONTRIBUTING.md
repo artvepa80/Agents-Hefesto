@@ -100,7 +100,7 @@ chore: Update dependencies
 
 For security vulnerabilities:
 - **DO NOT** open public issues
-- Email: security@narapa.com
+- Email: security@narapallc.com
 - We'll respond within 48 hours
 - Fix will be released ASAP
 
@@ -119,7 +119,7 @@ Contributors will be:
 
 ---
 
-**Questions?** Email: opensource@narapa.com
+**Questions?** Email: opensource@narapallc.com
 
 Thank you for making Hefesto better! 🚀
 

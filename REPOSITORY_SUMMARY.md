@@ -297,7 +297,7 @@ Con Pro (ML):       ~150 MB
 
 ## 📞 CONTACTO
 
-**Email**: sales@narapa.com  
+**Email**: sales@narapallc.com  
 **GitHub**: https://github.com/artvepa80  
 **Website**: https://narapa.com  
 

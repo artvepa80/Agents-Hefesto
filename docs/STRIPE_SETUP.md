@@ -18,7 +18,7 @@ How to purchase and configure Hefesto Pro license.
 
 For enterprise licensing, custom terms, or bulk licenses:
 
-**Email**: sales@narapa.com  
+**Email**: sales@narapallc.com  
 **Subject**: Hefesto Pro License Inquiry
 
 Include:
@@ -199,7 +199,7 @@ LicenseError: License expired
 **Solution**:
 1. Check Stripe portal for payment issues
 2. Update payment method
-3. Contact support@narapa.com if needed
+3. Contact support@narapallc.com if needed
 
 ---
 
@@ -222,7 +222,7 @@ LicenseError: License expired
 - 48-hour response time
 
 ### Pro Tier
-- Priority email support (support@narapa.com)
+- Priority email support (support@narapallc.com)
 - 24-hour response time
 - Direct Slack channel (Enterprise)
 
@@ -237,21 +237,21 @@ LicenseError: License expired
 ## FAQ
 
 **Q: Can I try Pro before buying?**  
-A: Yes! Email sales@narapa.com for 14-day trial key.
+A: Yes! Email sales@narapallc.com for 14-day trial key.
 
 **Q: What happens if I cancel?**  
 A: License valid until end of billing period, then Pro features disabled.
 
 **Q: Can I transfer license?**  
-A: Enterprise licenses can be transferred. Contact sales@narapa.com
+A: Enterprise licenses can be transferred. Contact sales@narapallc.com
 
 **Q: Refund policy?**  
 A: 30-day money-back guarantee, no questions asked.
 
 **Q: Educational discount?**  
-A: 50% off for students/educators. Email edu@narapa.com with proof.
+A: 50% off for students/educators. Email edu@narapallc.com with proof.
 
 ---
 
-**Questions?** sales@narapa.com
+**Questions?** sales@narapallc.com
 

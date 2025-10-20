@@ -72,8 +72,8 @@ Total: 45 archivos (9,617 líneas)
 CONTACTO
 ═══════════════════════════════════════════════════════════════
 
-Sales: sales@narapa.com
-Support: support@narapa.com
+Sales: sales@narapallc.com
+Support: support@narapallc.com
 GitHub: https://github.com/artvepa80/Agents-Hefesto
 
 ═══════════════════════════════════════════════════════════════

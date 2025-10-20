@@ -172,7 +172,7 @@ class LicenseValidator:
                 f"   https://buy.stripe.com/hefesto-pro\n"
                 f"\n"
                 f"📧 ENTERPRISE:\n"
-                f"   sales@narapa.com\n"
+                f"   sales@narapallc.com\n"
                 f"\n"
                 f"After purchase, set your license key:\n"
                 f"   export HEFESTO_LICENSE_KEY='hef_your_key_here'\n"

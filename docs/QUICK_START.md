@@ -188,5 +188,5 @@ pytest -m "not bigquery"
 
 ---
 
-**Need help?** support@narapa.com
+**Need help?** support@narapallc.com
 

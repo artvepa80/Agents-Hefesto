@@ -167,7 +167,7 @@ ENTERPRISE
 ├── SLA guarantees
 ├── Dedicated support
 ├── On-site training
-└── Contact: sales@narapa.com
+└── Contact: sales@narapallc.com
 ```
 
 ### Revenue Projection
@@ -371,9 +371,9 @@ All criteria met for v3.5.0 release:
 ## 📞 SUPPORT & CONTACTS
 
 **For launch support**:
-- Technical: artvepa80@gmail.com
-- Sales: sales@narapa.com
-- General: support@narapa.com
+- Technical: contact@narapallc.com
+- Sales: sales@narapallc.com
+- General: support@narapallc.com
 
 **Resources**:
 - GitHub: https://github.com/artvepa80/Agents-Hefesto

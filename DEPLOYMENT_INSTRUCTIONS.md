@@ -252,9 +252,9 @@ twine upload dist/*
 
 ### Email
 
-- support@narapa.com - General support
-- sales@narapa.com - License sales
-- security@narapa.com - Security issues
+- support@narapallc.com - General support
+- sales@narapallc.com - License sales
+- security@narapallc.com - Security issues
 
 ### GitHub
 
@@ -271,5 +271,5 @@ twine upload dist/*
 
 **Ready to launch!** 🚀
 
-Contact: sales@narapa.com for questions.
+Contact: sales@narapallc.com for questions.
 

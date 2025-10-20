@@ -55,7 +55,7 @@ setup(
     name='hefesto',
     version=__version__,
     author='Narapa LLC',
-    author_email='sales@narapa.com',
+    author_email='sales@narapallc.com',
     description='AI-Powered Code Quality Guardian with Gemini integration',
     long_description=long_description,
     long_description_content_type='text/markdown',
