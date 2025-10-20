@@ -34,18 +34,24 @@
 
 ---
 
-## 🚀 Quick Start
+## 📦 Installation
 
-### Installation
-
+### Free Tier
 ```bash
-# Free version (Phase 0)
-pip install hefesto
-
-# Pro version (Phase 1 - requires license)
-pip install hefesto[pro]
-export HEFESTO_LICENSE_KEY='hef_your_key_here'
+pip install hefesto-ai
+hefesto init
 ```
+
+### Professional Tier
+1. **Purchase license:** [Start Free Trial](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
+2. **Receive license key** via email
+3. **Install and activate:**
+```bash
+pip install hefesto-ai
+hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+```
+
+Your Pro features unlock immediately! 🚀
 
 ### Basic Usage
 
@@ -100,17 +106,98 @@ curl -X POST http://localhost:8080/suggest/refactor \
 
 ## 💰 Pricing
 
-| Plan | Price | Features |
-|------|-------|----------|
-| **Free** | $0 | Phase 0 features (validation, feedback, budget) |
-| **Pro** | $99/month | Phase 1 features (ML, semantic analysis, CI/CD) |
-| **Enterprise** | Custom | Custom deployment, SLA, support |
+### Free Tier - Forever Free
+- ✓ 1 private repository
+- ✓ 50,000 lines of code per month
+- ✓ 10 analysis runs per month
+- ✓ Basic code quality checks
+- ✓ PR analysis
+- ✓ IDE integration (VS Code, JetBrains)
+- ✓ Community support
 
-### 🛒 Purchase Pro License
+**Get Started:**
+```bash
+pip install hefesto-ai
+hefesto init
+```
 
-Visit: **https://buy.stripe.com/hefesto-pro**
+---
 
-Or contact: **sales@narapa.com**
+### Professional Tier - $99/month
+**🚀 FOUNDING MEMBER SPECIAL: $59/month locked forever**
+*(Limited to first 25 teams)*
+
+- ✓ **Up to 10 users** (flat rate)
+- ✓ **25 private repositories**
+- ✓ **500,000 LOC/month**
+- ✓ **Unlimited analysis runs**
+- ✓ **ML semantic code analysis**
+- ✓ **AI-powered code recommendations**
+- ✓ **Security vulnerability scanning**
+- ✓ **Automated issue triage**
+- ✓ Full integrations (GitHub, GitLab, Jira, Slack)
+- ✓ Priority email support
+- ✓ Usage analytics dashboard
+
+**Start Your Free Trial:**
+
+[![Start Trial](https://img.shields.io/badge/Start_14--Day_Free_Trial-5469D4?style=for-the-badge)](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
+
+[![Founding Member](https://img.shields.io/badge/🚀_Claim_Founding_Member_Spot-FF6B6B?style=for-the-badge)](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)
+
+*No credit card required for trial*
+
+---
+
+### Professional Annual - $990/year
+**Save $198 per year** (16.7% discount)
+
+- ✓ Everything in Professional Monthly
+- ✓ 2 months free ($82.50/month equivalent)
+- ✓ Lock in your price
+- ✓ Simplified billing
+
+[![Get Annual](https://img.shields.io/badge/Get_Annual_Plan-5469D4?style=for-the-badge)](https://buy.stripe.com/9B69AS5fAfRv9Y2ei2eAg03)
+
+---
+
+### Need More?
+**Expansion Packs:**
+- +25 repositories: $29/month
+- +250K LOC: $19/month
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install Hefesto
+```bash
+pip install hefesto-ai
+```
+
+### 2. Activate Your License (Pro users)
+After purchasing, you'll receive a license key via email:
+```bash
+hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+```
+
+### 3. Initialize in Your Project
+```bash
+cd your-project
+hefesto init
+```
+
+### 4. Run Your First Analysis
+```bash
+hefesto analyze --project .
+```
+
+### 5. Set Up Pre-commit Hook (Recommended)
+```bash
+hefesto install-hooks
+```
+
+Now Hefesto will catch issues before they enter your codebase! 🎉
 
 ---
 
@@ -258,12 +345,17 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ---
 
-## 🆘 Support
+## 📧 Support
 
-- **Issues**: https://github.com/artvepa80/Agents-Hefesto/issues
-- **Discussions**: https://github.com/artvepa80/Agents-Hefesto/discussions
-- **Email**: support@narapa.com
-- **Pro Support**: sales@narapa.com (response within 24h)
+- **Email:** support@narapallc.com
+- **GitHub Issues:** [Report a bug](https://github.com/artvepa80/Agents-Hefesto/issues)
+- **Documentation:** [Read the docs](https://github.com/artvepa80/Agents-Hefesto/tree/main/docs)
+- **Community:** [Discussions](https://github.com/artvepa80/Agents-Hefesto/discussions)
+
+**Response times:**
+- Free tier: 48-72 hours
+- Professional tier: 4-8 hours
+- Founding Members: Priority support (2-4 hours)
 
 ---
 
@@ -305,12 +397,37 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ---
 
+## ❓ Frequently Asked Questions
+
+### Is the free tier really free forever?
+Yes! The free tier includes 1 repository, 50K LOC/month, and basic code quality checks. No credit card required.
+
+### What happens after my 14-day trial?
+Your trial converts to a paid Professional subscription at $99/month (or $59/month if you're a Founding Member). Cancel anytime during the trial with no charges.
+
+### Is the Founding Member price really locked forever?
+Absolutely! The first 25 teams pay $59/month forever, even when we raise prices for new customers. This is our way of thanking early adopters.
+
+### Can I switch from monthly to annual?
+Yes! Contact support@narapallc.com and we'll help you upgrade with a prorated credit.
+
+### What if I exceed my limits?
+We'll notify you with a 7-day grace period. You can add expansion packs ($29 for +25 repos or $19 for +250K LOC) or contact us for custom limits.
+
+### Do I pay for infrastructure costs?
+You use your own BigQuery project and Gemini API key. Typical costs are $5-20/month for small teams - you pay Google directly for compute.
+
+### How do I cancel?
+Email support@narapallc.com or manage your subscription in the [Stripe Customer Portal](https://billing.stripe.com/p/login/test_XXXXX). Cancel anytime, no questions asked.
+
+---
+
 ## 📞 Contact
 
 **Narapa LLC**  
 Miami, Florida  
-Website: https://narapa.com  
-Email: sales@narapa.com  
+Website: https://narapallc.com  
+Email: sales@narapallc.com  
 GitHub: https://github.com/artvepa80
 
 ---
