@@ -86,3 +86,6 @@ test_output/
 scripts/*.log
 scripts/__pycache__/
 
+# Generated emails (fulfillment)
+email_*.txt
+
