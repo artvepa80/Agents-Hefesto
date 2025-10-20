@@ -25,7 +25,7 @@ import logging
 from typing import List, Tuple, Optional, Set, Dict, Any
 from enum import Enum
 
-from security.masking import MASKING_PATTERNS, validate_masked
+from hefesto.security.masking import MASKING_PATTERNS, validate_masked
 
 # Configure logging
 logger = logging.getLogger(__name__)
