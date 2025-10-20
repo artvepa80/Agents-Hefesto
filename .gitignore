@@ -78,3 +78,11 @@ tmp/
 *.pem
 *.key
 
+# E2E Testing
+test_output/
+*.test.log
+
+# Scripts runtime
+scripts/*.log
+scripts/__pycache__/
+
