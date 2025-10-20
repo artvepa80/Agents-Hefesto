@@ -1,12 +1,14 @@
-"""Licensing system for Hefesto Pro."""
+"""
+Hefesto licensing module.
 
-from hefesto.licensing.key_generator import (
-    LicenseKeyGenerator,
-    LicenseMetadata,
-)
+Handles license key generation, validation, and tier enforcement.
+"""
+
+from hefesto.licensing.key_generator import LicenseKeyGenerator
+from hefesto.licensing.license_validator import LicenseValidator
 
 __all__ = [
-    "LicenseKeyGenerator",
-    "LicenseMetadata",
+    'LicenseKeyGenerator',
+    'LicenseValidator'
 ]
 

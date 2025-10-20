@@ -167,7 +167,7 @@ ENTERPRISE
 ├── SLA guarantees
 ├── Dedicated support
 ├── On-site training
-└── Contact: sales@narapallc.com
+└── Contact: sales@narapa.com
 ```
 
 ### Revenue Projection
