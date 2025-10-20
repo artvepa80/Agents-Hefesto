@@ -7,7 +7,7 @@ security analysis, and quality assurance using Gemini AI.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-from hefesto.__version__ import __version__, __version_info
+from hefesto.__version__ import __version__
 
 # Core exports (Phase 0 - Free)
 from hefesto.llm.suggestion_validator import (
@@ -46,7 +46,6 @@ except ImportError:
 
 __all__ = [
     "__version__",
-    "__version_info__",
     # Phase 0
     "SuggestionValidator",
     "SuggestionValidationResult",
