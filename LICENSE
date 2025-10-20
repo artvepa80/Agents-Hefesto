@@ -1,0 +1,109 @@
+HEFESTO DUAL LICENSE AGREEMENT
+
+Copyright © 2025 Narapa LLC, Miami, Florida
+All Rights Reserved.
+
+This software is licensed under a dual license model:
+
+1. Phase 0 Features (Free) - MIT License
+2. Phase 1 Features (Pro) - Commercial License
+
+================================================================================
+PHASE 0 FEATURES - MIT LICENSE
+================================================================================
+
+The following components are licensed under the MIT License:
+
+- hefesto/llm/suggestion_validator.py
+- hefesto/llm/feedback_logger.py
+- hefesto/llm/budget_tracker.py
+- hefesto/llm/validators.py
+- hefesto/security/masking.py
+- hefesto/config/
+- hefesto/cli/
+- All base API functionality
+
+MIT License:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+PHASE 1 FEATURES - COMMERCIAL LICENSE
+================================================================================
+
+The following components require a valid commercial license:
+
+- hefesto/llm/semantic_analyzer.py
+- hefesto/llm/cicd_feedback_collector.py
+- All ML-based features
+- Advanced analytics
+
+Commercial License Terms:
+
+1. LICENSE GRANT
+   Subject to payment of applicable fees and compliance with these terms,
+   Narapa LLC grants you a non-exclusive, non-transferable license to use
+   the Phase 1 (Pro) features.
+
+2. PRICING
+   - Individual: $99 USD per month
+   - Team (5 users): $399 USD per month
+   - Enterprise: Custom pricing
+
+3. RESTRICTIONS
+   You may NOT:
+   - Redistribute Phase 1 code without written permission
+   - Modify Phase 1 code for commercial purposes
+   - Remove or modify license validation code
+   - Use Phase 1 features without a valid license key
+
+4. TERMINATION
+   License terminates automatically if:
+   - Subscription payment fails
+   - Terms are violated
+   - License key is shared without authorization
+
+5. WARRANTY DISCLAIMER
+   Phase 1 features are provided "AS IS" without warranty of any kind.
+
+6. SUPPORT
+   Pro license includes:
+   - Email support (24-hour response time)
+   - Bug fixes and updates
+   - Access to Pro documentation
+
+For commercial license inquiries or enterprise licensing:
+Email: sales@narapa.com
+Website: https://narapa.com/hefesto
+
+================================================================================
+TRADEMARK
+================================================================================
+
+"HEFESTO" is a trademark of Narapa LLC. Unauthorized use is prohibited.
+
+================================================================================
+
+For questions about licensing:
+- General: support@narapallc.com
+- Sales: sales@narapallc.com
+- Legal: contact@narapallc.com
+
+Last Updated: October 20, 2025
+

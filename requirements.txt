@@ -1,0 +1,24 @@
+# HEFESTO v3.5 - Base Dependencies (Phase 0 - Free)
+# Python 3.10+
+# Last Updated: 2025-10-20
+
+# Core API
+fastapi>=0.104.0,<1.0.0
+uvicorn[standard]>=0.24.0,<1.0.0
+pydantic>=2.5.0,<3.0.0
+python-multipart>=0.0.6
+
+# CLI
+click>=8.0.0,<9.0.0
+
+# Google Cloud
+google-cloud-bigquery>=3.10.0,<4.0.0
+google-generativeai>=0.3.0
+
+# HTTP Client
+httpx>=0.25.0,<1.0.0
+
+# Utilities
+python-dateutil>=2.8.2,<3.0.0
+pyyaml>=6.0.1,<7.0.0
+

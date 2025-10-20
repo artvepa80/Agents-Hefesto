@@ -1,0 +1,12 @@
+# HEFESTO v3.5 - Pro Dependencies (Phase 1 - Paid License Required)
+# Install with: pip install -r requirements-pro.txt
+# Requires: HEFESTO_LICENSE_KEY environment variable
+
+# Include base dependencies
+-r requirements.txt
+
+# Machine Learning (Phase 1)
+sentence-transformers>=2.2.2,<3.0.0
+torch>=2.0.1,<3.0.0
+numpy>=1.24.0,<2.0.0
+

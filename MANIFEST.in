@@ -1,0 +1,28 @@
+# Include documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+
+# Include requirements
+include requirements.txt
+include requirements-pro.txt
+include requirements-dev.txt
+
+# Include configuration files
+include pyproject.toml
+include setup.py
+
+# Exclude unnecessary files
+exclude .gitignore
+recursive-exclude tests *
+recursive-exclude examples *
+recursive-exclude docs *
+recursive-exclude .github *
+recursive-exclude scripts *
+
+# Include package data
+recursive-include hefesto *.py
+recursive-include hefesto *.yaml
+recursive-include hefesto *.json
+
