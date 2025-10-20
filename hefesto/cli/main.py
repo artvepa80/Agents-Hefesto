@@ -189,6 +189,149 @@ def check():
     click.echo("✅ Installation check complete!")
 
 
+@cli.command()
+@click.argument('license_key')
+def activate(license_key: str):
+    """
+    Activate Hefesto Professional with license key.
+    
+    Usage:
+        hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+    """
+    from hefesto.licensing.key_generator import LicenseKeyGenerator
+    from hefesto.config.config_manager import ConfigManager
+    
+    click.echo("🔑 Activating Hefesto Professional...")
+    
+    # Validate format
+    if not LicenseKeyGenerator.validate_format(license_key):
+        click.echo("❌ Invalid license key format", err=True)
+        click.echo("   Expected format: HFST-XXXX-XXXX-XXXX-XXXX-XXXX")
+        return
+    
+    # Store license key
+    config = ConfigManager()
+    config.set_license_key(license_key)
+    
+    # Get tier info
+    from hefesto.licensing.feature_gate import FeatureGate
+    tier_info = FeatureGate.get_tier_info()
+    
+    click.echo("✅ License activated successfully!")
+    click.echo(f"   Tier: {tier_info['tier_display']}")
+    click.echo(f"   Key: {license_key}")
+    click.echo("\n🚀 You now have access to:")
+    
+    feature_names = {
+        'ml_semantic_analysis': '   • ML semantic code analysis',
+        'ai_recommendations': '   • AI-powered code recommendations',
+        'security_scanning': '   • Security vulnerability scanning',
+        'automated_triage': '   • Automated issue triage',
+        'github_gitlab_bitbucket': '   • Full Git integrations (GitHub, GitLab, Bitbucket)',
+        'jira_slack_integration': '   • Jira & Slack integration',
+        'priority_support': '   • Priority email support (4-8 hour response)',
+        'analytics_dashboard': '   • Usage analytics dashboard'
+    }
+    
+    for feature in tier_info['limits']['features']:
+        if feature in feature_names:
+            click.echo(feature_names[feature])
+
+
+@cli.command()
+def deactivate():
+    """
+    Deactivate Hefesto Professional license.
+    
+    This will remove your license key and revert to free tier.
+    """
+    from hefesto.config.config_manager import ConfigManager
+    
+    config = ConfigManager()
+    license_key = config.get_license_key()
+    
+    if not license_key:
+        click.echo("ℹ️  No active license found. Already using free tier.")
+        return
+    
+    if click.confirm('⚠️  This will deactivate your Professional license. Continue?'):
+        config.clear_license()
+        click.echo("✅ License deactivated. Reverted to free tier.")
+        click.echo("\n   To reactivate, use: hefesto activate YOUR-KEY")
+    else:
+        click.echo("❌ Deactivation cancelled.")
+
+
+@cli.command()
+def status():
+    """
+    Show current license status and tier information.
+    """
+    from hefesto.licensing.feature_gate import FeatureGate
+    from hefesto.config.config_manager import ConfigManager
+    
+    config = ConfigManager()
+    license_key = config.get_license_key()
+    tier_info = FeatureGate.get_tier_info()
+    
+    click.echo("═" * 60)
+    click.echo("HEFESTO LICENSE STATUS")
+    click.echo("═" * 60)
+    
+    if license_key:
+        click.echo(f"Tier: {tier_info['tier_display']}")
+        click.echo(f"License: {license_key}")
+    else:
+        click.echo(f"Tier: Free")
+        click.echo(f"License: Not activated")
+    
+    click.echo("\n" + "─" * 60)
+    click.echo("USAGE LIMITS")
+    click.echo("─" * 60)
+    
+    limits = tier_info['limits']
+    click.echo(f"Repositories: {limits['repositories']}")
+    click.echo(f"LOC/month: {limits['loc_monthly']:,}")
+    
+    if limits['analysis_runs'] == float('inf'):
+        click.echo(f"Analysis runs: Unlimited")
+    else:
+        click.echo(f"Analysis runs: {limits['analysis_runs']}/month")
+    
+    click.echo("\n" + "─" * 60)
+    click.echo("AVAILABLE FEATURES")
+    click.echo("─" * 60)
+    
+    feature_names = {
+        'basic_quality': 'Basic code quality checks',
+        'pr_analysis': 'Pull request analysis',
+        'ide_integration': 'IDE integration',
+        'ml_semantic_analysis': 'ML semantic code analysis',
+        'ai_recommendations': 'AI-powered recommendations',
+        'security_scanning': 'Security vulnerability scanning',
+        'automated_triage': 'Automated issue triage',
+        'github_gitlab_bitbucket': 'Full Git integrations',
+        'jira_slack_integration': 'Jira & Slack integration',
+        'priority_support': 'Priority email support',
+        'analytics_dashboard': 'Usage analytics dashboard'
+    }
+    
+    for feature in limits['features']:
+        if feature in feature_names:
+            click.echo(f"✓ {feature_names[feature]}")
+    
+    if tier_info['tier'] == 'free':
+        click.echo("\n" + "═" * 60)
+        click.echo("UPGRADE TO PROFESSIONAL")
+        click.echo("═" * 60)
+        click.echo("🚀 First 25 teams: $59/month forever (40% off)")
+        click.echo(f"   → {tier_info['founding_url']}")
+        click.echo(f"\n   Or start 14-day free trial:")
+        click.echo(f"   → {tier_info['upgrade_url']}")
+    
+    click.echo("═" * 60)
+
+
 if __name__ == '__main__':
     cli()
 
