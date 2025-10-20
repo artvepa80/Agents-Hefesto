@@ -11,8 +11,8 @@ Thank you for your interest in contributing to Hefesto!
 
 **Phase 1 (Pro - Commercial License)**:
 - Closed source, proprietary code
-- Contributions by Narapa LLC employees only
-- Bug reports welcome, but fixes are internal
+- Bug reports welcome via GitHub Issues
+- Managed by Narapa LLC team
 
 ## 🐛 Reporting Bugs
 
