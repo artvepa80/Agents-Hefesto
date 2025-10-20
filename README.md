@@ -9,6 +9,18 @@
 
 ---
 
+## 🚀 Limited Time: Founding Member Program
+
+**First 25 teams lock in $59/month forever** (40% off regular $99/month)
+
+[![Claim Founding Member Spot](https://img.shields.io/badge/🚀_Claim_Founding_Member_Spot-FF6B6B?style=for-the-badge)](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)
+
+[![Start 14-Day Free Trial](https://img.shields.io/badge/Start_14--Day_Free_Trial-5469D4?style=for-the-badge)](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
+
+*No credit card required for trial • Cancel anytime*
+
+---
+
 ## ✨ Features
 
 ### 🆓 Phase 0 (Free - MIT License)
@@ -36,19 +48,26 @@
 
 ## 📦 Installation
 
-### Free Tier
+### Free Tier (No signup required)
+
 ```bash
 pip install hefesto-ai
 hefesto init
+hefesto analyze --project .
 ```
 
 ### Professional Tier
-1. **Purchase license:** [Start Free Trial](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
-2. **Receive license key** via email
-3. **Install and activate:**
+
+1. **[Start your 14-day free trial](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)** or **[Claim Founding Member spot](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)**
+
+2. You'll receive your license key via email
+
+3. **Activate:**
 ```bash
 pip install hefesto-ai
 hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+hefesto init
+hefesto analyze --project . --semantic-ml
 ```
 
 Your Pro features unlock immediately! 🚀
@@ -165,6 +184,14 @@ hefesto init
 **Expansion Packs:**
 - +25 repositories: $29/month
 - +250K LOC: $19/month
+
+---
+
+## 💬 What Developers Say
+
+> *"Early access reviews coming soon. Be among the first 25 Founding Members!"*
+
+**Want to be featured here?** Try Hefesto and [share your feedback](mailto:support@narapallc.com).
 
 ---
 
@@ -422,13 +449,25 @@ Email support@narapallc.com or manage your subscription in the [Stripe Customer 
 
 ---
 
-## 📞 Contact
+## 🎯 Ready to Ship Faster?
 
-**Narapa LLC**  
-Miami, Florida  
-Website: https://narapallc.com  
-Email: sales@narapallc.com  
-GitHub: https://github.com/artvepa80
+Don't miss out on the Founding Member pricing. Lock in $59/month forever.
+
+**[🚀 Claim Your Founding Member Spot Now](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)**
+
+---
+
+## 📧 Support
+
+- **Email**: support@narapallc.com
+- **GitHub Issues**: [Report a bug](https://github.com/artvepa80/Agents-Hefesto/issues)
+- **Documentation**: [Read the docs](https://github.com/artvepa80/Agents-Hefesto/tree/main/docs)
+- **Community**: [Discussions](https://github.com/artvepa80/Agents-Hefesto/discussions)
+
+**Response Times:**
+- Founding Members: 2-4 hours (priority)
+- Professional: 4-8 hours
+- Free tier: 24-48 hours
 
 ---
 
