@@ -9,13 +9,15 @@
 
 ---
 
-## 🚀 Limited Time: Founding Member Program
+## 🚀 Introducing OMEGA Guardian: DevOps AI Suite
 
-**First 25 teams lock in $59/month forever** (40% off regular $99/month)
+**Production-Ready Integration: Hefesto Code Quality + IRIS Production Monitoring + ML Correlation**
 
-[![Claim Founding Member Spot](https://img.shields.io/badge/🚀_Claim_Founding_Member_Spot-FF6B6B?style=for-the-badge)](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)
+[![OMEGA Guardian - Founding Members $35/month](https://img.shields.io/badge/🚀_OMEGA_Guardian_Founding_Members_$35/month-FF6B6B?style=for-the-badge)](https://buy.stripe.com/bJe9AScI25cR0ns4HseAg06)
 
-[![Start 14-Day Free Trial](https://img.shields.io/badge/Start_14--Day_Free_Trial-5469D4?style=for-the-badge)](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
+[![OMEGA Guardian Pro $49/month](https://img.shields.io/badge/OMEGA_Guardian_Pro_$49/month-5469D4?style=for-the-badge)](https://buy.stripe.com/bJe3cugYiaxb4DIgqaeAg07)
+
+[![Hefesto Standalone $25/month](https://img.shields.io/badge/Hefesto_Standalone_$25/month-28a745?style=for-the-badge)](https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08)
 
 *No credit card required for trial • Cancel anytime*
 
@@ -34,7 +36,7 @@
 | **⚡ Fast API** | RESTful API with <10ms health checks |
 | **📈 Basic Analytics** | Usage tracking and cost monitoring |
 
-### 🌟 Phase 1 (Pro - $99/month)
+### 🌟 Hefesto Professional ($25/month)
 
 | Feature | Description |
 |---------|-------------|
@@ -123,60 +125,67 @@ curl -X POST http://localhost:8080/suggest/refactor \
 
 ---
 
-## 💰 Pricing
+## 💰 Pricing - Optimized for Developers
 
 ### Free Tier - Forever Free
-- ✓ 1 private repository
+- ✓ 1 private repository  
 - ✓ 50,000 lines of code per month
 - ✓ 10 analysis runs per month
 - ✓ Basic code quality checks
-- ✓ PR analysis
 - ✓ IDE integration (VS Code, JetBrains)
 - ✓ Community support
 
-**Get Started:**
 ```bash
-pip install hefesto-ai
-hefesto init
+pip install hefesto-ai && hefesto init
 ```
 
 ---
 
-### Professional Tier - $99/month
-**🚀 FOUNDING MEMBER SPECIAL: $59/month locked forever**
-*(Limited to first 25 teams)*
+### Hefesto Professional - $25/month
+**Pure Code Quality & Security Analysis**
 
-- ✓ **Up to 10 users** (flat rate)
-- ✓ **25 private repositories**
-- ✓ **500,000 LOC/month**
+- ✓ **Up to 5 users**
+- ✓ **10 private repositories**
+- ✓ **200,000 LOC/month**
 - ✓ **Unlimited analysis runs**
 - ✓ **ML semantic code analysis**
-- ✓ **AI-powered code recommendations**
 - ✓ **Security vulnerability scanning**
-- ✓ **Automated issue triage**
-- ✓ Full integrations (GitHub, GitLab, Jira, Slack)
-- ✓ Priority email support
-- ✓ Usage analytics dashboard
+- ✓ **CI/CD integration**
+- ✓ **Email support**
 
-**Start Your Free Trial:**
-
-[![Start Trial](https://img.shields.io/badge/Start_14--Day_Free_Trial-5469D4?style=for-the-badge)](https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04)
-
-[![Founding Member](https://img.shields.io/badge/🚀_Claim_Founding_Member_Spot-FF6B6B?style=for-the-badge)](https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40)
-
-*No credit card required for trial*
+[![Get Hefesto Pro](https://img.shields.io/badge/Get_Hefesto_Pro_$25/month-28a745?style=for-the-badge)](https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08)
 
 ---
 
-### Professional Annual - $990/year
-**Save $198 per year** (16.7% discount)
+### OMEGA Guardian Founding Members - $35/month
+**LIMITED: First 25 teams lock this price forever**
 
-- ✓ Everything in Professional Monthly
-- ✓ 2 months free ($82.50/month equivalent)
-- ✓ Lock in your price
-- ✓ Simplified billing
+**Everything in Hefesto Professional PLUS:**
+- ✓ **IRIS Production Monitoring**
+- ✓ **ML Alert Correlation** ("You Were Warned" alerts)
+- ✓ **BigQuery Integration**
+- ✓ **Real-time Anomaly Detection**
+- ✓ **Production Incident Analysis**
+- ✓ **24/7 monitoring dashboards**
+- ✓ **Priority support (4-8h response)**
 
-[![Get Annual](https://img.shields.io/badge/Get_Annual_Plan-5469D4?style=for-the-badge)](https://buy.stripe.com/9B69AS5fAfRv9Y2ei2eAg03)
+[![🚀 Claim Founding Member Spot](https://img.shields.io/badge/🚀_Founding_Members_$35/month-FF6B6B?style=for-the-badge)](https://buy.stripe.com/bJe9AScI25cR0ns4HseAg06)
+
+*Founding Members price locked forever • First 25 teams only*
+
+---
+
+### OMEGA Guardian Professional - $49/month
+**Complete DevOps AI Suite**
+
+**Everything in Founding Members** at regular price:
+- ✓ **Up to 15 users**
+- ✓ **50 private repositories**
+- ✓ **1M LOC/month**
+- ✓ **Full OMEGA Guardian suite**
+- ✓ **Priority email support**
+
+[![Get OMEGA Guardian Pro](https://img.shields.io/badge/OMEGA_Guardian_Pro_$49/month-5469D4?style=for-the-badge)](https://buy.stripe.com/bJe3cugYiaxb4DIgqaeAg07)
 
 ---
 
