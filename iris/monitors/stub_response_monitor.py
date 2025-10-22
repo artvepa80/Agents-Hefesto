@@ -8,8 +8,16 @@ Part of OMEGA Agent Optimization - Closes gap in Iris monitoring
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from google.cloud import logging as cloud_logging
-from google.cloud import bigquery
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import logging as cloud_logging
+    from google.cloud import bigquery
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    cloud_logging = None
+    bigquery = None
 
 
 logger = logging.getLogger(__name__)

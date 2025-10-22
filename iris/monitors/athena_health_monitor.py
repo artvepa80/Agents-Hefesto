@@ -9,7 +9,14 @@ import logging
 import requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
-from google.cloud import bigquery
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import bigquery
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    bigquery = None
 
 logger = logging.getLogger(__name__)
 

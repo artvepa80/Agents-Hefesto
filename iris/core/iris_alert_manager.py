@@ -7,7 +7,16 @@ import yaml
 import logging
 from datetime import datetime
 from typing import Optional
-from google.cloud import bigquery, pubsub_v1
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import bigquery, pubsub_v1
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    # Mock objects para evitar errores de import
+    bigquery = None
+    pubsub_v1 = None
 
 # Configuración del logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,6 +35,17 @@ class IrisAgent:
         self.project_id = project_id
         self.dry_run = dry_run
         self.config = self._load_config(config_path)
+        
+        if not GOOGLE_CLOUD_AVAILABLE:
+            logging.warning(
+                "Google Cloud libraries not available. "
+                "Some features will be disabled. "
+                "Install with: pip install google-cloud-bigquery google-cloud-pubsub"
+            )
+            self.bq_client = None
+            self.pubsub_client = None
+            return
+            
         self.bq_client = bigquery.Client(project=self.project_id)
 
         # Initialize Pub/Sub client for inter-agent communication
@@ -54,6 +74,10 @@ class IrisAgent:
 
     def evaluate_rule(self, rule: dict):
         """Evalúa una regla de alerta específica consultando BigQuery."""
+        if not GOOGLE_CLOUD_AVAILABLE or self.bq_client is None:
+            logging.warning(f"BigQuery not available, skipping rule: {rule.get('name')}")
+            return
+            
         rule_name = rule.get('name')
         query = rule.get('query')
         threshold = rule.get('threshold')

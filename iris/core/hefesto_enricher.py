@@ -12,7 +12,14 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
-from google.cloud import bigquery
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import bigquery
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    bigquery = None
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +46,16 @@ class HefestoEnricher:
         """
         self.project_id = project_id
         self.dry_run = dry_run
+
+        if not GOOGLE_CLOUD_AVAILABLE:
+            logger.warning(
+                "Google Cloud libraries not available. "
+                "Hefesto enrichment will be disabled. "
+                "Install with: pip install google-cloud-bigquery"
+            )
+            self.client = None
+            self.table_ref = None
+            return
 
         if not dry_run:
             self.client = bigquery.Client(project=project_id)

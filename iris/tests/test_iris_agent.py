@@ -17,7 +17,14 @@ import os
 import json
 from datetime import datetime
 from unittest.mock import Mock, MagicMock, patch, call
-from google.cloud import bigquery
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import bigquery
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    bigquery = None
 
 # Import the agent (will fail initially - that's expected in TDD)
 import sys

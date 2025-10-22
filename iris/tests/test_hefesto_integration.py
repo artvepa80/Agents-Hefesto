@@ -11,7 +11,14 @@ import pytest
 import json
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
-from google.cloud import bigquery
+
+# Optional Google Cloud imports
+try:
+    from google.cloud import bigquery
+    GOOGLE_CLOUD_AVAILABLE = True
+except ImportError:
+    GOOGLE_CLOUD_AVAILABLE = False
+    bigquery = None
 
 # Import modules to test
 import sys
