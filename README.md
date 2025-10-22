@@ -85,6 +85,51 @@ OMEGA Guardian:
 
 ---
 
+## 🚀 Installation
+
+### Basic Installation (Core features)
+```bash
+pip install omega-guardian
+```
+
+### Full Installation (with Google Cloud support)
+```bash
+pip install omega-guardian[cloud]
+```
+
+### From Source
+```bash
+git clone https://github.com/artvepa80/Agents-Hefesto.git
+cd Agents-Hefesto
+
+# Basic
+pip install -e .
+
+# With Google Cloud
+pip install -e .[cloud]
+
+# Development
+pip install -e .[all]
+```
+
+## 📋 Requirements
+
+**Core (always required):**
+- Python 3.8+
+- FastAPI
+- Pydantic
+- PyYAML
+
+**Optional (for production monitoring):**
+- Google Cloud BigQuery (for data storage)
+- Google Cloud Pub/Sub (for alerting)
+- Google Cloud Logging
+
+**Note:** You can use OMEGA Guardian without Google Cloud for:
+- Hefesto code analysis (fully functional)
+- Iris monitoring with local storage
+- Development and testing
+
 ## 🚀 Quick Start
 
 ### Option 1: Use Hefesto Standalone (FREE)
@@ -114,7 +159,7 @@ Get the complete suite with production correlation:
 
 ```bash
 # Install OMEGA Guardian
-pip install omega-guardian
+pip install omega-guardian[cloud]
 
 # Initialize (includes Hefesto + Iris)
 omega-guardian init
