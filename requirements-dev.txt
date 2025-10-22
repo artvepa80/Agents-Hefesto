@@ -1,28 +1,33 @@
-# HEFESTO v3.5 - Development Dependencies
-# Install with: pip install -r requirements-dev.txt
+# OMEGA Guardian - Development Dependencies
+# All requirements for development and testing
 
-# Include all runtime dependencies
+# Include base requirements
 -r requirements.txt
--r requirements-pro.txt
 
-# Testing
-pytest>=7.4.0,<8.0.0
-pytest-cov>=4.1.0,<5.0.0
-pytest-asyncio>=0.21.0,<1.0.0
-pytest-mock>=3.12.0,<4.0.0
+# Include cloud requirements for full testing
+-r requirements-cloud.txt
 
-# Code Quality
+# Development tools
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.21.0
+
+# Code quality and formatting
 black>=23.0.0
 isort>=5.12.0
-mypy>=1.7.0
-flake8>=6.1.0
-bandit>=1.7.5
+flake8>=6.0.0
+mypy>=1.0.0
+pre-commit>=3.0.0
 
 # Documentation
-mkdocs>=1.5.0
-mkdocs-material>=9.4.0
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0
 
-# Build Tools
-build>=1.0.0
-twine>=4.0.0
+# Debugging and profiling
+ipdb>=0.13.0
+memory-profiler>=0.60.0
 
+# Type checking
+types-requests>=2.31.0
+types-PyYAML>=6.0.0
