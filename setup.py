@@ -33,11 +33,11 @@ def get_requirements():
     return []
 
 setup(
-    name="omega-guardian",
+    name="hefesto-ai",
     version=get_version(),
     author="Narapa LLC",
-    author_email="support@omega-guardian.com",
-    description="Complete DevOps Intelligence Suite - Hefesto (Code Quality) + Iris (Production Monitoring) + ML Correlation",
+    author_email="support@narapa.app",
+    description="Hefesto AI - Intelligent Code Quality Analysis and Technical Debt Detection",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     url="https://github.com/artvepa80/Agents-Hefesto",
@@ -47,7 +47,7 @@ setup(
         "Documentation": "https://docs.omega-guardian.com",
         "Website": "https://omega-guardian.com",
     },
-    packages=find_packages(include=['omega', 'omega.*', 'hefesto', 'hefesto.*', 'iris', 'iris.*']),
+    packages=find_packages(include=['hefesto', 'hefesto.*']),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -105,22 +105,18 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "omega-guardian=omega.cli:main",
             "hefesto=hefesto.cli.main:app",
-            "iris=iris.cli:main",
         ],
     },
     include_package_data=True,
     package_data={
-        "omega": ["config/*.yaml", "config/*.sql", "templates/*.html"],
         "hefesto": ["config/*.yaml", "rules/*.yaml"],
-        "iris": ["config/*.yaml", "config/*.sql"],
     },
     zip_safe=False,
     keywords=[
-        "devops", "code-quality", "monitoring", "alerts", "ml", "correlation",
-        "hefesto", "iris", "omega-guardian", "ci-cd", "production-monitoring",
-        "code-analysis", "static-analysis", "security-scanning", "anomaly-detection"
+        "code-quality", "static-analysis", "technical-debt", "ml", "ai",
+        "hefesto", "code-analysis", "security-scanning", "duplicate-detection",
+        "ci-cd", "python", "code-review", "quality-assurance"
     ],
     platforms=["any"],
     license="MIT",

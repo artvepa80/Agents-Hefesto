@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hefesto"
+name = "hefesto-ai"
 version = "3.5.0"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
