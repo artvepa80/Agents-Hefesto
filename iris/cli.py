@@ -3,93 +3,58 @@
 Iris CLI - Production Monitoring Agent
 """
 
-import typer
-from rich.console import Console
-from rich.panel import Panel
-
-app = typer.Typer(
-    name="iris",
-    help="Iris: Production Monitoring Agent",
-    no_args_is_help=True,
-)
-console = Console()
-
-def __version_callback(value: bool):
-    if value:
-        console.print("Iris Version: [green]1.0.0[/green]")
-        raise typer.Exit()
-
-@app.callback()
-def main(
-    ctx: typer.Context,
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show the version of Iris.",
-        is_eager=True,
-        callback=__version_callback,
-    ),
-):
+def main():
     """
     Iris CLI for managing production monitoring.
     """
-    pass
+    print("Iris: Production Monitoring Agent")
+    print("Version: 1.0.0")
+    print("Use: iris start|stop|status|alerts")
 
-@app.command()
 def start():
-    """
-    Starts Iris monitoring processes.
-    """
-    console.print(Panel.fit(
-        "[bold green]🔍 Starting Iris monitoring...[/bold green]\n\n"
-        "Monitoring:\n"
-        "• System health checks\n"
-        "• Alert correlation\n"
-        "• Performance metrics\n"
-        "• Incident detection",
-        title="Iris Monitor"
-    ))
-    console.print("[green]✅ Iris monitoring started![/green]")
+    """Start Iris monitoring processes."""
+    print("🔍 Starting Iris monitoring...")
+    print("Monitoring:")
+    print("• System health checks")
+    print("• Alert correlation")
+    print("• Performance metrics")
+    print("• Incident detection")
+    print("✅ Iris monitoring started!")
 
-@app.command()
 def stop():
-    """
-    Stops Iris monitoring processes.
-    """
-    console.print(Panel.fit(
-        "[bold red]⏹️ Stopping Iris monitoring...[/bold red]\n\n"
-        "Stopping all monitoring processes",
-        title="Iris Monitor"
-    ))
-    console.print("[red]⏹️ Iris monitoring stopped![/red]")
+    """Stop Iris monitoring processes."""
+    print("⏹️ Stopping Iris monitoring...")
+    print("Stopping all monitoring processes")
+    print("⏹️ Iris monitoring stopped!")
 
-@app.command()
 def status():
-    """
-    Shows current status of Iris monitoring.
-    """
-    console.print(Panel.fit(
-        "[bold blue]📊 Iris Status[/bold blue]\n\n"
-        "• Health checks: [green]Active[/green]\n"
-        "• Alert routing: [green]Active[/green]\n"
-        "• Correlation engine: [green]Active[/green]\n"
-        "• Last check: [yellow]2 minutes ago[/yellow]",
-        title="Iris Status"
-    ))
+    """Show current status of Iris monitoring."""
+    print("📊 Iris Status:")
+    print("• Health checks: Active")
+    print("• Alert routing: Active")
+    print("• Correlation engine: Active")
+    print("• Last check: 2 minutes ago")
 
-@app.command()
 def alerts():
-    """
-    Shows recent alerts and their status.
-    """
-    console.print(Panel.fit(
-        "[bold yellow]🚨 Recent Alerts[/bold yellow]\n\n"
-        "• [red]CRITICAL[/red]: Database connection timeout (5 min ago)\n"
-        "• [yellow]HIGH[/yellow]: Memory usage spike (12 min ago)\n"
-        "• [green]RESOLVED[/green]: API response time (1 hour ago)",
-        title="Alert History"
-    ))
+    """Show recent alerts and their status."""
+    print("🚨 Recent Alerts:")
+    print("• CRITICAL: Database connection timeout (5 min ago)")
+    print("• HIGH: Memory usage spike (12 min ago)")
+    print("• RESOLVED: API response time (1 hour ago)")
 
 if __name__ == "__main__":
-    app()
+    import sys
+    if len(sys.argv) > 1:
+        command = sys.argv[1]
+        if command == "start":
+            start()
+        elif command == "stop":
+            stop()
+        elif command == "status":
+            status()
+        elif command == "alerts":
+            alerts()
+        else:
+            main()
+    else:
+        main()

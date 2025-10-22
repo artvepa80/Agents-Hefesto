@@ -98,7 +98,7 @@ setup(
     entry_points={
         "console_scripts": [
             "omega-guardian=omega.cli:main",
-            "hefesto=hefesto.cli:main",
+            "hefesto=hefesto.cli.main:app",
             "iris=iris.cli:main",
         ],
     },
