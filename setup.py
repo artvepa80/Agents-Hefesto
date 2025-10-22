@@ -105,7 +105,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "hefesto=hefesto.cli.main:app",
+            "hefesto=hefesto.cli.main:cli",
         ],
     },
     include_package_data=True,
