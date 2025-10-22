@@ -16,7 +16,7 @@
 pip install hefesto
 
 # Pro version (Phase 1)
-pip install hefesto[pro]
+pip install hefesto-ai[pro]
 ```
 
 ### Method 2: From Source
@@ -123,7 +123,7 @@ export GEMINI_API_KEY='your_key'
 **Solution**:
 ```bash
 # Install Pro dependencies
-pip install hefesto[pro]
+pip install hefesto-ai[pro]
 
 # Set license key
 export HEFESTO_LICENSE_KEY='hef_your_key'

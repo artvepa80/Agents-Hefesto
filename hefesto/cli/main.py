@@ -46,7 +46,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     except ImportError as e:
         click.echo(f"❌ Error: {e}", err=True)
         click.echo("\n💡 Install API dependencies:", err=True)
-        click.echo("   pip install hefesto[api]", err=True)
+        click.echo("   pip install hefesto-ai[api]", err=True)
         sys.exit(1)
     
     settings = get_settings()
@@ -183,7 +183,7 @@ def check():
         if spec:
             click.echo(f"   ✅ {description}")
         else:
-            click.echo(f"   ⚠️  {description} - Install with: pip install hefesto[pro]")
+            click.echo(f"   ⚠️  {description} - Install with: pip install hefesto-ai[pro]")
     
     click.echo("")
     click.echo("✅ Installation check complete!")

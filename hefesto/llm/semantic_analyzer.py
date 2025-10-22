@@ -8,7 +8,7 @@ This module is part of Hefesto Pro (Commercial License).
 
 To use semantic analysis:
 1. Purchase Pro license: https://buy.stripe.com/hefesto-pro
-2. Install Pro package: pip install hefesto[pro]
+2. Install Pro package: pip install hefesto-ai[pro]
 3. Set license key: export HEFESTO_LICENSE_KEY='hef_your_key'
 
 Copyright © 2025 Narapa LLC, Miami, Florida
@@ -49,7 +49,7 @@ class SemanticAnalyzer:
     
     To unlock:
     1. Purchase: https://buy.stripe.com/hefesto-pro
-    2. Install: pip install hefesto[pro]
+    2. Install: pip install hefesto-ai[pro]
     3. Configure: export HEFESTO_LICENSE_KEY='hef_xxxxx'
     """
     

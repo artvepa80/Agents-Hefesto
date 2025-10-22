@@ -16,7 +16,7 @@ def example_semantic_similarity():
         from hefesto.llm.semantic_analyzer import get_semantic_analyzer
     except ImportError as e:
         print("❌ Pro features not available")
-        print("💡 Install: pip install hefesto[pro]")
+        print("💡 Install: pip install hefesto-ai[pro]")
         print("🔑 Set: export HEFESTO_LICENSE_KEY='hef_your_key'")
         print(f"🛒 Purchase: https://buy.stripe.com/hefesto-pro")
         return

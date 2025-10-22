@@ -58,7 +58,7 @@ Expected output:
 ### Step 3: Install Pro Dependencies
 
 ```bash
-pip install hefesto[pro]
+pip install hefesto-ai[pro]
 ```
 
 ---
@@ -186,7 +186,7 @@ from hefesto.llm.semantic_analyzer import get_semantic_analyzer
 
 **Solution**:
 ```bash
-pip install hefesto[pro]  # Install Pro dependencies
+pip install hefesto-ai[pro]  # Install Pro dependencies
 ```
 
 ### License expired

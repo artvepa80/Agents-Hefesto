@@ -106,7 +106,7 @@ For ML-based semantic analysis and duplicate detection:
 # Visit: https://buy.stripe.com/hefesto-pro
 
 # Install Pro features
-pip install hefesto[pro]
+pip install hefesto-ai[pro]
 
 # Set license key
 export HEFESTO_LICENSE_KEY='hef_your_pro_key'
