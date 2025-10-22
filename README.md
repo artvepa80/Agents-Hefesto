@@ -158,7 +158,7 @@ pip install hefesto-ai && hefesto init
 ---
 
 ### OMEGA Guardian Founding Members - $35/month
-**LIMITED: First 25 teams lock this price forever**
+**LIMITED: First 50 teams lock this price forever**
 
 **Everything in Hefesto Professional PLUS:**
 - ✓ **IRIS Production Monitoring**
@@ -171,7 +171,7 @@ pip install hefesto-ai && hefesto init
 
 [![🚀 Claim Founding Member Spot](https://img.shields.io/badge/🚀_Founding_Members_$35/month-FF6B6B?style=for-the-badge)](https://buy.stripe.com/bJe9AScI25cR0ns4HseAg06)
 
-*Founding Members price locked forever • First 25 teams only*
+*Founding Members price locked forever • First 50 teams only*
 
 ---
 
