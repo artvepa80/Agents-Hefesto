@@ -25,7 +25,8 @@ import re
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from hefesto.security.masking import MASKING_PATTERNS, validate_masked
+from hefesto.security.masking import mask_secrets, MASKING_PATTERNS  # noqa: F401
+
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -70,7 +70,7 @@ MASKING_PATTERNS = {
     ),
     "jwt": re.compile(r"\beyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\b"),
     "private_key": re.compile(
-        r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[A-Za-z0-9+/=\s]+-----END (?:RSA |EC )?PRIVATE KEY-----",
+        r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[A-Za-z0-9+/=\s]+-----END (?:RSA |EC )?PRIVATE KEY-----",  # noqa: E501
         re.DOTALL,
     ),
     "github_token": re.compile(r"\b(gh[ps]_[A-Za-z0-9]{36,})\b"),

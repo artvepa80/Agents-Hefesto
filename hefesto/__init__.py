@@ -28,13 +28,13 @@ from hefesto.llm.suggestion_validator import (
 
 # Pro exports (Phase 1 - Paid)
 try:
-    from hefesto.llm.cicd_feedback_collector import (
+    from hefesto.llm.cicd_feedback_collector import (  # noqa: F401
         CICDFeedbackCollector,
         DeploymentFeedback,
         TestFeedback,
         get_cicd_collector,
     )
-    from hefesto.llm.semantic_analyzer import (
+    from hefesto.llm.semantic_analyzer import (  # noqa: F401
         CodeEmbedding,
         SemanticAnalyzer,
         get_semantic_analyzer,

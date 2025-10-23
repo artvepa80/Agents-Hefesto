@@ -21,7 +21,7 @@ except ImportError:
     )
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass  # noqa: F811
 
 from hefesto.llm.provider import IssueFinding, LLMProvider, RefactorSuggestion, TestSuggestion
 from hefesto.security.masking import mask_text, validate_masked
@@ -474,7 +474,7 @@ Format as JSON:
 
         try:
             data = json.loads(response.text.strip())
-        except:
+        except Exception:
             data = {
                 "summary": response.text[:200],
                 "root_cause": "Analysis failed",
@@ -565,7 +565,7 @@ Format as JSON:
 
         try:
             data = json.loads(response.text.strip())
-        except:
+        except Exception:
             # Fallback
             data = {
                 "test_code": f"# Generated test\n{response.text[:500]}",
@@ -710,7 +710,7 @@ Format as JSON:
 
         try:
             data = json.loads(response.text.strip())
-        except:
+        except Exception:
             data = {
                 "severity": severity,
                 "business_risk": "Unknown",
@@ -753,7 +753,7 @@ def test_gemini_client():
 
         # Test generation
         response = client.generate("Say 'Hello, HEFESTO v3.0!' and nothing else.")
-        print(f"\n📤 Test prompt: 'Say Hello, HEFESTO v3.0!'")
+        print(f"\n📤 Test prompt: 'Say Hello, HEFESTO v3.0!'")  # noqa: F541
         print(f"📥 Response: {response.text}")
         print(f"✅ Success: {response.success}")
 

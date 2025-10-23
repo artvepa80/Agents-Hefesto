@@ -44,7 +44,7 @@ __all__ = [
 
 # Phase 1 (Pro - Commercial License)
 try:
-    from hefesto.llm.semantic_analyzer import (
+    from hefesto.llm.semantic_analyzer import (  # noqa: F401
         CodeEmbedding,
         SemanticAnalyzer,
         get_semantic_analyzer,

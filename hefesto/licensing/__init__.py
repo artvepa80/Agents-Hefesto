@@ -22,7 +22,6 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import logging
 from functools import wraps
-from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ class FeatureGate:
 
     def check_access(self, feature: str) -> bool:
         logger.warning(
-            f"Pro feature '{feature}' requires license. Visit: https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08"
+            f"Pro feature '{feature}' requires license. Visit: https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08"  # noqa: E501
         )
         return False
 

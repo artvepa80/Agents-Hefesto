@@ -7,7 +7,6 @@ Provides commands for running Hefesto API server and analyzing code.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import os
 import sys
 from typing import Optional
 
@@ -98,11 +97,10 @@ def analyze(path: str, severity: str, output: str):
 @cli.command()
 def info():
     """Show Hefesto configuration and license info."""
-    from hefesto import get_info, is_pro
+    from hefesto import get_info  # noqa: F401
     from hefesto.llm.license_validator import get_license_validator
 
     settings = get_settings()
-    package_info = get_info()
     validator = get_license_validator()
     license_info = validator.get_info()
 
@@ -121,11 +119,11 @@ def info():
     click.echo("📜 License:")
     click.echo(f"   Tier: {license_info['tier'].upper()}")
     click.echo(
-        f"   Pro Features: {'✅ Enabled' if license_info['is_pro'] else '❌ Disabled (upgrade to Pro)'}"
+        f"   Pro Features: {'✅ Enabled' if license_info['is_pro'] else '❌ Disabled (upgrade to Pro)'}  # noqa: E501"
     )
 
     if license_info["is_pro"]:
-        click.echo(f"   Enabled Features:")
+        click.echo("   Enabled Features:")
         for feature in sorted(license_info["features_enabled"]):
             click.echo(f"      • {feature}")
     else:
@@ -287,8 +285,8 @@ def status():
         click.echo(f"Tier: {tier_info['tier_display']}")
         click.echo(f"License: {license_key}")
     else:
-        click.echo(f"Tier: Free")
-        click.echo(f"License: Not activated")
+        click.echo("Tier: Free")
+        click.echo("License: Not activated")
 
     click.echo("\n" + "─" * 60)
     click.echo("USAGE LIMITS")
@@ -299,7 +297,7 @@ def status():
     click.echo(f"LOC/month: {limits['loc_monthly']:,}")
 
     if limits["analysis_runs"] == float("inf"):
-        click.echo(f"Analysis runs: Unlimited")
+        click.echo("Analysis runs: Unlimited")
     else:
         click.echo(f"Analysis runs: {limits['analysis_runs']}/month")
 
@@ -331,7 +329,7 @@ def status():
         click.echo("═" * 60)
         click.echo("🚀 First 25 teams: $59/month forever (40% off)")
         click.echo(f"   → {tier_info['founding_url']}")
-        click.echo(f"\n   Or start 14-day free trial:")
+        click.echo("\n   Or start 14-day free trial:")
         click.echo(f"   → {tier_info['upgrade_url']}")
 
     click.echo("═" * 60)
