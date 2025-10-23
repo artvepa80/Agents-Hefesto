@@ -114,7 +114,8 @@ class IrisAgent:
             metric_value = row[0]  # Asumimos que el valor a evaluar está en la primera columna
             if self._check_threshold(metric_value, threshold):
                 logging.warning(
-                    f"¡ANOMALÍA DETECTADA! Regla: {rule_name}, Valor: {metric_value}, Umbral: {threshold}"
+                    f"¡ANOMALÍA DETECTADA! Regla: {rule_name}, "
+                    f"Valor: {metric_value}, Umbral: {threshold}"
                 )
                 self.trigger_alert(rule, row)
             else:

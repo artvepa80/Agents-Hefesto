@@ -7,7 +7,6 @@ Validates Iris can monitor Athena agent health
 Following OMEGA CLAUDE.md standards
 """
 
-import os
 import sys
 
 from iris.monitors.athena_health_monitor import AthenaHealthMonitor
@@ -34,7 +33,7 @@ except Exception as e:
 print("\n📊 Test 2: Health Check Logic")
 try:
     health_data = monitor.check_athena_health()
-    print(f"✅ Health check executed")
+    print("✅ Health check executed")
     print(f"   Status: {health_data.get('status')}")
     print(f"   Agent State: {health_data.get('agent_state')}")
     print(f"   Error: {health_data.get('error', 'None')}")

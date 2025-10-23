@@ -7,9 +7,8 @@ Test suite for automatic alert enrichment with Hefesto code findings.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import json
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -29,7 +28,10 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from iris.core.hefesto_enricher import HefestoEnricher, get_hefesto_enricher
+from iris.core.hefesto_enricher import (  # noqa: E402
+    HefestoEnricher,
+    get_hefesto_enricher,
+)
 
 # ============================================================================
 # T-1: UNIT TESTS

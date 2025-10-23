@@ -153,7 +153,7 @@ class StubResponseMonitor:
             return "✅ No stub responses detected in production"
 
         count = len(stub_entries)
-        message = f"🚨 STUB RESPONSES DETECTED IN PRODUCTION\n\n"
+        message = "🚨 STUB RESPONSES DETECTED IN PRODUCTION\n\n"
         message += f"Found {count} stub response(s) in the last hour:\n\n"
 
         for i, entry in enumerate(stub_entries[:5], 1):  # Show first 5

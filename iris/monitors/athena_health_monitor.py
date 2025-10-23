@@ -6,8 +6,8 @@ Part of OMEGA Apollo-Athena Integration - Phase 2: Iris Monitoring
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -48,7 +48,7 @@ class AthenaHealthMonitor:
             "features": f"{athena_api_base}/api/athena/features/health",
         }
 
-        logger.info(f"🏛️ Athena Health Monitor initialized")
+        logger.info("🏛️ Athena Health Monitor initialized")
         logger.info(f"   API Base: {athena_api_base}")
 
     def check_athena_health(self) -> Dict[str, Any]:
@@ -257,7 +257,11 @@ class AthenaHealthMonitor:
         elif status == "degraded":
             message += "⚠️ MEDIUM: Athena agent performance degraded\n\n"
             message += f"Agent State: {health_data.get('agent_state')}\n"
-            message += f"Avg Response Time: {health_data.get('avg_validation_time_ms', 0):.1f}ms (target: <100ms)\n"
+            message += (
+                f"Avg Response Time: "
+                f"{health_data.get('avg_validation_time_ms', 0):.1f}ms "
+                f"(target: <100ms)\n"
+            )
             message += f"Memory Within Limits: {health_data.get('memory_within_limits', True)}\n\n"
             message += "ACTION REQUIRED:\n"
             message += "1. Monitor performance metrics\n"
@@ -267,11 +271,11 @@ class AthenaHealthMonitor:
         # Add feature health issues
         if not feature_data.get("is_healthy", False):
             freshness = feature_data.get("feature_freshness_pct", 0)
-            message += f"\n⚠️ Feature Store Issue:\n"
+            message += "\n⚠️ Feature Store Issue:\n"
             message += f"   Feature Freshness: {freshness:.1%} (target: >80%)\n"
-            message += f"   Risk: Athena may block training jobs unnecessarily\n\n"
+            message += "   Risk: Athena may block training jobs unnecessarily\n\n"
 
-        message += f"\n📊 Monitoring Dashboard:\n"
+        message += "\n📊 Monitoring Dashboard:\n"
         message += f"   Health Endpoint: {self.endpoints['health']}\n"
         message += f"   Features Endpoint: {self.endpoints['features']}\n"
         message += f"   Checked At: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n"

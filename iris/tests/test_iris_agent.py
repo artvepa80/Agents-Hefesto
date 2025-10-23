@@ -12,10 +12,9 @@ Follows OMEGA Sports Analytics QNEW Standards:
 Target: >90% code coverage
 """
 
-import json
 import os
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -32,7 +31,7 @@ except ImportError:
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from iris.core.iris_alert_manager import IrisAgent
+from iris.core.iris_alert_manager import IrisAgent  # noqa: E402
 
 # ============================================================================
 # FIXTURES - Test Data and Mocks
@@ -124,30 +123,30 @@ class TestUnitIrisAgent:
         """T-1: Test threshold checking with > operator."""
         threshold_config = {"operator": ">", "value": 5.0}
 
-        assert iris_agent_dry_run._check_threshold(10.0, threshold_config) == True
-        assert iris_agent_dry_run._check_threshold(5.0, threshold_config) == False
-        assert iris_agent_dry_run._check_threshold(3.0, threshold_config) == False
+        assert iris_agent_dry_run._check_threshold(10.0, threshold_config) is True
+        assert iris_agent_dry_run._check_threshold(5.0, threshold_config) is False
+        assert iris_agent_dry_run._check_threshold(3.0, threshold_config) is False
 
     def test_check_threshold_less_than(self, iris_agent_dry_run):
         """T-1: Test threshold checking with < operator."""
         threshold_config = {"operator": "<", "value": 50}
 
-        assert iris_agent_dry_run._check_threshold(25, threshold_config) == True
-        assert iris_agent_dry_run._check_threshold(50, threshold_config) == False
-        assert iris_agent_dry_run._check_threshold(75, threshold_config) == False
+        assert iris_agent_dry_run._check_threshold(25, threshold_config) is True
+        assert iris_agent_dry_run._check_threshold(50, threshold_config) is False
+        assert iris_agent_dry_run._check_threshold(75, threshold_config) is False
 
     def test_check_threshold_equals(self, iris_agent_dry_run):
         """T-1: Test threshold checking with == operator."""
         threshold_config = {"operator": "==", "value": 100}
 
-        assert iris_agent_dry_run._check_threshold(100, threshold_config) == True
-        assert iris_agent_dry_run._check_threshold(99, threshold_config) == False
+        assert iris_agent_dry_run._check_threshold(100, threshold_config) is True
+        assert iris_agent_dry_run._check_threshold(99, threshold_config) is False
 
     def test_check_threshold_invalid_operator(self, iris_agent_dry_run):
         """T-1: Test threshold checking with invalid operator."""
         threshold_config = {"operator": "invalid", "value": 10}
 
-        assert iris_agent_dry_run._check_threshold(15, threshold_config) == False
+        assert iris_agent_dry_run._check_threshold(15, threshold_config) is False
 
     def test_enrich_context_structure(self, iris_agent_dry_run):
         """T-1: Test alert context enrichment structure."""
@@ -195,7 +194,7 @@ class TestSmokeIrisAgent:
 
             assert agent is not None
             assert agent.project_id == "test-project"
-            assert agent.dry_run == True
+            assert agent.dry_run is True
             assert agent.config is not None
 
     def test_agent_initialization_missing_config(self):
@@ -431,11 +430,13 @@ class TestSportsIrisAgent:
             "threshold": {"operator": ">", "value": 3},
             "severity": "HIGH",
             "channel": "Slack_Sports_Team",
-            "message_template": "SportsRadar API timed out {timeout_count} times in last 15 minutes",
+            "message_template": (
+                "SportsRadar API timed out {timeout_count} times in last 15 minutes"
+            ),
         }
 
         threshold_config = rule["threshold"]
-        assert iris_agent_dry_run._check_threshold(5, threshold_config) == True
+        assert iris_agent_dry_run._check_threshold(5, threshold_config) is True
 
     def test_prediction_accuracy_degradation_alert(self, iris_agent_dry_run):
         """QSPORTS: Test alert for prediction accuracy drop."""
@@ -445,11 +446,13 @@ class TestSportsIrisAgent:
             "threshold": {"operator": "<", "value": 0.75},
             "severity": "MEDIUM",
             "channel": "Email_ML_Team",
-            "message_template": "Soccer prediction accuracy dropped to {accuracy:.2%} (target: 75%)",
+            "message_template": (
+                "Soccer prediction accuracy dropped to {accuracy:.2%} (target: 75%)"
+            ),
         }
 
         threshold_config = rule["threshold"]
-        assert iris_agent_dry_run._check_threshold(0.65, threshold_config) == True
+        assert iris_agent_dry_run._check_threshold(0.65, threshold_config) is True
 
 
 # ============================================================================
