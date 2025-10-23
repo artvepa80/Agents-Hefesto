@@ -10,9 +10,7 @@ Following OMEGA CLAUDE.md standards
 import sys
 import os
 
-sys.path.insert(0, "/opt/omega-pro-ai/SPORTS_ANALYTICS_FOUNDATION")
-
-from Agentes.Iris.monitors.athena_health_monitor import AthenaHealthMonitor
+from iris.monitors.athena_health_monitor import AthenaHealthMonitor
 
 print("\n" + "=" * 80)
 print("TEST: IRIS ATHENA HEALTH MONITOR")

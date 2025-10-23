@@ -8,7 +8,7 @@ OMEGA Sports Analytics Foundation
 """
 
 import pytest
-from llm.budget_tracker import (
+from hefesto.llm.budget_tracker import (
     BudgetTracker,
     TokenUsage,
     get_budget_tracker,

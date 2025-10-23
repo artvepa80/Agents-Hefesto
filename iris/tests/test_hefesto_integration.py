@@ -27,7 +27,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from core.hefesto_enricher import HefestoEnricher, get_hefesto_enricher
+from iris.core.hefesto_enricher import HefestoEnricher, get_hefesto_enricher
 
 
 # ============================================================================

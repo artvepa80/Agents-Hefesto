@@ -31,7 +31,7 @@ except ImportError:
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from core.iris_alert_manager import IrisAgent
+from iris.core.iris_alert_manager import IrisAgent
 
 
 # ============================================================================
