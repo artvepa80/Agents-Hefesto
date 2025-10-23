@@ -47,7 +47,7 @@ setup(
         "Documentation": "https://docs.omega-guardian.com",
         "Website": "https://omega-guardian.com",
     },
-    packages=find_packages(include=['hefesto', 'hefesto.*']),
+    packages=find_packages(include=['hefesto', 'hefesto.*', 'iris', 'iris.*', 'omega', 'omega.*']),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -106,11 +106,15 @@ setup(
     entry_points={
         "console_scripts": [
             "hefesto=hefesto.cli.main:cli",
+            "iris=iris.cli:main",
+            "omega-guardian=omega.cli:main",
         ],
     },
     include_package_data=True,
     package_data={
         "hefesto": ["config/*.yaml", "rules/*.yaml"],
+        "iris": ["config/*.yaml", "rules/*.yaml"],
+        "omega": ["config/*.yaml", "templates/*.yaml"],
     },
     zip_safe=False,
     keywords=[

@@ -8,16 +8,11 @@ __email__ = "support@omega-guardian.com"
 __description__ = "Complete DevOps Intelligence Suite - Hefesto (Code Quality) + Iris (Production Monitoring) + ML Correlation"
 
 # Core components
-from . import cli
-from . import config
-from . import correlation
+# cli is imported only when accessed to avoid circular imports
 
 __all__ = [
     "__version__",
-    "__author__", 
+    "__author__",
     "__email__",
     "__description__",
-    "cli",
-    "config", 
-    "correlation"
 ]
