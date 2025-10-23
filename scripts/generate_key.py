@@ -57,9 +57,14 @@ def main():
     print("=" * 70)
     print(f"Customer Email:    {email}")
     print(f"Subscription ID:   {subscription_id}")
-    print(f"Tier:              Professional")
+    print("Tier:              Professional")
     print(f"Founding Member:   {'Yes' if is_founding else 'No'}")
-    print(f"Price:             {'$35/month (locked forever)' if is_founding else '$25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)'}")
+    price = (
+        "$35/month (locked forever)"
+        if is_founding
+        else "$25/month (Hefesto) or $35/month (OMEGA Founding) or " "$49/month (OMEGA Pro)"
+    )
+    print(f"Price:             {price}")
     print("\n" + "=" * 70)
     print(f"LICENSE KEY:       {license_key}")
     print("=" * 70 + "\n")

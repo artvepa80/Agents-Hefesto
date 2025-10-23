@@ -18,7 +18,7 @@ from botocore.exceptions import ClientError
 # Add parent to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from hefesto.licensing.key_generator import LicenseKeyGenerator
+from hefesto.licensing.key_generator import LicenseKeyGenerator  # noqa: E402
 
 
 def generate_presigned_url(bucket: str, key: str, expiration: int = 604800) -> str:
@@ -42,7 +42,7 @@ def generate_presigned_url(bucket: str, key: str, expiration: int = 604800) -> s
         return url
     except ClientError as e:
         print(f"❌ Error generating presigned URL: {e}")
-        print(f"   Make sure AWS credentials are configured: aws configure")
+        print("   Make sure AWS credentials are configured: aws configure")
         sys.exit(1)
 
 
@@ -104,7 +104,7 @@ hefesto analyze --project . --semantic-ml --ai-recommendations
 
 YOU NOW HAVE ACCESS TO:
 ✓ ML semantic code analysis
-✓ AI-powered code recommendations  
+✓ AI-powered code recommendations
 ✓ Security vulnerability scanning
 ✓ Automated issue triage
 ✓ Full Git integrations (GitHub, GitLab, Bitbucket)
@@ -168,7 +168,7 @@ def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     bucket = "hefesto-pro-dist"
     key = "wheels/hefesto_pro-1.0.0-py3-none-any.whl"
     download_url = generate_presigned_url(bucket, key, expiration=604800)
-    print(f"✅ Download URL generated (expires in 7 days)")
+    print("✅ Download URL generated (expires in 7 days)")
 
     # 3. Generate email
     print("\n📧 Step 3/3: Generating customer email...")
@@ -188,7 +188,12 @@ def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     print(f"Subscription:       {subscription_id}")
     print(f"License Key:        {license_key}")
     print(f"Founding Member:    {'Yes' if is_founding else 'No'}")
-    print(f"Price:              {'$35/month locked' if is_founding else '$25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)'}")
+    price = (
+        "$35/month locked"
+        if is_founding
+        else "$25/month (Hefesto) or $35/month (OMEGA Founding) or " "$49/month (OMEGA Pro)"
+    )
+    print(f"Price:              {price}")
     print(f"Download expires:   {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d %H:%M')}")
     print(f"Email saved to:     {filename}")
     print("=" * 70)
