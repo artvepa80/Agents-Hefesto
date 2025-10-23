@@ -30,6 +30,7 @@ from hefesto.core.analysis_models import (
 # Phase 0 imports (always available)
 try:
     from hefesto.llm.license_validator import get_license_validator
+
     PHASE_0_AVAILABLE = True
 except ImportError:
     PHASE_0_AVAILABLE = False
@@ -37,6 +38,7 @@ except ImportError:
 # Phase 1 imports (PRO feature - optional)
 try:
     from hefesto.llm.semantic_analyzer import SemanticAnalyzer
+
     PHASE_1_AVAILABLE = True
 except ImportError:
     PHASE_1_AVAILABLE = False
@@ -45,8 +47,13 @@ except ImportError:
 class AnalyzerEngine:
     """Main analysis engine that orchestrates all analyzers with Phase 0+1 integration."""
 
-    def __init__(self, severity_threshold: str = "MEDIUM", enable_validation: bool = True,
-                 enable_ml: bool = True, verbose: bool = False):
+    def __init__(
+        self,
+        severity_threshold: str = "MEDIUM",
+        enable_validation: bool = True,
+        enable_ml: bool = True,
+        verbose: bool = False,
+    ):
         """
         Initialize analyzer engine with Phase 0 + Phase 1 integration.
 
@@ -91,7 +98,9 @@ class AnalyzerEngine:
         """Register an analyzer instance."""
         self.analyzers.append(analyzer)
 
-    def analyze_path(self, path: str, exclude_patterns: Optional[List[str]] = None) -> AnalysisReport:
+    def analyze_path(
+        self, path: str, exclude_patterns: Optional[List[str]] = None
+    ) -> AnalysisReport:
         """
         Analyze a file or directory with complete Phase 0+1 pipeline.
 
@@ -156,7 +165,7 @@ class AnalyzerEngine:
             enhanced_issues = self._enhance_with_ml(all_issues)
 
             if self.verbose:
-                ml_enhanced = sum(1 for i in enhanced_issues if hasattr(i, 'ml_confidence'))
+                ml_enhanced = sum(1 for i in enhanced_issues if hasattr(i, "ml_confidence"))
                 print(f"   {ml_enhanced} issue(s) enhanced with ML context")
                 print()
         else:
@@ -176,7 +185,7 @@ class AnalyzerEngine:
         report = AnalysisReport(summary=summary, file_results=file_results)
 
         # Add metadata about pipeline
-        if hasattr(report, '__dict__'):
+        if hasattr(report, "__dict__"):
             report.license_tier = self.license_tier
             report.ml_enabled = self.ml_enabled
             report.phase_0_enabled = PHASE_0_AVAILABLE
@@ -195,7 +204,7 @@ class AnalyzerEngine:
 
         This adds confidence scores based on semantic similarity to known patterns.
         """
-        if not self.ml_enabled or not hasattr(self, 'semantic_analyzer'):
+        if not self.ml_enabled or not hasattr(self, "semantic_analyzer"):
             return issues
 
         enhanced = []
@@ -254,7 +263,13 @@ class AnalyzerEngine:
                 return None
 
             # Count lines of code
-            loc = len([line for line in code.split("\n") if line.strip() and not line.strip().startswith("#")])
+            loc = len(
+                [
+                    line
+                    for line in code.split("\n")
+                    if line.strip() and not line.strip().startswith("#")
+                ]
+            )
 
             # Run all analyzers
             all_issues = []
@@ -291,7 +306,9 @@ class AnalyzerEngine:
 
         return [issue for issue in issues if severity_order[issue.severity] >= threshold_value]
 
-    def _create_summary(self, file_results: List[FileAnalysisResult], duration: float) -> AnalysisSummary:
+    def _create_summary(
+        self, file_results: List[FileAnalysisResult], duration: float
+    ) -> AnalysisSummary:
         """Create summary statistics from file results."""
         all_issues = []
         total_loc = 0
@@ -301,7 +318,9 @@ class AnalyzerEngine:
             total_loc += file_result.lines_of_code
 
         # Count by severity
-        critical = sum(1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.CRITICAL)
+        critical = sum(
+            1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.CRITICAL
+        )
         high = sum(1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.HIGH)
         medium = sum(1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.MEDIUM)
         low = sum(1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.LOW)

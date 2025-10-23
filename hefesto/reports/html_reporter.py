@@ -240,9 +240,7 @@ class HTMLReporter:
         if not issues:
             return ""
 
-        icon = {"CRITICAL": "🔥", "HIGH": "❌", "MEDIUM": "⚠️", "LOW": "💡"}.get(
-            severity.value, "•"
-        )
+        icon = {"CRITICAL": "🔥", "HIGH": "❌", "MEDIUM": "⚠️", "LOW": "💡"}.get(severity.value, "•")
 
         html = f"""
         <div class="severity-section">
@@ -270,9 +268,9 @@ class HTMLReporter:
 """
 
         if issue.function_name:
-            html += f'                <div><strong>Function:</strong> {issue.function_name}</div>\n'
+            html += f"                <div><strong>Function:</strong> {issue.function_name}</div>\n"
 
-        html += f'                <div><strong>Type:</strong> {issue.issue_type.value}</div>\n'
+        html += f"                <div><strong>Type:</strong> {issue.issue_type.value}</div>\n"
 
         if issue.suggestion:
             html += f"""

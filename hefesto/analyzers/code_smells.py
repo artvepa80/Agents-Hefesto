@@ -190,7 +190,9 @@ class CodeSmellAnalyzer:
 
         return issues
 
-    def _check_incomplete_todos(self, tree: ast.AST, file_path: str, code: str) -> List[AnalysisIssue]:
+    def _check_incomplete_todos(
+        self, tree: ast.AST, file_path: str, code: str
+    ) -> List[AnalysisIssue]:
         """Detect TODO/FIXME comments."""
         issues = []
 

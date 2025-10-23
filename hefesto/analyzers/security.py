@@ -50,7 +50,9 @@ class SecurityAnalyzer:
 
         return issues
 
-    def _check_hardcoded_secrets(self, tree: ast.AST, file_path: str, code: str) -> List[AnalysisIssue]:
+    def _check_hardcoded_secrets(
+        self, tree: ast.AST, file_path: str, code: str
+    ) -> List[AnalysisIssue]:
         """Detect hardcoded secrets in code."""
         issues = []
 

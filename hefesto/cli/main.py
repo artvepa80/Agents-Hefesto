@@ -74,7 +74,9 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--severity", default="MEDIUM", help="Minimum severity (LOW/MEDIUM/HIGH/CRITICAL)")
 @click.option("--output", type=click.Choice(["text", "json", "html"]), default="text")
-@click.option("--exclude", default="", help="Comma-separated patterns to exclude (e.g., tests/,docs/)")
+@click.option(
+    "--exclude", default="", help="Comma-separated patterns to exclude (e.g., tests/,docs/)"
+)
 @click.option("--save-html", help="Save HTML report to file")
 def analyze(path: str, severity: str, output: str, exclude: str, save_html: Optional[str]):
     """

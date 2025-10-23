@@ -49,9 +49,11 @@ class ComplexityAnalyzer:
                         file_path=file_path,
                         line=node.lineno,
                         column=node.col_offset,
-                        issue_type=AnalysisIssueType.HIGH_COMPLEXITY
-                        if severity != AnalysisIssueSeverity.CRITICAL
-                        else AnalysisIssueType.VERY_HIGH_COMPLEXITY,
+                        issue_type=(
+                            AnalysisIssueType.HIGH_COMPLEXITY
+                            if severity != AnalysisIssueSeverity.CRITICAL
+                            else AnalysisIssueType.VERY_HIGH_COMPLEXITY
+                        ),
                         severity=severity,
                         message=f"Cyclomatic complexity too high ({complexity})",
                         function_name=node.name,

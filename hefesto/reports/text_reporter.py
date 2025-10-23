@@ -60,28 +60,36 @@ class TextReporter:
         all_issues = report.get_all_issues()
 
         if report.summary.critical_issues > 0:
-            lines.append(self._format_severity_section(
-                AnalysisIssueSeverity.CRITICAL,
-                [i for i in all_issues if i.severity == AnalysisIssueSeverity.CRITICAL],
-            ))
+            lines.append(
+                self._format_severity_section(
+                    AnalysisIssueSeverity.CRITICAL,
+                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.CRITICAL],
+                )
+            )
 
         if report.summary.high_issues > 0:
-            lines.append(self._format_severity_section(
-                AnalysisIssueSeverity.HIGH,
-                [i for i in all_issues if i.severity == AnalysisIssueSeverity.HIGH],
-            ))
+            lines.append(
+                self._format_severity_section(
+                    AnalysisIssueSeverity.HIGH,
+                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.HIGH],
+                )
+            )
 
         if report.summary.medium_issues > 0:
-            lines.append(self._format_severity_section(
-                AnalysisIssueSeverity.MEDIUM,
-                [i for i in all_issues if i.severity == AnalysisIssueSeverity.MEDIUM],
-            ))
+            lines.append(
+                self._format_severity_section(
+                    AnalysisIssueSeverity.MEDIUM,
+                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.MEDIUM],
+                )
+            )
 
         if report.summary.low_issues > 0:
-            lines.append(self._format_severity_section(
-                AnalysisIssueSeverity.LOW,
-                [i for i in all_issues if i.severity == AnalysisIssueSeverity.LOW],
-            ))
+            lines.append(
+                self._format_severity_section(
+                    AnalysisIssueSeverity.LOW,
+                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.LOW],
+                )
+            )
 
         # Footer
         lines.append("")

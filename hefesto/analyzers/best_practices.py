@@ -59,15 +59,15 @@ class BestPracticesAnalyzer:
                                 severity=AnalysisIssueSeverity.LOW,
                                 message=f"Public function '{node.name}' missing docstring",
                                 function_name=node.name,
-                                suggestion='Add docstring:\n'
-                                f'def {node.name}(...):\n'
+                                suggestion="Add docstring:\n"
+                                f"def {node.name}(...):\n"
                                 '    """Brief description of what this function does.\n\n'
-                                '    Args:\n'
-                                '        param1: Description\n\n'
-                                '    Returns:\n'
-                                '        Description\n'
+                                "    Args:\n"
+                                "        param1: Description\n\n"
+                                "    Returns:\n"
+                                "        Description\n"
                                 '    """\n'
-                                '    ...',
+                                "    ...",
                                 metadata={"type": "function"},
                             )
                         )
@@ -86,13 +86,13 @@ class BestPracticesAnalyzer:
                                 issue_type=AnalysisIssueType.MISSING_DOCSTRING,
                                 severity=AnalysisIssueSeverity.LOW,
                                 message=f"Public class '{node.name}' missing docstring",
-                                suggestion='Add docstring:\n'
-                                f'class {node.name}:\n'
+                                suggestion="Add docstring:\n"
+                                f"class {node.name}:\n"
                                 '    """Brief description of the class.\n\n'
-                                '    Attributes:\n'
-                                '        attr1: Description\n'
+                                "    Attributes:\n"
+                                "        attr1: Description\n"
                                 '    """\n'
-                                '    ...',
+                                "    ...",
                                 metadata={"type": "class"},
                             )
                         )
