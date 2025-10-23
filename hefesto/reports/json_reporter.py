@@ -7,7 +7,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import json
-from typing import Dict, Any
+from typing import Any, Dict
 
 from hefesto.core.analysis_models import AnalysisReport
 

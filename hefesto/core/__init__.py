@@ -5,39 +5,29 @@ This module contains the core orchestration logic for code analysis.
 """
 
 # Import core models
-from hefesto.core.models import (
-    # Enums
+from hefesto.core.models import (  # Enums; Validation Models; Code Issue Models; Feedback Models; Budget Models; LLM Event Models; Semantic Models (Pro); CICD Models (Pro); License Models; Utility Functions
     BudgetStatus,
-    IssueCategory,
-    IssueSeverity,
-    LLMModel,
-    SuggestionAction,
-    ValidationStatus,
-    # Validation Models
-    SuggestionValidationResult,
-    ValidationResult,
-    # Code Issue Models
-    CodeIssue,
-    RefactoringRequest,
-    RefactoringResponse,
-    # Feedback Models
-    FeedbackMetrics,
-    SuggestionFeedback,
-    # Budget Models
     BudgetStatusInfo,
     BudgetSummary,
-    TokenUsage,
-    # LLM Event Models
-    LLMEvent,
-    # Semantic Models (Pro)
     CodeEmbedding,
-    SimilarityResult,
-    # CICD Models (Pro)
+    CodeIssue,
     DeploymentFeedback,
-    TestFeedback,
-    # License Models
+    FeedbackMetrics,
+    IssueCategory,
+    IssueSeverity,
     LicenseInfo,
-    # Utility Functions
+    LLMEvent,
+    LLMModel,
+    RefactoringRequest,
+    RefactoringResponse,
+    SimilarityResult,
+    SuggestionAction,
+    SuggestionFeedback,
+    SuggestionValidationResult,
+    TestFeedback,
+    TokenUsage,
+    ValidationResult,
+    ValidationStatus,
     generate_deployment_id,
     generate_event_id,
     generate_suggestion_id,

@@ -6,9 +6,9 @@ This package contains reporters for outputting analysis results in various forma
 - HTML (interactive web report with charts)
 """
 
-from hefesto.reports.text_reporter import TextReporter
-from hefesto.reports.json_reporter import JSONReporter
 from hefesto.reports.html_reporter import HTMLReporter
+from hefesto.reports.json_reporter import JSONReporter
+from hefesto.reports.text_reporter import TextReporter
 
 __all__ = [
     "TextReporter",

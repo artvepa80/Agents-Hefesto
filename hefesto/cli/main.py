@@ -89,13 +89,13 @@ def analyze(path: str, severity: str, output: str, exclude: str, save_html: Opti
         hefesto analyze . --output html --save-html report.html
     """
     from hefesto.analyzers import (
-        ComplexityAnalyzer,
-        CodeSmellAnalyzer,
-        SecurityAnalyzer,
         BestPracticesAnalyzer,
+        CodeSmellAnalyzer,
+        ComplexityAnalyzer,
+        SecurityAnalyzer,
     )
     from hefesto.core.analyzer_engine import AnalyzerEngine
-    from hefesto.reports import TextReporter, JSONReporter, HTMLReporter
+    from hefesto.reports import HTMLReporter, JSONReporter, TextReporter
 
     click.echo(f"🔍 Analyzing: {path}")
     click.echo(f"📊 Minimum severity: {severity}")

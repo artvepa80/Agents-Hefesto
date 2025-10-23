@@ -7,10 +7,10 @@ This package contains various code analyzers for detecting:
 - Best practice violations
 """
 
-from hefesto.analyzers.complexity import ComplexityAnalyzer
-from hefesto.analyzers.code_smells import CodeSmellAnalyzer
-from hefesto.analyzers.security import SecurityAnalyzer
 from hefesto.analyzers.best_practices import BestPracticesAnalyzer
+from hefesto.analyzers.code_smells import CodeSmellAnalyzer
+from hefesto.analyzers.complexity import ComplexityAnalyzer
+from hefesto.analyzers.security import SecurityAnalyzer
 
 __all__ = [
     "ComplexityAnalyzer",
