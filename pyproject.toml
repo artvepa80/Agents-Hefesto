@@ -102,3 +102,12 @@ python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v --tb=short --cov=hefesto --cov-report=html --cov-report=term"
 
+# Custom markers for different test categories
+markers = [
+    "unit: Unit tests that don't require external services",
+    "requires_gcp: Tests that require Google Cloud Platform (BigQuery) credentials",
+    "requires_stripe: Tests that require Stripe API configuration",
+    "integration: Integration tests that may require external services",
+    "slow: Tests that take significant time to run",
+]
+

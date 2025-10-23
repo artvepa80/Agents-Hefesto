@@ -7,6 +7,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
+import os
 import pytest
 from hefesto.llm.budget_tracker import (
     BudgetTracker,
@@ -190,6 +191,8 @@ class TestBudgetAvailability:
 class TestBudgetStatus:
     """Test budget status and alert levels"""
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_budget_status_structure(self):
         """Test budget status returns correct structure"""
         tracker = BudgetTracker(daily_limit_usd=10.0)
@@ -224,6 +227,8 @@ class TestBudgetStatus:
 class TestUsageSummary:
     """Test usage summary queries"""
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_usage_summary_today(self):
         """Test getting today's usage summary"""
         tracker = BudgetTracker(daily_limit_usd=10.0)
@@ -247,6 +252,8 @@ class TestUsageSummary:
             assert summary["total_tokens"] >= 0
             assert summary["estimated_cost_usd"] >= 0.0
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_usage_summary_month(self):
         """Test getting monthly usage summary"""
         tracker = BudgetTracker(monthly_limit_usd=200.0)
@@ -257,6 +264,8 @@ class TestUsageSummary:
         if "error" not in summary:
             assert summary["period"] == "This Month"
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_usage_summary_7d(self):
         """Test getting 7-day usage summary"""
         tracker = BudgetTracker()
@@ -267,6 +276,8 @@ class TestUsageSummary:
         if "error" not in summary:
             assert summary["period"] == "Last 7 days"
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_usage_summary_30d(self):
         """Test getting 30-day usage summary"""
         tracker = BudgetTracker()
@@ -354,6 +365,9 @@ class TestEdgeCases:
 class TestBudgetTrackerIntegration:
     """Integration tests combining multiple features"""
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.integration
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_full_budget_workflow(self):
         """Test complete budget tracking workflow"""
         tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=200.0)
@@ -425,6 +439,8 @@ def test_model_pricing_status(model, expected_free):
         assert cost > 0.0
 
 
+@pytest.mark.requires_gcp
+@pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
 @pytest.mark.parametrize("period", ["today", "month", "7d", "30d"])
 def test_usage_summary_all_periods(period):
     """Test usage summary for all valid periods"""

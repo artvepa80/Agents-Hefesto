@@ -314,18 +314,58 @@ else:
 
 ## 🧪 Testing
 
+### Quick Start
+
 ```bash
-# Run tests
-pytest
+# Run all unit tests (no cloud credentials required)
+pytest -m "not requires_gcp and not requires_stripe"
 
-# With coverage
-pytest --cov=hefesto --cov-report=html
+# Run with coverage
+pytest -m "not requires_gcp and not requires_stripe" --cov=hefesto --cov-report=html
 
-# Specific test suite
+# Run specific test file
 pytest tests/test_suggestion_validator.py -v
 ```
 
-**Test Coverage**: 96% (209 tests passing)
+### Test Categories
+
+Hefesto uses pytest markers to categorize tests:
+
+- **`unit`**: Fast tests that don't require external services (80 tests)
+- **`requires_gcp`**: Tests requiring Google Cloud Platform / BigQuery (29 tests)
+- **`requires_stripe`**: Tests requiring Stripe API configuration (24 tests)
+- **`integration`**: End-to-end integration tests
+
+### Running Different Test Sets
+
+```bash
+# Unit tests only (CI default - no credentials needed)
+pytest -m "not requires_gcp and not requires_stripe and not integration"
+
+# Include GCP tests (requires GCP_PROJECT_ID env var)
+export GCP_PROJECT_ID="your-project-id"
+pytest -m "not requires_stripe"
+
+# Include Stripe tests (requires STRIPE_API_KEY env var)
+export STRIPE_API_KEY="sk_test_..."
+pytest -m "not requires_gcp"
+
+# Run ALL tests (requires all credentials)
+export GCP_PROJECT_ID="your-project-id"
+export STRIPE_API_KEY="sk_test_..."
+pytest
+```
+
+### Environment Variables for Testing
+
+```bash
+# Optional - for cloud integration tests
+export GCP_PROJECT_ID="your-gcp-project"
+export STRIPE_API_KEY="sk_test_your_key"
+export STRIPE_SECRET_KEY="whsec_your_secret"
+```
+
+**Test Coverage**: 96% (133 tests total, 80 unit tests always run in CI)
 
 ---
 

@@ -7,6 +7,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
+import os
 import pytest
 from hefesto.llm.feedback_logger import (
     FeedbackLogger,
@@ -38,6 +39,8 @@ class TestFeedbackLoggerBasics:
         assert id2 != id3
         assert id1 != id3
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_feedback_logger_singleton(self):
         """Test singleton pattern returns same instance"""
         logger1 = get_feedback_logger()
@@ -207,6 +210,8 @@ class TestCIResultsLogging:
 class TestAcceptanceRateMetrics:
     """Test querying acceptance rate metrics"""
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_acceptance_rate_all(self):
         """Test getting acceptance rate for all suggestions"""
         logger = FeedbackLogger()
@@ -238,6 +243,8 @@ class TestAcceptanceRateMetrics:
         assert 0.0 <= metrics["avg_confidence"] <= 1.0
         assert 0.0 <= metrics["avg_similarity"] <= 1.0
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_acceptance_rate_filtered_by_type(self):
         """Test getting acceptance rate filtered by issue type"""
         logger = FeedbackLogger()
@@ -250,6 +257,8 @@ class TestAcceptanceRateMetrics:
         assert "total" in metrics
         assert "acceptance_rate" in metrics
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_acceptance_rate_filtered_by_severity(self):
         """Test getting acceptance rate filtered by severity"""
         logger = FeedbackLogger()
@@ -262,6 +271,8 @@ class TestAcceptanceRateMetrics:
         assert "total" in metrics
         assert "acceptance_rate" in metrics
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_acceptance_rate_filtered_both(self):
         """Test getting acceptance rate with multiple filters"""
         logger = FeedbackLogger()
@@ -275,6 +286,8 @@ class TestAcceptanceRateMetrics:
         assert "total" in metrics
         assert "acceptance_rate" in metrics
 
+    @pytest.mark.requires_gcp
+    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
     def test_get_acceptance_rate_different_timeframes(self):
         """Test getting metrics for different time periods"""
         logger = FeedbackLogger()
