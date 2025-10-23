@@ -73,8 +73,10 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 @cli.command()
 @click.argument("path", type=click.Path(exists=True))
 @click.option("--severity", default="MEDIUM", help="Minimum severity (LOW/MEDIUM/HIGH/CRITICAL)")
-@click.option("--output", type=click.Choice(["text", "json"]), default="text")
-def analyze(path: str, severity: str, output: str):
+@click.option("--output", type=click.Choice(["text", "json", "html"]), default="text")
+@click.option("--exclude", default="", help="Comma-separated patterns to exclude (e.g., tests/,docs/)")
+@click.option("--save-html", help="Save HTML report to file")
+def analyze(path: str, severity: str, output: str, exclude: str, save_html: Optional[str]):
     """
     Analyze code file or directory.
 
@@ -82,16 +84,68 @@ def analyze(path: str, severity: str, output: str):
         hefesto analyze mycode.py
         hefesto analyze src/ --severity HIGH
         hefesto analyze . --output json
+        hefesto analyze . --output html --save-html report.html
     """
+    from hefesto.analyzers import (
+        ComplexityAnalyzer,
+        CodeSmellAnalyzer,
+        SecurityAnalyzer,
+        BestPracticesAnalyzer,
+    )
+    from hefesto.core.analyzer_engine import AnalyzerEngine
+    from hefesto.reports import TextReporter, JSONReporter, HTMLReporter
+
     click.echo(f"🔍 Analyzing: {path}")
     click.echo(f"📊 Minimum severity: {severity}")
+
+    # Parse exclude patterns
+    exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
+
+    if exclude_patterns:
+        click.echo(f"🚫 Excluding: {', '.join(exclude_patterns)}")
+
     click.echo("")
 
-    # TODO: Implement code analysis
-    click.echo("⚠️  Analysis feature coming soon!")
-    click.echo("💡 For now, use the API server:")
-    click.echo("   hefesto serve")
-    click.echo("   curl -X POST http://localhost:8080/suggest/refactor ...")
+    # Create analyzer engine (with verbose mode)
+    try:
+        engine = AnalyzerEngine(severity_threshold=severity, verbose=True)
+
+        # Register all analyzers
+        engine.register_analyzer(ComplexityAnalyzer())
+        engine.register_analyzer(CodeSmellAnalyzer())
+        engine.register_analyzer(SecurityAnalyzer())
+        engine.register_analyzer(BestPracticesAnalyzer())
+
+        # Run analysis
+        report = engine.analyze_path(path, exclude_patterns)
+
+        # Generate output
+        if output == "text":
+            reporter = TextReporter()
+            result = reporter.generate(report)
+            click.echo(result)
+        elif output == "json":
+            reporter = JSONReporter()
+            result = reporter.generate(report)
+            click.echo(result)
+        elif output == "html":
+            reporter = HTMLReporter()
+            result = reporter.generate(report)
+
+            if save_html:
+                with open(save_html, "w", encoding="utf-8") as f:
+                    f.write(result)
+                click.echo(f"✅ HTML report saved to: {save_html}")
+            else:
+                click.echo(result)
+
+        # Exit with error code if critical issues found
+        if report.summary.critical_issues > 0:
+            sys.exit(1)
+
+    except Exception as e:
+        click.echo(f"❌ Analysis failed: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()

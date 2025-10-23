@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "3.5.0"
+version = "4.0.0"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,6 +40,12 @@ dependencies = [
     "google-generativeai>=0.3.0",
     "httpx>=0.25.0,<1.0.0",
     "python-dateutil>=2.8.2,<3.0.0",
+    "radon>=6.0.1,<7.0.0",
+    "bandit>=1.7.5,<2.0.0",
+    "vulture>=2.10,<3.0.0",
+    "pylint>=3.0.0,<4.0.0",
+    "mccabe>=0.7.0,<1.0.0",
+    "jinja2>=3.1.2,<4.0.0",
 ]
 
 [project.optional-dependencies]
