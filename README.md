@@ -312,6 +312,141 @@ else:
 
 ---
 
+## 🔒 Pre-Push Hook: Quality Gate (Hefesto Self-Validation)
+
+**Hefesto validates itself before every push - dogfooding at its finest!**
+
+### The Problem We Solved
+
+GitHub Actions was failing with lint errors that weren't caught locally:
+
+```
+❌ GitHub Actions Failed:
+hefesto/llm/license_validator.py:170:101: E501 line too long (166 > 100 characters)
+hefesto/llm/semantic_analyzer.py:74:101: E501 line too long (105 > 100 characters)
+scripts/fulfill_order.py:21:1: E402 module level import not at top of file
+```
+
+**Root cause**: Developers were pushing code without running full linting checks.
+
+### The Solution
+
+We created a **pre-push hook** that automatically validates code before it reaches GitHub:
+
+1. ✅ Runs Black, isort, flake8 on changed files
+2. ✅ Executes unit tests (80 tests, ~4 minutes)
+3. ✅ Blocks push if any validation fails
+4. ✅ Provides clear fix instructions
+
+### What It Does
+
+Every time you push to GitHub, the hook automatically runs:
+
+```bash
+🔨 HEFESTO Pre-Push Validation
+================================
+
+📋 Changed Python files:
+   • scripts/fulfill_order.py
+   • hefesto/llm/validators.py
+
+1️⃣  Running linters...
+   • Black formatting... ✓
+   • Import sorting (isort)... ✓
+   • Flake8 linting... ✓
+
+2️⃣  Running unit tests...
+   • 80 passed, 53 deselected in 3m 45s ✓
+
+3️⃣  Hefesto code analysis...
+   ⚠️  Hefesto analyze not yet implemented
+   Will be available in future version
+
+================================
+✅ All validations passed!
+🚀 Pushing to remote...
+```
+
+### Installation
+
+The hook is located at `.git/hooks/pre-push` and activates automatically when you:
+
+```bash
+git push origin main
+```
+
+### What Gets Validated
+
+| Check | Description | Blocks Push? |
+|-------|-------------|--------------|
+| **Black** | Code formatting (PEP 8) | ✅ Yes |
+| **isort** | Import statement ordering | ✅ Yes |
+| **flake8** | Style guide enforcement | ✅ Yes |
+| **pytest** | Unit tests (80 tests) | ✅ Yes |
+| **Hefesto analyze** | Self-analysis (future) | ⚠️ Not yet |
+
+### Features
+
+✅ **Only validates changed files** - Fast execution
+✅ **Handles file deletions** - No false positives
+✅ **Skips cloud tests** - No credentials needed locally
+✅ **Clear error messages** - Easy to fix issues
+✅ **Prevents broken commits** - Catches issues before CI
+
+### Example: Preventing a Bad Push
+
+```bash
+$ git push origin main
+
+🔨 HEFESTO Pre-Push Validation
+================================
+
+📋 Changed Python files:
+   scripts/generate_key.py
+
+1️⃣  Running linters...
+   • Black formatting... ✗
+
+❌ Black formatting failed!
+Run: black scripts/generate_key.py
+
+error: failed to push some refs to 'github.com/...'
+```
+
+**The hook blocked the push!** Fix the issue:
+
+```bash
+$ black scripts/generate_key.py
+reformatted scripts/generate_key.py
+
+$ git add scripts/generate_key.py
+$ git commit --amend --no-edit
+$ git push origin main
+
+✅ All validations passed!
+🚀 Pushing to remote...
+```
+
+### Customization
+
+Edit `.git/hooks/pre-push` to:
+- Add custom validation steps
+- Change flake8 rules
+- Adjust test markers
+- Add project-specific checks
+
+### Bypass (Not Recommended)
+
+In emergencies only:
+
+```bash
+git push --no-verify origin main
+```
+
+⚠️ **Warning**: This skips all validation and may break CI!
+
+---
+
 ## 🧪 Testing
 
 ### Quick Start
