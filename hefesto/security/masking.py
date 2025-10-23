@@ -52,63 +52,38 @@ class MaskingResult:
 
 # Comprehensive regex patterns for PII and secrets
 MASKING_PATTERNS = {
-    'api_key': re.compile(
-        r'(?i)(api[_-]?key|apikey)\s*[:=]\s*[\'"][A-Za-z0-9_\-\.]{16,}[\'"]',
-        re.IGNORECASE
+    "api_key": re.compile(
+        r'(?i)(api[_-]?key|apikey)\s*[:=]\s*[\'"][A-Za-z0-9_\-\.]{16,}[\'"]', re.IGNORECASE
     ),
-    'secret': re.compile(
-        r'(?i)(secret|token|access[_-]?token)\s*[:=]\s*[\'"][^\'"]{8,}[\'"]',
-        re.IGNORECASE
+    "secret": re.compile(
+        r'(?i)(secret|token|access[_-]?token)\s*[:=]\s*[\'"][^\'"]{8,}[\'"]', re.IGNORECASE
     ),
-    'password': re.compile(
-        r'(?i)(password|passwd|pwd)\s*[:=]\s*[\'"][^\'"]{4,}[\'"]',
-        re.IGNORECASE
+    "password": re.compile(
+        r'(?i)(password|passwd|pwd)\s*[:=]\s*[\'"][^\'"]{4,}[\'"]', re.IGNORECASE
     ),
-    'email': re.compile(
-        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
-    ),
-    'phone': re.compile(
-        r'\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b'
-    ),
-    'aws_key': re.compile(
-        r'\b(AKIA[0-9A-Z]{16})\b'
-    ),
-    'aws_secret': re.compile(
+    "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    "phone": re.compile(r"\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}\b"),
+    "aws_key": re.compile(r"\b(AKIA[0-9A-Z]{16})\b"),
+    "aws_secret": re.compile(
         r'(?i)(aws[_-]?secret[_-]?access[_-]?key)\s*[:=]\s*[\'"][A-Za-z0-9/+=]{40}[\'"]',
-        re.IGNORECASE
+        re.IGNORECASE,
     ),
-    'jwt': re.compile(
-        r'\beyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\b'
+    "jwt": re.compile(r"\beyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\b"),
+    "private_key": re.compile(
+        r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[A-Za-z0-9+/=\s]+-----END (?:RSA |EC )?PRIVATE KEY-----",
+        re.DOTALL,
     ),
-    'private_key': re.compile(
-        r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----[A-Za-z0-9+/=\s]+-----END (?:RSA |EC )?PRIVATE KEY-----',
-        re.DOTALL
-    ),
-    'github_token': re.compile(
-        r'\b(gh[ps]_[A-Za-z0-9]{36,})\b'
-    ),
-    'slack_token': re.compile(
-        r'\b(xox[baprs]-[A-Za-z0-9-]{10,})\b'
-    ),
-    'credit_card': re.compile(
-        r'\b(?:\d{4}[-\s]?){3}\d{4}\b'
-    ),
-    'ssn': re.compile(
-        r'\b\d{3}-\d{2}-\d{4}\b'
-    ),
-    'ip_address': re.compile(
-        r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-    ),
-    'bearer_token': re.compile(
-        r'\b[Bb]earer\s+[A-Za-z0-9\-._~+/]+=*\b'
-    ),
-    'basic_auth': re.compile(
-        r'\b[Bb]asic\s+[A-Za-z0-9+/]+=*\b'
-    ),
+    "github_token": re.compile(r"\b(gh[ps]_[A-Za-z0-9]{36,})\b"),
+    "slack_token": re.compile(r"\b(xox[baprs]-[A-Za-z0-9-]{10,})\b"),
+    "credit_card": re.compile(r"\b(?:\d{4}[-\s]?){3}\d{4}\b"),
+    "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    "ip_address": re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
+    "bearer_token": re.compile(r"\b[Bb]earer\s+[A-Za-z0-9\-._~+/]+=*\b"),
+    "basic_auth": re.compile(r"\b[Bb]asic\s+[A-Za-z0-9+/]+=*\b"),
 }
 
 
-def calculate_hash(text: str, algorithm: str = 'sha256') -> str:
+def calculate_hash(text: str, algorithm: str = "sha256") -> str:
     """
     Calculate cryptographic hash of text for referential integrity.
 
@@ -123,10 +98,10 @@ def calculate_hash(text: str, algorithm: str = 'sha256') -> str:
         >>> calculate_hash("sensitive data")
         '7b5e8e8c...'
     """
-    if algorithm == 'sha256':
-        return hashlib.sha256(text.encode('utf-8')).hexdigest()
-    elif algorithm == 'md5':
-        return hashlib.md5(text.encode('utf-8')).hexdigest()
+    if algorithm == "sha256":
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    elif algorithm == "md5":
+        return hashlib.md5(text.encode("utf-8")).hexdigest()
     else:
         raise ValueError(f"Unsupported hash algorithm: {algorithm}")
 
@@ -134,7 +109,7 @@ def calculate_hash(text: str, algorithm: str = 'sha256') -> str:
 def mask_text(
     text: str,
     patterns: Optional[Dict[str, re.Pattern]] = None,
-    placeholder: str = REDACTED_PLACEHOLDER
+    placeholder: str = REDACTED_PLACEHOLDER,
 ) -> MaskingResult:
     """
     Mask sensitive information in text using regex patterns.
@@ -188,7 +163,7 @@ def mask_text(
     masked_hash = calculate_hash(masked_text)
 
     # Check size
-    size_bytes = len(masked_text.encode('utf-8'))
+    size_bytes = len(masked_text.encode("utf-8"))
     truncated = False
 
     if size_bytes > MAX_CONTEXT_SIZE:
@@ -205,15 +180,12 @@ def mask_text(
         original_hash=original_hash,
         masked_hash=masked_hash,
         size_bytes=size_bytes,
-        truncated=truncated
+        truncated=truncated,
     )
 
 
 def safe_snippet(
-    full_text: str,
-    line_number: int,
-    window_lines: int = CONTEXT_WINDOW_LINES,
-    mask: bool = True
+    full_text: str, line_number: int, window_lines: int = CONTEXT_WINDOW_LINES, mask: bool = True
 ) -> Tuple[str, int, int]:
     """
     Extract a safe code snippet with context windowing around a specific line.
@@ -237,7 +209,7 @@ def safe_snippet(
         >>> assert start == 45
         >>> assert end == 55
     """
-    lines = full_text.split('\n')
+    lines = full_text.split("\n")
     total_lines = len(lines)
 
     # Validate line number
@@ -251,7 +223,7 @@ def safe_snippet(
 
     # Extract snippet
     snippet_lines = lines[start_idx:end_idx]
-    snippet_text = '\n'.join(snippet_lines)
+    snippet_text = "\n".join(snippet_lines)
 
     # Optionally mask sensitive data
     if mask:
@@ -262,7 +234,7 @@ def safe_snippet(
             logger.info(f"Masked {result.redaction_count} sensitive items in snippet")
 
     # Enforce size limit
-    size_bytes = len(snippet_text.encode('utf-8'))
+    size_bytes = len(snippet_text.encode("utf-8"))
     if size_bytes > MAX_CONTEXT_SIZE:
         # Truncate snippet
         snippet_text = snippet_text[:MAX_CONTEXT_SIZE]
@@ -272,10 +244,7 @@ def safe_snippet(
     return snippet_text, start_idx + 1, end_idx
 
 
-def mask_dict_values(
-    data: Dict,
-    keys_to_mask: Optional[List[str]] = None
-) -> Dict:
+def mask_dict_values(data: Dict, keys_to_mask: Optional[List[str]] = None) -> Dict:
     """
     Recursively mask values in a dictionary based on key names.
 
@@ -297,10 +266,22 @@ def mask_dict_values(
     """
     if keys_to_mask is None:
         keys_to_mask = [
-            'password', 'passwd', 'pwd', 'secret', 'token', 'api_key',
-            'apikey', 'access_token', 'refresh_token', 'auth_token',
-            'bearer', 'authorization', 'aws_secret_access_key',
-            'private_key', 'client_secret', 'jwt'
+            "password",
+            "passwd",
+            "pwd",
+            "secret",
+            "token",
+            "api_key",
+            "apikey",
+            "access_token",
+            "refresh_token",
+            "auth_token",
+            "bearer",
+            "authorization",
+            "aws_secret_access_key",
+            "private_key",
+            "client_secret",
+            "jwt",
         ]
 
     # Convert to lowercase for case-insensitive matching
@@ -358,10 +339,7 @@ def validate_masked(text: str) -> Tuple[bool, List[str]]:
 
 
 def create_safe_context(
-    file_path: str,
-    issue_line: int,
-    issue_description: str,
-    mask_data: bool = True
+    file_path: str, issue_line: int, issue_description: str, mask_data: bool = True
 ) -> Dict:
     """
     Create a safe context dictionary for LLM prompts.

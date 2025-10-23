@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LLMResponse:
     """Generic LLM response wrapper."""
+
     text: str
     raw_text: str
     metadata: Dict[str, Any]
@@ -43,6 +44,7 @@ class LLMResponse:
 @dataclass
 class PatchProposal:
     """Patch proposal from LLM."""
+
     unified_diff: str
     explanation: str
     confidence: float
@@ -55,6 +57,7 @@ class PatchProposal:
 @dataclass
 class IssueExplanation:
     """Detailed explanation of a code issue."""
+
     summary: str
     root_cause: str
     impact: str
@@ -65,6 +68,7 @@ class IssueExplanation:
 @dataclass
 class ImpactEstimate:
     """Business impact estimate."""
+
     severity: str
     business_risk: str
     estimated_effort: str
@@ -270,7 +274,11 @@ class GeminiAPIClient(LLMProvider):
         """
         try:
             models = genai.list_models()
-            return [model.name for model in models if "generateContent" in model.supported_generation_methods]
+            return [
+                model.name
+                for model in models
+                if "generateContent" in model.supported_generation_methods
+            ]
         except Exception as e:
             logger.error(f"Failed to list models: {e}")
             return [DEFAULT_MODEL, FALLBACK_MODEL]
@@ -366,7 +374,7 @@ Generate the JSON response now:"""
 
             # Extract JSON from response (handle markdown code blocks)
             text = response.text.strip()
-            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+            json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
@@ -382,7 +390,7 @@ Generate the JSON response now:"""
                     "unified_diff": f"--- a/{file_path}\n+++ b/{file_path}\n{text[:500]}",
                     "explanation": text[:1000],
                     "confidence": 0.5,
-                    "safety_notes": ["Manual review recommended"]
+                    "safety_notes": ["Manual review recommended"],
                 }
 
             # Build PatchProposal
@@ -463,6 +471,7 @@ Format as JSON:
 
         # Parse response (simplified)
         import json
+
         try:
             data = json.loads(response.text.strip())
         except:
@@ -471,7 +480,7 @@ Format as JSON:
                 "root_cause": "Analysis failed",
                 "impact": "Unknown",
                 "recommendations": ["Manual review required"],
-                "severity": severity
+                "severity": severity,
             }
 
         return IssueExplanation(**data)
@@ -506,7 +515,7 @@ Format as JSON:
             issue_description=issue_desc,
             code_context=code,
             severity=severity,
-            mask_sensitive=True
+            mask_sensitive=True,
         )
 
         # Convert PatchProposal to RefactorSuggestion
@@ -517,7 +526,7 @@ Format as JSON:
             confidence=proposal.confidence,
             safety_validated=len(proposal.safety_notes) == 0,
             issues_addressed=[issue_type],
-            estimated_impact=f"{severity} severity issue"
+            estimated_impact=f"{severity} severity issue",
         )
 
     def generate_tests(self, func: str) -> TestSuggestion:
@@ -553,6 +562,7 @@ Format as JSON:
 
         # Parse response
         import json
+
         try:
             data = json.loads(response.text.strip())
         except:
@@ -561,12 +571,13 @@ Format as JSON:
                 "test_code": f"# Generated test\n{response.text[:500]}",
                 "test_framework": "pytest",
                 "coverage_areas": ["basic functionality"],
-                "edge_cases": ["error handling"]
+                "edge_cases": ["error handling"],
             }
 
         # Extract function signature
         import re
-        sig_match = re.search(r'def\s+(\w+)\s*\([^)]*\)', func)
+
+        sig_match = re.search(r"def\s+(\w+)\s*\([^)]*\)", func)
         function_sig = sig_match.group(0) if sig_match else "unknown_function()"
 
         return TestSuggestion(
@@ -575,7 +586,7 @@ Format as JSON:
             test_framework=data.get("test_framework", "pytest"),
             coverage_areas=data.get("coverage_areas", []),
             edge_cases=data.get("edge_cases", []),
-            confidence=0.8
+            confidence=0.8,
         )
 
     def explain_finding(self, issue: Dict[str, Any]) -> IssueFinding:
@@ -599,7 +610,7 @@ Format as JSON:
             issue_description=issue_desc,
             code_context=code_context,
             severity=severity,
-            mask_sensitive=True
+            mask_sensitive=True,
         )
 
         # Convert IssueExplanation to IssueFinding
@@ -610,7 +621,7 @@ Format as JSON:
             root_cause=explanation.root_cause,
             consequences=[explanation.impact],
             recommendations=explanation.recommendations,
-            sports_context=None
+            sports_context=None,
         )
 
     def health_check(self) -> Dict[str, Any]:
@@ -633,7 +644,7 @@ Format as JSON:
                     "status": "healthy",
                     "latency_ms": latency_ms,
                     "provider_type": "gemini_api",
-                    "model_name": self.model_name
+                    "model_name": self.model_name,
                 }
             else:
                 return {
@@ -641,7 +652,7 @@ Format as JSON:
                     "latency_ms": latency_ms,
                     "provider_type": "gemini_api",
                     "model_name": self.model_name,
-                    "error": response.error
+                    "error": response.error,
                 }
         except Exception as e:
             return {
@@ -649,7 +660,7 @@ Format as JSON:
                 "latency_ms": 0,
                 "provider_type": "gemini_api",
                 "model_name": self.model_name,
-                "error": str(e)
+                "error": str(e),
             }
 
     def estimate_impact(
@@ -696,6 +707,7 @@ Format as JSON:
 
         # Parse response
         import json
+
         try:
             data = json.loads(response.text.strip())
         except:
@@ -704,7 +716,7 @@ Format as JSON:
                 "business_risk": "Unknown",
                 "estimated_effort": "Unknown",
                 "priority": "MEDIUM",
-                "recommendations": ["Manual assessment required"]
+                "recommendations": ["Manual assessment required"],
             }
 
         return ImpactEstimate(**data)
@@ -746,8 +758,10 @@ def test_gemini_client():
         print(f"✅ Success: {response.success}")
 
         if response.metadata.get("input_tokens"):
-            print(f"📊 Tokens - Input: {response.metadata['input_tokens']}, "
-                  f"Output: {response.metadata['output_tokens']}")
+            print(
+                f"📊 Tokens - Input: {response.metadata['input_tokens']}, "
+                f"Output: {response.metadata['output_tokens']}"
+            )
 
         # List available models
         models = client.list_models()

@@ -51,6 +51,7 @@ class SuggestionFeedback:
         validation_passed: Validation result
         similarity_score: Code similarity (0.0-1.0)
     """
+
     suggestion_id: str
     llm_event_id: Optional[str] = None
     file_path: Optional[str] = None
@@ -258,8 +259,12 @@ class FeedbackLogger:
                 query_parameters=[
                     bigquery.ScalarQueryParameter("suggestion_id", "STRING", suggestion_id),
                     bigquery.ScalarQueryParameter("accepted", "BOOL", accepted),
-                    bigquery.ScalarQueryParameter("applied_successfully", "BOOL", applied_successfully),
-                    bigquery.ScalarQueryParameter("time_to_apply_seconds", "INT64", time_to_apply_seconds),
+                    bigquery.ScalarQueryParameter(
+                        "applied_successfully", "BOOL", applied_successfully
+                    ),
+                    bigquery.ScalarQueryParameter(
+                        "time_to_apply_seconds", "INT64", time_to_apply_seconds
+                    ),
                     bigquery.ScalarQueryParameter("rejection_reason", "STRING", rejection_reason),
                     bigquery.ScalarQueryParameter("user_comment", "STRING", user_comment),
                 ]
@@ -380,9 +385,7 @@ class FeedbackLogger:
             return {"error": "BigQuery client not initialized"}
 
         try:
-            where_clauses = [
-                "ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY)"
-            ]
+            where_clauses = ["ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY)"]
 
             query_params: List[bigquery.ScalarQueryParameter] = [
                 bigquery.ScalarQueryParameter("days", "INT64", days)
@@ -396,9 +399,7 @@ class FeedbackLogger:
 
             if severity:
                 where_clauses.append("severity = @severity")
-                query_params.append(
-                    bigquery.ScalarQueryParameter("severity", "STRING", severity)
-                )
+                query_params.append(bigquery.ScalarQueryParameter("severity", "STRING", severity))
 
             where_clause = " AND ".join(where_clauses)
 
@@ -434,7 +435,9 @@ class FeedbackLogger:
                     "acceptance_rate": float(row.acceptance_rate) if row.acceptance_rate else 0.0,
                     "avg_confidence": float(row.avg_confidence) if row.avg_confidence else 0.0,
                     "avg_similarity": float(row.avg_similarity) if row.avg_similarity else 0.0,
-                    "avg_time_to_apply": float(row.avg_time_to_apply) if row.avg_time_to_apply else 0.0,
+                    "avg_time_to_apply": (
+                        float(row.avg_time_to_apply) if row.avg_time_to_apply else 0.0
+                    ),
                 }
 
             return {
@@ -466,26 +469,28 @@ class FeedbackLogger:
         if not self.client:
             raise Exception("BigQuery client not initialized")
 
-        rows_to_insert = [{
-            "suggestion_id": feedback.suggestion_id,
-            "llm_event_id": feedback.llm_event_id,
-            "ts": datetime.utcnow().isoformat(),
-            "file_path": feedback.file_path,
-            "issue_type": feedback.issue_type,
-            "severity": feedback.severity,
-            "shown_to_user": feedback.shown_to_user,
-            "user_accepted": feedback.user_accepted,
-            "applied_successfully": feedback.applied_successfully,
-            "time_to_apply_seconds": feedback.time_to_apply_seconds,
-            "ci_passed": feedback.ci_passed,
-            "tests_passed": feedback.tests_passed,
-            "coverage_improved": feedback.coverage_improved,
-            "user_comment": feedback.user_comment,
-            "rejection_reason": feedback.rejection_reason,
-            "confidence_score": feedback.confidence_score,
-            "validation_passed": feedback.validation_passed,
-            "similarity_score": feedback.similarity_score,
-        }]
+        rows_to_insert = [
+            {
+                "suggestion_id": feedback.suggestion_id,
+                "llm_event_id": feedback.llm_event_id,
+                "ts": datetime.utcnow().isoformat(),
+                "file_path": feedback.file_path,
+                "issue_type": feedback.issue_type,
+                "severity": feedback.severity,
+                "shown_to_user": feedback.shown_to_user,
+                "user_accepted": feedback.user_accepted,
+                "applied_successfully": feedback.applied_successfully,
+                "time_to_apply_seconds": feedback.time_to_apply_seconds,
+                "ci_passed": feedback.ci_passed,
+                "tests_passed": feedback.tests_passed,
+                "coverage_improved": feedback.coverage_improved,
+                "user_comment": feedback.user_comment,
+                "rejection_reason": feedback.rejection_reason,
+                "confidence_score": feedback.confidence_score,
+                "validation_passed": feedback.validation_passed,
+                "similarity_score": feedback.similarity_score,
+            }
+        ]
 
         errors = self.client.insert_rows_json(self.full_table_id, rows_to_insert)
         if errors:
@@ -496,9 +501,7 @@ class FeedbackLogger:
 _feedback_logger_instance: Optional[FeedbackLogger] = None
 
 
-def get_feedback_logger(
-    project_id: str = "your-project-id"
-) -> FeedbackLogger:
+def get_feedback_logger(project_id: str = "your-project-id") -> FeedbackLogger:
     """
     Get singleton FeedbackLogger instance.
 

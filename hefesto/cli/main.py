@@ -21,20 +21,20 @@ from hefesto.config import get_settings
 def cli():
     """
     🔨 HEFESTO - AI-Powered Code Quality Guardian
-    
+
     Autonomous code analysis, refactoring, and quality assurance.
     """
     pass
 
 
 @cli.command()
-@click.option('--host', default=None, help='Host to bind (default: 0.0.0.0)')
-@click.option('--port', default=None, type=int, help='Port to bind (default: 8080)')
-@click.option('--reload', is_flag=True, help='Auto-reload on code changes')
+@click.option("--host", default=None, help="Host to bind (default: 0.0.0.0)")
+@click.option("--port", default=None, type=int, help="Port to bind (default: 8080)")
+@click.option("--reload", is_flag=True, help="Auto-reload on code changes")
 def serve(host: Optional[str], port: Optional[int], reload: bool):
     """
     Start Hefesto API server.
-    
+
     Example:
         hefesto serve
         hefesto serve --port 9000
@@ -48,18 +48,18 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         click.echo("\n💡 Install API dependencies:", err=True)
         click.echo("   pip install hefesto-ai[api]", err=True)
         sys.exit(1)
-    
+
     settings = get_settings()
-    
+
     host = host or settings.api_host
     port = port or settings.api_port
-    
+
     click.echo(f"🔨 HEFESTO v{__version__}")
     click.echo(f"🌐 Starting server at http://{host}:{port}")
     click.echo(f"📚 Docs: http://{host}:{port}/docs")
     click.echo(f"🔍 Health: http://{host}:{port}/ping")
     click.echo("")
-    
+
     uvicorn.run(
         app,
         host=host,
@@ -70,13 +70,13 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 
 
 @cli.command()
-@click.argument('path', type=click.Path(exists=True))
-@click.option('--severity', default='MEDIUM', help='Minimum severity (LOW/MEDIUM/HIGH/CRITICAL)')
-@click.option('--output', type=click.Choice(['text', 'json']), default='text')
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--severity", default="MEDIUM", help="Minimum severity (LOW/MEDIUM/HIGH/CRITICAL)")
+@click.option("--output", type=click.Choice(["text", "json"]), default="text")
 def analyze(path: str, severity: str, output: str):
     """
     Analyze code file or directory.
-    
+
     Example:
         hefesto analyze mycode.py
         hefesto analyze src/ --severity HIGH
@@ -85,7 +85,7 @@ def analyze(path: str, severity: str, output: str):
     click.echo(f"🔍 Analyzing: {path}")
     click.echo(f"📊 Minimum severity: {severity}")
     click.echo("")
-    
+
     # TODO: Implement code analysis
     click.echo("⚠️  Analysis feature coming soon!")
     click.echo("💡 For now, use the API server:")
@@ -98,12 +98,12 @@ def info():
     """Show Hefesto configuration and license info."""
     from hefesto import is_pro, get_info
     from hefesto.llm.license_validator import get_license_validator
-    
+
     settings = get_settings()
     package_info = get_info()
     validator = get_license_validator()
     license_info = validator.get_info()
-    
+
     click.echo(f"🔨 HEFESTO v{__version__}")
     click.echo("")
     click.echo("📦 Configuration:")
@@ -118,11 +118,13 @@ def info():
     click.echo("")
     click.echo("📜 License:")
     click.echo(f"   Tier: {license_info['tier'].upper()}")
-    click.echo(f"   Pro Features: {'✅ Enabled' if license_info['is_pro'] else '❌ Disabled (upgrade to Pro)'}")
-    
-    if license_info['is_pro']:
+    click.echo(
+        f"   Pro Features: {'✅ Enabled' if license_info['is_pro'] else '❌ Disabled (upgrade to Pro)'}"
+    )
+
+    if license_info["is_pro"]:
         click.echo(f"   Enabled Features:")
-        for feature in sorted(license_info['features_enabled']):
+        for feature in sorted(license_info["features_enabled"]):
             click.echo(f"      • {feature}")
     else:
         click.echo("")
@@ -139,10 +141,10 @@ def info():
 def check():
     """Check Hefesto installation and dependencies."""
     import importlib.util
-    
+
     click.echo("🔍 Checking Hefesto installation...")
     click.echo("")
-    
+
     # Check Python version
     py_version = sys.version_info
     click.echo(f"🐍 Python: {py_version.major}.{py_version.minor}.{py_version.micro}")
@@ -150,90 +152,91 @@ def check():
         click.echo("   ❌ Python 3.10+ required", err=True)
     else:
         click.echo("   ✅ Version OK")
-    
+
     click.echo("")
     click.echo("📦 Dependencies:")
-    
+
     # Core dependencies
     deps = {
-        'fastapi': 'FastAPI (API server)',
-        'pydantic': 'Pydantic (data validation)',
-        'google.cloud.bigquery': 'BigQuery (tracking)',
-        'google.generativeai': 'Gemini API (LLM)',
+        "fastapi": "FastAPI (API server)",
+        "pydantic": "Pydantic (data validation)",
+        "google.cloud.bigquery": "BigQuery (tracking)",
+        "google.generativeai": "Gemini API (LLM)",
     }
-    
+
     for module_name, description in deps.items():
         spec = importlib.util.find_spec(module_name)
         if spec:
             click.echo(f"   ✅ {description}")
         else:
             click.echo(f"   ❌ {description} - Not installed")
-    
+
     # Pro dependencies
     click.echo("")
     click.echo("🌟 Pro Dependencies (Optional):")
-    
+
     pro_deps = {
-        'sentence_transformers': 'Sentence Transformers (semantic analysis)',
-        'torch': 'PyTorch (ML backend)',
+        "sentence_transformers": "Sentence Transformers (semantic analysis)",
+        "torch": "PyTorch (ML backend)",
     }
-    
+
     for module_name, description in pro_deps.items():
         spec = importlib.util.find_spec(module_name)
         if spec:
             click.echo(f"   ✅ {description}")
         else:
             click.echo(f"   ⚠️  {description} - Install with: pip install hefesto-ai[pro]")
-    
+
     click.echo("")
     click.echo("✅ Installation check complete!")
 
 
 @cli.command()
-@click.argument('license_key')
+@click.argument("license_key")
 def activate(license_key: str):
     """
     Activate Hefesto Professional with license key.
-    
+
     Usage:
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
     from hefesto.licensing.key_generator import LicenseKeyGenerator
     from hefesto.config.config_manager import ConfigManager
-    
+
     click.echo("🔑 Activating Hefesto Professional...")
-    
+
     # Validate format
     if not LicenseKeyGenerator.validate_format(license_key):
         click.echo("❌ Invalid license key format", err=True)
         click.echo("   Expected format: HFST-XXXX-XXXX-XXXX-XXXX-XXXX")
         return
-    
+
     # Store license key
     config = ConfigManager()
     config.set_license_key(license_key)
-    
+
     # Get tier info
     from hefesto.licensing.feature_gate import FeatureGate
+
     tier_info = FeatureGate.get_tier_info()
-    
+
     click.echo("✅ License activated successfully!")
     click.echo(f"   Tier: {tier_info['tier_display']}")
     click.echo(f"   Key: {license_key}")
     click.echo("\n🚀 You now have access to:")
-    
+
     feature_names = {
-        'ml_semantic_analysis': '   • ML semantic code analysis',
-        'ai_recommendations': '   • AI-powered code recommendations',
-        'security_scanning': '   • Security vulnerability scanning',
-        'automated_triage': '   • Automated issue triage',
-        'github_gitlab_bitbucket': '   • Full Git integrations (GitHub, GitLab, Bitbucket)',
-        'jira_slack_integration': '   • Jira & Slack integration',
-        'priority_support': '   • Priority email support (4-8 hour response)',
-        'analytics_dashboard': '   • Usage analytics dashboard'
+        "ml_semantic_analysis": "   • ML semantic code analysis",
+        "ai_recommendations": "   • AI-powered code recommendations",
+        "security_scanning": "   • Security vulnerability scanning",
+        "automated_triage": "   • Automated issue triage",
+        "github_gitlab_bitbucket": "   • Full Git integrations (GitHub, GitLab, Bitbucket)",
+        "jira_slack_integration": "   • Jira & Slack integration",
+        "priority_support": "   • Priority email support (4-8 hour response)",
+        "analytics_dashboard": "   • Usage analytics dashboard",
     }
-    
-    for feature in tier_info['limits']['features']:
+
+    for feature in tier_info["limits"]["features"]:
         if feature in feature_names:
             click.echo(feature_names[feature])
 
@@ -242,19 +245,19 @@ def activate(license_key: str):
 def deactivate():
     """
     Deactivate Hefesto Professional license.
-    
+
     This will remove your license key and revert to free tier.
     """
     from hefesto.config.config_manager import ConfigManager
-    
+
     config = ConfigManager()
     license_key = config.get_license_key()
-    
+
     if not license_key:
         click.echo("ℹ️  No active license found. Already using free tier.")
         return
-    
-    if click.confirm('⚠️  This will deactivate your Professional license. Continue?'):
+
+    if click.confirm("⚠️  This will deactivate your Professional license. Continue?"):
         config.clear_license()
         click.echo("✅ License deactivated. Reverted to free tier.")
         click.echo("\n   To reactivate, use: hefesto activate YOUR-KEY")
@@ -269,58 +272,58 @@ def status():
     """
     from hefesto.licensing.feature_gate import FeatureGate
     from hefesto.config.config_manager import ConfigManager
-    
+
     config = ConfigManager()
     license_key = config.get_license_key()
     tier_info = FeatureGate.get_tier_info()
-    
+
     click.echo("═" * 60)
     click.echo("HEFESTO LICENSE STATUS")
     click.echo("═" * 60)
-    
+
     if license_key:
         click.echo(f"Tier: {tier_info['tier_display']}")
         click.echo(f"License: {license_key}")
     else:
         click.echo(f"Tier: Free")
         click.echo(f"License: Not activated")
-    
+
     click.echo("\n" + "─" * 60)
     click.echo("USAGE LIMITS")
     click.echo("─" * 60)
-    
-    limits = tier_info['limits']
+
+    limits = tier_info["limits"]
     click.echo(f"Repositories: {limits['repositories']}")
     click.echo(f"LOC/month: {limits['loc_monthly']:,}")
-    
-    if limits['analysis_runs'] == float('inf'):
+
+    if limits["analysis_runs"] == float("inf"):
         click.echo(f"Analysis runs: Unlimited")
     else:
         click.echo(f"Analysis runs: {limits['analysis_runs']}/month")
-    
+
     click.echo("\n" + "─" * 60)
     click.echo("AVAILABLE FEATURES")
     click.echo("─" * 60)
-    
+
     feature_names = {
-        'basic_quality': 'Basic code quality checks',
-        'pr_analysis': 'Pull request analysis',
-        'ide_integration': 'IDE integration',
-        'ml_semantic_analysis': 'ML semantic code analysis',
-        'ai_recommendations': 'AI-powered recommendations',
-        'security_scanning': 'Security vulnerability scanning',
-        'automated_triage': 'Automated issue triage',
-        'github_gitlab_bitbucket': 'Full Git integrations',
-        'jira_slack_integration': 'Jira & Slack integration',
-        'priority_support': 'Priority email support',
-        'analytics_dashboard': 'Usage analytics dashboard'
+        "basic_quality": "Basic code quality checks",
+        "pr_analysis": "Pull request analysis",
+        "ide_integration": "IDE integration",
+        "ml_semantic_analysis": "ML semantic code analysis",
+        "ai_recommendations": "AI-powered recommendations",
+        "security_scanning": "Security vulnerability scanning",
+        "automated_triage": "Automated issue triage",
+        "github_gitlab_bitbucket": "Full Git integrations",
+        "jira_slack_integration": "Jira & Slack integration",
+        "priority_support": "Priority email support",
+        "analytics_dashboard": "Usage analytics dashboard",
     }
-    
-    for feature in limits['features']:
+
+    for feature in limits["features"]:
         if feature in feature_names:
             click.echo(f"✓ {feature_names[feature]}")
-    
-    if tier_info['tier'] == 'free':
+
+    if tier_info["tier"] == "free":
         click.echo("\n" + "═" * 60)
         click.echo("UPGRADE TO PROFESSIONAL")
         click.echo("═" * 60)
@@ -328,10 +331,9 @@ def status():
         click.echo(f"   → {tier_info['founding_url']}")
         click.echo(f"\n   Or start 14-day free trial:")
         click.echo(f"   → {tier_info['upgrade_url']}")
-    
+
     click.echo("═" * 60)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
-

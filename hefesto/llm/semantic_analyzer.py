@@ -23,36 +23,38 @@ logger = logging.getLogger(__name__)
 
 class ProFeatureError(Exception):
     """Raised when attempting to use Pro features without license."""
+
     pass
 
 
 class CodeEmbedding:
     """
     Semantic embedding of code snippet (Pro Feature).
-    
+
     This is a stub. Real implementation available in hefesto-pro package.
     """
+
     pass
 
 
 class SemanticAnalyzer:
     """
     Semantic code analyzer using ML embeddings (Pro Feature).
-    
+
     ⚠️  STUB ONLY - Real implementation requires Pro license.
-    
+
     Features (Pro only):
     - Generate 384-dimensional code embeddings
     - Calculate semantic similarity between code snippets
     - Detect duplicate suggestions with different variable names
     - ML-based code understanding
-    
+
     To unlock:
     1. Purchase: https://buy.stripe.com/hefesto-pro
     2. Install: pip install hefesto-ai[pro]
     3. Configure: export HEFESTO_LICENSE_KEY='hef_xxxxx'
     """
-    
+
     def __init__(self):
         """Initialize semantic analyzer (Pro only)."""
         raise ProFeatureError(
@@ -82,15 +84,15 @@ class SemanticAnalyzer:
             "\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         )
-    
+
     def get_code_embedding(self, code: str, language: str = "python"):
         """Get semantic embedding (Pro only)."""
         raise ProFeatureError("Semantic embeddings require Pro license")
-    
+
     def calculate_similarity(self, code1: str, code2: str, language: str = "python") -> float:
         """Calculate semantic similarity (Pro only)."""
         raise ProFeatureError("Semantic similarity requires Pro license")
-    
+
     def find_similar_suggestions(self, new_code: str, threshold: float = 0.80) -> list:
         """Find similar suggestions (Pro only)."""
         raise ProFeatureError("Duplicate detection requires Pro license")
@@ -99,7 +101,7 @@ class SemanticAnalyzer:
 def get_semantic_analyzer() -> SemanticAnalyzer:
     """
     Get semantic analyzer (Pro feature).
-    
+
     ⚠️  Requires Pro license. This stub will raise ProFeatureError.
     """
     return SemanticAnalyzer()

@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any, List
 # Optional Google Cloud imports
 try:
     from google.cloud import bigquery
+
     GOOGLE_CLOUD_AVAILABLE = True
 except ImportError:
     GOOGLE_CLOUD_AVAILABLE = False
@@ -64,9 +65,7 @@ class HefestoEnricher:
             self.client = None
             self.table_ref = None
 
-        logger.info(
-            f"HefestoEnricher initialized: {self.table_ref} (dry_run={dry_run})"
-        )
+        logger.info(f"HefestoEnricher initialized: {self.table_ref} (dry_run={dry_run})")
 
     def extract_file_paths(self, alert_message: str) -> List[str]:
         """
@@ -174,9 +173,7 @@ class HefestoEnricher:
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[
                     bigquery.ArrayQueryParameter("file_paths", "STRING", file_paths),
-                    bigquery.ScalarQueryParameter(
-                        "alert_timestamp", "TIMESTAMP", alert_timestamp
-                    ),
+                    bigquery.ScalarQueryParameter("alert_timestamp", "TIMESTAMP", alert_timestamp),
                     bigquery.ScalarQueryParameter("limit", "INT64", limit),
                 ]
             )
@@ -279,9 +276,7 @@ class HefestoEnricher:
             }
 
         # Score findings and pick best match
-        scored_findings = [
-            (finding, self.score_finding(finding)) for finding in findings
-        ]
+        scored_findings = [(finding, self.score_finding(finding)) for finding in findings]
         scored_findings.sort(key=lambda x: x[1], reverse=True)
 
         best_finding, best_score = scored_findings[0]

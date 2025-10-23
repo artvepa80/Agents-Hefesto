@@ -384,13 +384,16 @@ class TestErrorHandling:
 
 
 # Parametrized tests for issue types and severities
-@pytest.mark.parametrize("issue_type", [
-    "security",
-    "performance",
-    "correctness",
-    "style",
-    "maintainability",
-])
+@pytest.mark.parametrize(
+    "issue_type",
+    [
+        "security",
+        "performance",
+        "correctness",
+        "style",
+        "maintainability",
+    ],
+)
 def test_log_different_issue_types(issue_type):
     """Test logging suggestions for different issue types"""
     logger = FeedbackLogger()
@@ -404,13 +407,16 @@ def test_log_different_issue_types(issue_type):
     assert suggestion_id.startswith("SUG-")
 
 
-@pytest.mark.parametrize("severity", [
-    "CRITICAL",
-    "HIGH",
-    "MEDIUM",
-    "LOW",
-    "INFO",
-])
+@pytest.mark.parametrize(
+    "severity",
+    [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO",
+    ],
+)
 def test_log_different_severities(severity):
     """Test logging suggestions for different severities"""
     logger = FeedbackLogger()

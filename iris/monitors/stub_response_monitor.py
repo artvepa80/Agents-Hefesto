@@ -13,6 +13,7 @@ from typing import List, Dict, Any
 try:
     from google.cloud import logging as cloud_logging
     from google.cloud import bigquery
+
     GOOGLE_CLOUD_AVAILABLE = True
 except ImportError:
     GOOGLE_CLOUD_AVAILABLE = False
@@ -85,11 +86,11 @@ class StubResponseMonitor:
                 }
 
                 # Extract response text
-                if hasattr(entry, 'json_payload') and entry.json_payload:
+                if hasattr(entry, "json_payload") and entry.json_payload:
                     stub_entry["response"] = entry.json_payload.get("response", "")
                     stub_entry["message"] = entry.json_payload.get("message", "")
                     stub_entry["user_id"] = entry.json_payload.get("user_id", "unknown")
-                elif hasattr(entry, 'text_payload'):
+                elif hasattr(entry, "text_payload"):
                     stub_entry["response"] = entry.text_payload
 
                 stub_entries.append(stub_entry)
@@ -125,7 +126,7 @@ class StubResponseMonitor:
                 "user_id": entry.get("user_id", "unknown"),
                 "trace_id": entry.get("trace"),
                 "service_name": "omega-sports-commercial",
-                "action_required": "Fix stub code and redeploy"
+                "action_required": "Fix stub code and redeploy",
             }
             rows_to_insert.append(row)
 
@@ -201,7 +202,7 @@ class StubResponseMonitor:
             "alert_message": alert_message,
             "should_alert": len(stub_entries) > 0,
             "checked_hours": hours,
-            "checked_at": datetime.utcnow().isoformat()
+            "checked_at": datetime.utcnow().isoformat(),
         }
 
         if result["should_alert"]:
@@ -224,10 +225,7 @@ def cli_check_stubs():
 
 if __name__ == "__main__":
     # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     # Run monitor
     exit_code = cli_check_stubs()

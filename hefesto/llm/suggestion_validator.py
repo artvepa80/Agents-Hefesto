@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 class ValidationResult(Enum):
     """Validation result categories"""
+
     VALID = "valid"
     WARNING = "warning"
     INVALID = "invalid"
@@ -63,6 +64,7 @@ class SuggestionValidationResult:
         is_duplicate: Whether suggestion is semantically duplicate (>0.85)
         details: Detailed validation breakdown
     """
+
     valid: bool
     confidence: float
     issues: List[str]
@@ -136,15 +138,25 @@ class SuggestionValidator:
 
         # Dangerous patterns (extended from validators.py)
         self.dangerous_calls: Set[str] = {
-            'eval', 'exec', 'compile', '__import__',
-            'os.system', 'subprocess.call', 'subprocess.run',
-            'subprocess.Popen', 'subprocess.check_output',
-            'os.popen', 'commands.getoutput',
+            "eval",
+            "exec",
+            "compile",
+            "__import__",
+            "os.system",
+            "subprocess.call",
+            "subprocess.run",
+            "subprocess.Popen",
+            "subprocess.check_output",
+            "os.popen",
+            "commands.getoutput",
         }
 
         # Dangerous imports
         self.dangerous_imports: Set[str] = {
-            'pickle', 'marshal', 'shelve', 'dill',
+            "pickle",
+            "marshal",
+            "shelve",
+            "dill",
         }
 
         logger.info(
@@ -185,11 +197,7 @@ class SuggestionValidator:
         suggested_normalized = " ".join(suggested.split())
 
         # Use SequenceMatcher for similarity ratio
-        matcher = difflib.SequenceMatcher(
-            None,
-            original_normalized,
-            suggested_normalized
-        )
+        matcher = difflib.SequenceMatcher(None, original_normalized, suggested_normalized)
         similarity = matcher.ratio()
 
         logger.debug(f"Code similarity: {similarity:.2f}")
@@ -226,33 +234,28 @@ class SuggestionValidator:
                     # Check direct function calls
                     if isinstance(node.func, ast.Name):
                         if node.func.id in self.validator.dangerous_calls:
-                            self.violations.append(
-                                f"Dangerous function: {node.func.id}"
-                            )
+                            self.violations.append(f"Dangerous function: {node.func.id}")
 
                     # Check attribute calls (os.system, subprocess.call)
                     elif isinstance(node.func, ast.Attribute):
                         full_name = self._get_full_name(node.func)
                         if full_name in self.validator.dangerous_calls:
-                            self.violations.append(
-                                f"Dangerous function: {full_name}"
-                            )
+                            self.violations.append(f"Dangerous function: {full_name}")
 
                     self.generic_visit(node)
 
                 def visit_Import(self, node):
                     for alias in node.names:
-                        if alias.name.split('.')[0] in self.validator.dangerous_imports:
-                            self.violations.append(
-                                f"Dangerous import: {alias.name}"
-                            )
+                        if alias.name.split(".")[0] in self.validator.dangerous_imports:
+                            self.violations.append(f"Dangerous import: {alias.name}")
                     self.generic_visit(node)
 
                 def visit_ImportFrom(self, node):
-                    if node.module and node.module.split('.')[0] in self.validator.dangerous_imports:
-                        self.violations.append(
-                            f"Dangerous import from: {node.module}"
-                        )
+                    if (
+                        node.module
+                        and node.module.split(".")[0] in self.validator.dangerous_imports
+                    ):
+                        self.violations.append(f"Dangerous import from: {node.module}")
                     self.generic_visit(node)
 
                 def _get_full_name(self, node):
@@ -276,11 +279,11 @@ class SuggestionValidator:
 
         # Additional regex-based checks for patterns AST might miss
         dangerous_patterns = [
-            (r'__import__\s*\(', "Dynamic import detected"),
-            (r'globals\s*\(\s*\)', "globals() access detected"),
-            (r'locals\s*\(\s*\)', "locals() manipulation detected"),
-            (r'setattr\s*\(', "setattr() usage (potential security risk)"),
-            (r'getattr\s*\(.*\bgetattr\b', "Nested getattr (potential exploit)"),
+            (r"__import__\s*\(", "Dynamic import detected"),
+            (r"globals\s*\(\s*\)", "globals() access detected"),
+            (r"locals\s*\(\s*\)", "locals() manipulation detected"),
+            (r"setattr\s*\(", "setattr() usage (potential security risk)"),
+            (r"getattr\s*\(.*\bgetattr\b", "Nested getattr (potential exploit)"),
         ]
 
         for pattern, message in dangerous_patterns:
@@ -336,9 +339,7 @@ class SuggestionValidator:
 
             # Calculate semantic similarity
             semantic_sim = analyzer.calculate_similarity(
-                original_code,
-                suggested_code,
-                language="python"
+                original_code, suggested_code, language="python"
             )
 
             # Check if duplicate
@@ -426,30 +427,30 @@ class SuggestionValidator:
         if similarity < self.min_similarity:
             # Too different - might be rewriting entire function
             similarity_penalty = similarity / self.min_similarity
-            confidence *= (0.5 + 0.5 * similarity_penalty)
+            confidence *= 0.5 + 0.5 * similarity_penalty
             logger.debug(f"Low similarity penalty: {1 - similarity_penalty:.2f}")
 
         elif similarity > self.max_similarity:
             # Too similar - might not be fixing anything
             similarity_penalty = (1.0 - similarity) / (1.0 - self.max_similarity)
-            confidence *= (0.7 + 0.3 * similarity_penalty)
+            confidence *= 0.7 + 0.3 * similarity_penalty
             logger.debug(f"High similarity penalty: {1 - similarity_penalty:.2f}")
 
         # Issue-specific adjustments
         safe_issue_types = {
-            'missing_docstring': 1.0,
-            'missing_type_hints': 1.0,
-            'unused_variable': 0.95,
-            'unused_import': 0.95,
-            'code_complexity': 0.85,
-            'long_function': 0.80,
+            "missing_docstring": 1.0,
+            "missing_type_hints": 1.0,
+            "unused_variable": 0.95,
+            "unused_import": 0.95,
+            "code_complexity": 0.85,
+            "long_function": 0.80,
         }
 
         risky_issue_types = {
-            'security': 0.7,
-            'authentication': 0.6,
-            'authorization': 0.6,
-            'data_validation': 0.75,
+            "security": 0.7,
+            "authentication": 0.6,
+            "authorization": 0.6,
+            "data_validation": 0.75,
         }
 
         issue_key = issue_type.lower()
@@ -499,7 +500,7 @@ class SuggestionValidator:
 
         # 1. Calculate similarity (syntactic)
         similarity = self.calculate_similarity(original_code, suggested_code)
-        details['similarity'] = similarity
+        details["similarity"] = similarity
 
         if similarity < self.min_similarity:
             warnings.append(
@@ -514,12 +515,10 @@ class SuggestionValidator:
 
         # 1.5. Semantic similarity check (Phase 1 - ML-based)
         semantic_similarity, is_duplicate, semantic_warnings = self.check_semantic_similarity(
-            original_code,
-            suggested_code,
-            duplicate_threshold=0.85
+            original_code, suggested_code, duplicate_threshold=0.85
         )
-        details['semantic_similarity'] = semantic_similarity
-        details['is_duplicate'] = is_duplicate
+        details["semantic_similarity"] = semantic_similarity
+        details["is_duplicate"] = is_duplicate
         warnings.extend(semantic_warnings)
 
         if is_duplicate:
@@ -530,14 +529,14 @@ class SuggestionValidator:
 
         # 2. Syntax validation
         syntax_valid, syntax_error = validate_syntax(suggested_code)
-        details['syntax'] = {'valid': syntax_valid, 'error': syntax_error}
+        details["syntax"] = {"valid": syntax_valid, "error": syntax_error}
 
         if not syntax_valid:
             issues.append(f"Syntax error: {syntax_error}")
 
         # 3. Secret detection
         no_secrets, secret_violations = validate_no_secrets(suggested_code)
-        details['secrets'] = {'valid': no_secrets, 'violations': secret_violations}
+        details["secrets"] = {"valid": no_secrets, "violations": secret_violations}
 
         if not no_secrets:
             issues.append(f"Hardcoded secrets detected: {len(secret_violations)} patterns")
@@ -546,23 +545,23 @@ class SuggestionValidator:
 
         # 4. Category validation
         category_safe, category_reason = validate_safe_category(issue_type)
-        details['category'] = {'safe': category_safe, 'reason': category_reason}
+        details["category"] = {"safe": category_safe, "reason": category_reason}
 
         if not category_safe:
             issues.append(f"Unsafe issue category: {category_reason}")
 
         # 5. Structure validation
         structure_valid, structure_error = validate_function_structure(suggested_code)
-        details['structure'] = {'valid': structure_valid, 'error': structure_error}
+        details["structure"] = {"valid": structure_valid, "error": structure_error}
 
         if not structure_valid:
             issues.append(f"Structure error: {structure_error}")
 
         # 6. Dangerous pattern detection (v3.5 enhancement)
         no_dangerous_patterns, dangerous_violations = self.check_dangerous_patterns(suggested_code)
-        details['dangerous_patterns'] = {
-            'safe': no_dangerous_patterns,
-            'violations': dangerous_violations
+        details["dangerous_patterns"] = {
+            "safe": no_dangerous_patterns,
+            "violations": dangerous_violations,
         }
 
         if not no_dangerous_patterns:
@@ -572,7 +571,7 @@ class SuggestionValidator:
 
         # 7. Sports context validation (warnings only)
         sports_valid, sports_warnings = validate_sports_context(suggested_code, issue_type)
-        details['sports_context'] = {'valid': sports_valid, 'warnings': sports_warnings}
+        details["sports_context"] = {"valid": sports_valid, "warnings": sports_warnings}
         warnings.extend(sports_warnings)
 
         # 8. Calculate confidence score
@@ -585,22 +584,22 @@ class SuggestionValidator:
             structure_valid=structure_valid,
             issue_type=issue_type,
         )
-        details['confidence_factors'] = {
-            'similarity': similarity,
-            'syntax_valid': syntax_valid,
-            'no_secrets': no_secrets,
-            'no_dangerous_patterns': no_dangerous_patterns,
-            'category_safe': category_safe,
-            'structure_valid': structure_valid,
+        details["confidence_factors"] = {
+            "similarity": similarity,
+            "syntax_valid": syntax_valid,
+            "no_secrets": no_secrets,
+            "no_dangerous_patterns": no_dangerous_patterns,
+            "category_safe": category_safe,
+            "structure_valid": structure_valid,
         }
 
         # 9. Determine overall validity
         valid = (
-            syntax_valid and
-            no_secrets and
-            category_safe and
-            structure_valid and
-            no_dangerous_patterns
+            syntax_valid
+            and no_secrets
+            and category_safe
+            and structure_valid
+            and no_dangerous_patterns
         )
 
         # 10. Determine if safe to auto-apply
@@ -615,8 +614,7 @@ class SuggestionValidator:
             )
         else:
             logger.warning(
-                f"Validation FAILED: {len(issues)} issues found, "
-                f"confidence={confidence:.2f}"
+                f"Validation FAILED: {len(issues)} issues found, " f"confidence={confidence:.2f}"
             )
 
         return SuggestionValidationResult(

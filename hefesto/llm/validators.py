@@ -38,6 +38,7 @@ class IssueCategory(str, Enum):
     These categories represent issues that are safe for automated refactoring
     without risk of breaking functionality or introducing security problems.
     """
+
     # Code quality issues
     CODE_COMPLEXITY = "code_complexity"
     LONG_FUNCTION = "long_function"
@@ -190,7 +191,9 @@ def validate_no_secrets(code: str) -> Tuple[bool, List[str]]:
                 matched_text = match.group(0)
                 preview = matched_text[:50] + "..." if len(matched_text) > 50 else matched_text
 
-                violation = f"{pattern_name}: {preview} (line {code[:match.start()].count(chr(10)) + 1})"
+                violation = (
+                    f"{pattern_name}: {preview} (line {code[:match.start()].count(chr(10)) + 1})"
+                )
                 violations.append(violation)
                 logger.warning(f"Secret pattern detected: {violation}")
 
@@ -289,7 +292,7 @@ def validate_function_structure(code: str) -> Tuple[bool, Optional[str]]:
         tree = ast.parse(code)
 
         # Check for dangerous built-ins
-        dangerous_calls = {'eval', 'exec', 'compile', '__import__', 'open'}
+        dangerous_calls = {"eval", "exec", "compile", "__import__", "open"}
 
         class DangerousCallChecker(ast.NodeVisitor):
             def __init__(self):
@@ -298,9 +301,7 @@ def validate_function_structure(code: str) -> Tuple[bool, Optional[str]]:
             def visit_Call(self, node):
                 if isinstance(node.func, ast.Name):
                     if node.func.id in dangerous_calls:
-                        self.violations.append(
-                            f"Dangerous function call: {node.func.id}"
-                        )
+                        self.violations.append(f"Dangerous function call: {node.func.id}")
                 self.generic_visit(node)
 
         checker = DangerousCallChecker()
@@ -371,40 +372,33 @@ def validate_sports_context(code: str, issue_type: str) -> Tuple[bool, List[str]
 
     # Check for sports domain patterns
     sports_patterns = {
-        'match_data': r'\bmatch[_\s]data\b',
-        'team_stats': r'\bteam[_\s]stats\b',
-        'prediction': r'\bpredict(ion)?\b',
-        'accuracy': r'\baccuracy\b',
-        'confidence': r'\bconfidence\b',
+        "match_data": r"\bmatch[_\s]data\b",
+        "team_stats": r"\bteam[_\s]stats\b",
+        "prediction": r"\bpredict(ion)?\b",
+        "accuracy": r"\baccuracy\b",
+        "confidence": r"\bconfidence\b",
     }
 
     has_sports_context = any(
-        re.search(pattern, code, re.IGNORECASE)
-        for pattern in sports_patterns.values()
+        re.search(pattern, code, re.IGNORECASE) for pattern in sports_patterns.values()
     )
 
     if has_sports_context:
         # Check for proper type hints in sports code
-        if 'MatchId' in code or 'TeamId' in code:
+        if "MatchId" in code or "TeamId" in code:
             logger.debug("Sports branded types detected")
         else:
-            warnings.append(
-                "Consider using branded types (MatchId, TeamId) for sports entities"
-            )
+            warnings.append("Consider using branded types (MatchId, TeamId) for sports entities")
 
         # Check for prediction confidence logging
-        if 'prediction' in code.lower() or 'predict' in code.lower():
-            if 'logger' not in code and 'log' not in code:
-                warnings.append(
-                    "Sports prediction code should log confidence metrics"
-                )
+        if "prediction" in code.lower() or "predict" in code.lower():
+            if "logger" not in code and "log" not in code:
+                warnings.append("Sports prediction code should log confidence metrics")
 
         # Check for data validation
-        if 'match' in code.lower() or 'team' in code.lower():
-            if 'validate' not in code.lower() and 'assert' not in code:
-                warnings.append(
-                    "Sports data processing should include validation"
-                )
+        if "match" in code.lower() or "team" in code.lower():
+            if "validate" not in code.lower() and "assert" not in code:
+                warnings.append("Sports data processing should include validation")
 
     # Always valid, but may have warnings for improvement
     if warnings:
@@ -415,11 +409,7 @@ def validate_sports_context(code: str, issue_type: str) -> Tuple[bool, List[str]
     return True, warnings
 
 
-def validate_all(
-    code: str,
-    issue_type: str,
-    strict: bool = True
-) -> Tuple[bool, Dict[str, Any]]:
+def validate_all(code: str, issue_type: str, strict: bool = True) -> Tuple[bool, Dict[str, Any]]:
     """
     Run all validation checks on generated code.
 
@@ -511,12 +501,7 @@ def validate_all(
     }
 
     # Overall validation result
-    report["overall_valid"] = (
-        syntax_valid and
-        no_secrets and
-        category_safe and
-        structure_valid
-    )
+    report["overall_valid"] = syntax_valid and no_secrets and category_safe and structure_valid
 
     if report["overall_valid"]:
         logger.info("All validations passed successfully")

@@ -49,12 +49,14 @@ try:
         CodeEmbedding,
         get_semantic_analyzer,
     )
-    __all__.extend([
-        "SemanticAnalyzer",
-        "CodeEmbedding",
-        "get_semantic_analyzer",
-    ])
+
+    __all__.extend(
+        [
+            "SemanticAnalyzer",
+            "CodeEmbedding",
+            "get_semantic_analyzer",
+        ]
+    )
     _PRO_AVAILABLE = True
 except ImportError:
     _PRO_AVAILABLE = False
-

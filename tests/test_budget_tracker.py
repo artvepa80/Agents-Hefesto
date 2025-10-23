@@ -23,9 +23,7 @@ class TestBudgetTrackerBasics:
         tracker = BudgetTracker()
 
         cost = tracker.calculate_cost(
-            input_tokens=1500,
-            output_tokens=800,
-            model="gemini-2.0-flash-exp"
+            input_tokens=1500, output_tokens=800, model="gemini-2.0-flash-exp"
         )
 
         # Experimental model is FREE
@@ -38,7 +36,7 @@ class TestBudgetTrackerBasics:
         cost = tracker.calculate_cost(
             input_tokens=1_000_000,  # 1M tokens
             output_tokens=1_000_000,  # 1M tokens
-            model="gemini-2.0-flash"
+            model="gemini-2.0-flash",
         )
 
         # $0.075/1M input + $0.30/1M output = $0.375
@@ -50,8 +48,8 @@ class TestBudgetTrackerBasics:
 
         cost = tracker.calculate_cost(
             input_tokens=2_000_000,  # 2M tokens
-            output_tokens=500_000,   # 0.5M tokens
-            model="gemini-1.5-flash"
+            output_tokens=500_000,  # 0.5M tokens
+            model="gemini-1.5-flash",
         )
 
         # (2M * $0.075) + (0.5M * $0.30) = $0.15 + $0.15 = $0.30
@@ -62,9 +60,7 @@ class TestBudgetTrackerBasics:
         tracker = BudgetTracker()
 
         cost = tracker.calculate_cost(
-            input_tokens=1_000_000,
-            output_tokens=1_000_000,
-            model="gemini-1.5-pro"
+            input_tokens=1_000_000, output_tokens=1_000_000, model="gemini-1.5-pro"
         )
 
         # $1.25/1M input + $5.00/1M output = $6.25
@@ -75,9 +71,7 @@ class TestBudgetTrackerBasics:
         tracker = BudgetTracker()
 
         cost = tracker.calculate_cost(
-            input_tokens=1_000_000,
-            output_tokens=1_000_000,
-            model="unknown-model-xyz"
+            input_tokens=1_000_000, output_tokens=1_000_000, model="unknown-model-xyz"
         )
 
         # Should use default pricing (same as gemini-2.0-flash)
@@ -87,11 +81,7 @@ class TestBudgetTrackerBasics:
         """Test cost calculation with zero tokens"""
         tracker = BudgetTracker()
 
-        cost = tracker.calculate_cost(
-            input_tokens=0,
-            output_tokens=0,
-            model="gemini-2.0-flash"
-        )
+        cost = tracker.calculate_cost(input_tokens=0, output_tokens=0, model="gemini-2.0-flash")
 
         assert cost == 0.0
 
@@ -101,9 +91,7 @@ class TestBudgetTrackerBasics:
 
         # Typical request: ~2000 input, ~500 output
         cost = tracker.calculate_cost(
-            input_tokens=2000,
-            output_tokens=500,
-            model="gemini-2.0-flash"
+            input_tokens=2000, output_tokens=500, model="gemini-2.0-flash"
         )
 
         # (2000/1M * 0.075) + (500/1M * 0.30) = 0.00015 + 0.00015 = 0.0003
@@ -119,10 +107,7 @@ class TestTokenUsageTracking:
         tracker = BudgetTracker()
 
         usage = tracker.track_usage(
-            event_id="evt-123",
-            input_tokens=1500,
-            output_tokens=800,
-            model="gemini-2.0-flash"
+            event_id="evt-123", input_tokens=1500, output_tokens=800, model="gemini-2.0-flash"
         )
 
         assert usage.input_tokens == 1500
@@ -136,10 +121,7 @@ class TestTokenUsageTracking:
         tracker = BudgetTracker()
 
         usage = tracker.track_usage(
-            event_id="evt-456",
-            input_tokens=10000,
-            output_tokens=5000,
-            model="gemini-2.0-flash-exp"
+            event_id="evt-456", input_tokens=10000, output_tokens=5000, model="gemini-2.0-flash-exp"
         )
 
         assert usage.total_tokens == 15000
@@ -154,7 +136,7 @@ class TestTokenUsageTracking:
             input_tokens=2000,
             output_tokens=1000,
             model="gemini-2.0-flash",
-            metadata={"file_path": "test.py", "issue_type": "security"}
+            metadata={"file_path": "test.py", "issue_type": "security"},
         )
 
         assert usage.total_tokens == 3000
@@ -174,10 +156,7 @@ class TestBudgetAvailability:
 
     def test_check_budget_available_no_limit(self):
         """Test budget check with no limits set"""
-        tracker = BudgetTracker(
-            daily_limit_usd=None,
-            monthly_limit_usd=None
-        )
+        tracker = BudgetTracker(daily_limit_usd=None, monthly_limit_usd=None)
 
         # No limits = always available
         available = tracker.check_budget_available(period="today")
@@ -185,10 +164,7 @@ class TestBudgetAvailability:
 
     def test_check_budget_available_with_daily_limit(self):
         """Test budget check with daily limit"""
-        tracker = BudgetTracker(
-            daily_limit_usd=10.0,
-            monthly_limit_usd=None
-        )
+        tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=None)
 
         # Should check against daily limit
         available = tracker.check_budget_available(period="today")
@@ -197,10 +173,7 @@ class TestBudgetAvailability:
 
     def test_check_budget_available_with_monthly_limit(self):
         """Test budget check with monthly limit"""
-        tracker = BudgetTracker(
-            daily_limit_usd=None,
-            monthly_limit_usd=200.0
-        )
+        tracker = BudgetTracker(daily_limit_usd=None, monthly_limit_usd=200.0)
 
         available = tracker.check_budget_available(period="month")
         assert isinstance(available, bool)
@@ -317,10 +290,7 @@ class TestUsageSummary:
 
     def test_get_usage_summary_includes_budget_info(self):
         """Test usage summary includes budget information"""
-        tracker = BudgetTracker(
-            daily_limit_usd=10.0,
-            monthly_limit_usd=200.0
-        )
+        tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=200.0)
 
         summary = tracker.get_usage_summary(period="today")
 
@@ -342,7 +312,7 @@ class TestEdgeCases:
         cost = tracker.calculate_cost(
             input_tokens=100_000_000,  # 100M tokens
             output_tokens=50_000_000,  # 50M tokens
-            model="gemini-2.0-flash"
+            model="gemini-2.0-flash",
         )
 
         # (100 * $0.075) + (50 * $0.30) = $7.50 + $15.00 = $22.50
@@ -355,9 +325,7 @@ class TestEdgeCases:
 
         # Should still be able to calculate costs locally
         cost = tracker.calculate_cost(
-            input_tokens=1000,
-            output_tokens=500,
-            model="gemini-2.0-flash"
+            input_tokens=1000, output_tokens=500, model="gemini-2.0-flash"
         )
 
         assert cost > 0
@@ -377,9 +345,7 @@ class TestEdgeCases:
         # Negative tokens should still calculate (Python allows it)
         # but result would be negative
         cost = tracker.calculate_cost(
-            input_tokens=-1000,
-            output_tokens=-500,
-            model="gemini-2.0-flash"
+            input_tokens=-1000, output_tokens=-500, model="gemini-2.0-flash"
         )
 
         assert cost < 0  # Negative cost is invalid but allowed by calculation
@@ -390,10 +356,7 @@ class TestBudgetTrackerIntegration:
 
     def test_full_budget_workflow(self):
         """Test complete budget tracking workflow"""
-        tracker = BudgetTracker(
-            daily_limit_usd=10.0,
-            monthly_limit_usd=200.0
-        )
+        tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=200.0)
 
         # 1. Check budget available
         available = tracker.check_budget_available(period="today")
@@ -404,7 +367,7 @@ class TestBudgetTrackerIntegration:
             event_id="integration-test-1",
             input_tokens=2000,
             output_tokens=1000,
-            model="gemini-2.0-flash"
+            model="gemini-2.0-flash",
         )
         assert usage.total_tokens == 3000
 
@@ -440,22 +403,21 @@ class TestBudgetTrackerIntegration:
 
 
 # Parametrized tests for models
-@pytest.mark.parametrize("model,expected_free", [
-    ("gemini-2.0-flash-exp", True),
-    ("gemini-2.0-flash", False),
-    ("gemini-1.5-flash", False),
-    ("gemini-1.5-flash-8b", False),
-    ("gemini-1.5-pro", False),
-])
+@pytest.mark.parametrize(
+    "model,expected_free",
+    [
+        ("gemini-2.0-flash-exp", True),
+        ("gemini-2.0-flash", False),
+        ("gemini-1.5-flash", False),
+        ("gemini-1.5-flash-8b", False),
+        ("gemini-1.5-pro", False),
+    ],
+)
 def test_model_pricing_status(model, expected_free):
     """Test pricing status for each model"""
     tracker = BudgetTracker()
 
-    cost = tracker.calculate_cost(
-        input_tokens=1000,
-        output_tokens=1000,
-        model=model
-    )
+    cost = tracker.calculate_cost(input_tokens=1000, output_tokens=1000, model=model)
 
     if expected_free:
         assert cost == 0.0

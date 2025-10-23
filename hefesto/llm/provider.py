@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class ProviderType(str, Enum):
     """Supported LLM provider types."""
+
     VERTEX_AI = "vertex_ai"
     OPENAI = "openai"
     CLAUDE = "claude"
@@ -39,6 +40,7 @@ class ProviderType(str, Enum):
 
 class SafetyLevel(str, Enum):
     """Safety filtering levels for LLM providers."""
+
     STRICT = "strict"
     MODERATE = "moderate"
     PERMISSIVE = "permissive"
@@ -58,6 +60,7 @@ class RefactorSuggestion:
         issues_addressed: List of issue types addressed by this refactor
         estimated_impact: Estimated business impact (optional)
     """
+
     original_code: str
     refactored_code: str
     explanation: str
@@ -80,6 +83,7 @@ class TestSuggestion:
         edge_cases: Edge cases tested
         confidence: Confidence score (0.0 to 1.0)
     """
+
     function_signature: str
     test_code: str
     test_framework: str
@@ -102,6 +106,7 @@ class IssueFinding:
         recommendations: Recommended actions
         sports_context: Sports analytics specific context (optional)
     """
+
     summary: str
     technical_details: str
     severity: str
@@ -129,6 +134,7 @@ class ProviderConfig:
         api_key: API key (for API-based providers)
         service_account_path: Path to service account JSON (for GCP)
     """
+
     provider_type: ProviderType
     project_id: Optional[str] = None
     location: Optional[str] = None
@@ -423,10 +429,7 @@ def create_provider(provider_type: str, **kwargs) -> LLMProvider:
         )
 
     # Create config
-    config = ProviderConfig(
-        provider_type=ProviderType(provider_type),
-        **kwargs
-    )
+    config = ProviderConfig(provider_type=ProviderType(provider_type), **kwargs)
 
     # Instantiate provider
     provider_class = provider_map[provider_type]

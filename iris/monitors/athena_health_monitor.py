@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional
 # Optional Google Cloud imports
 try:
     from google.cloud import bigquery
+
     GOOGLE_CLOUD_AVAILABLE = True
 except ImportError:
     GOOGLE_CLOUD_AVAILABLE = False
@@ -27,7 +28,7 @@ class AthenaHealthMonitor:
     def __init__(
         self,
         project_id: str = "eminent-carver-469323-q2",
-        athena_api_base: str = "http://localhost:8080"  # Default to local, override for production
+        athena_api_base: str = "http://localhost:8080",  # Default to local, override for production
     ):
         """
         Initialize Athena health monitor
@@ -43,7 +44,7 @@ class AthenaHealthMonitor:
         # Health check endpoints
         self.endpoints = {
             "health": f"{athena_api_base}/api/athena/health",
-            "features": f"{athena_api_base}/api/athena/features/health"
+            "features": f"{athena_api_base}/api/athena/features/health",
         }
 
         logger.info(f"🏛️ Athena Health Monitor initialized")
@@ -64,10 +65,7 @@ class AthenaHealthMonitor:
 
         try:
             # Call Athena health endpoint
-            response = requests.get(
-                self.endpoints["health"],
-                timeout=5  # 5 second timeout
-            )
+            response = requests.get(self.endpoints["health"], timeout=5)  # 5 second timeout
 
             response_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
 
@@ -103,7 +101,7 @@ class AthenaHealthMonitor:
                     "uptime_hours": agent_info.get("uptime_hours", 0),
                     "decision_count": performance.get("decision_count", 0),
                     "error": None,
-                    "raw_data": data
+                    "raw_data": data,
                 }
 
             else:
@@ -112,7 +110,7 @@ class AthenaHealthMonitor:
                     "agent_state": "ERROR",
                     "response_time_ms": response_time_ms,
                     "error": f"HTTP {response.status_code}: {response.text[:100]}",
-                    "raw_data": None
+                    "raw_data": None,
                 }
 
         except requests.exceptions.Timeout:
@@ -121,7 +119,7 @@ class AthenaHealthMonitor:
                 "agent_state": "UNREACHABLE",
                 "response_time_ms": 5000,  # Timeout
                 "error": "Athena health endpoint timed out (>5s)",
-                "raw_data": None
+                "raw_data": None,
             }
 
         except requests.exceptions.ConnectionError:
@@ -130,7 +128,7 @@ class AthenaHealthMonitor:
                 "agent_state": "UNREACHABLE",
                 "response_time_ms": 0,
                 "error": "Cannot connect to Athena API (service down?)",
-                "raw_data": None
+                "raw_data": None,
             }
 
         except Exception as e:
@@ -139,7 +137,7 @@ class AthenaHealthMonitor:
                 "agent_state": "ERROR",
                 "response_time_ms": 0,
                 "error": f"Unexpected error: {str(e)}",
-                "raw_data": None
+                "raw_data": None,
             }
 
     def check_feature_health(self) -> Dict[str, Any]:
@@ -150,10 +148,7 @@ class AthenaHealthMonitor:
             Feature health status dictionary
         """
         try:
-            response = requests.get(
-                self.endpoints["features"],
-                timeout=5
-            )
+            response = requests.get(self.endpoints["features"], timeout=5)
 
             if response.status_code == 200:
                 data = response.json()
@@ -164,14 +159,14 @@ class AthenaHealthMonitor:
                     "status": status,
                     "feature_freshness_pct": freshness_pct,
                     "is_healthy": freshness_pct > 0.8,  # >80% fresh
-                    "error": None
+                    "error": None,
                 }
             else:
                 return {
                     "status": "error",
                     "feature_freshness_pct": 0,
                     "is_healthy": False,
-                    "error": f"HTTP {response.status_code}"
+                    "error": f"HTTP {response.status_code}",
                 }
 
         except Exception as e:
@@ -179,7 +174,7 @@ class AthenaHealthMonitor:
                 "status": "error",
                 "feature_freshness_pct": 0,
                 "is_healthy": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     def log_health_check_to_bigquery(self, health_data: Dict[str, Any]):
@@ -200,7 +195,7 @@ class AthenaHealthMonitor:
             "error_message": health_data.get("error"),
             "uptime_hours": health_data.get("uptime_hours", 0),
             "decision_count": health_data.get("decision_count", 0),
-            "memory_within_limits": health_data.get("memory_within_limits", True)
+            "memory_within_limits": health_data.get("memory_within_limits", True),
         }
 
         try:
@@ -213,7 +208,9 @@ class AthenaHealthMonitor:
             # Table might not exist yet - log but don't fail
             logger.warning(f"⚠️ Could not log to BigQuery (table may not exist): {e}")
 
-    def generate_alert_message(self, health_data: Dict[str, Any], feature_data: Dict[str, Any]) -> Optional[str]:
+    def generate_alert_message(
+        self, health_data: Dict[str, Any], feature_data: Dict[str, Any]
+    ) -> Optional[str]:
         """
         Generate human-readable alert message for Hermes
 
@@ -241,7 +238,9 @@ class AthenaHealthMonitor:
             message += "ACTION REQUIRED:\n"
             message += "1. Check if Cloud Run service is running\n"
             message += "2. Check Athena agent logs for crashes\n"
-            message += "3. Restart service if needed: gcloud run services update omega-sports-commercial\n"
+            message += (
+                "3. Restart service if needed: gcloud run services update omega-sports-commercial\n"
+            )
 
         elif status == "error":
             message += "⚠️ HIGH: Athena agent is in ERROR state\n\n"
@@ -307,7 +306,7 @@ class AthenaHealthMonitor:
             "should_alert": alert_message is not None,
             "alert_message": alert_message,
             "alert_severity": self._determine_severity(health_data),
-            "checked_at": datetime.utcnow().isoformat()
+            "checked_at": datetime.utcnow().isoformat(),
         }
 
         if result["should_alert"]:
@@ -347,9 +346,9 @@ def cli_check_athena_health():
     print(f"Response Time: {result['response_time_ms']:.1f}ms")
     print(f"Feature Freshness: {result['feature_freshness_pct']:.1%}")
 
-    if result['should_alert']:
+    if result["should_alert"]:
         print(f"\n⚠️ ALERT SEVERITY: {result['alert_severity']}\n")
-        print(result['alert_message'])
+        print(result["alert_message"])
         return 1
     else:
         print("\n✅ Athena is healthy - No alerts")
@@ -358,10 +357,7 @@ def cli_check_athena_health():
 
 if __name__ == "__main__":
     # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     # Run monitor
     exit_code = cli_check_athena_health()

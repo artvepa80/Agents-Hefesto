@@ -11,10 +11,4 @@ from . import core
 from . import monitors
 from . import config
 
-__all__ = [
-    "__version__",
-    "__description__",
-    "core",
-    "monitors", 
-    "config"
-]
+__all__ = ["__version__", "__description__", "core", "monitors", "config"]

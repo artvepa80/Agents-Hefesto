@@ -36,6 +36,7 @@ class TokenUsage:
         total_tokens: Total tokens (input + output)
         estimated_cost_usd: Estimated cost in USD
     """
+
     input_tokens: int
     output_tokens: int
     total_tokens: int
@@ -78,12 +79,12 @@ class BudgetTracker:
     PRICING = {
         # Gemini 2.0 Flash (most common)
         "gemini-2.0-flash-exp": {
-            "input": 0.00,    # FREE during experimental period
-            "output": 0.00,   # FREE during experimental period
+            "input": 0.00,  # FREE during experimental period
+            "output": 0.00,  # FREE during experimental period
         },
         "gemini-2.0-flash": {
-            "input": 0.075,   # $0.075 per 1M input tokens
-            "output": 0.30,   # $0.30 per 1M output tokens
+            "input": 0.075,  # $0.075 per 1M input tokens
+            "output": 0.30,  # $0.30 per 1M output tokens
         },
         # Gemini 1.5 Flash (fallback)
         "gemini-1.5-flash": {
@@ -286,7 +287,9 @@ class BudgetTracker:
                 start_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 period_name = "Today"
             elif period == "month":
-                start_time = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                start_time = datetime.now().replace(
+                    day=1, hour=0, minute=0, second=0, microsecond=0
+                )
                 period_name = "This Month"
             elif period.endswith("d"):
                 days = int(period[:-1])
@@ -309,11 +312,7 @@ class BudgetTracker:
 
             job_config = bigquery.QueryJobConfig(
                 query_parameters=[
-                    bigquery.ScalarQueryParameter(
-                        "start_time",
-                        "TIMESTAMP",
-                        start_time.isoformat()
-                    )
+                    bigquery.ScalarQueryParameter("start_time", "TIMESTAMP", start_time.isoformat())
                 ]
             )
 
@@ -332,7 +331,9 @@ class BudgetTracker:
                     "estimated_cost_usd": 0.0,
                     "daily_limit_usd": self.daily_limit,
                     "monthly_limit_usd": self.monthly_limit,
-                    "budget_remaining_usd": self.daily_limit if period == "today" else self.monthly_limit,
+                    "budget_remaining_usd": (
+                        self.daily_limit if period == "today" else self.monthly_limit
+                    ),
                     "budget_utilization_pct": 0.0,
                 }
 
@@ -343,7 +344,7 @@ class BudgetTracker:
             estimated_cost = self.calculate_cost(
                 input_tokens=row.total_input_tokens,
                 output_tokens=row.total_output_tokens,
-                model="gemini-2.0-flash"
+                model="gemini-2.0-flash",
             )
 
             # Calculate budget remaining and utilization

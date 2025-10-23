@@ -1,2 +1,1 @@
 """Hefesto test suite."""
-

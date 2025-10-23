@@ -26,8 +26,8 @@ class TestSuggestionValidatorBasics:
         assert validator.max_similarity == 0.95
         assert validator.confidence_threshold == 0.5
         assert len(validator.dangerous_calls) > 0
-        assert 'eval' in validator.dangerous_calls
-        assert 'exec' in validator.dangerous_calls
+        assert "eval" in validator.dangerous_calls
+        assert "exec" in validator.dangerous_calls
 
     def test_get_validator_singleton(self):
         """Test get_validator returns singleton instance"""
@@ -110,15 +110,16 @@ class TestDangerousPatterns:
         )
 
         assert result.valid is False
-        assert any("Dangerous" in issue or "subprocess" in issue.lower()
-                   for issue in result.issues)
+        assert any("Dangerous" in issue or "subprocess" in issue.lower() for issue in result.issues)
 
     def test_validator_detects_dangerous_imports(self):
         """Test validator detects dangerous imports like pickle"""
         validator = SuggestionValidator()
 
         original = "def load_data():\n    return {}"
-        dangerous_suggested = "import pickle\ndef load_data():\n    return pickle.load(open('data.pkl'))"
+        dangerous_suggested = (
+            "import pickle\ndef load_data():\n    return pickle.load(open('data.pkl'))"
+        )
 
         result = validator.validate(
             original_code=original,
@@ -127,8 +128,9 @@ class TestDangerousPatterns:
         )
 
         assert result.valid is False
-        assert any("Dangerous import" in issue or "pickle" in issue.lower()
-                   for issue in result.issues)
+        assert any(
+            "Dangerous import" in issue or "pickle" in issue.lower() for issue in result.issues
+        )
 
 
 class TestSimilarityAnalysis:
@@ -162,8 +164,10 @@ class CompletelyDifferentArchitecture:
         # Should still be valid but have warnings due to drastic change
         assert result.similarity_score < 0.3  # Now truly below threshold
         assert len(result.warnings) > 0
-        assert any("Large change" in warning or "similarity" in warning.lower()
-                   for warning in result.warnings)
+        assert any(
+            "Large change" in warning or "similarity" in warning.lower()
+            for warning in result.warnings
+        )
 
     def test_similarity_calculation_identical_code(self):
         """Test similarity is 1.0 for identical code"""
@@ -193,13 +197,13 @@ class TestValidSuggestions:
         """Test 4: Valid fixes should pass all checks"""
         validator = SuggestionValidator()
 
-        original = '''def get_user(user_id):
+        original = """def get_user(user_id):
     query = "SELECT * FROM users WHERE id = " + str(user_id)
-    return db.execute(query)'''
+    return db.execute(query)"""
 
-        suggested = '''def get_user(user_id):
+        suggested = """def get_user(user_id):
     query = "SELECT * FROM users WHERE id = ?"
-    return db.execute(query, (user_id,))'''
+    return db.execute(query, (user_id,))"""
 
         result = validator.validate(
             original_code=original,
@@ -263,13 +267,13 @@ class TestConfidenceScoring:
         result = validator.validate(original, suggested, "missing_type_hints")
 
         # Check that details contain all confidence factors
-        assert 'confidence_factors' in result.details
-        factors = result.details['confidence_factors']
+        assert "confidence_factors" in result.details
+        factors = result.details["confidence_factors"]
 
-        assert 'syntax_valid' in factors
-        assert 'no_secrets' in factors
-        assert 'no_dangerous_patterns' in factors
-        assert 'similarity' in factors
+        assert "syntax_valid" in factors
+        assert "no_secrets" in factors
+        assert "no_dangerous_patterns" in factors
+        assert "similarity" in factors
 
 
 class TestSecurityValidation:
@@ -304,8 +308,9 @@ class TestSecurityValidation:
         result = validator.validate(original, suggested, "sql_injection")
 
         assert result.valid is False
-        assert any("unsafe" in issue.lower() or "category" in issue.lower()
-                   for issue in result.issues)
+        assert any(
+            "unsafe" in issue.lower() or "category" in issue.lower() for issue in result.issues
+        )
 
 
 class TestMaintainabilityValidation:
@@ -336,8 +341,9 @@ class TestMaintainabilityValidation:
 
         # Should fail structure validation due to excessive nesting
         assert result.valid is False
-        assert any("nesting" in issue.lower() or "structure" in issue.lower()
-                   for issue in result.issues)
+        assert any(
+            "nesting" in issue.lower() or "structure" in issue.lower() for issue in result.issues
+        )
 
 
 class TestEdgeCases:
@@ -409,14 +415,14 @@ class TestValidationResult:
         result = validator.validate(original, suggested, "style")
 
         # Check all required fields exist
-        assert hasattr(result, 'valid')
-        assert hasattr(result, 'confidence')
-        assert hasattr(result, 'issues')
-        assert hasattr(result, 'safe_to_apply')
-        assert hasattr(result, 'warnings')
-        assert hasattr(result, 'validation_passed')
-        assert hasattr(result, 'similarity_score')
-        assert hasattr(result, 'details')
+        assert hasattr(result, "valid")
+        assert hasattr(result, "confidence")
+        assert hasattr(result, "issues")
+        assert hasattr(result, "safe_to_apply")
+        assert hasattr(result, "warnings")
+        assert hasattr(result, "validation_passed")
+        assert hasattr(result, "similarity_score")
+        assert hasattr(result, "details")
 
         # Check types
         assert isinstance(result.valid, bool)
@@ -438,10 +444,10 @@ class TestValidationResult:
         result_dict = result.to_dict()
 
         assert isinstance(result_dict, dict)
-        assert 'valid' in result_dict
-        assert 'confidence' in result_dict
-        assert 'safe_to_apply' in result_dict
-        assert 'similarity_score' in result_dict
+        assert "valid" in result_dict
+        assert "confidence" in result_dict
+        assert "safe_to_apply" in result_dict
+        assert "similarity_score" in result_dict
 
 
 class TestSportsContextValidation:
@@ -492,21 +498,21 @@ class TestIntegration:
         assert len(result.issues) == 0
 
         # Check all validations ran
-        assert 'syntax' in result.details
-        assert 'secrets' in result.details
-        assert 'category' in result.details
-        assert 'structure' in result.details
-        assert 'dangerous_patterns' in result.details
+        assert "syntax" in result.details
+        assert "secrets" in result.details
+        assert "category" in result.details
+        assert "structure" in result.details
+        assert "dangerous_patterns" in result.details
 
     def test_validation_rejects_multiple_issues(self):
         """Test validator detects multiple problems at once"""
         validator = SuggestionValidator()
 
         original = "def foo(): return 1"
-        problematic = '''def foo():
+        problematic = """def foo():
     password = "hardcoded_password_123"
     eval("dangerous code")
-    return 1'''
+    return 1"""
 
         result = validator.validate(original, problematic, "security")
 
@@ -514,16 +520,20 @@ class TestIntegration:
         assert result.valid is False
         assert len(result.issues) >= 2
         assert any("secret" in issue.lower() for issue in result.issues)
-        assert any("dangerous" in issue.lower() or "eval" in issue.lower()
-                   for issue in result.issues)
+        assert any(
+            "dangerous" in issue.lower() or "eval" in issue.lower() for issue in result.issues
+        )
 
 
 # Test parametrization for confidence threshold variations
-@pytest.mark.parametrize("threshold,expected_safe", [
-    (0.3, True),   # Low threshold = more suggestions safe to apply
-    (0.7, False),  # High threshold = fewer suggestions safe to apply
-    (0.9, False),  # Very high threshold = very few suggestions safe
-])
+@pytest.mark.parametrize(
+    "threshold,expected_safe",
+    [
+        (0.3, True),  # Low threshold = more suggestions safe to apply
+        (0.7, False),  # High threshold = fewer suggestions safe to apply
+        (0.9, False),  # Very high threshold = very few suggestions safe
+    ],
+)
 def test_confidence_threshold_variations(threshold, expected_safe):
     """Test different confidence thresholds affect safe_to_apply"""
     validator = SuggestionValidator(confidence_threshold=threshold)

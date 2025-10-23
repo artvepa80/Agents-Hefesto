@@ -39,6 +39,7 @@ try:
         TestFeedback,
         get_cicd_collector,
     )
+
     _PRO_FEATURES_AVAILABLE = True
 except ImportError:
     _PRO_FEATURES_AVAILABLE = False
@@ -60,15 +61,17 @@ __all__ = [
 
 # Add Pro features if available
 if _PRO_FEATURES_AVAILABLE:
-    __all__.extend([
-        "SemanticAnalyzer",
-        "CodeEmbedding",
-        "get_semantic_analyzer",
-        "CICDFeedbackCollector",
-        "DeploymentFeedback",
-        "TestFeedback",
-        "get_cicd_collector",
-    ])
+    __all__.extend(
+        [
+            "SemanticAnalyzer",
+            "CodeEmbedding",
+            "get_semantic_analyzer",
+            "CICDFeedbackCollector",
+            "DeploymentFeedback",
+            "TestFeedback",
+            "get_cicd_collector",
+        ]
+    )
 
 
 def is_pro() -> bool:
@@ -83,4 +86,3 @@ def get_info() -> dict:
         "pro_features": _PRO_FEATURES_AVAILABLE,
         "license": "Dual (MIT + Commercial)",
     }
-
