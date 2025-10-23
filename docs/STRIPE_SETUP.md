@@ -8,7 +8,7 @@ How to purchase and configure Hefesto Pro license.
 
 1. Visit: **https://buy.stripe.com/hefesto-pro**
 2. Choose plan:
-   - **Individual**: $99/month (1 user)
+   - **Individual**: $25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro) (1 user)
    - **Team**: $399/month (5 users)
    - **Enterprise**: Contact sales
 3. Complete payment
@@ -205,12 +205,15 @@ LicenseError: License expired
 
 ## Pricing
 
-| Plan | Monthly | Annual | Users | Features |
-|------|---------|--------|-------|----------|
-| **Free** | $0 | $0 | ∞ | Phase 0 only |
-| **Individual** | $99 | $990 (17% off) | 1 | Full Pro |
-| **Team** | $399 | $3,990 (17% off) | 5 | Full Pro |
-| **Enterprise** | Custom | Custom | Custom | SLA + Support |
+| Plan | Monthly | Users | Features |
+|------|---------|-------|----------|
+| **Free** | $0 | ∞ | Phase 0 only |
+| **Hefesto Professional** | $25 | 5 | Code Quality AI |
+| **OMEGA Founding Members** | $35 | 10 | Complete Suite (limited to 50 teams) |
+| **OMEGA Professional** | $49 | 15 | Complete DevOps AI Suite |
+| **Enterprise** | Custom | Custom | SLA + Support + Custom integrations |
+
+**Note:** Annual pricing discontinued. Contact sales for custom annual contracts.
 
 ---
 

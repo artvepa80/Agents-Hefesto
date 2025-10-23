@@ -59,7 +59,7 @@ def main():
     print(f"Subscription ID:   {subscription_id}")
     print(f"Tier:              Professional")
     print(f"Founding Member:   {'Yes' if is_founding else 'No'}")
-    print(f"Price:             {'$59/month (locked forever)' if is_founding else '$99/month'}")
+    print(f"Price:             {'$35/month (locked forever)' if is_founding else '$25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)'}")
     print("\n" + "=" * 70)
     print(f"LICENSE KEY:       {license_key}")
     print("=" * 70 + "\n")
@@ -125,7 +125,7 @@ support@narapallc.com"""
         template += """
 
 P.S. You're a Founding Member! 🚀
-Your price is locked at $59/month forever, even when we raise prices.
+Your price is locked at $35/month forever, even when we raise prices.
 Thank you for being an early supporter!"""
 
     return template

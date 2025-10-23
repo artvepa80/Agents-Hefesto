@@ -23,7 +23,7 @@ When you receive a Stripe payment email, extract:
 - ✅ **Subscription ID**: Starts with `sub_` (e.g., `sub_1SKNC8CKQFEi4zJF...`)
 - ✅ **Amount**: 
   - `$59.40` = Founding Member (40% discount applied)
-  - `$99.00` = Regular Professional
+  - `$25-49` = Regular Professional
 
 ---
 
@@ -34,10 +34,10 @@ Open terminal and run:
 ```bash
 cd ~/Agents-Hefesto
 
-# For Founding Member ($59/month):
+# For Founding Member ($35/month):
 python scripts/generate_key.py customer@email.com sub_ABC123XYZ true
 
-# For Regular Pro ($99/month):
+# For Regular Pro ($25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)):
 python scripts/generate_key.py customer@email.com sub_ABC123XYZ false
 ```
 

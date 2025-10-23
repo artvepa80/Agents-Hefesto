@@ -44,10 +44,10 @@ python scripts/generate_key.py customer@email.com sub_ABC123 true
 
 **Examples:**
 ```bash
-# Founding Member ($59/month forever)
+# Founding Member ($35/month forever)
 python scripts/generate_key.py john@acme.com sub_1SKN true
 
-# Regular Professional ($99/month)
+# Regular Professional ($25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro))
 python scripts/generate_key.py jane@startup.io sub_1SKP false
 ```
 
@@ -117,10 +117,10 @@ Combines license key generation, S3 presigned URL creation, and email template g
 
 **Usage:**
 ```bash
-# Founding Member ($59/month)
+# Founding Member ($35/month)
 python scripts/fulfill_order.py john@acme.com sub_1ABC123XYZ true
 
-# Regular Professional ($99/month)
+# Regular Professional ($25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro))
 python scripts/fulfill_order.py jane@startup.io sub_1XYZ789ABC false
 ```
 
@@ -135,12 +135,14 @@ python scripts/fulfill_order.py jane@startup.io sub_1XYZ789ABC false
 ```
 WHEN STRIPE PAYMENT ARRIVES:
 1. Extract: customer email + subscription ID + amount
-2. Determine tier: $59.40 = Founding (true), $99 = Regular (false)
-3. Run: python scripts/fulfill_order.py EMAIL SUB_ID true/false
+2. Determine tier: $25 = Hefesto, $35 = OMEGA Founding, $49 = OMEGA Pro
+3. Run: python scripts/fulfill_order.py EMAIL SUB_ID TIER
 4. Open: cat email_*.txt
 5. Copy and send from support@narapallc.com
 6. Log in tracking spreadsheet
 ```
+
+**Note:** Old pricing ($59/$99) deprecated. Update fulfillment scripts accordingly.
 
 **Time per customer:** ~2 minutes (fully automated key + URL + email)
 
@@ -163,7 +165,7 @@ $ python scripts/fulfill_order.py john@acme.com sub_1SKNC8ABC true
 Customer:           john@acme.com
 License Key:        HFST-A2F4-8B91-C3D7-E5F6-1234
 Founding Member:    Yes
-Price:              $59/month locked
+Price:              $35/month locked
 Email saved to:     email_john_at_acme_com_20251020_183045.txt
 ```
 

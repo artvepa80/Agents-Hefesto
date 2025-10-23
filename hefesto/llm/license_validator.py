@@ -167,7 +167,7 @@ class LicenseValidator:
                 f"   • CI/CD feedback automation\n"
                 f"   • Advanced analytics dashboard\n"
                 f"\n"
-                f"💰 PRICING: $99/month or $990/year (save 17%)\n"
+                f"💰 PRICING: $25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro) or DEPRECATED - Contact sales for annual pricing (save 17%)\n"
                 f"\n"
                 f"🛒 PURCHASE:\n"
                 f"   https://buy.stripe.com/hefesto-pro\n"

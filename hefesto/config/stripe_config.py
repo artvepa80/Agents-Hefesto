@@ -42,52 +42,14 @@ STRIPE_CONFIG = {
             "checkout_url": "https://buy.stripe.com/bJe3cugYiaxb4DIgqaeAg07",
         },
     },
-    # Payment Links
-    "payment_links": {
-        "monthly_trial": {
-            "url": "https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04",
-            "link_id": "plink_1SKNWfCKQFEi4zJFnns0YRqf",
-            "description": "Monthly $99 with 14-day trial",
-            "tier": "professional",
-            "interval": "month",
-            "has_trial": True,
-            "has_coupon": False,
-        },
-        "monthly_founding": {
-            "url": "https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
-            "url_base": "https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05",
-            "link_id": "plink_1SKO9JCKQFEi4zJFNfYyQpYK",
-            "description": "Founding Member: $59/month locked forever",
-            "tier": "professional",
-            "interval": "month",
-            "has_trial": True,
-            "has_coupon": True,
-            "coupon_code": "Founding40",
-            "final_price": 59.00,
-            "max_redemptions": 25,
-        },
-        "annual": {
-            "url": "https://buy.stripe.com/9B69AS5fAfRv9Y2ei2eAg03",
-            "link_id": "plink_1SKNUWCKQFEi4zJFTVKVxFYV",
-            "description": "Annual $990 (save $198/year)",
-            "tier": "professional",
-            "interval": "year",
-            "has_trial": False,
-            "has_coupon": False,
-        },
-    },
-    # Coupon
-    "coupons": {
-        "founding_member": {
-            "id": "FoundingMember",
-            "code": "Founding40",
-            "discount_percent": 40,
-            "duration": "forever",
-            "max_redemptions": 25,
-            "current_redemptions": 0,  # Update via Stripe API
-            "prices": {"monthly": 59.00, "annual": 594.00},
-        }
-    },
+    # Payment Links - DEPRECATED (Removed obsolete plans)
+    # Only keeping active plans:
+    # - Hefesto Professional: $25/month
+    # - OMEGA Founding Members: $35/month
+    # - OMEGA Professional: $49/month
+    "payment_links": {},
+    # Coupons - DEPRECATED
+    "coupons": {},
     # Tier Limits
     "limits": {
         "free": {
@@ -187,59 +149,54 @@ def get_limits_for_tier(tier: str) -> dict:
 
 def is_founding_member(coupon_id: str) -> bool:
     """
-    Check if customer has founding member discount.
+    DEPRECATED: Founding member discount is no longer active.
 
     Args:
         coupon_id: Stripe coupon ID
 
     Returns:
-        True if founding member
+        Always False (feature deprecated)
     """
-    return coupon_id == STRIPE_CONFIG["coupons"]["founding_member"]["id"]
+    return False
 
 
 def calculate_final_price(price_id: str, has_founding_coupon: bool = False) -> float:
     """
-    Calculate final price after applying discounts.
+    DEPRECATED: Calculate final price (simplified).
+
+    Current active prices:
+    - Hefesto Professional: $25/month
+    - OMEGA Founding Members: $35/month
+    - OMEGA Professional: $49/month
 
     Args:
         price_id: Stripe price ID
-        has_founding_coupon: Whether founding member coupon applied
+        has_founding_coupon: Ignored (deprecated)
 
     Returns:
         Final price in USD
     """
-    products = STRIPE_CONFIG["products"]
-
-    if price_id == products["professional_monthly"]["price_id"]:
-        return 59.00 if has_founding_coupon else 99.00
-
-    if price_id == products["professional_annual"]["price_id"]:
-        return 594.00 if has_founding_coupon else 990.00
+    # Return default prices from public_pricing
+    for plan_key, plan_info in STRIPE_CONFIG["public_pricing"].items():
+        if price_id in str(plan_info):
+            return plan_info["amount"]
 
     return 0.00
 
 
 def get_payment_link_by_type(link_type: str) -> dict:
     """
-    Get payment link configuration by type.
+    DEPRECATED: Get payment link configuration.
+
+    Use direct checkout URLs from public_pricing instead.
 
     Args:
-        link_type: 'trial', 'founding', or 'annual'
+        link_type: Link type (deprecated)
 
     Returns:
-        Payment link configuration dict
+        Empty dict (feature deprecated)
     """
-    links = STRIPE_CONFIG["payment_links"]
-
-    if link_type == "trial":
-        return links["monthly_trial"]
-    elif link_type == "founding":
-        return links["monthly_founding"]
-    elif link_type == "annual":
-        return links["annual"]
-
-    return links["monthly_trial"]  # Default
+    return {}
 
 
 __all__ = [

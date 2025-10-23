@@ -71,7 +71,7 @@ class SemanticAnalyzer:
             "   • 30% higher suggestion quality\n"
             "\n"
             "💰 PRICING:\n"
-            "   Individual: $99/month\n"
+            "   Individual: $25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)\n"
             "   Team (5 users): $399/month\n"
             "   Enterprise: Custom\n"
             "\n"

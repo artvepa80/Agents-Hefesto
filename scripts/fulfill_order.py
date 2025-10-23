@@ -127,7 +127,7 @@ support@narapallc.com"""
 P.S. YOU'RE A FOUNDING MEMBER! 🚀
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Your price is locked at $59/month FOREVER, even when we raise prices.
+Your price is locked at $35/month FOREVER, even when we raise prices.
 
 Thank you for being an early supporter! As a Founding Member, you get:
 • Priority support (2-4 hour response time)
@@ -188,7 +188,7 @@ def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     print(f"Subscription:       {subscription_id}")
     print(f"License Key:        {license_key}")
     print(f"Founding Member:    {'Yes' if is_founding else 'No'}")
-    print(f"Price:              {'$59/month locked' if is_founding else '$99/month'}")
+    print(f"Price:              {'$35/month locked' if is_founding else '$25/month (Hefesto) or $35/month (OMEGA Founding) or $49/month (OMEGA Pro)'}")
     print(f"Download expires:   {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d %H:%M')}")
     print(f"Email saved to:     {filename}")
     print("=" * 70)
