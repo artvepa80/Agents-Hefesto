@@ -11,7 +11,9 @@ Examples:
 """
 
 import sys
+
 from hefesto.licensing.key_generator import LicenseKeyGenerator
+
 
 def main():
     if len(sys.argv) < 3:
@@ -21,34 +23,34 @@ def main():
         print("  python generate_key.py john@acme.com sub_ABC123 true")
         print("  python generate_key.py jane@startup.io sub_XYZ789 false")
         sys.exit(1)
-    
+
     email = sys.argv[1]
     subscription_id = sys.argv[2]
-    is_founding = len(sys.argv) > 3 and sys.argv[3].lower() == 'true'
-    
+    is_founding = len(sys.argv) > 3 and sys.argv[3].lower() == "true"
+
     # Validate email format
-    if '@' not in email or '.' not in email:
+    if "@" not in email or "." not in email:
         print(f"❌ Error: Invalid email format: {email}")
         sys.exit(1)
-    
+
     # Validate subscription ID format
-    if not subscription_id.startswith('sub_'):
+    if not subscription_id.startswith("sub_"):
         print(f"❌ Error: Invalid Stripe subscription ID format: {subscription_id}")
         print("   Expected format: sub_XXXXXXXXXX")
         sys.exit(1)
-    
+
     # Generate license key
     try:
         license_key = LicenseKeyGenerator.generate(
             customer_email=email,
-            tier='professional',
+            tier="professional",
             subscription_id=subscription_id,
-            is_founding_member=is_founding
+            is_founding_member=is_founding,
         )
     except Exception as e:
         print(f"❌ Error generating license key: {e}")
         sys.exit(1)
-    
+
     # Display results
     print("\n" + "=" * 70)
     print("✅ LICENSE KEY GENERATED SUCCESSFULLY")
@@ -61,17 +63,18 @@ def main():
     print("\n" + "=" * 70)
     print(f"LICENSE KEY:       {license_key}")
     print("=" * 70 + "\n")
-    
+
     # Email template
     print("📧 EMAIL TEMPLATE FOR CUSTOMER:")
     print("-" * 70)
     print(generate_email_template(email, license_key, is_founding))
     print("-" * 70 + "\n")
 
+
 def generate_email_template(email, license_key, is_founding):
     """Generate email template for customer."""
-    name = email.split('@')[0].title()
-    
+    name = email.split("@")[0].title()
+
     template = f"""Subject: ✅ Your Hefesto Professional License Key
 
 Hi {name},
@@ -124,9 +127,9 @@ support@narapallc.com"""
 P.S. You're a Founding Member! 🚀
 Your price is locked at $59/month forever, even when we raise prices.
 Thank you for being an early supporter!"""
-    
+
     return template
+
 
 if __name__ == "__main__":
     main()
-

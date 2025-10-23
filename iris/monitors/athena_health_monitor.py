@@ -6,9 +6,10 @@ Part of OMEGA Apollo-Athena Integration - Phase 2: Iris Monitoring
 """
 
 import logging
-import requests
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
+import requests
 
 # Optional Google Cloud imports
 try:

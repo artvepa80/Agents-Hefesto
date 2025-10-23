@@ -19,11 +19,11 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional
 from enum import Enum
-import logging
+from typing import Any, Dict, List, Optional
 
 # Configure logging
 logger = logging.getLogger(__name__)

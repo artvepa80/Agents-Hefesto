@@ -8,36 +8,36 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 from hefesto.__version__ import __version__
-
-# Core exports (Phase 0 - Free)
-from hefesto.llm.suggestion_validator import (
-    SuggestionValidator,
-    SuggestionValidationResult,
-    get_validator,
+from hefesto.llm.budget_tracker import (
+    BudgetTracker,
+    TokenUsage,
+    get_budget_tracker,
 )
 from hefesto.llm.feedback_logger import (
     FeedbackLogger,
     SuggestionFeedback,
     get_feedback_logger,
 )
-from hefesto.llm.budget_tracker import (
-    BudgetTracker,
-    TokenUsage,
-    get_budget_tracker,
+
+# Core exports (Phase 0 - Free)
+from hefesto.llm.suggestion_validator import (
+    SuggestionValidationResult,
+    SuggestionValidator,
+    get_validator,
 )
 
 # Pro exports (Phase 1 - Paid)
 try:
-    from hefesto.llm.semantic_analyzer import (
-        SemanticAnalyzer,
-        CodeEmbedding,
-        get_semantic_analyzer,
-    )
     from hefesto.llm.cicd_feedback_collector import (
         CICDFeedbackCollector,
         DeploymentFeedback,
         TestFeedback,
         get_cicd_collector,
+    )
+    from hefesto.llm.semantic_analyzer import (
+        CodeEmbedding,
+        SemanticAnalyzer,
+        get_semantic_analyzer,
     )
 
     _PRO_FEATURES_AVAILABLE = True

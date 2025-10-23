@@ -7,8 +7,6 @@ __version__ = "1.0.0"
 __description__ = "Production Monitoring & Alerting with ML Anomaly Detection"
 
 # Core components
-from . import core
-from . import monitors
-from . import config
+from . import config, core, monitors
 
 __all__ = ["__version__", "__description__", "core", "monitors", "config"]

@@ -7,10 +7,11 @@ Test suite for automatic alert enrichment with Hefesto code findings.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import pytest
 import json
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Optional Google Cloud imports
 try:
@@ -21,14 +22,14 @@ except ImportError:
     GOOGLE_CLOUD_AVAILABLE = False
     bigquery = None
 
+import os
+
 # Import modules to test
 import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from iris.core.hefesto_enricher import HefestoEnricher, get_hefesto_enricher
-
 
 # ============================================================================
 # T-1: UNIT TESTS

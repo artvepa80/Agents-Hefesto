@@ -8,7 +8,9 @@ OMEGA Sports Analytics Foundation
 """
 
 import os
+
 import pytest
+
 from hefesto.llm.feedback_logger import (
     FeedbackLogger,
     SuggestionFeedback,

@@ -7,8 +7,8 @@ Validates Iris can monitor Athena agent health
 Following OMEGA CLAUDE.md standards
 """
 
-import sys
 import os
+import sys
 
 from iris.monitors.athena_health_monitor import AthenaHealthMonitor
 

@@ -5,8 +5,8 @@ Loads configuration from environment variables with sensible defaults.
 """
 
 import os
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass

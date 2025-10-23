@@ -8,9 +8,10 @@ Usage:
     python scripts/fulfill_order.py customer@email.com sub_ABC123 false
 """
 
-import sys
 import os
+import sys
 from datetime import datetime, timedelta
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -23,22 +24,20 @@ from hefesto.licensing.key_generator import LicenseKeyGenerator
 def generate_presigned_url(bucket: str, key: str, expiration: int = 604800) -> str:
     """
     Generate S3 presigned URL.
-    
+
     Args:
         bucket: S3 bucket name
         key: Object key (file path in bucket)
         expiration: URL expiration in seconds (default 7 days)
-    
+
     Returns:
         Presigned URL string
     """
-    s3_client = boto3.client('s3', region_name='us-east-1')
-    
+    s3_client = boto3.client("s3", region_name="us-east-1")
+
     try:
         url = s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket, 'Key': key},
-            ExpiresIn=expiration
+            "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=expiration
         )
         return url
     except ClientError as e:
@@ -47,10 +46,12 @@ def generate_presigned_url(bucket: str, key: str, expiration: int = 604800) -> s
         sys.exit(1)
 
 
-def generate_customer_email(email: str, license_key: str, download_url: str, is_founding: bool) -> str:
+def generate_customer_email(
+    email: str, license_key: str, download_url: str, is_founding: bool
+) -> str:
     """Generate customer welcome email with all instructions."""
-    name = email.split('@')[0].title()
-    
+    name = email.split("@")[0].title()
+
     template = f"""Subject: ✅ Your Hefesto Professional License - Download & Activate
 
 Hi {name},
@@ -135,14 +136,14 @@ Thank you for being an early supporter! As a Founding Member, you get:
 • Early access to new features
 
 Welcome to the founding team! 🎉"""
-    
+
     return template
 
 
 def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     """
     Complete order fulfillment.
-    
+
     Args:
         email: Customer email
         subscription_id: Stripe subscription ID
@@ -151,34 +152,34 @@ def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     print("\n" + "=" * 70)
     print("🚀 HEFESTO PRO - AUTOMATED FULFILLMENT")
     print("=" * 70)
-    
+
     # 1. Generate license key
     print("\n📝 Step 1/3: Generating license key...")
     license_key = LicenseKeyGenerator.generate(
         customer_email=email,
-        tier='professional',
+        tier="professional",
         subscription_id=subscription_id,
-        is_founding_member=is_founding
+        is_founding_member=is_founding,
     )
     print(f"✅ License key: {license_key}")
-    
+
     # 2. Generate S3 presigned URL
     print("\n🔗 Step 2/3: Generating download URL...")
     bucket = "hefesto-pro-dist"
     key = "wheels/hefesto_pro-1.0.0-py3-none-any.whl"
     download_url = generate_presigned_url(bucket, key, expiration=604800)
     print(f"✅ Download URL generated (expires in 7 days)")
-    
+
     # 3. Generate email
     print("\n📧 Step 3/3: Generating customer email...")
     email_content = generate_customer_email(email, license_key, download_url, is_founding)
-    
+
     # Save email to file
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"email_{email.replace('@', '_at_').replace('.', '_')}_{timestamp}.txt"
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         f.write(email_content)
-    
+
     # Print summary
     print("\n" + "=" * 70)
     print("✅ FULFILLMENT COMPLETE")
@@ -191,7 +192,7 @@ def fulfill_order(email: str, subscription_id: str, is_founding: bool):
     print(f"Download expires:   {(datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d %H:%M')}")
     print(f"Email saved to:     {filename}")
     print("=" * 70)
-    
+
     print("\n📋 NEXT STEPS:")
     print(f"1. Open email file: cat {filename}")
     print("2. Copy content")
@@ -208,31 +209,31 @@ def main():
         print("  python scripts/fulfill_order.py john@acme.com sub_ABC123 true")
         print("  python scripts/fulfill_order.py jane@startup.io sub_XYZ789 false")
         sys.exit(1)
-    
+
     email = sys.argv[1]
     subscription_id = sys.argv[2]
-    is_founding = len(sys.argv) > 3 and sys.argv[3].lower() == 'true'
-    
+    is_founding = len(sys.argv) > 3 and sys.argv[3].lower() == "true"
+
     # Validate
-    if '@' not in email or '.' not in email.split('@')[1]:
+    if "@" not in email or "." not in email.split("@")[1]:
         print(f"❌ Invalid email format: {email}")
         sys.exit(1)
-    
-    if not subscription_id.startswith('sub_'):
+
+    if not subscription_id.startswith("sub_"):
         print(f"❌ Invalid Stripe subscription ID: {subscription_id}")
         print("   Expected format: sub_XXXXXXXXXX")
         sys.exit(1)
-    
+
     # Fulfill
     try:
         fulfill_order(email, subscription_id, is_founding)
     except Exception as e:
         print(f"\n❌ Error during fulfillment: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-

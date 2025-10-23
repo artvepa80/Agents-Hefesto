@@ -4,17 +4,19 @@ Following OMEGA 4-Level Testing Pyramid: Unit → Smoke → Canary → Empirical
 """
 
 import os
+
 import pytest
-from hefesto.licensing import LicenseValidator, LicenseKeyGenerator
+
 from hefesto.config.stripe_config import STRIPE_CONFIG
+from hefesto.licensing import LicenseKeyGenerator, LicenseValidator
 
 # All tests in this module require Stripe configuration
 pytestmark = [
     pytest.mark.requires_stripe,
     pytest.mark.skipif(
         not os.getenv("STRIPE_API_KEY") and not os.getenv("STRIPE_SECRET_KEY"),
-        reason="Requires Stripe API credentials"
-    )
+        reason="Requires Stripe API credentials",
+    ),
 ]
 
 

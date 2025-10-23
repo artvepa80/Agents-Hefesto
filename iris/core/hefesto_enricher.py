@@ -11,7 +11,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
 
 # Optional Google Cloud imports
 try:

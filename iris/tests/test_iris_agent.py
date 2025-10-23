@@ -12,11 +12,12 @@ Follows OMEGA Sports Analytics QNEW Standards:
 Target: >90% code coverage
 """
 
-import pytest
-import os
 import json
+import os
 from datetime import datetime
-from unittest.mock import Mock, MagicMock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
+
+import pytest
 
 # Optional Google Cloud imports
 try:
@@ -32,7 +33,6 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from iris.core.iris_alert_manager import IrisAgent
-
 
 # ============================================================================
 # FIXTURES - Test Data and Mocks
@@ -492,8 +492,9 @@ class TestIrisBenchmarks:
 
     def test_memory_usage_monitoring_cycle(self, iris_agent_dry_run, mock_bq_client):
         """QBENCH: Test memory usage stays under 2GB (CLAUDE.md G-5 requirement)."""
-        import psutil
         import gc
+
+        import psutil
 
         mock_row = Mock(spec=bigquery.Row)
         mock_row.__getitem__ = Mock(return_value=5.0)

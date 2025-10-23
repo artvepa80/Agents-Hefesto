@@ -8,10 +8,10 @@ Author: OMEGA Development Team
 Date: 2025-10-01
 """
 
-import os
 import logging
-from typing import Optional, Dict, Any, List
+import os
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 try:
     import google.generativeai as genai
@@ -20,11 +20,11 @@ except ImportError:
         "google-generativeai not installed. Install with: pip install google-generativeai"
     )
 
-from hefesto.security.masking import mask_text, validate_masked
-from hefesto.llm.provider import LLMProvider, RefactorSuggestion, TestSuggestion, IssueFinding
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
 
+from hefesto.llm.provider import IssueFinding, LLMProvider, RefactorSuggestion, TestSuggestion
+from hefesto.security.masking import mask_text, validate_masked
 
 logger = logging.getLogger(__name__)
 

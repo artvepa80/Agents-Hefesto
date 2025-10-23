@@ -8,9 +8,10 @@ OMEGA Sports Analytics Foundation
 """
 
 import pytest
+
 from hefesto.llm.suggestion_validator import (
-    SuggestionValidator,
     SuggestionValidationResult,
+    SuggestionValidator,
     get_validator,
 )
 

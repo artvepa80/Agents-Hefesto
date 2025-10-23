@@ -7,10 +7,11 @@ Provides commands for running Hefesto API server and analyzing code.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import click
-import sys
 import os
+import sys
 from typing import Optional
+
+import click
 
 from hefesto.__version__ import __version__
 from hefesto.config import get_settings
@@ -42,6 +43,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     """
     try:
         import uvicorn
+
         from hefesto.api.health import app
     except ImportError as e:
         click.echo(f"❌ Error: {e}", err=True)
@@ -96,7 +98,7 @@ def analyze(path: str, severity: str, output: str):
 @cli.command()
 def info():
     """Show Hefesto configuration and license info."""
-    from hefesto import is_pro, get_info
+    from hefesto import get_info, is_pro
     from hefesto.llm.license_validator import get_license_validator
 
     settings = get_settings()
@@ -200,8 +202,8 @@ def activate(license_key: str):
     Usage:
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
-    from hefesto.licensing.key_generator import LicenseKeyGenerator
     from hefesto.config.config_manager import ConfigManager
+    from hefesto.licensing.key_generator import LicenseKeyGenerator
 
     click.echo("🔑 Activating Hefesto Professional...")
 
@@ -270,8 +272,8 @@ def status():
     """
     Show current license status and tier information.
     """
-    from hefesto.licensing.feature_gate import FeatureGate
     from hefesto.config.config_manager import ConfigManager
+    from hefesto.licensing.feature_gate import FeatureGate
 
     config = ConfigManager()
     license_key = config.get_license_key()

@@ -4,33 +4,38 @@ OMEGA Guardian - Complete DevOps Intelligence Suite
 Setup script for Hefesto + Iris integration
 """
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
+
 
 # Read version from version file
 def get_version():
-    version_file = os.path.join(os.path.dirname(__file__), 'omega', '__version__.py')
+    version_file = os.path.join(os.path.dirname(__file__), "omega", "__version__.py")
     if os.path.exists(version_file):
-        with open(version_file, 'r') as f:
+        with open(version_file, "r") as f:
             exec(f.read())
-        return locals()['__version__']
+        return locals()["__version__"]
     return "1.0.0"
+
 
 # Read long description from README
 def get_long_description():
-    readme_file = os.path.join(os.path.dirname(__file__), 'README.md')
+    readme_file = os.path.join(os.path.dirname(__file__), "README.md")
     if os.path.exists(readme_file):
-        with open(readme_file, 'r', encoding='utf-8') as f:
+        with open(readme_file, "r", encoding="utf-8") as f:
             return f.read()
     return "OMEGA Guardian - Complete DevOps Intelligence Suite"
 
+
 # Read requirements
 def get_requirements():
-    requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+    requirements_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
     if os.path.exists(requirements_file):
-        with open(requirements_file, 'r') as f:
-            return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        with open(requirements_file, "r") as f:
+            return [line.strip() for line in f if line.strip() and not line.startswith("#")]
     return []
+
 
 setup(
     name="hefesto-ai",
@@ -47,7 +52,7 @@ setup(
         "Documentation": "https://docs.omega-guardian.com",
         "Website": "https://omega-guardian.com",
     },
-    packages=find_packages(include=['hefesto', 'hefesto.*', 'iris', 'iris.*', 'omega', 'omega.*']),
+    packages=find_packages(include=["hefesto", "hefesto.*", "iris", "iris.*", "omega", "omega.*"]),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -118,9 +123,19 @@ setup(
     },
     zip_safe=False,
     keywords=[
-        "code-quality", "static-analysis", "technical-debt", "ml", "ai",
-        "hefesto", "code-analysis", "security-scanning", "duplicate-detection",
-        "ci-cd", "python", "code-review", "quality-assurance"
+        "code-quality",
+        "static-analysis",
+        "technical-debt",
+        "ml",
+        "ai",
+        "hefesto",
+        "code-analysis",
+        "security-scanning",
+        "duplicate-detection",
+        "ci-cd",
+        "python",
+        "code-review",
+        "quality-assurance",
     ],
     platforms=["any"],
     license="MIT",

@@ -19,10 +19,10 @@ OMEGA Sports Analytics Foundation
 """
 
 import hashlib
+import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
-import logging
+from typing import Dict, List, Optional, Tuple
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -3,10 +3,10 @@ Configuration manager for Hefesto.
 Stores license keys and user preferences locally.
 """
 
-import os
 import json
+import os
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 class ConfigManager:

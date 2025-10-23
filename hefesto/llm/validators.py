@@ -20,10 +20,10 @@ OMEGA Sports Analytics Foundation
 """
 
 import ast
-import re
 import logging
-from typing import List, Tuple, Optional, Set, Dict, Any
+import re
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from hefesto.security.masking import MASKING_PATTERNS, validate_masked
 

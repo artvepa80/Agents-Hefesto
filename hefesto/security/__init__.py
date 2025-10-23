@@ -1,11 +1,11 @@
 """Security and PII masking for Hefesto."""
 
 from hefesto.security.masking import (
-    mask_text,
+    MaskingResult,
     mask_dict_values,
+    mask_text,
     safe_snippet,
     validate_masked,
-    MaskingResult,
 )
 
 __all__ = [

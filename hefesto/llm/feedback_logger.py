@@ -18,10 +18,11 @@ OMEGA Sports Analytics Foundation
 
 import logging
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from google.cloud import bigquery
-from dataclasses import dataclass, asdict
 
 # Configure logging
 logger = logging.getLogger(__name__)

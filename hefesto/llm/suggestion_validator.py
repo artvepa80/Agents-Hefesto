@@ -16,24 +16,24 @@ OMEGA Sports Analytics Foundation
 """
 
 import ast
-import re
-import logging
 import difflib
-from typing import Dict, List, Optional, Tuple, Set, Any
+import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
-
-# Import existing validation infrastructure
-from hefesto.llm.validators import (
-    validate_syntax,
-    validate_no_secrets,
-    validate_safe_category,
-    validate_function_structure,
-    validate_sports_context,
-)
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Import semantic analyzer (Phase 1)
 from hefesto.llm.semantic_analyzer import get_semantic_analyzer
+
+# Import existing validation infrastructure
+from hefesto.llm.validators import (
+    validate_function_structure,
+    validate_no_secrets,
+    validate_safe_category,
+    validate_sports_context,
+    validate_syntax,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)

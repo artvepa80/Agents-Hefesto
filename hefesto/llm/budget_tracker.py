@@ -16,10 +16,11 @@ OMEGA Sports Analytics Foundation
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
-from google.cloud import bigquery
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
+from google.cloud import bigquery
 
 # Configure logging
 logger = logging.getLogger(__name__)
