@@ -1,31 +1,45 @@
 """
-Stripe configuration for Hefesto Professional tier.
-All IDs are from production Stripe account.
+Stripe Configuration (STUB)
+============================
+
+⚠️  THIS IS A STUB - Real Stripe configuration is in private repository.
+
+This stub provides public pricing information without exposing
+sensitive Stripe product IDs, webhook secrets, or API keys.
+
+Real Stripe integration requires private key access and is handled
+by the licensing system in the private repository.
 
 Copyright © 2025 Narapa LLC
 """
 
+# Public pricing information only
 STRIPE_CONFIG = {
-    # Product IDs
-    'products': {
-        'professional_monthly': {
-            'product_id': 'prod_TGv2JCJzh2AjrE',
-            'price_id': 'price_1SKNC8CKQFEi4zJFOVTpdD89',
-            'amount': 99.00,
+    # Public pricing (no sensitive IDs)
+    'public_pricing': {
+        'hefesto_professional': {
+            'name': 'Hefesto Professional',
+            'amount': 25.00,
             'currency': 'usd',
             'interval': 'month',
-            'trial_days': 14
+            'trial_days': 14,
+            'checkout_url': 'https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08'
         },
-        'professional_annual': {
-            'product_id': 'prod_TGvAoXzoRjWVCz',
-            'price_id': 'price_1SKNK7CKQFEi4zJFzcUqh9kz',
-            'amount': 990.00,
-            'currency': 'usd',
-            'interval': 'year',
+        'omega_founding_members': {
+            'name': 'OMEGA Guardian Founding Members',
+            'amount': 35.00,
+            'currency': 'usd', 
+            'interval': 'month',
             'trial_days': 0,
-            'monthly_equivalent': 82.50,
-            'savings': 198.00,
-            'discount_percent': 16.7
+            'checkout_url': 'https://buy.stripe.com/bJe9AScI25cR0ns4HseAg06'
+        },
+        'omega_professional': {
+            'name': 'OMEGA Guardian Professional',
+            'amount': 49.00,
+            'currency': 'usd',
+            'interval': 'month', 
+            'trial_days': 0,
+            'checkout_url': 'https://buy.stripe.com/bJe3cugYiaxb4DIgqaeAg07'
         }
     },
     
