@@ -5,7 +5,7 @@
 
 set -e  # Exit on error
 
-PROJECT_ID="${GCP_PROJECT_ID:-eminent-carver-469323-q2}"
+PROJECT_ID="${GCP_PROJECT_ID:?Error: GCP_PROJECT_ID environment variable not set}"
 REGION="${GCP_REGION:-us-central1}"
 SERVICE_NAME="iris-alert-manager-job"
 SERVICE_ACCOUNT="iris-agent-sa@${PROJECT_ID}.iam.gserviceaccount.com"

@@ -378,6 +378,28 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## 🔒 Private Repository
+
+Some internal tools and documentation are in a **private repository** for security:
+
+```bash
+# For team members with access:
+git submodule update --init
+cd private/
+
+# Available private resources:
+# - scripts/generate_key.py - License key generator
+# - scripts/fulfill_order.py - Order fulfillment with AWS S3
+# - docs/MANUAL_FULFILLMENT.md - Internal processes
+# - deployment/ - Production deployment configs
+```
+
+**Access:** Contact **team@narapallc.com**
+
+See [SECURITY.md](SECURITY.md) for our security policy.
+
+---
+
 ## 📄 License
 
 **Dual License:**

@@ -105,7 +105,33 @@ chmod +x scripts/generate_key.py
 3. Check Python version: `python --version` (need 3.10+)
 4. Clear license: `hefesto deactivate` then rerun tests
 
-### `fulfill_order.py` ⭐ RECOMMENDED
+---
+
+## ⚠️  Private Scripts
+
+Some internal scripts are in the **private repository** for security:
+
+- **`generate_key.py`** - Real implementation in `private/scripts/`
+- **`fulfill_order.py`** - Real implementation in `private/scripts/`
+
+These scripts contain proprietary business logic and require credentials.
+
+### Access Private Scripts
+
+```bash
+# Initialize private repository submodule
+git submodule update --init
+
+# Run private scripts
+python private/scripts/generate_key.py [email] [sub_id] [is_founding]
+python private/scripts/fulfill_order.py [email] [sub_id] [is_founding]
+```
+
+For access to the private repository, contact: **team@narapallc.com**
+
+---
+
+### `fulfill_order.py` (PRIVATE) ⭐ RECOMMENDED
 **Automated fulfillment for Hefesto Pro orders with S3 distribution.**
 
 Combines license key generation, S3 presigned URL creation, and email template generation in one command.
