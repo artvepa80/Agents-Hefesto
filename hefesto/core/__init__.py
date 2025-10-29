@@ -5,7 +5,10 @@ This module contains the core orchestration logic for code analysis.
 """
 
 # Import core models
-from hefesto.core.models import (  # Enums; Validation Models; Code Issue Models; Feedback Models; Budget Models; LLM Event Models; Semantic Models (Pro); CICD Models (Pro); License Models; Utility Functions
+# Enums; Validation Models; Code Issue Models; Feedback Models
+# Budget Models; LLM Event Models; Semantic Models (Pro)
+# CICD Models (Pro); License Models; Utility Functions
+from hefesto.core.models import (
     BudgetStatus,
     BudgetStatusInfo,
     BudgetSummary,
@@ -35,7 +38,7 @@ from hefesto.core.models import (  # Enums; Validation Models; Code Issue Models
 
 # Try to import analyzer engine if it exists
 try:
-    from hefesto.core.analyzer_engine import AnalyzerEngine
+    from hefesto.core.analyzer_engine import AnalyzerEngine  # noqa: F401
 
     _has_analyzer = True
 except ImportError:

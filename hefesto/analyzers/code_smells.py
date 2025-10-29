@@ -83,10 +83,16 @@ class CodeSmellAnalyzer:
                             column=node.col_offset,
                             issue_type=AnalysisIssueType.LONG_PARAMETER_LIST,
                             severity=AnalysisIssueSeverity.MEDIUM,
-                            message=f"Function '{node.name}' has too many parameters ({param_count})",
+                            message=(
+                                f"Function '{node.name}' has too many "
+                                f"parameters ({param_count})"
+                            ),
                             function_name=node.name,
-                            suggestion="Consider using a config object, dataclass, or **kwargs. "
-                            "Group related parameters into objects.",
+                            suggestion=(
+                                "Consider using a config object, dataclass, "
+                                "or **kwargs. Group related parameters into "
+                                "objects."
+                            ),
                             metadata={"param_count": param_count},
                         )
                     )
@@ -212,7 +218,10 @@ class CodeSmellAnalyzer:
                         issue_type=AnalysisIssueType.INCOMPLETE_TODO,
                         severity=AnalysisIssueSeverity.LOW,
                         message=f"{marker} found: {comment[:50]}...",
-                        suggestion="Either complete the TODO or create a tracked issue and remove the comment",
+                        suggestion=(
+                            "Either complete the TODO or create a tracked "
+                            "issue and remove the comment"
+                        ),
                         metadata={"marker": marker, "comment": comment},
                     )
                 )

@@ -6,7 +6,6 @@ Generates interactive HTML reports with basic styling.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-from datetime import datetime
 from typing import List
 
 from hefesto.core.analysis_models import (
@@ -215,7 +214,9 @@ class HTMLReporter:
                 </div>
                 <div class="summary-item">
                     <div class="summary-label">Critical</div>
-                    <div class="summary-value" style="color: #f44336;">{summary.critical_issues}</div>
+                    <div class="summary-value" style="color: #f44336;">
+                        {summary.critical_issues}
+                    </div>
                 </div>
                 <div class="summary-item">
                     <div class="summary-label">High</div>

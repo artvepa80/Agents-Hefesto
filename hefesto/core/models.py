@@ -581,8 +581,8 @@ class SimilarityResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            "code1": code1,
-            "code2": code2,
+            "code1": self.code1,
+            "code2": self.code2,
             "similarity_score": self.similarity_score,
             "is_duplicate": self.is_duplicate,
             "threshold": self.threshold,

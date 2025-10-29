@@ -220,7 +220,7 @@ class AnalyzerEngine:
                 issue.ml_confidence = 0.85  # High confidence by default
                 issue.ml_enhanced = True
 
-            except Exception as e:
+            except Exception:
                 # ML enhancement is optional, continue without it
                 issue.ml_enhanced = False
 
@@ -258,7 +258,7 @@ class AnalyzerEngine:
             # Parse to AST
             try:
                 tree = ast.parse(code, filename=str(file_path))
-            except SyntaxError as e:
+            except SyntaxError:
                 # File has syntax errors, skip it
                 return None
 
@@ -289,7 +289,7 @@ class AnalyzerEngine:
                 analysis_duration_ms=duration_ms,
             )
 
-        except Exception as e:
+        except Exception:
             # Skip files that can't be read or analyzed
             return None
 

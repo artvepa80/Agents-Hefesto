@@ -6,7 +6,7 @@ Generates formatted text output for the terminal with colors and structure.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-from typing import Dict, List
+from typing import List
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -60,36 +60,20 @@ class TextReporter:
         all_issues = report.get_all_issues()
 
         if report.summary.critical_issues > 0:
-            lines.append(
-                self._format_severity_section(
-                    AnalysisIssueSeverity.CRITICAL,
-                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.CRITICAL],
-                )
-            )
+            critical = [i for i in all_issues if i.severity == AnalysisIssueSeverity.CRITICAL]
+            lines.append(self._format_severity_section(AnalysisIssueSeverity.CRITICAL, critical))
 
         if report.summary.high_issues > 0:
-            lines.append(
-                self._format_severity_section(
-                    AnalysisIssueSeverity.HIGH,
-                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.HIGH],
-                )
-            )
+            high = [i for i in all_issues if i.severity == AnalysisIssueSeverity.HIGH]
+            lines.append(self._format_severity_section(AnalysisIssueSeverity.HIGH, high))
 
         if report.summary.medium_issues > 0:
-            lines.append(
-                self._format_severity_section(
-                    AnalysisIssueSeverity.MEDIUM,
-                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.MEDIUM],
-                )
-            )
+            medium = [i for i in all_issues if i.severity == AnalysisIssueSeverity.MEDIUM]
+            lines.append(self._format_severity_section(AnalysisIssueSeverity.MEDIUM, medium))
 
         if report.summary.low_issues > 0:
-            lines.append(
-                self._format_severity_section(
-                    AnalysisIssueSeverity.LOW,
-                    [i for i in all_issues if i.severity == AnalysisIssueSeverity.LOW],
-                )
-            )
+            low = [i for i in all_issues if i.severity == AnalysisIssueSeverity.LOW]
+            lines.append(self._format_severity_section(AnalysisIssueSeverity.LOW, low))
 
         # Footer
         lines.append("")
@@ -99,22 +83,27 @@ class TextReporter:
 
     def _format_header(self) -> str:
         """Format report header."""
-        return (
-            f"{self.COLORS['BOLD']}🔨 HEFESTO CODE ANALYSIS{self.COLORS['RESET']}\n"
-            "========================"
-        )
+        bold = self.COLORS["BOLD"]
+        reset = self.COLORS["RESET"]
+        return f"{bold}🔨 HEFESTO CODE ANALYSIS{reset}\n" "========================"
 
     def _format_summary(self, summary) -> str:
         """Format summary section."""
-        lines = [f"{self.COLORS['BOLD']}📊 Summary:{self.COLORS['RESET']}"]
+        bold = self.COLORS["BOLD"]
+        reset = self.COLORS["RESET"]
+        lines = [f"{bold}📊 Summary:{reset}"]
         lines.append(f"   Files analyzed: {summary.files_analyzed}")
         lines.append(f"   Issues found: {summary.total_issues}")
 
         if summary.total_issues > 0:
-            lines.append(f"   Critical: {self._colorize('CRITICAL', summary.critical_issues)}")
-            lines.append(f"   High: {self._colorize('HIGH', summary.high_issues)}")
-            lines.append(f"   Medium: {self._colorize('MEDIUM', summary.medium_issues)}")
-            lines.append(f"   Low: {self._colorize('LOW', summary.low_issues)}")
+            critical = self._colorize("CRITICAL", summary.critical_issues)
+            lines.append(f"   Critical: {critical}")
+            high = self._colorize("HIGH", summary.high_issues)
+            lines.append(f"   High: {high}")
+            medium = self._colorize("MEDIUM", summary.medium_issues)
+            lines.append(f"   Medium: {medium}")
+            low = self._colorize("LOW", summary.low_issues)
+            lines.append(f"   Low: {low}")
 
         return "\n".join(lines)
 

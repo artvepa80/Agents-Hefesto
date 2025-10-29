@@ -10,7 +10,6 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import ast
-import re
 from typing import List
 
 from hefesto.core.analysis_models import (

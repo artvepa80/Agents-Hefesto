@@ -100,9 +100,12 @@ class SecurityAnalyzer:
                                     column=node.col_offset,
                                     issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
                                     severity=AnalysisIssueSeverity.HIGH,
-                                    message="Potential SQL injection via f-string",
-                                    suggestion="Use parameterized queries instead:\n"
-                                    "cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))",
+                                    message=("Potential SQL injection via f-string"),
+                                    suggestion=(
+                                        "Use parameterized queries instead:\n"
+                                        "cursor.execute('SELECT * FROM users "
+                                        "WHERE id = ?', (user_id,))"
+                                    ),
                                     metadata={"pattern": "f-string"},
                                 )
                             )
