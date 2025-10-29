@@ -2,8 +2,9 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-Dual%20(MIT%20%2B%20Commercial)-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/artvepa80/Agents-Hefesto/actions)
+[![License](https://img.shields.io/badge/license-MIT%20%2F%20Commercial-green.svg)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
+[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
 **Stop bad code before it reaches production. Hefesto is your autonomous code quality guardian with integrated static analysis, ML-powered validation, and intelligent refactoring.**
 
@@ -64,7 +65,7 @@ hefesto install-hook
 - JSON (machine-readable)
 - HTML (interactive report)
 
-### 🌟 PRO Tier ($25/month)
+### 🌟 PRO Tier ($20/month)
 
 Everything in FREE, plus:
 
@@ -315,21 +316,109 @@ ML Enhancement: ❌ Disabled
 
 ## 💰 Pricing
 
-| Feature | FREE | PRO ($25/mo) |
+| Feature | FREE | PRO ($20/mo) |
 |---------|------|--------------|
-| **Static Analysis** | ✅ | ✅ |
-| **22+ Quality Checks** | ✅ | ✅ |
-| **Phase 0 Validation** | ✅ | ✅ |
-| **Pre-Push Hook** | ✅ | ✅ |
-| **Text/JSON/HTML Reports** | ✅ | ✅ |
-| **ML Semantic Analysis** | ❌ | ✅ |
-| **Duplicate Detection** | ❌ | ✅ |
-| **BigQuery Analytics** | ❌ | ✅ |
-| **Priority Support** | ❌ | ✅ |
+| Static Analysis | ✅ | ✅ |
+| 22+ Quality Checks | ✅ | ✅ |
+| Phase 0 Validation | ✅ | ✅ |
+| Pre-Push Hook | ✅ | ✅ |
+| Text/JSON/HTML Reports | ✅ | ✅ |
+| ML Semantic Analysis | ❌ | ✅ |
+| Duplicate Detection | ❌ | ✅ |
+| BigQuery Analytics | ❌ | ✅ |
+| Priority Support (4-8h) | ❌ | ✅ |
 
-**Start Free Trial:** [14 days, no credit card required](https://buy.stripe.com/hefesto-pro-trial)
+---
 
-**Founding Members:** First 100 users get 40% off forever → **$15/month**
+### 🆓 FREE Tier
+```bash
+pip install hefesto-ai
+hefesto analyze .
+```
+
+Perfect for individual developers and open-source projects.
+
+**Includes:**
+- All static analyzers (Complexity, Security, Code Smells, Best Practices)
+- Phase 0 validation layer with false positive filtering
+- Pre-commit hook integration
+- Multiple report formats: Text, JSON, HTML
+- MIT License (commercial use allowed)
+
+---
+
+### 💎 PRO Tier - $20/month
+
+[![Start 14-Day Free Trial](https://img.shields.io/badge/Start%2014--Day%20Free%20Trial-5469d4?style=for-the-badge&logo=stripe&logoColor=white)](https://buy.stripe.com/4gMfZg4bw48N3zEgqaeAg0a)
+
+**Everything in FREE, plus:**
+- 🧠 **ML Semantic Analysis** - Understand code meaning, not just syntax
+- 🔍 **Duplicate Detection** - Find semantically similar code across your codebase
+- 📊 **BigQuery Analytics** - Track quality trends and identify bottlenecks
+- 🚀 **Priority Support** - 4-8 hour response time
+- 📈 **Pattern Learning** - ML learns from your codebase patterns
+
+**✨ 14-day free trial • No credit card required • Cancel anytime**
+
+---
+
+### 🎁 FOUNDING MEMBER OFFER
+
+**🔥 Limited to first 50 customers only! 🔥**
+
+[![Become a Founding Member](https://img.shields.io/badge/Become%20a%20Founding%20Member-FFD700?style=for-the-badge&logo=stripe&logoColor=black)](https://buy.stripe.com/4gMfZg4bw48N3zEgqaeAg0a)
+
+**Exclusive benefits:**
+- 💰 **40% OFF Forever** - Use code `FOUNDING100` at checkout
+- 💵 **$20/month → $12/month** - Grandfathered permanently
+- 🎯 **All PRO features** included
+- 🌟 **Priority feature requests** - Your voice shapes the roadmap
+- 👥 **Direct access** to founding team
+- 🏆 **Founding Member badge** in dashboard
+
+**How to claim:**
+1. Click "Become a Founding Member" button above
+2. Enter code `FOUNDING100` at checkout
+3. Enjoy 40% OFF forever!
+
+⏰ **Only 50 spots available • Offer expires Dec 31, 2025**
+
+---
+
+### 💳 Payment & Security
+
+**Accepted payment methods:**
+- 💳 Credit/Debit Cards (Visa, Mastercard, Amex, Discover)
+- 🍎 Apple Pay
+- 🤖 Google Pay
+- 💸 Klarna (Buy Now, Pay Later)
+- 🔗 Link (Stripe's one-click checkout)
+- 💵 Cash App Pay
+- 📦 Amazon Pay
+
+**Secure checkout powered by Stripe** • **PCI DSS compliant** • **Cancel anytime, no questions asked**
+
+---
+
+### ❓ Frequently Asked Questions
+
+**Q: What happens after the 14-day trial?**
+A: You'll be charged $20/month (or $12/month with FOUNDING100 code). Cancel anytime before the trial ends with no charge.
+
+**Q: Can I cancel anytime?**
+A: Yes! No contracts, no penalties. Cancel with one click from your dashboard.
+
+**Q: Is the Founding Member discount really forever?**
+A: Yes! Your rate is locked at $12/month for as long as you remain a customer, even if prices increase later.
+
+**Q: Do I need a credit card for the trial?**
+A: Yes, but you won't be charged until after the 14-day trial period.
+
+**Q: What if I'm not satisfied?**
+A: Contact us within 30 days for a full refund, no questions asked.
+
+**Q: What about OMEGA Guardian?**
+A: OMEGA Guardian (Hefesto + Iris production monitoring + ML correlation) is planned for Q1 2026. Start with Hefesto now and upgrade when available!
 
 ---
 
@@ -418,15 +507,33 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🚀 What's Next?
+## 🛣️ Roadmap
 
-**Roadmap:**
-- [ ] Auto-fix for simple issues
-- [ ] VS Code extension
-- [ ] GitHub App integration
-- [ ] Custom rule creation
-- [ ] Team analytics dashboard
-- [ ] JavaScript/TypeScript support
+### ✅ Available Now (v4.0.0)
+- Complete static analysis suite
+- ML semantic analysis
+- Pre-commit hook integration
+- Multiple report formats
+- BigQuery analytics
+
+### 🔜 Coming Q1 2026: OMEGA Guardian Suite
+
+The complete DevOps intelligence platform combining:
+- **Hefesto** (Code Quality) - Already available
+- **Iris** (Production Monitoring) - In development
+- **ML Correlation Engine** - Automatically links code warnings to production incidents
+
+**OMEGA Guardian will answer:** "Which ignored code warnings caused production incidents and what did they cost?"
+
+Interested in early access? [Join the waitlist](mailto:sales@narapallc.com?subject=OMEGA%20Guardian%20Early%20Access)
+
+### 🎯 Future Enhancements
+- Auto-fix for simple issues
+- VS Code extension
+- GitHub App integration
+- Custom rule creation
+- Team analytics dashboard
+- JavaScript/TypeScript support
 
 **Vote on features:** [Roadmap Discussion](https://github.com/artvepa80/Agents-Hefesto/discussions/categories/roadmap)
 
