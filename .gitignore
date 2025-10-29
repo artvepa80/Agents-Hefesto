@@ -89,3 +89,10 @@ scripts/__pycache__/
 # Generated emails (fulfillment)
 email_*.txt
 
+# GCP Credentials
+*service-account*.json
+gcp-*.json
+
+# Test/Dev Environments
+test_install_env/
+
