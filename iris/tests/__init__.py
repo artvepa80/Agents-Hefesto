@@ -1,3 +1,0 @@
-"""
-Iris Test Suite
-"""

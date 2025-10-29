@@ -356,8 +356,8 @@ hefesto analyze . --verbose
 3. **Update configuration**:
    ```bash
    # Old
-   export GCP_PROJECT_ID='eminent-carver-469323-q2'
-   
+   export GCP_PROJECT_ID='${GCP_PROJECT_ID}'
+
    # New
    export GCP_PROJECT_ID='your-project-id'
    ```
