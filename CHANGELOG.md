@@ -5,6 +5,70 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2025-10-30
+
+### Added - REST API (Phases 1-4)
+
+#### Phase 1: Health & Monitoring
+- `GET /health` - Basic health check with response time
+- `GET /api/v1/status` - Detailed system status with analyzer info
+- Request ID middleware for distributed tracing
+- Timing middleware for performance monitoring
+- Structured logging with request context
+
+#### Phase 2: Analysis Endpoints
+- `POST /api/v1/analyze` - Analyze single file or directory
+- `GET /api/v1/analyze/{analysis_id}` - Retrieve cached analysis results
+- `POST /api/v1/analyze/batch` - Batch analysis (up to 100 paths)
+- In-memory caching with TTL for fast retrieval
+- Async analysis processing for large directories
+- Performance: <500ms single file, <5s batch (P95)
+
+#### Phase 3: Findings Management
+- `GET /api/v1/findings` - List findings with filters and pagination
+- `GET /api/v1/findings/{finding_id}` - Get finding details by ID
+- `PATCH /api/v1/findings/{finding_id}` - Update finding status/notes
+- BigQuery integration for persistence (user-owned projects)
+- Graceful degradation when BigQuery not configured
+- Advanced filtering: severity, status, file_path, date range
+- Performance: <200ms list, <100ms detail, <300ms update (P95)
+
+#### Phase 4: IRIS Integration Foundation
+- BigQuery schema for production correlation
+- 90-day correlation window for historical analysis
+- Alert enrichment pipeline with Hefesto findings
+- Shared data layer with IRIS monitoring agent
+- <100ms correlation queries with BigQuery clustering
+
+### Testing
+- 118+ tests passing (4-level TDD pyramid following CLAUDE.md)
+- Unit tests (40+): Business logic, validation, data transformation
+- Smoke tests (32+): System initialization, imports, critical paths
+- Canary tests (28+): Real operations, end-to-end flows
+- Empirical tests (18+): Performance validation, production workloads
+- Code coverage: 85-100% on new modules
+
+### Documentation
+- Complete API documentation with OpenAPI 3.0 (Swagger UI at `/docs`)
+- BigQuery setup guide for users (bring your own GCP project)
+- SQL schema for findings persistence (with partitioning & clustering)
+- IRIS integration architecture and data contracts
+- Performance benchmarks and best practices
+- API usage examples for all endpoints
+
+### Infrastructure
+- FastAPI framework for high-performance async API
+- Pydantic v2 for request/response validation with type safety
+- Google Cloud BigQuery SDK for scalable persistence
+- Structured logging with request tracing and correlation IDs
+- CORS middleware for web integration
+- Retry logic with exponential backoff for BigQuery operations
+- Health checks for dependency monitoring
+
+### Products & Pricing
+- Hefesto Standalone: Free tier (CLI) + Pro tier ($19/month with API access)
+- Omega Guardian: $35/month (Hefesto Pro + IRIS production correlation)
+
 ## [4.0.0] - 2025-01-23
 
 ### 🎉 Major Release: Complete Code Analysis System
