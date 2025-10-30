@@ -391,5 +391,128 @@ def status():
     click.echo("═" * 60)
 
 
+@cli.command()
+@click.option(
+    "--project-root", type=click.Path(exists=True), default=".", help="Project root directory"
+)  # noqa: E501
+def check_ci_parity(project_root: str):
+    """
+    Check for discrepancies between local and CI environments.
+
+    This validator compares:
+    - Tool versions (flake8, black, isort, pytest)
+    - Flake8 configuration (max-line-length, ignore rules)
+    - Python version compatibility
+
+    Example:
+        hefesto check-ci-parity
+        hefesto check-ci-parity --project-root /path/to/project
+    """
+    from pathlib import Path
+
+    from hefesto.validators.ci_parity import CIParityChecker
+
+    click.echo("🔍 Checking CI parity...")
+    click.echo("")
+
+    checker = CIParityChecker(Path(project_root))
+    issues = checker.check_all()
+    checker.print_report(issues)
+
+    # Exit with error if HIGH priority issues found
+    high_priority = [i for i in issues if i.severity.value == "HIGH"]
+    if high_priority:
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("test_directory", type=click.Path(exists=True), default="tests")
+def check_test_contradictions(test_directory: str):
+    """
+    Detect contradictory assertions in test suite.
+
+    Finds tests that call the same function with the same inputs
+    but expect different outputs - a sign of logical inconsistency.
+
+    Example:
+        hefesto check-test-contradictions tests/
+        hefesto check-test-contradictions .
+    """
+    from hefesto.validators.test_contradictions import TestContradictionDetector
+
+    click.echo(f"🔍 Checking test contradictions in: {test_directory}")
+    click.echo("")
+
+    detector = TestContradictionDetector(test_directory)
+    contradictions = detector.find_contradictions()
+    detector.print_report(contradictions)
+
+    # Exit with error if contradictions found
+    if contradictions:
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--force", is_flag=True, help="Overwrite existing hooks")
+def install_hooks(force: bool):
+    """
+    Install Hefesto git pre-push hook.
+
+    The pre-push hook runs before git push to prevent CI failures:
+    - Black formatting check
+    - isort import ordering check
+    - Flake8 linting check (prevents CI failures!)
+    - Unit tests
+    - Hefesto code analysis
+
+    Example:
+        hefesto install-hooks
+        hefesto install-hooks --force  # Overwrite existing hook
+    """
+    import shutil
+    from pathlib import Path
+
+    # Check if we're in a git repo
+    git_dir = Path(".git")
+    if not git_dir.exists():
+        click.echo("❌ Not a git repository!", err=True)
+        click.echo("   Run this command from the root of your git repository.")
+        sys.exit(1)
+
+    # Create hooks directory if it doesn't exist
+    hooks_dir = git_dir / "hooks"
+    hooks_dir.mkdir(exist_ok=True)
+
+    # Source hook file
+    source_hook = Path(__file__).parent.parent / "hooks" / "pre_push.py"
+
+    if not source_hook.exists():
+        click.echo(f"❌ Hook source not found: {source_hook}", err=True)
+        sys.exit(1)
+
+    # Destination hook file
+    dest_hook = hooks_dir / "pre-push"
+
+    # Check if hook already exists
+    if dest_hook.exists() and not force:
+        click.echo("⚠️  Pre-push hook already exists!")
+        click.echo(f"   Location: {dest_hook}")
+        click.echo("\n   Use --force to overwrite, or remove the existing hook manually.")
+        sys.exit(1)
+
+    # Copy hook
+    shutil.copy(source_hook, dest_hook)
+
+    # Make executable
+    dest_hook.chmod(0o755)
+
+    click.echo("✅ Pre-push hook installed successfully!")
+    click.echo(f"   Location: {dest_hook}")
+    click.echo("\n   The hook will run automatically before every 'git push'.")
+    click.echo("   It checks: Black, isort, Flake8, tests, and Hefesto analysis.")
+    click.echo("\n💡 To test the hook manually:")
+    click.echo(f"   python3 {dest_hook}")
+
+
 if __name__ == "__main__":
     cli()
