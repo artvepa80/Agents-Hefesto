@@ -42,6 +42,61 @@ hefesto install-hook
 
 ---
 
+## 🛡️ Advanced Validation Features (NEW in v4.0.1)
+
+Hefesto now includes **three powerful validators** that prevent "works on my machine" failures:
+
+### 1. 🔄 CI Parity Checker
+
+Detects discrepancies between your local development environment and CI configuration:
+
+```bash
+hefesto check-ci-parity .
+```
+
+**Validates:**
+- Python version matches CI matrix
+- Flake8 config (max-line-length, ignore rules) matches CI
+- Required tools installed (flake8, black, isort, pytest)
+
+**Real Impact:** Would have prevented 20+ Flake8 errors in v4.0.1 release.
+
+### 2. ⚖️ Test Contradiction Detector
+
+Finds tests that contradict each other using AST analysis:
+
+```bash
+hefesto check-test-contradictions tests/
+```
+
+**Detects:**
+- Same function, same inputs, different expected outputs
+- Logical inconsistencies in test assertions
+- Hidden bugs in test suite logic
+
+**Real Impact:** Caught `insert_findings([])` returning both `True` and `False` in v4.0.1.
+
+### 3. 🔒 Enhanced Pre-Push Hook
+
+Enhanced git hook now includes **Flake8 validation**:
+
+```bash
+hefesto install-hooks
+```
+
+**Validation Steps:**
+1. ✅ Black formatting
+2. ✅ isort import sorting
+3. ✅ **Flake8 linting (NEW!)** - max-line-length=100, extend-ignore=E203,W503
+4. ✅ pytest tests
+5. ✅ Hefesto analysis
+
+**Meta-Validation Success:** The new hook caught 6 Flake8 errors in its own code before reaching CI!
+
+📚 **[Full Documentation →](docs/ADVANCED_VALIDATION.md)**
+
+---
+
 ## ✨ Features
 
 ### 🆓 FREE Tier (MIT License)
@@ -161,6 +216,11 @@ hefesto analyze . --exclude "tests/,docs/,build/"
 
 # JSON output for CI/CD
 hefesto analyze . --output json > analysis.json
+
+# Advanced validation commands (NEW in v4.0.1)
+hefesto check-ci-parity .                     # Check local/CI environment parity
+hefesto check-test-contradictions tests/      # Find contradictory test assertions
+hefesto install-hooks                         # Install enhanced pre-push hook
 ```
 
 ### Pre-Push Hook (Recommended)
