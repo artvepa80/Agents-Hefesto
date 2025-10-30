@@ -132,7 +132,8 @@ class FeatureGate:
                         f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
                         f"   \n"
                         f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                        f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40"
+                        f"   → https://buy.stripe.com/"
+                        f"dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40"
                     )
 
                 return func(*args, **kwargs)
@@ -164,11 +165,41 @@ class FeatureAccessDenied(Exception):
 
 
 # Convenience decorators for common features
-requires_pro = lambda func: FeatureGate.requires_tier("professional")(func)
-requires_ml_analysis = lambda func: FeatureGate.requires("ml_semantic_analysis")(func)
-requires_ai_recommendations = lambda func: FeatureGate.requires("ai_recommendations")(func)
-requires_security_scanning = lambda func: FeatureGate.requires("security_scanning")(func)
-requires_automated_triage = lambda func: FeatureGate.requires("automated_triage")(func)
-requires_integrations = lambda func: FeatureGate.requires("github_gitlab_bitbucket")(func)
-requires_priority_support = lambda func: FeatureGate.requires("priority_support")(func)
-requires_analytics = lambda func: FeatureGate.requires("analytics_dashboard")(func)
+def requires_pro(func):  # noqa: E731
+    """Require professional tier."""
+    return FeatureGate.requires_tier("professional")(func)
+
+
+def requires_ml_analysis(func):  # noqa: E731
+    """Require ML semantic analysis feature."""
+    return FeatureGate.requires("ml_semantic_analysis")(func)
+
+
+def requires_ai_recommendations(func):  # noqa: E731
+    """Require AI recommendations feature."""
+    return FeatureGate.requires("ai_recommendations")(func)
+
+
+def requires_security_scanning(func):  # noqa: E731
+    """Require security scanning feature."""
+    return FeatureGate.requires("security_scanning")(func)
+
+
+def requires_automated_triage(func):  # noqa: E731
+    """Require automated triage feature."""
+    return FeatureGate.requires("automated_triage")(func)
+
+
+def requires_integrations(func):  # noqa: E731
+    """Require GitHub/GitLab/Bitbucket integrations."""
+    return FeatureGate.requires("github_gitlab_bitbucket")(func)
+
+
+def requires_priority_support(func):  # noqa: E731
+    """Require priority support feature."""
+    return FeatureGate.requires("priority_support")(func)
+
+
+def requires_analytics(func):  # noqa: E731
+    """Require analytics dashboard feature."""
+    return FeatureGate.requires("analytics_dashboard")(func)
