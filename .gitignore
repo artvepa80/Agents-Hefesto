@@ -107,3 +107,18 @@ gcp_config.yaml
 # Test/Dev Environments
 test_install_env/
 
+.env.omega
+
+
+# === OMEGA GUARDIAN CONFIGURATION (SENSITIVE) ===
+# NEVER commit .env.omega - contains license key
+.env.omega
+*.env.omega
+config/.env.omega
+
+# === PRIVATE REPOSITORY FILES ===
+# These belong in Agents-Hefesto-Pro-Private only
+private/licensing/subscription.py
+private/scripts/provision*.py
+internal/
+customer_data/
