@@ -441,12 +441,12 @@ class BigQueryClient:
         Returns:
             True if successful, False otherwise
         """
+        if not findings:
+            return True  # Empty list is always successful (no-op)
+
         if not self.is_configured:
             logger.debug("BigQuery not configured, cannot insert findings")
             return False
-
-        if not findings:
-            return True
 
         try:
             # Transform findings to BigQuery format
