@@ -50,9 +50,7 @@ class TestFindingsListPerformance(unittest.TestCase):
         p95 = durations_sorted[8]  # 9th out of 10 = P95
 
         # Phase 3 target: <200ms P95
-        assert (
-            p95 < 200
-        ), f"List findings P95 {p95:.2f}ms exceeds target of 200ms"
+        assert p95 < 200, f"List findings P95 {p95:.2f}ms exceeds target of 200ms"
 
     def test_list_findings_with_filters_performance(self):
         """Test list findings with filters maintains performance."""
@@ -60,9 +58,7 @@ class TestFindingsListPerformance(unittest.TestCase):
 
         for _ in range(10):
             start_time = time.time()
-            response = client.get(
-                "/api/v1/findings?limit=50&severity=HIGH&status=new"
-            )
+            response = client.get("/api/v1/findings?limit=50&severity=HIGH&status=new")
             duration_ms = (time.time() - start_time) * 1000
 
             assert response.status_code == 200
@@ -72,9 +68,7 @@ class TestFindingsListPerformance(unittest.TestCase):
         p95 = durations_sorted[8]
 
         # Should still meet <200ms target with filters
-        assert (
-            p95 < 200
-        ), f"List findings with filters P95 {p95:.2f}ms exceeds target"
+        assert p95 < 200, f"List findings with filters P95 {p95:.2f}ms exceeds target"
 
     def test_list_findings_pagination_performance(self):
         """Test pagination doesn't significantly degrade performance."""
@@ -131,9 +125,7 @@ class TestFindingDetailPerformance(unittest.TestCase):
         p95 = durations_sorted[8]
 
         # Phase 3 target: <100ms P95
-        assert (
-            p95 < 100
-        ), f"Get finding by ID P95 {p95:.2f}ms exceeds target of 100ms"
+        assert p95 < 100, f"Get finding by ID P95 {p95:.2f}ms exceeds target of 100ms"
 
     def test_get_finding_consistency(self):
         """Test get finding response time consistency."""
@@ -153,9 +145,7 @@ class TestFindingDetailPerformance(unittest.TestCase):
         p50 = durations_sorted[10]  # 50th percentile
         p99 = durations_sorted[19]  # 99th percentile
 
-        assert (
-            p99 < p50 * 3
-        ), f"Response time inconsistent: P99={p99:.2f}ms, P50={p50:.2f}ms"
+        assert p99 < p50 * 3, f"Response time inconsistent: P99={p99:.2f}ms, P50={p50:.2f}ms"
 
 
 class TestFindingUpdatePerformance(unittest.TestCase):
@@ -192,9 +182,7 @@ class TestFindingUpdatePerformance(unittest.TestCase):
         p95 = durations_sorted[8]
 
         # Phase 3 target: <300ms P95
-        assert (
-            p95 < 300
-        ), f"Update finding P95 {p95:.2f}ms exceeds target of 300ms"
+        assert p95 < 300, f"Update finding P95 {p95:.2f}ms exceeds target of 300ms"
 
 
 class TestConcurrentRequests(unittest.TestCase):
@@ -221,9 +209,7 @@ class TestConcurrentRequests(unittest.TestCase):
 
         # Average duration shouldn't be drastically worse than single request
         avg_duration = sum(d for _, d in results) / len(results)
-        assert (
-            avg_duration < 400
-        ), f"Concurrent requests average {avg_duration:.2f}ms (too slow)"
+        assert avg_duration < 400, f"Concurrent requests average {avg_duration:.2f}ms (too slow)"
 
 
 class TestBigQueryOptimization(unittest.TestCase):
@@ -249,9 +235,7 @@ class TestBigQueryOptimization(unittest.TestCase):
         avg_clustered = sum(durations_clustered) / len(durations_clustered)
 
         # Should be reasonably fast due to clustering
-        assert (
-            avg_clustered < 250
-        ), f"Clustered query {avg_clustered:.2f}ms slower than expected"
+        assert avg_clustered < 250, f"Clustered query {avg_clustered:.2f}ms slower than expected"
 
     def test_partitioned_query_performance(self):
         """Test queries using partitioned fields perform well."""
@@ -264,9 +248,7 @@ class TestBigQueryOptimization(unittest.TestCase):
         durations_partitioned = []
         for _ in range(5):
             start_time = time.time()
-            response = client.get(
-                "/api/v1/findings?start_date=2025-01-01T00:00:00Z&limit=50"
-            )
+            response = client.get("/api/v1/findings?start_date=2025-01-01T00:00:00Z&limit=50")
             duration_ms = (time.time() - start_time) * 1000
 
             assert response.status_code == 200
@@ -306,9 +288,7 @@ class TestResponseConsistency(unittest.TestCase):
 
         # Trigger various errors
         error_responses.append(client.get("/api/v1/findings?severity=INVALID"))
-        error_responses.append(
-            client.get("/api/v1/findings/invalid_id_format")
-        )
+        error_responses.append(client.get("/api/v1/findings/invalid_id_format"))
         error_responses.append(
             client.patch(
                 "/api/v1/findings/fnd_test",

@@ -70,9 +70,7 @@ class BigQueryClient:
             self.dataset_id = DatasetId(dataset_id)
             self.is_configured = True
 
-            logger.info(
-                f"BigQuery client initialized: {self.project_id}.{self.dataset_id}"
-            )
+            logger.info(f"BigQuery client initialized: {self.project_id}.{self.dataset_id}")
 
         except Exception as e:
             logger.warning(
@@ -81,9 +79,7 @@ class BigQueryClient:
             )
             self.is_configured = False
 
-    def _build_list_query(
-        self, limit: int, offset: int, filters: Dict[str, Any]
-    ) -> str:
+    def _build_list_query(self, limit: int, offset: int, filters: Dict[str, Any]) -> str:
         """
         Build SQL query for listing findings with filters.
 
@@ -140,9 +136,7 @@ class BigQueryClient:
             where_clauses.append(f"status = '{filters['status']}'")
 
         if "start_date" in filters:
-            where_clauses.append(
-                f"created_at >= TIMESTAMP('{filters['start_date']}')"
-            )
+            where_clauses.append(f"created_at >= TIMESTAMP('{filters['start_date']}')")
 
         if "end_date" in filters:
             where_clauses.append(f"created_at <= TIMESTAMP('{filters['end_date']}')")
@@ -219,18 +213,12 @@ class BigQueryClient:
                 "confidence": row.get("confidence"),
                 "status": row.get("status", "new"),
                 "status_updated_at": (
-                    row["status_updated_at"].isoformat()
-                    if row.get("status_updated_at")
-                    else None
+                    row["status_updated_at"].isoformat() if row.get("status_updated_at") else None
                 ),
                 "status_updated_by": row.get("status_updated_by"),
                 "notes": row.get("notes"),
-                "created_at": (
-                    row["created_at"].isoformat() if row.get("created_at") else None
-                ),
-                "updated_at": (
-                    row["updated_at"].isoformat() if row.get("updated_at") else None
-                ),
+                "created_at": (row["created_at"].isoformat() if row.get("created_at") else None),
+                "updated_at": (row["updated_at"].isoformat() if row.get("updated_at") else None),
             },
         }
 
@@ -253,7 +241,9 @@ class BigQueryClient:
             "line_number": finding["line"],
             "column_number": finding.get("column", 1),
             "severity": finding["severity"],
-            "analyzer": finding.get("analyzer", finding.get("metadata", {}).get("analyzer", "unknown")),
+            "analyzer": finding.get(
+                "analyzer", finding.get("metadata", {}).get("analyzer", "unknown")
+            ),
             "issue_type": finding["type"],
             "description": finding["message"],
             "recommendation": finding.get("suggestion"),
@@ -394,9 +384,7 @@ class BigQueryClient:
             # First, get current status for history
             current_finding = self.get_finding_by_id(finding_id)
             previous_status = (
-                current_finding.get("metadata", {}).get("status")
-                if current_finding
-                else None
+                current_finding.get("metadata", {}).get("status") if current_finding else None
             )
 
             # Update findings table
@@ -433,9 +421,7 @@ class BigQueryClient:
             history_job = self.client.query(history_query)
             history_job.result()
 
-            logger.info(
-                f"Updated finding {finding_id} status: {previous_status} -> {new_status}"
-            )
+            logger.info(f"Updated finding {finding_id} status: {previous_status} -> {new_status}")
             return True
 
         except GoogleCloudError as e:
@@ -514,9 +500,7 @@ class BigQueryClient:
                 logger.error(f"BigQuery insert errors for analysis run: {errors}")
                 return False
 
-            logger.info(
-                f"Inserted analysis run {analysis['analysis_id']} into BigQuery"
-            )
+            logger.info(f"Inserted analysis run {analysis['analysis_id']} into BigQuery")
             return True
 
         except GoogleCloudError as e:

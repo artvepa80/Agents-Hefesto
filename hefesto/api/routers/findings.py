@@ -230,8 +230,7 @@ async def get_finding(
                 success=False,
                 error=ErrorDetail(
                     code="INVALID_FINDING_ID",
-                    message=f"Invalid finding_id format: {finding_id}. "
-                    f"Must start with 'fnd_'",
+                    message=f"Invalid finding_id format: {finding_id}. " f"Must start with 'fnd_'",
                 ),
             )
 
@@ -316,8 +315,7 @@ async def update_finding(
                 success=False,
                 error=ErrorDetail(
                     code="INVALID_FINDING_ID",
-                    message=f"Invalid finding_id format: {finding_id}. "
-                    f"Must start with 'fnd_'",
+                    message=f"Invalid finding_id format: {finding_id}. " f"Must start with 'fnd_'",
                 ),
             )
 

@@ -102,9 +102,7 @@ class TestQueryBuilding(unittest.TestCase):
         from hefesto.api.services.bigquery_service import BigQueryClient
 
         client = BigQueryClient()
-        query = client._build_list_query(
-            limit=10, offset=0, filters={"file_path": "src/main.py"}
-        )
+        query = client._build_list_query(limit=10, offset=0, filters={"file_path": "src/main.py"})
 
         assert "WHERE" in query
         assert "file_path" in query

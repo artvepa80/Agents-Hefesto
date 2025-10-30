@@ -284,8 +284,7 @@ class TestDependencyAvailability(unittest.TestCase):
             assert google.cloud.bigquery is not None
         except ImportError:
             pytest.fail(
-                "google-cloud-bigquery not installed. "
-                "Run: pip install google-cloud-bigquery"
+                "google-cloud-bigquery not installed. " "Run: pip install google-cloud-bigquery"
             )
 
     def test_google_api_core_available(self):
@@ -295,10 +294,7 @@ class TestDependencyAvailability(unittest.TestCase):
 
             assert retry is not None
         except ImportError:
-            pytest.fail(
-                "google-api-core not installed. "
-                "Run: pip install google-api-core"
-            )
+            pytest.fail("google-api-core not installed. " "Run: pip install google-api-core")
 
 
 if __name__ == "__main__":

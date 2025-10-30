@@ -154,9 +154,7 @@ async def analyze_code(request: AnalysisRequest):
                 # Findings are still available in cache
                 import logging
 
-                logging.warning(
-                    f"Failed to persist analysis {analysis_id} to BigQuery: {bq_error}"
-                )
+                logging.warning(f"Failed to persist analysis {analysis_id} to BigQuery: {bq_error}")
 
         return APIResponse(success=True, data=analysis_response)
 

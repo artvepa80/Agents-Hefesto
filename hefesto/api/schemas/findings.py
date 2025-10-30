@@ -51,12 +51,12 @@ class FindingListRequest(BaseModel):
         description="Filter by analyzer name",
         examples=["complexity", "security"],
     )
-    status: Optional[
-        Literal["new", "in_progress", "resolved", "ignored", "false_positive"]
-    ] = Field(
-        default=None,
-        description="Filter by finding status",
-        examples=["new", "resolved"],
+    status: Optional[Literal["new", "in_progress", "resolved", "ignored", "false_positive"]] = (
+        Field(
+            default=None,
+            description="Filter by finding status",
+            examples=["new", "resolved"],
+        )
     )
     start_date: Optional[datetime] = Field(
         default=None,
@@ -106,9 +106,7 @@ class PaginationMeta(BaseModel):
     has_more: bool = Field(..., description="Whether more results are available")
 
     model_config = {
-        "json_schema_extra": {
-            "example": {"total": 142, "limit": 50, "offset": 0, "has_more": True}
-        }
+        "json_schema_extra": {"example": {"total": 142, "limit": 50, "offset": 0, "has_more": True}}
     }
 
 
@@ -119,9 +117,7 @@ class FindingListResponse(BaseModel):
     GET /api/v1/findings
     """
 
-    findings: List[FindingSchema] = Field(
-        ..., description="List of findings matching filters"
-    )
+    findings: List[FindingSchema] = Field(..., description="List of findings matching filters")
     pagination: PaginationMeta = Field(..., description="Pagination metadata")
     filters_applied: Dict[str, Any] = Field(
         default_factory=dict, description="Filters that were applied to this query"
@@ -256,15 +252,11 @@ class FindingUpdateResponse(BaseModel):
     """
 
     finding_id: str = Field(..., description="Finding identifier that was updated")
-    previous_status: Optional[str] = Field(
-        default=None, description="Previous status value"
-    )
+    previous_status: Optional[str] = Field(default=None, description="Previous status value")
     new_status: str = Field(..., description="New status value")
     updated_at: datetime = Field(..., description="Timestamp of update (UTC)")
     updated_by: Optional[str] = Field(default=None, description="Who made the update")
-    bigquery_available: bool = Field(
-        ..., description="Whether change was persisted to BigQuery"
-    )
+    bigquery_available: bool = Field(..., description="Whether change was persisted to BigQuery")
 
     model_config = {
         "json_schema_extra": {
