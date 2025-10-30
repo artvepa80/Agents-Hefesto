@@ -41,28 +41,28 @@ def check_analyzers() -> dict:
     analyzers_status = {}
 
     try:
-        from hefesto.analyzers import complexity
+        from hefesto.analyzers import complexity  # noqa: F401
 
         analyzers_status["complexity"] = AnalyzerStatus.AVAILABLE
     except ImportError:
         analyzers_status["complexity"] = AnalyzerStatus.UNAVAILABLE
 
     try:
-        from hefesto.analyzers import security
+        from hefesto.analyzers import security  # noqa: F401
 
         analyzers_status["security"] = AnalyzerStatus.AVAILABLE
     except ImportError:
         analyzers_status["security"] = AnalyzerStatus.UNAVAILABLE
 
     try:
-        from hefesto.analyzers import code_smells
+        from hefesto.analyzers import code_smells  # noqa: F401
 
         analyzers_status["code_smells"] = AnalyzerStatus.AVAILABLE
     except ImportError:
         analyzers_status["code_smells"] = AnalyzerStatus.UNAVAILABLE
 
     try:
-        from hefesto.analyzers import best_practices
+        from hefesto.analyzers import best_practices  # noqa: F401
 
         analyzers_status["best_practices"] = AnalyzerStatus.AVAILABLE
     except ImportError:
@@ -81,7 +81,7 @@ def check_integrations() -> dict:
 
     # Check BigQuery
     try:
-        from google.cloud import bigquery
+        from google.cloud import bigquery  # noqa: F401
 
         # Could add actual connection test here
         integrations_status["bigquery"] = IntegrationStatus.ENABLED
@@ -98,7 +98,7 @@ def check_integrations() -> dict:
     "/health",
     response_model=APIResponse[HealthResponse],
     summary="Basic health check",
-    description="Simple health check endpoint for load balancers and monitoring systems. Returns healthy/unhealthy status.",
+    description="Simple health check endpoint for load balancers and monitoring systems. Returns healthy/unhealthy status.",  # noqa: E501
     responses={
         200: {
             "description": "Service is healthy",
@@ -136,7 +136,7 @@ async def health_check():
     "/api/v1/status",
     response_model=APIResponse[SystemStatusResponse],
     summary="Detailed system status",
-    description="Comprehensive system status including analyzer health, integration status, and uptime.",
+    description="Comprehensive system status including analyzer health, integration status, and uptime.",  # noqa: E501
     responses={
         200: {
             "description": "System status retrieved successfully",

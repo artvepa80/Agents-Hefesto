@@ -16,9 +16,9 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch  # noqa: F401
 
-import pytest
+import pytest  # noqa: F401
 
 
 class TestBigQueryClientInitialization(unittest.TestCase):

@@ -21,7 +21,7 @@ from google.api_core import retry
 from google.cloud import bigquery
 from google.cloud.exceptions import GoogleCloudError
 
-from hefesto.api.types import DatasetId, FindingId, FindingStatus, ProjectId
+from hefesto.api.types import DatasetId, FindingId, FindingStatus, ProjectId  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

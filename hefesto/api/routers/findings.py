@@ -65,7 +65,7 @@ async def list_findings(
     ),
     status: Optional[str] = Query(
         default=None,
-        description="Filter by finding status (new, in_progress, resolved, ignored, false_positive)",
+        description="Filter by finding status (new, in_progress, resolved, ignored, false_positive)",  # noqa: E501
     ),
     start_date: Optional[str] = Query(
         default=None,

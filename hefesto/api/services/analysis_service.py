@@ -15,7 +15,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from hefesto.api.types import AnalysisId, FindingId
+from hefesto.api.types import AnalysisId, FindingId  # noqa: F401
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,

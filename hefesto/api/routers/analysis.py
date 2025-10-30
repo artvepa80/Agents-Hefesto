@@ -45,7 +45,7 @@ _analysis_cache: Dict[str, AnalysisResponse] = {}
     "/analyze",
     response_model=APIResponse[AnalysisResponse],
     summary="Analyze code (single path)",
-    description="Analyze a single file or directory for code quality issues. Returns immediate results (synchronous).",
+    description="Analyze a single file or directory for code quality issues. Returns immediate results (synchronous).",  # noqa: E501
     responses={
         200: {"description": "Analysis completed successfully"},
         400: {"description": "Invalid request (path validation failed)"},
@@ -244,7 +244,7 @@ async def get_analysis(
     "/analyze/batch",
     response_model=APIResponse[BatchAnalysisResponse],
     summary="Batch code analysis",
-    description="Analyze multiple files or directories in a single request. Returns immediate results (synchronous).",
+    description="Analyze multiple files or directories in a single request. Returns immediate results (synchronous).",  # noqa: E501
     responses={
         200: {"description": "Batch analysis completed"},
         400: {"description": "Invalid request (validation failed)"},

@@ -9,8 +9,6 @@ Currently contains placeholders for:
 Will be implemented in future phases.
 """
 
-from typing import Optional
-
 
 async def get_db():
     """

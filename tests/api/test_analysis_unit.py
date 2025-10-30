@@ -10,7 +10,7 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 import os
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path  # noqa: F401
 from typing import List
 
 import pytest
@@ -26,7 +26,7 @@ from hefesto.api.services.analysis_service import (
 
 # These imports will fail until we implement the types and service
 # This is intentional - TDD requires writing tests first
-from hefesto.api.types import AnalysisId, AnalyzerName, FilePathStr, FindingId
+from hefesto.api.types import AnalysisId, AnalyzerName, FilePathStr, FindingId  # noqa: F401
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
