@@ -15,17 +15,18 @@ from typing import List
 
 import pytest
 
-# These imports will fail until we implement the types and service
-# This is intentional - TDD requires writing tests first
-from hefesto.api.types import AnalysisId, FindingId, FilePathStr, AnalyzerName
 from hefesto.api.services.analysis_service import (
-    generate_analysis_id,
-    generate_finding_id,
-    validate_file_path,
-    is_safe_path,
     calculate_summary_stats,
     format_finding,
+    generate_analysis_id,
+    generate_finding_id,
+    is_safe_path,
+    validate_file_path,
 )
+
+# These imports will fail until we implement the types and service
+# This is intentional - TDD requires writing tests first
+from hefesto.api.types import AnalysisId, AnalyzerName, FilePathStr, FindingId
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,

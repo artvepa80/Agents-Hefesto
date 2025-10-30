@@ -7,12 +7,13 @@ Includes:
 - Structured logging
 """
 
+import logging
 import time
 import uuid
 from typing import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-import logging
 
 # Configure structured logging
 logging.basicConfig(

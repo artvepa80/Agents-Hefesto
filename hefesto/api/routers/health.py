@@ -8,14 +8,16 @@ Endpoints:
 
 import time
 from datetime import datetime
+
 from fastapi import APIRouter
+
 from hefesto.__version__ import __version__
 from hefesto.api.schemas.common import APIResponse
 from hefesto.api.schemas.health import (
-    HealthResponse,
-    SystemStatusResponse,
     AnalyzerStatus,
+    HealthResponse,
     IntegrationStatus,
+    SystemStatusResponse,
 )
 
 router = APIRouter(tags=["Health & Monitoring"])

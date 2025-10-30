@@ -14,6 +14,7 @@ Provides:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from hefesto.__version__ import __version__
 from hefesto.api.middleware import add_middlewares
 from hefesto.api.routers import health

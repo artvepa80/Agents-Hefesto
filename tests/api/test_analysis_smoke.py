@@ -104,7 +104,7 @@ class TestSchemaImports(unittest.TestCase):
 
     def test_branded_types_import(self):
         """Test branded types are importable."""
-        from hefesto.api.types import AnalysisId, AnalyzerName, FindingId, FilePathStr
+        from hefesto.api.types import AnalysisId, AnalyzerName, FilePathStr, FindingId
 
         assert AnalysisId is not None
         assert FindingId is not None

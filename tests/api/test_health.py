@@ -8,9 +8,11 @@ Tests:
 - Performance requirements
 """
 
-import pytest
 import time
+
+import pytest
 from fastapi.testclient import TestClient
+
 from hefesto.api.main import app
 
 client = TestClient(app)
