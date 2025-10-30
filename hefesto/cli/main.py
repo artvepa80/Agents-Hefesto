@@ -43,7 +43,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     try:
         import uvicorn
 
-        from hefesto.api.health import app
+        from hefesto.api.main import app
     except ImportError as e:
         click.echo(f"❌ Error: {e}", err=True)
         click.echo("\n💡 Install API dependencies:", err=True)

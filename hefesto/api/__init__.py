@@ -1,4 +1,9 @@
-"""FastAPI application for Hefesto."""
+"""
+Hefesto API Package
 
-# API will be imported by CLI
-__all__ = []
+REST API for Hefesto code quality analysis.
+"""
+
+from hefesto.api.main import app
+
+__all__ = ["app"]

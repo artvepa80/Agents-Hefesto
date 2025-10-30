@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.0.0"
+version = "4.0.1"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
 requires-python = ">=3.10"
