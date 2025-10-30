@@ -467,8 +467,8 @@ class TestGracefulDegradation(unittest.TestCase):
         # Update should return False
         assert client.update_finding_status("fnd_123", "resolved") is False
 
-        # Insert should return False
-        assert client.insert_findings([]) is False
+        # Insert empty list should return True (no-op is success)
+        assert client.insert_findings([]) is True
 
 
 if __name__ == "__main__":
