@@ -30,6 +30,7 @@ class CodeEmbedding:
         code_snippet: Preview of the code (first 200 chars)
         metadata: Additional information (language, length, etc.)
     """
+
     code_hash: str
     embedding: List[float]
     code_snippet: str
@@ -66,7 +67,7 @@ class SemanticAnalyzer:
     def __init__(self):
         """Initialize semantic analyzer with ML model."""
         self.model = None
-        self.model_name = 'all-MiniLM-L6-v2'
+        self.model_name = "all-MiniLM-L6-v2"
         self._load_model()
 
     def _load_model(self):
@@ -136,9 +137,7 @@ class SemanticAnalyzer:
 
             # Generate embedding
             embedding = self.model.encode(
-                processed,
-                normalize_embeddings=normalize,
-                show_progress_bar=False
+                processed, normalize_embeddings=normalize, show_progress_bar=False
             )
 
             # Create hash for caching/deduplication
@@ -153,7 +152,7 @@ class SemanticAnalyzer:
                     "length": len(code),
                     "normalized": normalize,
                     "model": self.model_name,
-                }
+                },
             )
 
         except Exception as e:
@@ -178,12 +177,12 @@ class SemanticAnalyzer:
         """
         # Remove Python comments
         lines = [
-            line.split('#')[0].strip()
-            for line in code.split('\n')
-            if line.strip() and not line.strip().startswith('#')
+            line.split("#")[0].strip()
+            for line in code.split("\n")
+            if line.strip() and not line.strip().startswith("#")
         ]
 
-        clean_code = ' '.join(lines)
+        clean_code = " ".join(lines)
 
         # Add language context for better embedding
         # This helps the model understand language-specific semantics
@@ -226,7 +225,7 @@ class SemanticAnalyzer:
                 "language": language,
                 "length": len(code),
                 "normalized": True,
-            }
+            },
         )
 
     def calculate_similarity(
