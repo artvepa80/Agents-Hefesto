@@ -13,6 +13,28 @@ from typing import Callable, Optional
 
 from hefesto.licensing.license_validator import LicenseValidator
 
+# Tier hierarchy: higher number = higher tier
+# OMEGA (2) includes all PRO (1) features
+# PRO (1) includes all FREE (0) features
+TIER_HIERARCHY = {
+    "free": 0,
+    "professional": 1,
+    "omega": 2,
+}
+
+
+def get_tier_level(tier: str) -> int:
+    """
+    Get numeric level for a tier name.
+
+    Args:
+        tier: Tier name ('free', 'professional', 'omega')
+
+    Returns:
+        Numeric tier level (0-2), defaults to 0 for unknown tiers
+    """
+    return TIER_HIERARCHY.get(tier.lower(), 0)
+
 
 class FeatureGate:
     """
@@ -104,37 +126,70 @@ class FeatureGate:
     @classmethod
     def requires_tier(cls, required_tier: str):
         """
-        Decorator to require a specific tier.
+        Decorator to require a minimum tier level.
+
+        Uses tier hierarchy: OMEGA (2) >= PRO (1) >= FREE (0)
+        Higher tiers have access to all lower tier features.
 
         Args:
-            required_tier: 'free' or 'professional'
+            required_tier: Minimum tier required ('free', 'professional', 'omega')
 
         Example:
             @FeatureGate.requires_tier('professional')
             def pro_only_function():
+                # Accessible by PRO and OMEGA users
                 pass
 
         Raises:
-            FeatureAccessDenied: If user doesn't have required tier
+            FeatureAccessDenied: If user's tier level is below required level
         """
 
         def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
                 current_tier = cls.get_current_tier()
+                user_level = get_tier_level(current_tier)
+                required_level = get_tier_level(required_tier)
 
-                if current_tier != required_tier:
-                    raise FeatureAccessDenied(
-                        f"❌ This feature requires {required_tier} tier.\n"
-                        f"   Current tier: {current_tier}\n"
-                        f"   \n"
-                        f"   Upgrade to Professional:\n"
-                        f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
-                        f"   \n"
-                        f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                        f"   → https://buy.stripe.com/"
-                        f"dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40"
-                    )
+                # Hierarchy check: user must have tier >= required tier
+                if user_level < required_level:
+                    # Build appropriate upgrade message based on required tier
+                    if required_tier.lower() == "omega":
+                        upgrade_msg = (
+                            f"❌ This feature requires OMEGA Guardian tier.\n"
+                            f"   Current tier: {current_tier}\n"
+                            f"\n"
+                            f"   Upgrade to OMEGA Guardian ($35/month):\n"
+                            f"   → Full production monitoring with IRIS Agent\n"
+                            f"   → Auto-correlation between code & production issues\n"
+                            f"   → All PRO features + ML enhancement\n"
+                            f"   → BigQuery integration & real-time alerts\n"
+                            f"\n"
+                            f"   Contact: sales@hefesto.ai"
+                        )
+                    elif required_tier.lower() == "professional":
+                        upgrade_msg = (
+                            f"❌ This feature requires Professional tier.\n"
+                            f"   Current tier: {current_tier}\n"
+                            f"\n"
+                            f"   Upgrade to Professional ($25/month):\n"
+                            f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
+                            f"\n"
+                            f"   🚀 First 25 teams: $59/month forever (40% off)\n"
+                            f"   → https://buy.stripe.com/"
+                            f"dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40\n"
+                            f"\n"
+                            f"   Or upgrade to OMEGA Guardian ($35/month):\n"
+                            f"   → All PRO + production monitoring + IRIS Agent\n"
+                            f"   Contact: sales@hefesto.ai"
+                        )
+                    else:
+                        upgrade_msg = (
+                            f"❌ This feature requires {required_tier} tier.\n"
+                            f"   Current tier: {current_tier}"
+                        )
+
+                    raise FeatureAccessDenied(upgrade_msg)
 
                 return func(*args, **kwargs)
 
