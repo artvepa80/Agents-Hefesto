@@ -1,167 +1,244 @@
 """
-Stripe Configuration (STUB)
-============================
+Stripe payment configuration for Hefesto AI.
 
-⚠️  THIS IS A STUB - Real Stripe configuration is in private repository.
-
-This stub provides public pricing information without exposing
-sensitive Stripe product IDs, webhook secrets, or API keys.
-
-Real Stripe integration requires private key access and is handled
-by the licensing system in the private repository.
-
-Copyright © 2025 Narapa LLC
+Contains payment links, pricing information, and feature definitions
+for all subscription tiers (FREE, PRO, OMEGA Guardian).
 """
 
-# Public pricing information only
+# Stripe Payment Links (with 14-day free trial)
+PAYMENT_LINKS = {
+    "pro": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
+    "omega": "https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c",
+}
+
+# Launch Pricing (first 100 customers - locked forever)
+LAUNCH_PRICES = {
+    "pro": 8,  # $8/month
+    "omega": 19,  # $19/month
+}
+
+# Future Pricing (after launch period)
+FUTURE_PRICES = {
+    "pro": 25,  # $25/month
+    "omega": 35,  # $35/month
+}
+
+# Free Trial Period
+FREE_TRIAL_DAYS = 14
+
+# Feature Matrix
+FEATURES = {
+    "free": {
+        "price": 0,
+        "features": [
+            "Basic Analysis",
+            "Pre-push Hooks",
+            "CLI Commands",
+            "Multi-language Support",
+            "Security Scanning (basic)",
+        ],
+        "limits": {
+            "repos": 1,
+            "lines_of_code": 10000,
+            "users": 1,
+        },
+    },
+    "pro": {
+        "price": LAUNCH_PRICES["pro"],
+        "future_price": FUTURE_PRICES["pro"],
+        "payment_link": PAYMENT_LINKS["pro"],
+        "features": [
+            "Everything in FREE",
+            "AI/ML Enhancement (SemanticAnalyzer)",
+            "REST API (8 endpoints)",
+            "BigQuery Integration",
+            "Deep Security Scanning",
+            "Duplicate Detection",
+            "Anti-Pattern Detection",
+            "Priority Support",
+        ],
+        "limits": {
+            "repos": "unlimited",
+            "lines_of_code": "unlimited",
+            "users": "unlimited",
+        },
+    },
+    "omega": {
+        "price": LAUNCH_PRICES["omega"],
+        "future_price": FUTURE_PRICES["omega"],
+        "payment_link": PAYMENT_LINKS["omega"],
+        "features": [
+            "Everything in PRO",
+            "IRIS Agent (Production Monitoring)",
+            "HefestoEnricher (Auto-correlation)",
+            "Real-time Alerts (Pub/Sub)",
+            "Production Dashboard",
+            "BigQuery Analytics",
+            "Priority Slack Support",
+        ],
+        "limits": {
+            "repos": "unlimited",
+            "lines_of_code": "unlimited",
+            "users": "unlimited",
+        },
+    },
+}
+
+# Backward compatibility: STRIPE_CONFIG structure
 STRIPE_CONFIG = {
-    # Public pricing (no sensitive IDs)
     "public_pricing": {
         "hefesto_professional": {
             "name": "Hefesto Professional",
-            "amount": 25.00,
+            "amount": LAUNCH_PRICES["pro"],
             "currency": "usd",
             "interval": "month",
-            "trial_days": 14,
-            "checkout_url": "https://buy.stripe.com/bJeeVc8rM7kZgmq5LweAg08",
+            "trial_days": FREE_TRIAL_DAYS,
+            "checkout_url": PAYMENT_LINKS["pro"],
         },
-        "omega_founding_members": {
-            "name": "OMEGA Guardian Founding Members",
-            "amount": 35.00,
+        "omega_guardian": {
+            "name": "OMEGA Guardian",
+            "amount": LAUNCH_PRICES["omega"],
             "currency": "usd",
             "interval": "month",
-            "trial_days": 0,
-            "checkout_url": "https://buy.stripe.com/bJe9AScI25cR0ns4HseAg06",
-        },
-        "omega_professional": {
-            "name": "OMEGA Guardian Professional",
-            "amount": 49.00,
-            "currency": "usd",
-            "interval": "month",
-            "trial_days": 0,
-            "checkout_url": "https://buy.stripe.com/bJe3cugYiaxb4DIgqaeAg07",
+            "trial_days": FREE_TRIAL_DAYS,
+            "checkout_url": PAYMENT_LINKS["omega"],
         },
     },
-    # Payment Links - DEPRECATED (Removed obsolete plans)
-    # Only keeping active plans:
-    # - Hefesto Professional: $25/month
-    # - OMEGA Founding Members: $35/month
-    # - OMEGA Professional: $49/month
-    "payment_links": {},
-    # Coupons - DEPRECATED
-    "coupons": {},
-    # Tier Limits
     "limits": {
         "free": {
             "tier": "free",
             "users": 1,
             "repositories": 1,
             "loc_monthly": 50_000,
-            "analysis_runs": 10,
-            "features": ["basic_quality", "pr_analysis", "ide_integration"],
+            "loc_per_analysis": 10_000,
+            "api_requests_daily": 100,
+            "bigquery_gb_monthly": 0,
         },
         "professional": {
             "tier": "professional",
-            "users": 10,
-            "repositories": 25,
-            "loc_monthly": 500_000,
-            "analysis_runs": float("inf"),
-            "features": [
-                "ml_semantic_analysis",
-                "ai_recommendations",
-                "security_scanning",
-                "automated_triage",
-                "github_gitlab_bitbucket",
-                "jira_slack_integration",
-                "priority_support",
-                "analytics_dashboard",
-            ],
+            "users": "unlimited",
+            "repositories": "unlimited",
+            "loc_monthly": "unlimited",
+            "loc_per_analysis": "unlimited",
+            "api_requests_daily": "unlimited",
+            "bigquery_gb_monthly": 100,
         },
         "omega": {
             "tier": "omega",
-            "users": float("inf"),
-            "repositories": float("inf"),
-            "loc_monthly": float("inf"),
-            "analysis_runs": float("inf"),
-            "features": [
-                # All PRO features
-                "ml_semantic_analysis",
-                "ai_recommendations",
-                "security_scanning",
-                "automated_triage",
-                "github_gitlab_bitbucket",
-                "jira_slack_integration",
-                "priority_support",
-                "analytics_dashboard",
-                # OMEGA-exclusive features
-                "iris_monitoring",
-                "production_alerts",
-                "incident_correlation",
-                "hefesto_iris_integration",
-                "real_time_monitoring",
-                "advanced_ml_correlation",
-            ],
+            "users": "unlimited",
+            "repositories": "unlimited",
+            "loc_monthly": "unlimited",
+            "loc_per_analysis": "unlimited",
+            "api_requests_daily": "unlimited",
+            "bigquery_gb_monthly": "unlimited",
         },
-    },
-    # Webhooks (configure in Stripe dashboard)
-    "webhooks": {
-        "secret": "",  # Set via STRIPE_WEBHOOK_SECRET env var
-        "events": [
-            "checkout.session.completed",
-            "customer.subscription.created",
-            "customer.subscription.updated",
-            "customer.subscription.deleted",
-            "invoice.payment_succeeded",
-            "invoice.payment_failed",
-        ],
     },
 }
 
 
-def get_tier_from_price_id(price_id: str) -> str:
+def get_payment_link(tier: str) -> str:
     """
-    Determine tier from Stripe price ID.
+    Get Stripe payment link for a tier.
 
     Args:
-        price_id: Stripe price ID
+        tier: Subscription tier ('pro' or 'omega')
 
     Returns:
-        'omega', 'professional', or 'free'
+        Stripe payment link URL
+
+    Raises:
+        ValueError: If tier is invalid
     """
-    # Check for OMEGA tier (contains "omega" in price_id)
-    if "omega" in price_id.lower():
-        return "omega"
-
-    # Check for Professional tier
-    if "professional" in price_id.lower() or "pro" in price_id.lower():
-        return "professional"
-
-    return "free"
+    if tier.lower() not in PAYMENT_LINKS:
+        raise ValueError(f"Invalid tier: {tier}. Must be 'pro' or 'omega'")
+    return PAYMENT_LINKS[tier.lower()]
 
 
-def get_interval_from_price_id(price_id: str) -> str:
+def get_launch_price(tier: str) -> int:
     """
-    Get billing interval from price ID.
+    Get launch pricing for a tier.
 
     Args:
-        price_id: Stripe price ID
+        tier: Subscription tier ('pro' or 'omega')
 
     Returns:
-        'month', 'year', or None
+        Price in USD per month
+
+    Raises:
+        ValueError: If tier is invalid
     """
-    products = STRIPE_CONFIG["products"]
+    if tier.lower() not in LAUNCH_PRICES:
+        raise ValueError(f"Invalid tier: {tier}. Must be 'pro' or 'omega'")
+    return LAUNCH_PRICES[tier.lower()]
 
-    if price_id == products["professional_monthly"]["price_id"]:
-        return "month"
-    if price_id == products["professional_annual"]["price_id"]:
-        return "year"
 
-    return None
+def get_future_price(tier: str) -> int:
+    """
+    Get future pricing for a tier.
+
+    Args:
+        tier: Subscription tier ('pro' or 'omega')
+
+    Returns:
+        Price in USD per month
+
+    Raises:
+        ValueError: If tier is invalid
+    """
+    if tier.lower() not in FUTURE_PRICES:
+        raise ValueError(f"Invalid tier: {tier}. Must be 'pro' or 'omega'")
+    return FUTURE_PRICES[tier.lower()]
+
+
+def get_savings(tier: str) -> int:
+    """
+    Calculate annual savings with launch pricing.
+
+    Args:
+        tier: Subscription tier ('pro' or 'omega')
+
+    Returns:
+        Annual savings in USD
+
+    Raises:
+        ValueError: If tier is invalid
+    """
+    launch = get_launch_price(tier)
+    future = get_future_price(tier)
+    return (future - launch) * 12
+
+
+def get_features(tier: str) -> dict:
+    """
+    Get feature list and limits for a tier.
+
+    Args:
+        tier: Subscription tier ('free', 'pro', or 'omega')
+
+    Returns:
+        Dictionary with features and limits
+
+    Raises:
+        ValueError: If tier is invalid
+    """
+    if tier.lower() not in FEATURES:
+        raise ValueError(f"Invalid tier: {tier}. Must be 'free', 'pro', or 'omega'")
+    return FEATURES[tier.lower()]
+
+
+def get_trial_days() -> int:
+    """
+    Get free trial duration in days.
+
+    Returns:
+        Number of free trial days
+    """
+    return FREE_TRIAL_DAYS
 
 
 def get_limits_for_tier(tier: str) -> dict:
     """
-    Get usage limits for a specific tier.
+    Get usage limits for a specific tier (backward compatibility).
 
     Args:
         tier: 'free', 'professional', or 'omega'
@@ -170,66 +247,3 @@ def get_limits_for_tier(tier: str) -> dict:
         Dictionary with limits
     """
     return STRIPE_CONFIG["limits"].get(tier, STRIPE_CONFIG["limits"]["free"])
-
-
-def is_founding_member(coupon_id: str) -> bool:
-    """
-    DEPRECATED: Founding member discount is no longer active.
-
-    Args:
-        coupon_id: Stripe coupon ID
-
-    Returns:
-        Always False (feature deprecated)
-    """
-    return False
-
-
-def calculate_final_price(price_id: str, has_founding_coupon: bool = False) -> float:
-    """
-    DEPRECATED: Calculate final price (simplified).
-
-    Current active prices:
-    - Hefesto Professional: $25/month
-    - OMEGA Founding Members: $35/month
-    - OMEGA Professional: $49/month
-
-    Args:
-        price_id: Stripe price ID
-        has_founding_coupon: Ignored (deprecated)
-
-    Returns:
-        Final price in USD
-    """
-    # Return default prices from public_pricing
-    for plan_key, plan_info in STRIPE_CONFIG["public_pricing"].items():
-        if price_id in str(plan_info):
-            return plan_info["amount"]
-
-    return 0.00
-
-
-def get_payment_link_by_type(link_type: str) -> dict:
-    """
-    DEPRECATED: Get payment link configuration.
-
-    Use direct checkout URLs from public_pricing instead.
-
-    Args:
-        link_type: Link type (deprecated)
-
-    Returns:
-        Empty dict (feature deprecated)
-    """
-    return {}
-
-
-__all__ = [
-    "STRIPE_CONFIG",
-    "get_tier_from_price_id",
-    "get_interval_from_price_id",
-    "get_limits_for_tier",
-    "is_founding_member",
-    "calculate_final_price",
-    "get_payment_link_by_type",
-]

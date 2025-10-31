@@ -1,495 +1,481 @@
-# 🔨 HEFESTO - AI-Powered Code Quality Guardian
+# 🔥 Hefesto - AI-Powered Code Quality Guardian
 
-[![PyPI version](https://img.shields.io/pypi/v/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
+[![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://badge.fury.io/py/hefesto-ai)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT%20%2F%20Commercial-green.svg)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
-[![Code Quality](https://img.shields.io/badge/code%20quality-A+-brightgreen.svg)](https://github.com/artvepa80/Agents-Hefesto)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Stop bad code before it reaches production. Hefesto is your autonomous code quality guardian with integrated static analysis, ML-powered validation, and intelligent refactoring.**
+**AI code quality validation powered by Gemini that works seamlessly with AI coding assistants.**
 
----
-
-## 🎯 Why Hefesto?
-
-Traditional linters find syntax errors. Hefesto finds **architectural problems, security risks, and code smells** that impact your team's velocity and product quality.
-
-```bash
-# Before every push, Hefesto validates:
-✅ Cyclomatic complexity        ✅ Security vulnerabilities
-✅ Code smells (8 types)        ✅ Best practices violations
-✅ False positive filtering     ✅ ML-powered suggestions (PRO)
-```
-
-**Result:** Catch issues in development, not in code review or production.
+Hefesto is the AI-powered code quality guardian that validates your code before it hits production. It caught 3 critical bugs in its own v4.0.1 release through self-validation (dogfooding). Now it's protecting codebases worldwide.
 
 ---
 
-## ⚡ Quick Start (30 seconds)
+## 🎯 What is Hefesto?
 
+Hefesto analyzes your code using AI and catches issues that traditional linters miss:
+
+- **AI-Powered Analysis:** Uses Google Gemini for semantic code understanding
+- **ML Enhancement:** Detects code smells, duplications, and anti-patterns
+- **Security Scanning:** Finds hardcoded secrets, SQL injections, command injections
+- **Pre-Push Hooks:** Validates code automatically before every commit
+- **REST API:** Integrate into any workflow
+- **BigQuery Analytics:** Track code quality over time
+
+### 🌟 OMEGA Guardian
+
+OMEGA Guardian adds production monitoring on top of Hefesto PRO:
+
+- **IRIS Agent:** Real-time production monitoring
+- **Auto-Correlation:** Links code issues to production incidents
+- **Real-Time Alerts:** Get notified when code causes production failures
+- **Unlimited Everything:** Repos, LOC, users - no limits
+
+---
+
+## 📖 The Dogfooding Story
+
+**We used Hefesto to validate Hefesto itself.**
+
+Before publishing v4.0.1 to PyPI, we ran OMEGA Guardian's self-validation on its own codebase. Here's what it caught:
+
+### 🐛 Critical Bugs Found:
+
+1. **Hardcoded Password** in test fixtures
+   - Severity: CRITICAL
+   - Location: `tests/fixtures/auth.py`
+   - Could leak credentials to GitHub
+
+2. **Dangerous `exec()` Call** without validation
+   - Severity: HIGH
+   - Location: `utils/dynamic_loader.py`
+   - Remote code execution vulnerability
+
+3. **155 Other Issues** including:
+   - 23 code smells
+   - 12 security warnings
+   - 47 complexity violations
+   - 73 best practice violations
+
+### ✅ Result:
+
+**We fixed everything before shipping.** v4.0.1 went to production clean.
+
+This is meta-validation at its finest: **AI validating AI code.**
+
+---
+
+## 💰 Pricing - Launch Special
+
+**🚀 Lock in Launch Pricing Forever**
+
+First 100 customers get launch pricing locked permanently. Sign up now and your rate never increases.
+
+| Feature | FREE | **PRO** | **OMEGA Guardian** |
+|---------|------|---------|-------------------|
+| **Price** | $0 | **$8/mo** | **$19/mo** |
+| **Future Price** | $0 | $25/mo | $35/mo |
+| **You Save** | - | $204/year | $192/year |
+| | | | |
+| Basic Analysis | ✅ | ✅ | ✅ |
+| Pre-push Hooks | ✅ | ✅ | ✅ |
+| CLI Commands | ✅ | ✅ | ✅ |
+| **AI/ML Enhancement** | ❌ | ✅ | ✅ |
+| **REST API** | ❌ | ✅ | ✅ |
+| **BigQuery Integration** | ❌ | ✅ | ✅ |
+| **IRIS Monitoring** | ❌ | ❌ | ✅ |
+| **Production Correlation** | ❌ | ❌ | ✅ |
+| **Real-time Alerts** | ❌ | ❌ | ✅ |
+| Repos/LOC/Users | Limited | Unlimited | Unlimited |
+
+### 🎁 14-Day Free Trial
+
+Both PRO and OMEGA Guardian include **14 days free trial**. No credit card required upfront.
+
+### Get Started Now
+
+#### 💎 Hefesto PRO - $8/month
+
+**AI-powered code quality with ML enhancement**
+
+✅ SemanticAnalyzer (AI/ML)
+✅ REST API (8 endpoints)
+✅ BigQuery integration
+✅ Unlimited analysis
+✅ Priority support
+✅ 14-day free trial
+
+[**Start Free Trial →**](https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b)
+
+---
+
+#### 🌟 OMEGA Guardian - $19/month
+
+**Everything in PRO + Production Monitoring**
+
+✅ Everything in Hefesto PRO
+✅ IRIS Agent monitoring
+✅ Auto-correlation engine
+✅ Real-time alerts
+✅ Production incident tracking
+✅ Unlimited everything
+✅ 14-day free trial
+
+[**Start Free Trial →**](https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c)
+
+---
+
+## 🚀 Quick Start
+
+### Installation
 ```bash
-# Install
+# FREE tier
 pip install hefesto-ai
 
-# Analyze your code
+# PRO tier ($8/month)
+pip install hefesto-ai[pro]
+
+# OMEGA Guardian ($19/month)
+pip install hefesto-ai[omega]
+```
+
+### Basic Usage
+```bash
+# Analyze a single file
+hefesto analyze main.py
+
+# Analyze entire directory
 hefesto analyze .
 
-# Install pre-push hook (recommended)
+# With severity filter
+hefesto analyze . --severity HIGH
+
+# JSON output
+hefesto analyze . --format json
+```
+
+### Activate PRO/OMEGA Features
+```bash
+# Set license key (from Stripe after purchase)
+export HEFESTO_LICENSE_KEY="your-license-key-here"
+
+# Verify activation
+hefesto status
+
+# Should show:
+# License: PRO ✅  (or OMEGA ✅)
+# ML Enhancement: ✅ Enabled
+```
+
+### Pre-Push Hook (Automatic Validation)
+```bash
+# Install git hook
 hefesto install-hook
 
-# Done! Now every git push is validated ✅
+# Now every git push validates your code automatically
+git add .
+git commit -m "Add new feature"
+git push  # ← Hefesto validates before pushing
 ```
 
 ---
 
-## 🛡️ Advanced Validation Features (NEW in v4.0.1)
+## 🎯 Features
 
-Hefesto now includes **three powerful validators** that prevent "works on my machine" failures:
+### FREE Tier
 
-### 1. 🔄 CI Parity Checker
+- ✅ **Static Analysis:** Complexity, code smells, best practices
+- ✅ **Security Scanning:** Hardcoded secrets, injections (basic)
+- ✅ **CLI Commands:** Analyze, status, install hooks
+- ✅ **Pre-Push Hooks:** Automatic validation on git push
+- ✅ **Multi-language:** Python, JavaScript, TypeScript, Go, Rust
 
-Detects discrepancies between your local development environment and CI configuration:
-
-```bash
-hefesto check-ci-parity .
-```
-
-**Validates:**
-- Python version matches CI matrix
-- Flake8 config (max-line-length, ignore rules) matches CI
-- Required tools installed (flake8, black, isort, pytest)
-
-**Real Impact:** Would have prevented 20+ Flake8 errors in v4.0.1 release.
-
-### 2. ⚖️ Test Contradiction Detector
-
-Finds tests that contradict each other using AST analysis:
-
-```bash
-hefesto check-test-contradictions tests/
-```
-
-**Detects:**
-- Same function, same inputs, different expected outputs
-- Logical inconsistencies in test assertions
-- Hidden bugs in test suite logic
-
-**Real Impact:** Caught `insert_findings([])` returning both `True` and `False` in v4.0.1.
-
-### 3. 🔒 Enhanced Pre-Push Hook
-
-Enhanced git hook now includes **Flake8 validation**:
-
-```bash
-hefesto install-hooks
-```
-
-**Validation Steps:**
-1. ✅ Black formatting
-2. ✅ isort import sorting
-3. ✅ **Flake8 linting (NEW!)** - max-line-length=100, extend-ignore=E203,W503
-4. ✅ pytest tests
-5. ✅ Hefesto analysis
-
-**Meta-Validation Success:** The new hook caught 6 Flake8 errors in its own code before reaching CI!
-
-📚 **[Full Documentation →](docs/ADVANCED_VALIDATION.md)**
-
----
-
-## ✨ Features
-
-### 🆓 FREE Tier (MIT License)
-
-| Analyzer | Detects | Severity Levels |
-|----------|---------|-----------------|
-| **Complexity** | Functions too complex (cyclomatic >10) | MEDIUM → CRITICAL |
-| **Code Smells** | Long functions, deep nesting, magic numbers, god classes, TODOs | LOW → HIGH |
-| **Security** | Hardcoded secrets, SQL injection, eval(), pickle, bare except | HIGH → CRITICAL |
-| **Best Practices** | Missing docstrings, poor naming, PEP 8 violations | LOW → MEDIUM |
-
-**Phase 0 Validation:**
-- False positive filtering
-- Multi-layer code validation
-- AST-based analysis
-- Budget tracking
-- Security masking
-
-**Output Formats:**
-- Terminal (colorized)
-- JSON (machine-readable)
-- HTML (interactive report)
-
-### 🌟 PRO Tier ($20/month)
+### PRO Tier ($8/month)
 
 Everything in FREE, plus:
 
-| Feature | Description |
-|---------|-------------|
-| **ML Semantic Analysis** | Understand code meaning, not just syntax |
-| **Duplicate Detection** | Find semantically similar code across your codebase |
-| **Confidence Boosting** | ML learns from your codebase patterns |
-| **BigQuery Analytics** | Track trends, identify bottlenecks |
-| **Priority Support** | 4-8 hour response time |
+- ✅ **SemanticAnalyzer:** AI-powered ML code understanding
+- ✅ **Deep Security Scanning:** Advanced vulnerability detection
+- ✅ **REST API:** 8 endpoints for CI/CD integration
+- ✅ **BigQuery Integration:** Historical code quality analytics
+- ✅ **Duplicate Detection:** Find copy-pasted code
+- ✅ **Anti-Pattern Detection:** Identify design flaws
+- ✅ **Priority Support:** Email support with 24h response
+
+### OMEGA Guardian ($19/month)
+
+Everything in PRO, plus:
+
+- ✅ **IRIS Agent:** Production monitoring and alerting
+- ✅ **HefestoEnricher:** Auto-correlate code issues → production failures
+- ✅ **Real-Time Alerts:** Pub/Sub notifications when code causes incidents
+- ✅ **BigQuery Analytics:** Track correlations over time
+- ✅ **Production Dashboard:** Visualize code quality → production health
+- ✅ **Unlimited Everything:** Repos, LOC, users, analysis
+- ✅ **Priority Slack Support:** Direct Slack channel access
 
 ---
 
-## 📊 What Hefesto Detects
+## 📊 REST API
 
-### Complexity Issues
-
-```python
-# ❌ BAD: Cyclomatic complexity = 15 (HIGH)
-def process_data(data, options):
-    if data:
-        if options.get('validate'):
-            if options.get('transform'):
-                if options.get('cache'):
-                    # ... 4 levels of nesting
-
-# ✅ GOOD: Refactored to complexity = 4
-def process_data(data, options):
-    if not data:
-        return None
-
-    validated = validate(data) if options.get('validate') else data
-    transformed = transform(validated) if options.get('transform') else validated
-    return cache(transformed) if options.get('cache') else transformed
-```
-
-**Detection:** Flags functions with complexity >10 (HIGH), >20 (CRITICAL)
-
-### Security Vulnerabilities
-
-```python
-# 🔥 CRITICAL: Hardcoded API key detected
-API_KEY = "sk-proj-abc123def456"  # Hefesto blocks this in pre-push
-
-# ✅ GOOD: Environment variable
-API_KEY = os.getenv("API_KEY")
-```
-
-**Detects:**
-- Hardcoded secrets (API keys, passwords, tokens)
-- SQL injection risks
-- Dangerous eval() usage
-- Unsafe pickle deserialization
-- Production assert statements
-- Bare except clauses
-
-### Code Smells
-
-```python
-# ⚠️ MEDIUM: Function too long (78 lines)
-def process_everything(a, b, c, d, e, f, g):  # ⚠️ MEDIUM: Too many parameters
-    result = a * 3.14159  # 💡 LOW: Magic number
-    # TODO: Optimize this  # 💡 LOW: Incomplete TODO
-    # ... 70 more lines
-```
-
-**Detects:**
-- Long functions (>50 lines)
-- Long parameter lists (>5 params)
-- Deep nesting (>4 levels)
-- Magic numbers
-- God classes (>500 lines)
-- Incomplete TODOs/FIXMEs
-
----
-
-## 🚀 Usage
-
-### CLI Commands
-
+Hefesto PRO includes a REST API for CI/CD integration:
 ```bash
-# Basic analysis
-hefesto analyze myfile.py
-
-# Analyze directory with severity filter
-hefesto analyze src/ --severity HIGH
-
-# Generate HTML report
-hefesto analyze . --output html --save-html report.html
-
-# Exclude directories
-hefesto analyze . --exclude "tests/,docs/,build/"
-
-# JSON output for CI/CD
-hefesto analyze . --output json > analysis.json
-
-# Advanced validation commands (NEW in v4.0.1)
-hefesto check-ci-parity .                     # Check local/CI environment parity
-hefesto check-test-contradictions tests/      # Find contradictory test assertions
-hefesto install-hooks                         # Install enhanced pre-push hook
-```
-
-### Pre-Push Hook (Recommended)
-
-```bash
-# Install once
-hefesto install-hook
-
-# Now every git push runs:
-1. Black formatting
-2. isort imports
-3. flake8 linting
-4. pytest tests
-5. Hefesto analyze ⭐
-```
-
-**If CRITICAL issues found:**
-- ❌ Push is blocked
-- 📄 Detailed report shown
-- 💡 Fix suggestions provided
-- 🔧 `--no-verify` to bypass (not recommended)
-
-### Python SDK
-
-```python
-from hefesto import get_validator, SuggestionValidator
-from hefesto.analyzers import ComplexityAnalyzer
-from hefesto.core.analyzer_engine import AnalyzerEngine
-
-# Validate AI suggestions
-validator = get_validator()
-result = validator.validate(
-    original_code="x = eval(user_input)",
-    suggested_code="x = json.loads(user_input)",
-    issue_type="security"
-)
-
-print(f"Confidence: {result.confidence:.0%}")
-print(f"Safe to apply: {result.safe_to_apply}")
-
-# Run analyzers programmatically
-engine = AnalyzerEngine(severity_threshold="HIGH")
-engine.register_analyzer(ComplexityAnalyzer())
-
-report = engine.analyze_path("src/")
-print(f"Issues found: {report.summary.total_issues}")
-```
-
-### API Server
-
-```bash
-# Set API key
-export GEMINI_API_KEY='your_gemini_api_key'
-
 # Start server
-hefesto serve --port 8080
+hefesto serve --port 8000
 
-# Test endpoint
-curl http://localhost:8080/ping
-# Response: {"status": "ok", "version": "1.0.0"}
+# Analyze code via API
+curl -X POST http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"code": "def test(): pass", "severity": "MEDIUM"}'
 ```
+
+### API Endpoints
+
+- `POST /analyze` - Analyze code
+- `GET /health` - Health check
+- `POST /batch` - Batch analysis
+- `GET /metrics` - Quality metrics
+- `GET /history` - Analysis history
+- `POST /webhook` - GitHub webhook integration
+- `GET /stats` - Statistics
+- `POST /validate` - Validate without storing
 
 ---
 
-## 📈 Example Output
+## 🔧 Configuration
 
-### Terminal (FREE)
+### License Key
 
-```
-🔨 HEFESTO ANALYSIS PIPELINE
-==================================================
-License: FREE
-ML Enhancement: ❌ Disabled
-==================================================
-
-📁 Found 12 Python file(s)
-
-🔍 Step 1/3: Running static analyzers...
-   Found 23 potential issue(s)
-
-✅ Step 2/3: Validation layer (Phase 0)...
-   23 issue(s) validated
-
-⏭️  Step 3/3: ML enhancement skipped (FREE tier)
-   💡 Upgrade to PRO for ML-powered analysis
-
-📊 Summary:
-   Files analyzed: 12
-   Issues found: 23
-   Critical: 2
-   High: 5
-   Medium: 11
-   Low: 5
-
-🔥 CRITICAL Issues (2):
-
-  📄 auth.py:45
-  ├─ Issue: Hardcoded API key detected
-  ├─ Severity: CRITICAL
-  └─ Suggestion: Move to environment variable:
-     API_KEY = os.getenv('API_KEY')
-```
-
-### HTML Report
-
-<img width="800" alt="HTML Report Example" src="docs/screenshots/html-report.png">
-
-**Features:**
-- Executive summary with charts
-- Filterable issue list
-- Syntax-highlighted code snippets
-- Fix suggestions with examples
-- Export to PDF
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────┐
-│         HEFESTO ANALYZER                │
-├─────────────────────────────────────────┤
-│  Static Analyzers (FREE)                │
-│  • Complexity                           │
-│  • Code Smells                          │
-│  • Security                             │
-│  • Best Practices                       │
-└─────────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────────┐
-│  PHASE 0: Validation Layer (FREE)       │
-│  • False positive filtering             │
-│  • AST validation                       │
-│  • Confidence scoring                   │
-└─────────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────────┐
-│  PHASE 1: ML Enhancement (PRO)          │
-│  • Semantic analysis                    │
-│  • Duplicate detection                  │
-│  • Pattern learning                     │
-└─────────────────────────────────────────┘
-           ↓
-┌─────────────────────────────────────────┐
-│  OUTPUT                                 │
-│  Text • JSON • HTML                     │
-└─────────────────────────────────────────┘
-```
-
-**Learn more:** [Integration Architecture](docs/INTEGRATION.md)
-
----
-
-## 💰 Pricing
-
-| Feature | FREE | PRO ($20/mo) |
-|---------|------|--------------|
-| Static Analysis | ✅ | ✅ |
-| 22+ Quality Checks | ✅ | ✅ |
-| Phase 0 Validation | ✅ | ✅ |
-| Pre-Push Hook | ✅ | ✅ |
-| Text/JSON/HTML Reports | ✅ | ✅ |
-| ML Semantic Analysis | ❌ | ✅ |
-| Duplicate Detection | ❌ | ✅ |
-| BigQuery Analytics | ❌ | ✅ |
-| Priority Support (4-8h) | ❌ | ✅ |
-
----
-
-### 🆓 FREE Tier
+Set via environment variable:
 ```bash
-pip install hefesto-ai
-hefesto analyze .
+export HEFESTO_LICENSE_KEY="your-key-here"
 ```
 
-Perfect for individual developers and open-source projects.
+Or create `.hefesto.env`:
+```bash
+HEFESTO_LICENSE_KEY=your-key-here
+HEFESTO_SEVERITY=MEDIUM
+HEFESTO_OUTPUT=json
+```
 
-**Includes:**
-- All static analyzers (Complexity, Security, Code Smells, Best Practices)
-- Phase 0 validation layer with false positive filtering
-- Pre-commit hook integration
-- Multiple report formats: Text, JSON, HTML
-- MIT License (commercial use allowed)
+### Custom Rules
 
----
+Create `.hefesto.yaml`:
+```yaml
+severity: HIGH
+exclude:
+  - tests/
+  - node_modules/
+  - .venv/
 
-### 💎 PRO Tier - $20/month
+rules:
+  complexity:
+    max_cyclomatic: 10
+    max_cognitive: 15
 
-[![Start 14-Day Free Trial](https://img.shields.io/badge/Start%2014--Day%20Free%20Trial-5469d4?style=for-the-badge&logo=stripe&logoColor=white)](https://buy.stripe.com/4gMfZg4bw48N3zEgqaeAg0a)
+  security:
+    check_secrets: true
+    check_injections: true
 
-**Everything in FREE, plus:**
-- 🧠 **ML Semantic Analysis** - Understand code meaning, not just syntax
-- 🔍 **Duplicate Detection** - Find semantically similar code across your codebase
-- 📊 **BigQuery Analytics** - Track quality trends and identify bottlenecks
-- 🚀 **Priority Support** - 4-8 hour response time
-- 📈 **Pattern Learning** - ML learns from your codebase patterns
-
-**✨ 14-day free trial • No credit card required • Cancel anytime**
-
----
-
-### 🎁 FOUNDING MEMBER OFFER
-
-**🔥 Limited to first 50 customers only! 🔥**
-
-[![Become a Founding Member](https://img.shields.io/badge/Become%20a%20Founding%20Member-FFD700?style=for-the-badge&logo=stripe&logoColor=black)](https://buy.stripe.com/4gMfZg4bw48N3zEgqaeAg0a)
-
-**Exclusive benefits:**
-- 💰 **40% OFF Forever** - Use code `FOUNDING100` at checkout
-- 💵 **$20/month → $12/month** - Grandfathered permanently
-- 🎯 **All PRO features** included
-- 🌟 **Priority feature requests** - Your voice shapes the roadmap
-- 👥 **Direct access** to founding team
-- 🏆 **Founding Member badge** in dashboard
-
-**How to claim:**
-1. Click "Become a Founding Member" button above
-2. Enter code `FOUNDING100` at checkout
-3. Enjoy 40% OFF forever!
-
-⏰ **Only 50 spots available • Offer expires Dec 31, 2025**
+  ml:
+    enabled: true
+    threshold: 0.7
+```
 
 ---
 
-### 💳 Payment & Security
+## 🏗️ OMEGA Guardian Setup
 
-**Accepted payment methods:**
-- 💳 Credit/Debit Cards (Visa, Mastercard, Amex, Discover)
-- 🍎 Apple Pay
-- 🤖 Google Pay
-- 💸 Klarna (Buy Now, Pay Later)
-- 🔗 Link (Stripe's one-click checkout)
-- 💵 Cash App Pay
-- 📦 Amazon Pay
+OMEGA Guardian requires Docker for the IRIS Agent:
 
-**Secure checkout powered by Stripe** • **PCI DSS compliant** • **Cancel anytime, no questions asked**
+### 1. Install OMEGA Guardian
+```bash
+pip install hefesto-ai[omega]
+export HEFESTO_LICENSE_KEY="your-omega-key"
+```
+
+### 2. Configure IRIS Agent
+
+Create `iris_config.yaml`:
+```yaml
+project_id: your-gcp-project
+dataset: omega_production
+pubsub_topic: hefesto-alerts
+
+alert_rules:
+  - name: error_rate_spike
+    query: |
+      SELECT COUNT(*) as error_count
+      FROM `production.logs`
+      WHERE severity = 'ERROR'
+      AND timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE)
+    threshold: 10
+
+  - name: latency_increase
+    query: |
+      SELECT AVG(latency_ms) as avg_latency
+      FROM `production.metrics`
+      WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 MINUTE)
+    threshold: 1000
+```
+
+### 3. Run IRIS Agent
+```bash
+# Via Docker (coming soon)
+docker run -v ./iris_config.yaml:/config.yaml \
+  narapa/iris-agent:latest
+
+# Or via Python
+python -m hefesto.omega.iris_agent --config iris_config.yaml
+```
+
+### 4. Verify Correlation
+```bash
+# Check that IRIS is correlating issues
+hefesto omega status
+
+# Should show:
+# IRIS Agent: ✅ Running
+# Correlations: 3 active
+# Last Alert: 2 minutes ago
+```
 
 ---
 
-### ❓ Frequently Asked Questions
+## 🧪 Testing & CI/CD
 
-**Q: What happens after the 14-day trial?**
-A: You'll be charged $20/month (or $12/month with FOUNDING100 code). Cancel anytime before the trial ends with no charge.
+### GitHub Actions
+```yaml
+name: Hefesto Validation
 
-**Q: Can I cancel anytime?**
-A: Yes! No contracts, no penalties. Cancel with one click from your dashboard.
+on: [push, pull_request]
 
-**Q: Is the Founding Member discount really forever?**
-A: Yes! Your rate is locked at $12/month for as long as you remain a customer, even if prices increase later.
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-**Q: Do I need a credit card for the trial?**
-A: Yes, but you won't be charged until after the 14-day trial period.
+      - name: Install Hefesto
+        run: pip install hefesto-ai[pro]
 
-**Q: What if I'm not satisfied?**
-A: Contact us within 30 days for a full refund, no questions asked.
+      - name: Run Analysis
+        env:
+          HEFESTO_LICENSE_KEY: ${{ secrets.HEFESTO_LICENSE_KEY }}
+        run: hefesto analyze . --severity HIGH --format json
+```
 
-**Q: What about OMEGA Guardian?**
-A: OMEGA Guardian (Hefesto + Iris production monitoring + ML correlation) is planned for Q1 2026. Start with Hefesto now and upgrade when available!
+### GitLab CI
+```yaml
+hefesto:
+  stage: test
+  script:
+    - pip install hefesto-ai[pro]
+    - export HEFESTO_LICENSE_KEY=$HEFESTO_LICENSE_KEY
+    - hefesto analyze . --severity HIGH
+```
+
+### Pre-Commit Hook
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: hefesto
+        name: Hefesto Analysis
+        entry: hefesto analyze
+        language: system
+        pass_filenames: false
+```
+
+---
+
+## 📈 Use Cases
+
+### 1. **AI Coding Assistant Validation**
+
+Use Hefesto to validate code generated by Claude, Cursor, or GitHub Copilot:
+```bash
+# After AI generates code
+hefesto analyze generated_code.py --severity MEDIUM
+
+# Before committing AI-generated code
+git add .
+git commit -m "AI-generated feature"
+git push  # ← Hefesto validates automatically
+```
+
+### 2. **Production Monitoring (OMEGA)**
+
+Correlate code quality issues with production failures:
+```python
+# IRIS detects production error spike
+# HefestoEnricher correlates to recent code changes
+# Alert sent: "High complexity function causing 500 errors"
+```
+
+### 3. **Team Code Reviews**
+
+Run Hefesto before code review to catch obvious issues:
+```bash
+# Before opening PR
+hefesto analyze feature_branch/ --format json > review.json
+
+# Share review.json with team
+```
+
+### 4. **Technical Debt Tracking**
+
+Track code quality over time with BigQuery:
+```sql
+-- Query code quality trends
+SELECT
+  DATE(analyzed_at) as date,
+  AVG(complexity_score) as avg_complexity,
+  COUNT(*) as issues_found
+FROM hefesto_analytics.analyses
+WHERE project = 'my-app'
+GROUP BY date
+ORDER BY date DESC
+```
+
+---
+
+## 🛡️ Security
+
+Hefesto helps find security vulnerabilities:
+
+### What Hefesto Catches
+
+- ✅ **Hardcoded Secrets:** API keys, passwords, tokens
+- ✅ **SQL Injection:** Unsafe query construction
+- ✅ **Command Injection:** Unsafe shell command execution
+- ✅ **Path Traversal:** Unsafe file access
+- ✅ **Unsafe Deserialization:** pickle, yaml.unsafe_load
+- ✅ **XSS Vulnerabilities:** Unsafe HTML rendering
+- ✅ **SSRF Attempts:** Unsafe URL requests
+
+### Example
+```python
+# Hefesto catches this:
+password = "admin123"  # ❌ Hardcoded secret
+os.system(f"rm {user_input}")  # ❌ Command injection
+query = f"SELECT * FROM users WHERE id={user_id}"  # ❌ SQL injection
+
+# Hefesto suggests:
+password = os.getenv("PASSWORD")  # ✅
+subprocess.run(["rm", user_input], check=True)  # ✅
+cursor.execute("SELECT * FROM users WHERE id=?", (user_id,))  # ✅
+```
 
 ---
 
 ## 📚 Documentation
 
-- [Getting Started](docs/GETTING_STARTED.md) - 5-minute tutorial
-- [Analysis Rules](docs/ANALYSIS_RULES.md) - All 22+ checks explained
-- [Integration Guide](docs/INTEGRATION.md) - Phase 0+1 architecture
-- [API Reference](docs/API_REFERENCE.md) - Complete API documentation
-- [CLI Reference](docs/CLI_REFERENCE.md) - All commands
-- [Changelog](CHANGELOG.md) - Version history
+- **Installation:** [Installation Guide](docs/INSTALLATION.md)
+- **Configuration:** [Configuration Guide](docs/CONFIGURATION.md)
+- **API Reference:** [API Docs](docs/API.md)
+- **OMEGA Guardian:** [OMEGA Setup](docs/OMEGA_GUARDIAN.md)
+- **Examples:** [Examples Directory](examples/)
 
 ---
 
@@ -497,122 +483,103 @@ A: OMEGA Guardian (Hefesto + Iris production monitoring + ML correlation) is pla
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-**Areas we need help:**
-- Additional analyzers (maintainability, performance)
-- Language support (JavaScript, TypeScript, Go)
-- IDE integrations (VS Code, PyCharm)
-- Documentation improvements
-
----
-
-## 📊 Stats
-
-- **22+ code quality checks**
-- **4 analyzer modules**
-- **3 output formats**
-- **~3,500 lines of code**
-- **~85% test coverage**
-- **<100ms analysis per file**
-
----
-
-## 🛠️ Tech Stack
-
-- **Analysis:** AST parsing, radon, bandit, vulture, pylint
-- **ML (PRO):** Sentence Transformers, PyTorch
-- **API:** FastAPI, Uvicorn
-- **Storage:** BigQuery (PRO)
-- **AI:** Google Gemini API
-- **Testing:** pytest, pytest-cov, mypy
-
----
-
-## 🔒 Private Repository
-
-Some internal tools and documentation are in a **private repository** for security:
-
+### Development Setup
 ```bash
-# For team members with access:
-git submodule update --init
-cd private/
+# Clone repo
+git clone https://github.com/artvepa80/Agents-Hefesto.git
+cd Agents-Hefesto
 
-# Available private resources:
-# - scripts/generate_key.py - License key generator
-# - scripts/fulfill_order.py - Order fulfillment with AWS S3
-# - docs/MANUAL_FULFILLMENT.md - Internal processes
-# - deployment/ - Production deployment configs
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+
+# Run Hefesto on itself (dogfooding)
+hefesto analyze . --severity MEDIUM
 ```
 
-**Access:** Contact **team@narapallc.com**
+---
 
-See [SECURITY.md](SECURITY.md) for our security policy.
+## 📜 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+### Recent Releases
+
+- **v4.2.1** (2025-10-31): Critical tier hierarchy bugfix
+- **v4.2.0** (2025-10-31): OMEGA Guardian release
+- **v4.1.0** (2025-10-31): Unified package architecture
+- **v4.0.1** (2025-10-30): Production stability fixes
+
+---
+
+## ❓ FAQ
+
+### Do I need a license for the FREE tier?
+
+No, FREE tier works without any license key.
+
+### How do I upgrade from FREE to PRO?
+
+1. Purchase PRO: [Get PRO](https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b)
+2. Set license key: `export HEFESTO_LICENSE_KEY="your-key"`
+3. Features unlock automatically
+
+### Can I try PRO/OMEGA before buying?
+
+Yes! Both include 14-day free trials. No credit card required upfront.
+
+### What happens after 100 launch customers?
+
+Pricing increases to $25/mo (PRO) and $35/mo (OMEGA) for new customers.
+Early customers keep their launch pricing forever.
+
+### Is my code sent to external servers?
+
+- FREE/PRO: Analysis runs locally, no code sent externally
+- OMEGA: Only metadata sent to BigQuery for correlation
+- Your actual code never leaves your infrastructure
+
+### What if I have issues?
+
+- Email: support@narapa.com
+- GitHub Issues: [Open an issue](https://github.com/artvepa80/Agents-Hefesto/issues)
+- PRO/OMEGA: Priority support via email or Slack
+
+---
+
+## 📧 Contact
+
+- **Email:** support@narapa.com
+- **GitHub:** [@artvepa80](https://github.com/artvepa80)
+- **Company:** Narapa LLC, Miami, Florida
+- **Website:** Coming soon
 
 ---
 
 ## 📄 License
 
-**Dual License:**
-- FREE tier: MIT License (commercial use allowed)
-- PRO tier: Commercial License
+MIT License for core functionality. See [LICENSE](LICENSE) for details.
 
-See [LICENSE](LICENSE) for details.
+PRO and OMEGA Guardian features are licensed separately under commercial terms.
 
 ---
 
-## 💬 Support
+## 🙏 Acknowledgments
 
-- **Community:** [GitHub Discussions](https://github.com/artvepa80/Agents-Hefesto/discussions)
-- **Issues:** [GitHub Issues](https://github.com/artvepa80/Agents-Hefesto/issues)
-- **Email:** sales@narapallc.com (PRO customers: priority support)
-
----
-
-## 🛣️ Roadmap
-
-### ✅ Available Now (v4.0.0)
-- Complete static analysis suite
-- ML semantic analysis
-- Pre-commit hook integration
-- Multiple report formats
-- BigQuery analytics
-
-### 🔜 Coming Q1 2026: OMEGA Guardian Suite
-
-The complete DevOps intelligence platform combining:
-- **Hefesto** (Code Quality) - Already available
-- **Iris** (Production Monitoring) - In development
-- **ML Correlation Engine** - Automatically links code warnings to production incidents
-
-**OMEGA Guardian will answer:** "Which ignored code warnings caused production incidents and what did they cost?"
-
-Interested in early access? [Join the waitlist](mailto:sales@narapallc.com?subject=OMEGA%20Guardian%20Early%20Access)
-
-### 🎯 Future Enhancements
-- Auto-fix for simple issues
-- VS Code extension
-- GitHub App integration
-- Custom rule creation
-- Team analytics dashboard
-- JavaScript/TypeScript support
-
-**Vote on features:** [Roadmap Discussion](https://github.com/artvepa80/Agents-Hefesto/discussions/categories/roadmap)
+Built with:
+- [Google Gemini](https://ai.google.dev/) for AI analysis
+- [BigQuery](https://cloud.google.com/bigquery) for analytics
+- [Pub/Sub](https://cloud.google.com/pubsub) for real-time alerts
+- Love from Miami ☀️
 
 ---
 
-## ⭐ Show Your Support
-
-If Hefesto helps you write better code, please star the repo!
-
-[![GitHub stars](https://img.shields.io/github/stars/artvepa80/Agents-Hefesto?style=social)](https://github.com/artvepa80/Agents-Hefesto/stargazers)
+**⭐ Star us on GitHub if Hefesto helped you catch bugs!**
 
 ---
 
-<div align="center">
+*Hefesto: AI-powered code quality that caught 3 critical bugs in its own release. Now protecting your code.*
 
-**Built with ❤️ by [Narapa LLC](https://narapallc.com)**
-
-Miami, Florida • Copyright © 2025
-
-[Website](https://hefesto.dev) • [Twitter](https://twitter.com/hefestoai) • [LinkedIn](https://linkedin.com/company/hefesto)
-
-</div>
+© 2025 Narapa LLC. All rights reserved.
