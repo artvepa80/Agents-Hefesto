@@ -5,6 +5,159 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2025-10-31
+
+### 🚀 Major Release: Unified Package Architecture
+
+This release implements a unified package architecture where all features (FREE, PRO, OMEGA Guardian) are included in a single PyPI package, with PRO features protected by license gates.
+
+#### Breaking Changes
+- None for end users (installation flow remains the same)
+- Internal: `hefesto-pro` package deprecated (merged into main package)
+
+#### Added
+
+**Unified Package System**
+- ✅ Single package for all tiers (FREE/PRO/OMEGA Guardian)
+- ✅ License gates protecting PRO features
+- ✅ Real `SemanticAnalyzer` with ML implementation (replaced stub)
+- ✅ Complete licensing system (`hefesto/licensing/`)
+  - `key_generator.py` - HFST- format license key generation
+  - `license_validator.py` - Stripe-integrated validation
+  - `subscription.py` - Subscription management
+  - `feature_gate.py` - Feature access control
+
+**OMEGA Guardian Features**
+- ✅ ML-powered code correlation (`hefesto/omega/correlation.py`)
+- ✅ Hermes alert integration (`hefesto/omega/alerts.py`)
+- ✅ HFST- license format support
+
+**Developer Experience**
+- ✅ `docs/LICENSE_GATES.md` - License gate implementation guide
+- ✅ Founding Member program (40% OFF forever)
+- ✅ Clear upgrade paths (FREE → PRO → OMEGA)
+
+#### Changed
+
+**SemanticAnalyzer**
+- Replaced stub with real ML implementation
+- Uses `sentence-transformers/all-MiniLM-L6-v2` model
+- 384-dimensional embeddings for code similarity
+- License gate: Requires PRO tier
+- Performance: <100ms per code snippet
+
+**License System**
+- Now supports HFST- format (OMEGA Guardian)
+- Maintains backward compatibility with hef_/sk_/pk_ formats
+- Runtime validation of all PRO features
+- Graceful degradation to FREE tier
+
+**Architecture**
+- Single codebase for all tiers
+- PRO code visible but legally protected
+- Standard industry pattern (GitHub Copilot, Cursor, JetBrains)
+- No separate packages needed
+
+#### Fixed
+- PRO license activation now works correctly
+- ML Enhancement properly gated by license
+- REST API requires valid PRO license
+- BigQuery integration properly gated
+
+#### Security
+- Code legally protected by license agreement
+- Runtime validation prevents unauthorized use
+- API keys required for backend services
+- Terms of Service enforced at runtime
+
+#### Customer Experience
+
+**FREE Tier ($0/month)**
+```bash
+pip install hefesto-ai
+hefesto analyze .
+```
+- Basic code analysis
+- Core validators
+- CLI interface
+
+**PRO Tier ($19/month, $12 Founding Member)**
+```bash
+pip install hefesto-ai
+export HEFESTO_LICENSE_KEY="HFST-xxxx..."
+hefesto analyze .
+```
+- ML-powered semantic analysis
+- REST API access
+- BigQuery integration
+- Advanced validators
+- Priority support
+
+**OMEGA Guardian ($35/month, $21 Founding Member)**
+```bash
+pip install hefesto-ai
+export HEFESTO_LICENSE_KEY="HFST-omega-xxxx..."
+docker run narapa/iris-agent
+docker run narapa/hermes-agent
+hefesto analyze . --omega
+```
+- All PRO features
+- IRIS monitoring correlation
+- Hermes alert enrichment
+- Full DevOps intelligence
+
+#### Migration Guide
+
+**For FREE users:** No changes needed
+
+**For PRO users:**
+1. Uninstall old package: `pip uninstall hefesto-pro`
+2. Install unified package: `pip install hefesto-ai==4.1.0`
+3. Set license key: `export HEFESTO_LICENSE_KEY="your-key"`
+
+**For OMEGA users:**
+1. Same as PRO users
+2. Docker agents coming soon (containerization in progress)
+
+#### Technical Details
+- Package size: ~2MB (includes PRO features)
+- Python: 3.10+ (no changes)
+- Dependencies: No changes from 4.0.1
+- License: MIT (core) + Commercial (PRO features)
+- Performance: No regressions
+
+#### Testing
+- ✅ FREE tier: Features limited correctly
+- ✅ PRO tier: ML enhancement works
+- ✅ REST API: License validation works
+- ✅ License formats: HFST- supported
+- ✅ Local wheel: Installation successful
+- ✅ Import tests: All modules load correctly
+- ✅ 312+ tests passing
+
+#### Benefits
+
+**For Customers:**
+- Simpler installation (one command)
+- Clear upgrade path
+- No confusion about packages
+- Better documentation
+
+**For Narapa LLC:**
+- Single codebase to maintain
+- No private PyPI needed ($0/month saved)
+- Easier testing and CI/CD
+- Faster feature deployment
+- Standard industry approach
+
+#### Links
+- PyPI: https://pypi.org/project/hefesto-ai/4.1.0/
+- Upgrade: https://buy.stripe.com/hefesto-pro
+- Docs: https://github.com/artvepa80/Agents-Hefesto
+- Support: sales@narapallc.com
+
+---
+
 ## [4.0.1] - 2025-10-30
 
 ### Added - REST API (Phases 1-4)

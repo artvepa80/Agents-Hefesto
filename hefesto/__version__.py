@@ -2,7 +2,7 @@
 Hefesto version information.
 """
 
-__version__ = "4.0.1"
+__version__ = "4.1.0"
 __api_version__ = "v1"
 
 # Version history
@@ -12,3 +12,8 @@ __api_version__ = "v1"
 #         - BigQuery integration
 #         - IRIS correlation foundation
 #         - 118+ tests passing
+# 4.1.0 - Unified Package Architecture
+#         - PRO features merged with license gates
+#         - Real SemanticAnalyzer (ML) implementation
+#         - OMEGA Guardian features included
+#         - Complete licensing system integrated
