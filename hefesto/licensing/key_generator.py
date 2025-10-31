@@ -5,12 +5,12 @@ Keys are generated when Stripe webhook confirms payment.
 Copyright © 2025 Narapa LLC
 """
 
-import secrets
 import hashlib
 import json
+import secrets
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Optional, Dict
-from dataclasses import dataclass, asdict
+from typing import Dict, Optional
 
 
 @dataclass

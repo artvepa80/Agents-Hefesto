@@ -3,7 +3,8 @@ License validation for Hefesto Professional tier.
 Validates license keys and enforces tier limits.
 """
 
-from typing import Optional, Dict, Tuple
+from typing import Dict, Optional, Tuple
+
 from hefesto.config.stripe_config import STRIPE_CONFIG, get_limits_for_tier, get_tier_from_price_id
 from hefesto.licensing.key_generator import LicenseKeyGenerator
 
