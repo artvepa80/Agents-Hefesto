@@ -118,7 +118,7 @@ config/.env.omega
 
 # === PRIVATE REPOSITORY FILES ===
 # These belong in Agents-Hefesto-Pro-Private only
-private/licensing/subscription.py
-private/scripts/provision*.py
+# Ignore entire private/ directory (was git submodule, now removed)
+private/
 internal/
 customer_data/
