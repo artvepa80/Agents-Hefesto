@@ -5,7 +5,7 @@ Validates license keys and enforces tier limits.
 
 from typing import Dict, Optional, Tuple
 
-from hefesto.config.stripe_config import STRIPE_CONFIG, get_limits_for_tier, get_tier_from_price_id
+from hefesto.config.stripe_config import STRIPE_CONFIG, get_limits_for_tier
 from hefesto.licensing.key_generator import LicenseKeyGenerator
 
 
@@ -92,7 +92,8 @@ class LicenseValidator:
                     f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
                     f"   \n"
                     f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                    f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
+                    f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05"
+                    f"?prefilled_promo_code=Founding40",
                 )
             else:
                 return (
@@ -135,7 +136,8 @@ class LicenseValidator:
                     f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
                     f"   \n"
                     f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                    f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
+                    f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05"
+                    f"?prefilled_promo_code=Founding40",
                 )
             else:
                 return (
@@ -180,7 +182,8 @@ class LicenseValidator:
                 f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
                 f"   \n"
                 f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
+                f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05"
+                f"?prefilled_promo_code=Founding40",
             )
 
         return (True, "")
@@ -226,7 +229,8 @@ class LicenseValidator:
             f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
             f"   \n"
             f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-            f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
+            f"   → https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05"
+            f"?prefilled_promo_code=Founding40",
         )
 
     def validate_before_analysis(
