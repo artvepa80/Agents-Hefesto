@@ -16,6 +16,7 @@ class LicenseValidator:
         """Initialize validator with tier limits from Stripe config."""
         self.free_limits = STRIPE_CONFIG["limits"]["free"]
         self.pro_limits = STRIPE_CONFIG["limits"]["professional"]
+        self.omega_limits = STRIPE_CONFIG["limits"]["omega"]
 
     def validate_key_format(self, license_key: str) -> bool:
         """
@@ -39,13 +40,17 @@ class LicenseValidator:
             license_key: License key string or None
 
         Returns:
-            'free' or 'professional'
+            'free', 'professional', or 'omega'
         """
         if not license_key:
             return "free"
 
         if not self.validate_key_format(license_key):
             return "free"
+
+        # OMEGA Guardian licenses use HFST- prefix
+        if license_key.startswith("HFST-"):
+            return "omega"
 
         # TODO: Validate with backend API when available
         # For now, if format is valid, assume professional

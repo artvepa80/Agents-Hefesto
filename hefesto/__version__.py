@@ -2,7 +2,7 @@
 Hefesto version information.
 """
 
-__version__ = "4.1.0"
+__version__ = "4.2.0"
 __api_version__ = "v1"
 
 # Version history
@@ -17,3 +17,9 @@ __api_version__ = "v1"
 #         - Real SemanticAnalyzer (ML) implementation
 #         - OMEGA Guardian features included
 #         - Complete licensing system integrated
+# 4.2.0 - OMEGA Guardian Release
+#         - IRIS Agent integration (production monitoring)
+#         - HefestoEnricher (auto-correlation)
+#         - 3-tier licensing (FREE/PRO/OMEGA)
+#         - HFST- license format for OMEGA
+#         - pip install hefesto-ai[omega]

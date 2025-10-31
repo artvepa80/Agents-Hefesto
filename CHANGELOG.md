@@ -5,6 +5,73 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2025-10-31
+
+### 🚀 Major Release: OMEGA Guardian
+
+Complete production monitoring suite integrating Hefesto PRO + IRIS Agent.
+
+### Breaking Changes
+- None for existing users
+
+### Added
+
+**OMEGA Guardian Tier:**
+- IRIS Agent integration for production monitoring
+- HefestoEnricher for automatic alert correlation
+- Real-time production alerts and incident management
+- Auto-correlation between code findings and production issues
+- 3-tier licensing system (FREE/PRO/OMEGA)
+- HFST- license format for OMEGA Guardian customers
+- `pip install hefesto-ai[omega]` installation option
+
+**License System:**
+- Support for 3 tiers: FREE, PRO, OMEGA
+- OMEGA tier with unlimited repos, LOC, users
+- HFST-XXXX-XXXX-XXXX-XXXX-XXXX format for OMEGA licenses
+- @requires_omega decorator for feature gating
+
+**IRIS Integration:**
+- IrisAgent class for production monitoring
+- HefestoEnricher for finding correlation
+- BigQuery integration for historical data
+- Pub/Sub integration for real-time alerts
+- YAML-based alert rule configuration
+
+### Changed
+- Updated Stripe config to support OMEGA tier pricing
+- Enhanced license validator to detect 3 tiers
+- Updated feature gates with OMEGA support
+
+### Dependencies
+- Added google-cloud-bigquery for IRIS
+- Added google-cloud-pubsub for IRIS
+- Added pyyaml for IRIS configuration
+
+### Documentation
+- OMEGA Guardian setup guide
+- IRIS configuration examples
+- 3-tier licensing documentation
+
+### Installation
+```bash
+# FREE tier
+pip install hefesto-ai
+
+# PRO tier (ML enhancement)
+pip install hefesto-ai[pro]
+
+# OMEGA Guardian (PRO + IRIS)
+pip install hefesto-ai[omega]
+```
+
+### Pricing
+- FREE: $0/month
+- PRO: $25/month
+- OMEGA Guardian: $35-49/month
+
+---
+
 ## [4.1.0] - 2025-10-31
 
 ### 🚀 Major Release: Unified Package Architecture

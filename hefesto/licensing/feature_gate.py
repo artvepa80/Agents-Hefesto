@@ -170,6 +170,11 @@ def requires_pro(func):  # noqa: E731
     return FeatureGate.requires_tier("professional")(func)
 
 
+def requires_omega(func):  # noqa: E731
+    """Require OMEGA Guardian tier."""
+    return FeatureGate.requires_tier("omega")(func)
+
+
 def requires_ml_analysis(func):  # noqa: E731
     """Require ML semantic analysis feature."""
     return FeatureGate.requires("ml_semantic_analysis")(func)

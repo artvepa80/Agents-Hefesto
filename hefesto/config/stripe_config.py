@@ -77,6 +77,31 @@ STRIPE_CONFIG = {
                 "analytics_dashboard",
             ],
         },
+        "omega": {
+            "tier": "omega",
+            "users": float("inf"),
+            "repositories": float("inf"),
+            "loc_monthly": float("inf"),
+            "analysis_runs": float("inf"),
+            "features": [
+                # All PRO features
+                "ml_semantic_analysis",
+                "ai_recommendations",
+                "security_scanning",
+                "automated_triage",
+                "github_gitlab_bitbucket",
+                "jira_slack_integration",
+                "priority_support",
+                "analytics_dashboard",
+                # OMEGA-exclusive features
+                "iris_monitoring",
+                "production_alerts",
+                "incident_correlation",
+                "hefesto_iris_integration",
+                "real_time_monitoring",
+                "advanced_ml_correlation",
+            ],
+        },
     },
     # Webhooks (configure in Stripe dashboard)
     "webhooks": {
@@ -101,14 +126,14 @@ def get_tier_from_price_id(price_id: str) -> str:
         price_id: Stripe price ID
 
     Returns:
-        'professional' or 'free'
+        'omega', 'professional', or 'free'
     """
-    products = STRIPE_CONFIG["products"]
+    # Check for OMEGA tier (contains "omega" in price_id)
+    if "omega" in price_id.lower():
+        return "omega"
 
-    if price_id in [
-        products["professional_monthly"]["price_id"],
-        products["professional_annual"]["price_id"],
-    ]:
+    # Check for Professional tier
+    if "professional" in price_id.lower() or "pro" in price_id.lower():
         return "professional"
 
     return "free"
@@ -139,7 +164,7 @@ def get_limits_for_tier(tier: str) -> dict:
     Get usage limits for a specific tier.
 
     Args:
-        tier: 'free' or 'professional'
+        tier: 'free', 'professional', or 'omega'
 
     Returns:
         Dictionary with limits
