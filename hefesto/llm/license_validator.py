@@ -67,7 +67,8 @@ class LicenseValidator:
 
     # Valid license key prefixes (Stripe format)
     VALID_PREFIXES = {
-        "hef_",  # Hefesto production keys
+        "HFST-",  # OMEGA Guardian format (HFST-XXXX-XXXX-XXXX-XXXX-XXXX)
+        "hef_",  # Hefesto production keys (legacy)
         "sk_",  # Stripe secret keys (for testing)
         "pk_",  # Stripe publishable keys
     }
