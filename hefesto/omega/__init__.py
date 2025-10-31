@@ -14,8 +14,8 @@ __version__ = "4.2.0"
 
 # IRIS integration
 try:
-    from hefesto.omega.iris_alert_manager import IrisAgent
     from hefesto.omega.hefesto_enricher import HefestoEnricher
+    from hefesto.omega.iris_alert_manager import IrisAgent
 
     IRIS_AVAILABLE = True
 except ImportError:

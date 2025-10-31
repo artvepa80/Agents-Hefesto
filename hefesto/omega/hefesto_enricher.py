@@ -10,7 +10,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # Optional Google Cloud imports
@@ -337,7 +337,7 @@ def get_hefesto_enricher(project_id: str, dry_run: bool = False) -> HefestoEnric
 
 if __name__ == "__main__":
     # Test the enricher
-    import sys
+    import sys  # noqa: F401
 
     logging.basicConfig(level=logging.INFO)
 
