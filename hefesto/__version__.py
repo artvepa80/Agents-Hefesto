@@ -2,7 +2,7 @@
 Hefesto version information.
 """
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 __api_version__ = "v1"
 
 # Version history
@@ -23,3 +23,8 @@ __api_version__ = "v1"
 #         - 3-tier licensing (FREE/PRO/OMEGA)
 #         - HFST- license format for OMEGA
 #         - pip install hefesto-ai[omega]
+# 4.2.1 - CRITICAL BUGFIX: Tier Hierarchy
+#         - Fixed OMEGA users blocked from PRO features
+#         - Implemented proper tier hierarchy (OMEGA >= PRO >= FREE)
+#         - Added 17 tests for tier hierarchy
+#         - Verified with real OMEGA license

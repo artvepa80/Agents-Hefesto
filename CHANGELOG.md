@@ -5,6 +5,86 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2025-10-31
+
+### 🐛 Critical Bugfix: Tier Hierarchy
+
+**CRITICAL FIX:** OMEGA users were blocked from PRO features they paid for.
+
+#### Problem
+- Feature gates used equality check (`==`) instead of hierarchy comparison (`>=`)
+- `@requires_tier('professional')` decorator blocked OMEGA users
+- OMEGA customers ($35/month) couldn't access PRO features ($25/month)
+- Potential for customer refunds and complaints
+- **Severity:** CRITICAL - Affects paying customers
+- **Priority:** HIGH - Blocks monetization
+
+#### Root Cause
+```python
+# BUGGY CODE (line 126 in feature_gate.py):
+if current_tier != required_tier:  # ❌ Equality check
+    raise FeatureAccessDenied(...)
+```
+
+This blocked OMEGA (tier=2) from PRO (tier=1) features.
+
+#### Solution Implemented
+- Added `TIER_HIERARCHY` constant with numeric levels:
+  - `free`: 0
+  - `professional`: 1
+  - `omega`: 2
+- Implemented `get_tier_level()` helper function
+- Changed `requires_tier()` to use hierarchy comparison:
+  ```python
+  # NEW CODE:
+  if user_level < required_level:  # ✅ Hierarchy check
+      raise FeatureAccessDenied(...)
+  ```
+- Updated error messages with tier-specific upgrade paths
+- Improved docstrings to clarify hierarchical behavior
+
+#### Files Changed
+1. `hefesto/licensing/feature_gate.py`
+   - Added TIER_HIERARCHY and get_tier_level()
+   - Fixed requires_tier() with proper hierarchy logic
+   - Updated error messages for all tiers
+
+2. `tests/licensing/test_tier_hierarchy.py` (NEW)
+   - 17 comprehensive tests
+   - Tests FREE/PRO/OMEGA access patterns
+   - Validates convenience decorators
+   - Tests error messages
+
+#### Testing & Verification
+- ✅ 17/17 unit tests passed
+- ✅ Verified with real OMEGA license (HFST-6F06-4D54-6402-B3B1-CF72)
+- ✅ OMEGA users can now access PRO features (CRITICAL)
+- ✅ PRO users can access FREE features
+- ✅ Backward compatibility maintained
+- ✅ All linters passing (black, isort, flake8)
+
+#### Customer Impact
+**Before Fix:**
+- ❌ OMEGA users blocked from `@requires_tier('professional')` features
+- ❌ Paid customers denied features they paid for
+- ❌ Risk of refunds and negative reviews
+
+**After Fix:**
+- ✅ OMEGA users access ALL PRO + OMEGA features
+- ✅ Proper tier hierarchy: OMEGA (2) ≥ PRO (1) ≥ FREE (0)
+- ✅ Correct feature inheritance across tiers
+- ✅ Ready for marketing launch
+
+#### Upgrade
+```bash
+pip install --upgrade hefesto-ai[omega]
+```
+
+**Time to Fix:** 30 minutes (from detection to PyPI)
+**Commits:** 899201d (fix), [current] (release)
+
+---
+
 ## [4.2.0] - 2025-10-31
 
 ### 🚀 Major Release: OMEGA Guardian
