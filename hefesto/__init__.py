@@ -26,6 +26,20 @@ from hefesto.llm.suggestion_validator import (
     get_validator,
 )
 
+# Licensing system (always available)
+try:
+    from hefesto.licensing.key_generator import (  # noqa: F401
+        LicenseKeyGenerator,
+        LicenseMetadata,
+    )
+    from hefesto.licensing.license_validator import (  # noqa: F401
+        LicenseValidator,
+    )
+
+    _LICENSING_AVAILABLE = True
+except ImportError:
+    _LICENSING_AVAILABLE = False
+
 # Pro exports (Phase 1 - Paid)
 try:
     from hefesto.llm.cicd_feedback_collector import (  # noqa: F401
@@ -58,6 +72,16 @@ __all__ = [
     "TokenUsage",
     "get_budget_tracker",
 ]
+
+# Add Licensing features if available
+if _LICENSING_AVAILABLE:
+    __all__.extend(
+        [
+            "LicenseKeyGenerator",
+            "LicenseMetadata",
+            "LicenseValidator",
+        ]
+    )
 
 # Add Pro features if available
 if _PRO_FEATURES_AVAILABLE:
