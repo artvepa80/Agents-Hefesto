@@ -476,7 +476,7 @@ For issues or questions:
 
 - **GitHub Issues**: https://github.com/artvepa80/Agents-Hefesto/issues
 - **Documentation**: https://github.com/artvepa80/Agents-Hefesto/blob/main/README.md
-- **Email**: sales@narapallc.com
+- **Email**: contact@narapallc.com
 
 ## License
 
@@ -484,4 +484,4 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 
 This setup guide is part of the Hefesto project under dual licensing:
 - Open Source: Apache License 2.0
-- Commercial: Contact sales@narapallc.com
+- Commercial: Contact contact@narapallc.com

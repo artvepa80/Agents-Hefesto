@@ -100,7 +100,7 @@ chore: Update dependencies
 
 For security vulnerabilities:
 - **DO NOT** open public issues
-- Email: security@narapallc.com
+- Email: support@narapallc.com
 - We'll respond within 48 hours
 - Fix will be released ASAP
 

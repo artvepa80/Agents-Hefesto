@@ -98,3 +98,25 @@ jobs:
       run: |
         flake8 hefesto/ --max-line-length=100 --extend-ignore=E203,W503
 
+  docs-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check standard emails in documentation
+      run: |
+        echo "Checking for non-standard email addresses in documentation..."
+        if grep -rIn --exclude-dir=.git --exclude-dir=venv --exclude-dir=htmlcov --include="*.md" -E "[A-Za-z0-9._%+-]+@narapa\.ai" . ; then
+          echo "❌ Found @narapa.ai emails. Use support@narapallc.com or contact@narapallc.com instead."
+          exit 1
+        fi
+        if grep -rIn --exclude-dir=.git --exclude-dir=venv --exclude-dir=htmlcov --include="*.md" "security@narapallc\.com" . ; then
+          echo "❌ Found security@narapallc.com. Use support@narapallc.com instead."
+          exit 1
+        fi
+        if grep -rIn --exclude-dir=.git --exclude-dir=venv --exclude-dir=htmlcov --include="*.md" "sales@narapallc\.com" . ; then
+          echo "❌ Found sales@narapallc.com. Use contact@narapallc.com instead."
+          exit 1
+        fi
+        echo "✅ All documentation uses standard emails (support@narapallc.com, contact@narapallc.com)"
+

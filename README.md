@@ -543,7 +543,7 @@ Early customers keep their launch pricing forever.
 
 ### What if I have issues?
 
-- Email: support@narapa.com
+- Email: support@narapallc.com
 - GitHub Issues: [Open an issue](https://github.com/artvepa80/Agents-Hefesto/issues)
 - PRO/OMEGA: Priority support via email or Slack
 
@@ -551,7 +551,8 @@ Early customers keep their launch pricing forever.
 
 ## 📧 Contact
 
-- **Email:** support@narapa.com
+- **Support:** support@narapallc.com
+- **General inquiries:** contact@narapallc.com
 - **GitHub:** [@artvepa80](https://github.com/artvepa80)
 - **Company:** Narapa LLC, Miami, Florida
 - **Website:** Coming soon

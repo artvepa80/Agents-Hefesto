@@ -1,10 +1,15 @@
 # Security Policy
 
-## Reporting Security Issues
+## Supported Versions
+| Version | Supported          |
+|---------|--------------------|
+| 4.x.x   | ✅ Full support    |
+| <4.0    | ❌ Not supported   |
 
-If you discover a security vulnerability in Hefesto, please report it responsibly:
-
-**Email:** security@narapallc.com
+## Reporting a Vulnerability
+If you discover a vulnerability or security issue, please contact us at:
+- **support@narapallc.com**
+- **contact@narapallc.com**
 
 Please include:
 - Description of the vulnerability
@@ -12,7 +17,10 @@ Please include:
 - Potential impact
 - Suggested fix (if any)
 
-We will respond within 48 hours and work with you to address the issue.
+We aim to acknowledge reports within **48 hours** and ship a fix within **5 business days** whenever feasible.
+
+## Scope
+Hefesto focuses on scanning source code for semantic and logical inconsistencies. Please avoid reporting issues out of scope (e.g., unrelated third-party dependencies or infrastructure not maintained by this project).
 
 ## Sensitive Information
 
@@ -105,9 +113,8 @@ We follow responsible disclosure practices:
 
 ## Contact
 
-- **Security issues:** security@narapallc.com
-- **General support:** support@narapallc.com
-- **Sales & licensing:** sales@narapallc.com
+- **Security & Support:** support@narapallc.com
+- **General inquiries:** contact@narapallc.com
 
 ---
 

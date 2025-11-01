@@ -521,7 +521,7 @@ python -m iris.cli test connection
 
 **For Customers:**
 - Support: support@narapallc.com
-- Sales: sales@narapallc.com
+- Sales: contact@narapallc.com
 - Documentation: https://docs.hefesto.ai (coming soon)
 
 ---

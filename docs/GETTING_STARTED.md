@@ -294,7 +294,7 @@ git push --no-verify
 
 - **Community:** [GitHub Discussions](https://github.com/artvepa80/Agents-Hefesto/discussions)
 - **Issues:** [GitHub Issues](https://github.com/artvepa80/Agents-Hefesto/issues)
-- **Email:** sales@narapallc.com
+- **Email:** contact@narapallc.com
 
 ---
 

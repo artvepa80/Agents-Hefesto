@@ -301,7 +301,7 @@ hefesto analyze . --omega
 - PyPI: https://pypi.org/project/hefesto-ai/4.1.0/
 - Upgrade: https://buy.stripe.com/hefesto-pro
 - Docs: https://github.com/artvepa80/Agents-Hefesto
-- Support: sales@narapallc.com
+- Support: contact@narapallc.com
 
 ---
 
@@ -807,5 +807,5 @@ hefesto analyze . --verbose
 For issues, feature requests, or questions:
 - GitHub Issues: https://github.com/artvepa80/Agents-Hefesto/issues
 - Email: support@narapallc.com
-- Pro Support: sales@narapallc.com
+- Pro Support: contact@narapallc.com
 
