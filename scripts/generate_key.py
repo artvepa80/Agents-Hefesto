@@ -24,7 +24,7 @@ def main():
     print("2. Initialize submodule: git submodule update --init")
     print("3. Run: python private/scripts/generate_key.py [args]")
     print("")
-    print("For access to private repository, contact: team@narapallc.com")
+    print("For access to private repository, contact: support@narapallc.com")
     sys.exit(1)
 
 
