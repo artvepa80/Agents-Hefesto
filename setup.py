@@ -11,11 +11,16 @@ from setuptools import find_packages, setup
 
 # Read version from version file
 def get_version():
+    """Read version safely without using exec()."""
     version_file = os.path.join(os.path.dirname(__file__), "omega", "__version__.py")
     if os.path.exists(version_file):
+        import re
         with open(version_file, "r") as f:
-            exec(f.read())
-        return locals()["__version__"]
+            content = f.read()
+        # Safely extract __version__ using regex instead of exec()
+        match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
+        if match:
+            return match.group(1)
     return "1.0.0"
 
 

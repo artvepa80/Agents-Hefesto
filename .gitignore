@@ -122,3 +122,24 @@ config/.env.omega
 private/
 internal/
 customer_data/
+
+# === PROPRIETARY CODE (Moved to Private Repo) ===
+# License system implementation (keep only stubs public)
+**/licensing/*_ORIGINAL.py
+**/licensing/*_PRIVATE.py
+**/omega/*_ORIGINAL.py
+**/omega/*_PRIVATE.py
+
+# Backup of original implementations (if accidentally created)
+**/*_backup.py
+**/*_original.py
+
+# NOTE: Public repo contains STUB versions only:
+# - hefesto/licensing/key_generator.py (STUB)
+# - hefesto/licensing/license_validator.py (STUB)
+# - hefesto/licensing/feature_gate.py (STUB)
+# - hefesto/omega/hefesto_enricher.py (STUB)
+# - hefesto/omega/iris_alert_manager.py (STUB)
+# - hefesto/llm/license_validator.py (STUB)
+#
+# Real implementations are in: Agents-Hefesto-Pro-Private

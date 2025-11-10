@@ -1,12 +1,20 @@
 """
-License key generation and validation for Hefesto Professional tier.
-Keys are generated when Stripe webhook confirms payment.
+License Key Generator (STUB - Public Version)
+==============================================
+
+⚠️  This is a public stub. Real implementation is in private repository.
+
+The actual license key generation logic contains proprietary algorithms
+and business rules that are not open source.
+
+For access to the full implementation:
+- PRO/OMEGA customers: Contact support@narapallc.com
+- Enterprise: Contact sales@narapallc.com
 
 Copyright © 2025 Narapa LLC
 """
 
 import hashlib
-import secrets
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict
@@ -30,22 +38,13 @@ class LicenseKeyGenerator:
     """
     Generate and validate Hefesto license keys.
 
-    License key format: HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+    ⚠️  STUB: This public version does not contain the actual implementation.
 
-    Example:
-        >>> generator = LicenseKeyGenerator()
-        >>> key = generator.generate(
-        ...     customer_email="user@example.com",
-        ...     tier="professional",
-        ...     subscription_id="sub_xxxxx",
-        ...     is_founding_member=True
-        ... )
-        >>> print(key)
-        HFST-A1B2-C3D4-E5F6-G7H8-I9J0
+    License key format: HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
 
     PREFIX = "HFST"
-    KEY_LENGTH = 20  # Total characters excluding prefix and hyphens
+    KEY_LENGTH = 20
 
     @classmethod
     def generate(
@@ -54,7 +53,10 @@ class LicenseKeyGenerator:
         """
         Generate a unique license key.
 
-        Format: HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+        ⚠️  STUB: Real implementation in private repository.
+
+        This public version returns a placeholder for demonstration purposes only.
+        Actual key generation uses proprietary algorithms.
 
         Args:
             customer_email: Stripe customer email
@@ -63,45 +65,28 @@ class LicenseKeyGenerator:
             is_founding_member: Whether customer has founding member discount
 
         Returns:
-            License key string (30 characters total)
-
-        Example:
-            >>> key = LicenseKeyGenerator.generate(
-            ...     customer_email="customer@example.com",
-            ...     tier="professional",
-            ...     subscription_id="sub_1234567890",
-            ...     is_founding_member=False
-            ... )
-            >>> assert key.startswith("HFST-")
-            >>> assert len(key) == 29  # HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+            License key string (demo mode)
         """
-        # Generate random key part (16 hex characters)
-        random_bytes = secrets.token_bytes(8)
-        random_part = random_bytes.hex().upper()
-
-        # Create checksum from customer data for verification
-        checksum_data = f"{customer_email}:{tier}:{subscription_id}".encode()
-        checksum = hashlib.sha256(checksum_data).hexdigest()[:4].upper()
-
-        # Combine random + checksum (20 chars total)
-        key_chars = random_part + checksum
-
-        # Format as HFST-XXXX-XXXX-XXXX-XXXX-XXXX
-        formatted_key = (
-            f"{cls.PREFIX}-"
-            f"{key_chars[0:4]}-"
-            f"{key_chars[4:8]}-"
-            f"{key_chars[8:12]}-"
-            f"{key_chars[12:16]}-"
-            f"{key_chars[16:20]}"
+        raise NotImplementedError(
+            "❌ License key generation is not available in the public version.\n"
+            "\n"
+            "This functionality is part of Hefesto's proprietary backend.\n"
+            "\n"
+            "For PRO/OMEGA customers:\n"
+            "  → License keys are generated automatically via Stripe webhook\n"
+            "  → Check your email after purchase for your license key\n"
+            "\n"
+            "For Enterprise/Self-hosted:\n"
+            "  → Contact: sales@narapallc.com\n"
+            "  → Private repository access available\n"
         )
-
-        return formatted_key
 
     @classmethod
     def validate_format(cls, key: str) -> bool:
         """
         Validate license key format.
+
+        This basic validation is available in the public version.
 
         Args:
             key: License key to validate
@@ -148,6 +133,8 @@ class LicenseKeyGenerator:
         """
         Create license metadata to store in database.
 
+        ⚠️  STUB: Real implementation in private repository.
+
         Args:
             customer_email: Customer email
             tier: Tier name
@@ -158,25 +145,17 @@ class LicenseKeyGenerator:
         Returns:
             LicenseMetadata object
         """
-        from hefesto.config.stripe_config import get_limits_for_tier
-
-        limits = get_limits_for_tier(tier)
-
-        return LicenseMetadata(
-            customer_email=customer_email,
-            tier=tier,
-            subscription_id=subscription_id,
-            price_id=price_id,
-            is_founding_member=is_founding_member,
-            limits=limits,
-            created_at=datetime.utcnow().isoformat(),
-            status="active",
+        raise NotImplementedError(
+            "❌ License metadata creation is not available in the public version.\n"
+            "This is handled automatically by the Hefesto backend service.\n"
         )
 
     @classmethod
     def hash_key(cls, key: str) -> str:
         """
         Hash license key for secure storage.
+
+        This utility function is available in the public version.
 
         Args:
             key: License key to hash

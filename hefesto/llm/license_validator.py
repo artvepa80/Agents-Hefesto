@@ -1,13 +1,17 @@
 """
-HEFESTO v3.5 - License Validation for Pro Features
+HEFESTO License Validation for Pro Features (STUB - Public Version)
+====================================================================
 
-Purpose: Validate Stripe license keys for Phase 1 (Pro) features.
-Location: hefesto/llm/license_validator.py
+⚠️  This is a public stub. Real implementation is in private repository.
 
-Pro Features (Commercial License Required):
+Purpose: Validate Stripe license keys for Pro/OMEGA features.
+
+Pro/OMEGA Features (Commercial License Required):
 - semantic_analyzer.py - ML-based code embeddings
 - cicd_feedback_collector.py - Automated CI/CD feedback
 - metrics.py - Advanced analytics dashboard
+- IRIS Agent - Production monitoring
+- OMEGA Guardian - Alert correlation
 
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
@@ -34,7 +38,7 @@ class LicenseInfo:
     is_valid: bool
     license_key: Optional[str]
     features_enabled: Set[str]
-    tier: str  # 'free', 'pro', 'enterprise'
+    tier: str  # 'free', 'pro', 'omega'
     expires_at: Optional[datetime] = None
     customer_email: Optional[str] = None
 
@@ -43,8 +47,8 @@ class LicenseValidator:
     """
     Validates Pro licenses for Phase 1 features.
 
-    Phase 1 features require a valid Stripe license key.
-    Set environment variable: HEFESTO_LICENSE_KEY='hef_xxxxx'
+    ⚠️  STUB: Public version provides basic interface only.
+    Real validation logic is in private repository.
 
     Usage:
         >>> validator = LicenseValidator()
@@ -74,7 +78,11 @@ class LicenseValidator:
     }
 
     def __init__(self):
-        """Initialize license validator."""
+        """
+        Initialize license validator.
+
+        ⚠️  STUB: Public version always returns FREE tier.
+        """
         self.license_key = os.getenv("HEFESTO_LICENSE_KEY")
         self.license_info = self._validate_key()
 
@@ -82,16 +90,11 @@ class LicenseValidator:
         """
         Validate license key format and status.
 
-        In production, this would:
-        1. Call Stripe API to verify key
-        2. Check subscription status
-        3. Verify expiration date
-        4. Get customer info
-
-        For now, we do basic format validation.
+        ⚠️  STUB: Public version does not validate against Stripe API.
+        Real validation is server-side only.
 
         Returns:
-            LicenseInfo with validation results
+            LicenseInfo with validation results (always FREE in public version)
         """
         if not self.license_key:
             logger.debug("No license key found - running in Free mode")
@@ -114,83 +117,107 @@ class LicenseValidator:
                 tier="free",
             )
 
-        # TODO: In production, call Stripe API:
-        # import stripe
-        # stripe.api_key = self.license_key
-        # subscription = stripe.Subscription.retrieve('sub_xxxxx')
-        # if subscription.status == 'active':
-        #     return LicenseInfo(is_valid=True, ...)
+        # ⚠️  STUB: Public version cannot validate licenses
+        # Real validation requires Stripe API access (private repository)
+        logger.warning(
+            "⚠️  License validation not available in public version. "
+            "Running in FREE mode. "
+            "To activate PRO/OMEGA features, subscribe at: "
+            "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b"
+        )
 
-        # For now, trust valid format = valid license
-        logger.info("✅ Valid Pro license detected")
         return LicenseInfo(
-            is_valid=True,
+            is_valid=False,
             license_key=self.license_key,
-            features_enabled=self.PRO_FEATURES,
-            tier="pro",
+            features_enabled=set(),
+            tier="free",
         )
 
     def is_pro(self) -> bool:
-        """Check if Pro license is active."""
-        return self.license_info.is_valid and self.license_info.tier == "pro"
+        """
+        Check if Pro license is active.
+
+        ⚠️  STUB: Always returns False in public version.
+        """
+        return False
 
     def has_feature(self, feature: str) -> bool:
-        """Check if specific feature is enabled."""
-        return feature in self.license_info.features_enabled
+        """
+        Check if specific feature is enabled.
+
+        ⚠️  STUB: Always returns False in public version.
+        """
+        return False
 
     def require_pro(self, feature: str = "Pro"):
         """
         Raise LicenseError if Pro license not valid.
 
+        ⚠️  STUB: Always raises error in public version.
+
         Args:
             feature: Feature name for error message
 
         Raises:
-            LicenseError: If license is not valid
+            LicenseError: Always (public version)
 
         Example:
             >>> validator = LicenseValidator()
             >>> validator.require_pro('semantic_analysis')
-            # Raises LicenseError if no valid license
+            # Raises LicenseError (public version)
         """
-        if not self.is_pro():
-            raise LicenseError(
-                f"\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"  🔒 HEFESTO PRO LICENSE REQUIRED\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"\n"
-                f"Feature '{feature}' requires Hefesto Pro.\n"
-                f"\n"
-                f"✨ UNLOCK PRO FEATURES:\n"
-                f"   • ML-based semantic code analysis\n"
-                f"   • Duplicate suggestion detection\n"
-                f"   • CI/CD feedback automation\n"
-                f"   • Advanced analytics dashboard\n"
-                f"\n"
-                f"💰 PRICING: $25/month (Hefesto) or $35/month (OMEGA Founding) "
-                f"or $49/month (OMEGA Pro)\n"
-                f"   Annual pricing deprecated - Contact sales for custom pricing\n"
-                f"\n"
-                f"🛒 PURCHASE:\n"
-                f"   https://buy.stripe.com/hefesto-pro\n"
-                f"\n"
-                f"📧 ENTERPRISE:\n"
-                f"   sales@narapallc.com\n"
-                f"\n"
-                f"After purchase, set your license key:\n"
-                f"   export HEFESTO_LICENSE_KEY='hef_your_key_here'\n"
-                f"\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            )
+        raise LicenseError(
+            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"  🔒 HEFESTO PRO LICENSE REQUIRED\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"\n"
+            f"Feature '{feature}' requires Hefesto Pro or OMEGA Guardian.\n"
+            f"\n"
+            f"✨ PRO FEATURES ($8/month launch pricing):\n"
+            f"   • ML-based semantic code analysis\n"
+            f"   • Duplicate suggestion detection\n"
+            f"   • CI/CD feedback automation\n"
+            f"   • Advanced analytics dashboard\n"
+            f"   • REST API (8 endpoints)\n"
+            f"   • BigQuery integration\n"
+            f"\n"
+            f"✨ OMEGA GUARDIAN FEATURES ($19/month launch pricing):\n"
+            f"   • Everything in PRO +\n"
+            f"   • IRIS Agent (production monitoring)\n"
+            f"   • Auto-correlation (alerts + code findings)\n"
+            f"   • Real-time alerts (Pub/Sub)\n"
+            f"   • Production dashboard\n"
+            f"   • Priority Slack support\n"
+            f"\n"
+            f"🚀 FIRST 100 CUSTOMERS: Launch pricing locked forever!\n"
+            f"\n"
+            f"🛒 SUBSCRIBE:\n"
+            f"   PRO: https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
+            f"   OMEGA: https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c\n"
+            f"\n"
+            f"📧 ENTERPRISE:\n"
+            f"   sales@narapallc.com\n"
+            f"\n"
+            f"After purchase, you'll receive your license key via email.\n"
+            f"Then set: export HEFESTO_LICENSE_KEY='your_key_here'\n"
+            f"\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        )
 
     def get_info(self) -> dict:
-        """Get license information."""
+        """
+        Get license information.
+
+        ⚠️  STUB: Always returns FREE tier in public version.
+        """
         return {
-            "tier": self.license_info.tier,
-            "is_pro": self.is_pro(),
-            "features_enabled": list(self.license_info.features_enabled),
+            "tier": "free",
+            "is_pro": False,
+            "features_enabled": [],
             "license_key_set": self.license_key is not None,
+            "upgrade_url_pro": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
+            "upgrade_url_omega": "https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c",
         }
 
 
@@ -209,6 +236,8 @@ def get_license_validator() -> LicenseValidator:
 def require_pro(feature: str = "Pro"):
     """
     Decorator to require Pro license for a function.
+
+    ⚠️  STUB: Always blocks in public version.
 
     Usage:
         @require_pro("semantic_analysis")

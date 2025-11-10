@@ -1,11 +1,12 @@
 """
-Feature gating system for Hefesto.
-Enforces tier-based access control at code execution level.
+Feature Gating System (STUB - Public Version)
+=============================================
 
-Usage:
-    @FeatureGate.requires('ml_semantic_analysis')
-    def some_pro_function():
-        pass
+⚠️  This is a public stub. Real implementation is in private repository.
+
+The actual feature gating enforcement logic is proprietary.
+
+Copyright © 2025 Narapa LLC
 """
 
 import functools
@@ -14,8 +15,6 @@ from typing import Callable, Optional
 from hefesto.licensing.license_validator import LicenseValidator
 
 # Tier hierarchy: higher number = higher tier
-# OMEGA (2) includes all PRO (1) features
-# PRO (1) includes all FREE (0) features
 TIER_HIERARCHY = {
     "free": 0,
     "professional": 1,
@@ -40,8 +39,8 @@ class FeatureGate:
     """
     Decorator and context manager for enforcing tier-based feature access.
 
-    This class provides decorators to restrict function execution based on
-    the user's license tier and available features.
+    ⚠️  STUB: Public version provides basic interface only.
+    Real enforcement logic is in private repository.
     """
 
     validator = LicenseValidator()
@@ -51,32 +50,32 @@ class FeatureGate:
         """
         Get license key from config.
 
+        ⚠️  STUB: Public version returns None.
+
         Returns:
             License key string or None if not activated
         """
-        try:
-            from hefesto.config.config_manager import ConfigManager
-
-            config = ConfigManager()
-            return config.get("license_key")
-        except Exception:
-            return None
+        # Public version doesn't have access to config
+        return None
 
     @classmethod
     def get_current_tier(cls) -> str:
         """
         Get current tier from license.
 
+        ⚠️  STUB: Public version always returns 'free'.
+
         Returns:
-            'free' or 'professional'
+            'free' (public version)
         """
-        license_key = cls.get_current_license()
-        return cls.validator.get_tier_for_key(license_key)
+        return "free"
 
     @classmethod
     def check_feature_access(cls, feature: str) -> tuple:
         """
         Check if current tier has access to feature.
+
+        ⚠️  STUB: Public version denies all PRO features.
 
         Args:
             feature: Feature code (e.g., 'ml_semantic_analysis')
@@ -91,6 +90,8 @@ class FeatureGate:
     def requires(cls, feature: str, fallback: Optional[Callable] = None):
         """
         Decorator to require a specific feature tier.
+
+        ⚠️  STUB: Public version denies access to all PRO features.
 
         Args:
             feature: Feature code from stripe_config.py
@@ -128,8 +129,7 @@ class FeatureGate:
         """
         Decorator to require a minimum tier level.
 
-        Uses tier hierarchy: OMEGA (2) >= PRO (1) >= FREE (0)
-        Higher tiers have access to all lower tier features.
+        ⚠️  STUB: Public version denies all tiers above FREE.
 
         Args:
             required_tier: Minimum tier required ('free', 'professional', 'omega')
@@ -151,37 +151,34 @@ class FeatureGate:
                 user_level = get_tier_level(current_tier)
                 required_level = get_tier_level(required_tier)
 
-                # Hierarchy check: user must have tier >= required tier
+                # Public version: user is always FREE tier
                 if user_level < required_level:
-                    # Build appropriate upgrade message based on required tier
                     if required_tier.lower() == "omega":
                         upgrade_msg = (
                             f"❌ This feature requires OMEGA Guardian tier.\n"
                             f"   Current tier: {current_tier}\n"
                             f"\n"
-                            f"   Upgrade to OMEGA Guardian ($35/month):\n"
-                            f"   → Full production monitoring with IRIS Agent\n"
-                            f"   → Auto-correlation between code & production issues\n"
-                            f"   → All PRO features + ML enhancement\n"
-                            f"   → BigQuery integration & real-time alerts\n"
+                            f"   Upgrade to OMEGA Guardian:\n"
+                            f"   → $19/month (launch pricing)\n"
+                            f"   → https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c\n"
                             f"\n"
-                            f"   Contact: sales@hefesto.ai"
+                            f"   ✨ Full production monitoring with IRIS Agent\n"
+                            f"   ✨ Auto-correlation between code & production issues\n"
+                            f"   ✨ All PRO features + ML enhancement\n"
+                            f"\n"
+                            f"   🚀 First 100 customers get pricing locked forever"
                         )
                     elif required_tier.lower() == "professional":
                         upgrade_msg = (
                             f"❌ This feature requires Professional tier.\n"
                             f"   Current tier: {current_tier}\n"
                             f"\n"
-                            f"   Upgrade to Professional ($25/month):\n"
-                            f"   → https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04\n"
+                            f"   Upgrade to Professional:\n"
+                            f"   → $8/month (launch pricing)\n"
+                            f"   → https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
                             f"\n"
-                            f"   🚀 First 25 teams: $59/month forever (40% off)\n"
-                            f"   → https://buy.stripe.com/"
-                            f"dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40\n"
-                            f"\n"
-                            f"   Or upgrade to OMEGA Guardian ($35/month):\n"
-                            f"   → All PRO + production monitoring + IRIS Agent\n"
-                            f"   Contact: sales@hefesto.ai"
+                            f"   🚀 First 100 customers get pricing locked forever\n"
+                            f"   → 14 days free trial, no credit card required"
                         )
                     else:
                         upgrade_msg = (
@@ -202,6 +199,8 @@ class FeatureGate:
         """
         Get information about current tier and limits.
 
+        ⚠️  STUB: Public version returns FREE tier info.
+
         Returns:
             Dictionary with tier information
         """
@@ -220,46 +219,46 @@ class FeatureAccessDenied(Exception):
 
 
 # Convenience decorators for common features
-def requires_pro(func):  # noqa: E731
+def requires_pro(func):
     """Require professional tier."""
     return FeatureGate.requires_tier("professional")(func)
 
 
-def requires_omega(func):  # noqa: E731
+def requires_omega(func):
     """Require OMEGA Guardian tier."""
     return FeatureGate.requires_tier("omega")(func)
 
 
-def requires_ml_analysis(func):  # noqa: E731
+def requires_ml_analysis(func):
     """Require ML semantic analysis feature."""
     return FeatureGate.requires("ml_semantic_analysis")(func)
 
 
-def requires_ai_recommendations(func):  # noqa: E731
+def requires_ai_recommendations(func):
     """Require AI recommendations feature."""
     return FeatureGate.requires("ai_recommendations")(func)
 
 
-def requires_security_scanning(func):  # noqa: E731
+def requires_security_scanning(func):
     """Require security scanning feature."""
     return FeatureGate.requires("security_scanning")(func)
 
 
-def requires_automated_triage(func):  # noqa: E731
+def requires_automated_triage(func):
     """Require automated triage feature."""
     return FeatureGate.requires("automated_triage")(func)
 
 
-def requires_integrations(func):  # noqa: E731
+def requires_integrations(func):
     """Require GitHub/GitLab/Bitbucket integrations."""
     return FeatureGate.requires("github_gitlab_bitbucket")(func)
 
 
-def requires_priority_support(func):  # noqa: E731
+def requires_priority_support(func):
     """Require priority support feature."""
     return FeatureGate.requires("priority_support")(func)
 
 
-def requires_analytics(func):  # noqa: E731
+def requires_analytics(func):
     """Require analytics dashboard feature."""
     return FeatureGate.requires("analytics_dashboard")(func)

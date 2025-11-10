@@ -384,13 +384,15 @@ for key, pattern in MASKING_PATTERNS.items():
 
 
 if __name__ == "__main__":
-    # Simple test
+    # Test the masking functionality with example values
+    # These are NOT real credentials, just test data to demonstrate masking
     test_code = """
     API_KEY = "sk-1234567890abcdef"
     EMAIL = "user@example.com"
-    PASSWORD = "super_secret_password"
+    DB_PASS = "example_test_value_123"
     """
 
+    print("Testing masking functionality with example data...")
     result = mask_text(test_code)
     print(f"Masked Text:\n{result.masked_text}")
     print(f"\nRedaction Count: {result.redaction_count}")
