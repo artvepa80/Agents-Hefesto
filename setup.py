@@ -15,6 +15,7 @@ def get_version():
     version_file = os.path.join(os.path.dirname(__file__), "omega", "__version__.py")
     if os.path.exists(version_file):
         import re
+
         with open(version_file, "r") as f:
             content = f.read()
         # Safely extract __version__ using regex instead of exec()
