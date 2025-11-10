@@ -244,7 +244,7 @@ class TestErrorMessages:
         assert "OMEGA Guardian" in error_msg
         assert "free" in error_msg.lower()
         assert "IRIS Agent" in error_msg  # OMEGA-specific features
-        assert "$35" in error_msg  # OMEGA pricing
+        assert "$19" in error_msg  # OMEGA launch pricing
 
     @patch.object(FeatureGate, "get_current_tier", return_value="professional")
     def test_pro_to_omega_error_message(self, mock_tier):
