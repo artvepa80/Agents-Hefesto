@@ -121,7 +121,7 @@ class LicenseValidator:
                 f"   → https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
                 f"   \n"
                 f"   🚀 Launch pricing: $8/month (first 100 customers)\n"
-                f"   → 14 days free trial, no credit card required"
+                f"   → 14 days free trial, no credit card required",
             )
 
         return (True, "")
@@ -154,7 +154,7 @@ class LicenseValidator:
                 f"   → https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
                 f"   \n"
                 f"   🚀 Launch pricing: $8/month (first 100 customers)\n"
-                f"   → 14 days free trial, no credit card required"
+                f"   → 14 days free trial, no credit card required",
             )
 
         return (True, "")
@@ -217,7 +217,7 @@ class LicenseValidator:
             f"   → https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c\n"
             f"   \n"
             f"   🚀 First 100 customers get launch pricing locked forever\n"
-            f"   → 14 days free trial, no credit card required"
+            f"   → 14 days free trial, no credit card required",
         )
 
     def validate_before_analysis(

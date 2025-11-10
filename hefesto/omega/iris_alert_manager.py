@@ -19,7 +19,6 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import logging
-import os
 from datetime import datetime
 from typing import Optional
 
