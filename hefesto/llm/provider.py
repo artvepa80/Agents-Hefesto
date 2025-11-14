@@ -413,13 +413,14 @@ def create_provider(provider_type: str, **kwargs) -> LLMProvider:
         ... )
         >>> provider.initialize()
     """
-    from llm.vertex_provider import VertexProvider
+    from hefesto.llm.claude_provider import ClaudeProvider
+    from hefesto.llm.gemini_api_client import GeminiAPIClient
+    from hefesto.llm.openai_provider import OpenAIProvider
 
     provider_map = {
-        "vertex_ai": VertexProvider,
-        # Add more providers here as they are implemented
-        # "openai": OpenAIProvider,
-        # "claude": ClaudeProvider,
+        "gemini": GeminiAPIClient,
+        "claude": ClaudeProvider,
+        "openai": OpenAIProvider,
     }
 
     if provider_type not in provider_map:
@@ -428,12 +429,10 @@ def create_provider(provider_type: str, **kwargs) -> LLMProvider:
             f"Supported types: {list(provider_map.keys())}"
         )
 
-    # Create config
-    config = ProviderConfig(provider_type=ProviderType(provider_type), **kwargs)
-
-    # Instantiate provider
+    # Instantiate provider with kwargs
+    # Modern providers (Gemini, Claude, OpenAI) use api_key/model pattern
     provider_class = provider_map[provider_type]
-    provider = provider_class(config)
+    provider = provider_class(**kwargs)
 
     logger.info(f"Created provider: {provider_type}")
     return provider
