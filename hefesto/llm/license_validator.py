@@ -96,6 +96,27 @@ class LicenseValidator:
         Returns:
             LicenseInfo with validation results (always FREE in public version)
         """
+        # Try to use real validator from hefesto-pro package if installed
+        try:
+            from hefesto_pro.licensing.license_validator import (
+                LicenseValidator as ProValidator,
+            )
+
+            pro_validator = ProValidator()
+            tier = pro_validator.get_tier_for_key(self.license_key)
+
+            if tier in ["professional", "omega"]:
+                is_pro = tier in ["professional", "omega"]
+                features = self.PRO_FEATURES if is_pro else set()
+                return LicenseInfo(
+                    is_valid=True,
+                    license_key=self.license_key,
+                    features_enabled=features,
+                    tier=tier,
+                )
+        except ImportError:
+            pass  # Fall back to stub behavior
+
         if not self.license_key:
             logger.debug("No license key found - running in Free mode")
             return LicenseInfo(
@@ -137,9 +158,9 @@ class LicenseValidator:
         """
         Check if Pro license is active.
 
-        ⚠️  STUB: Always returns False in public version.
+        ⚠️  STUB: Always returns False in public version unless hefesto-pro installed.
         """
-        return False
+        return self.license_info.tier in ["professional", "omega"]
 
     def has_feature(self, feature: str) -> bool:
         """
@@ -209,12 +230,12 @@ class LicenseValidator:
         """
         Get license information.
 
-        ⚠️  STUB: Always returns FREE tier in public version.
+        ⚠️  STUB: Always returns FREE tier in public version unless hefesto-pro installed.
         """
         return {
-            "tier": "free",
-            "is_pro": False,
-            "features_enabled": [],
+            "tier": self.license_info.tier,
+            "is_pro": self.license_info.tier in ["professional", "omega"],
+            "features_enabled": list(self.license_info.features_enabled),
             "license_key_set": self.license_key is not None,
             "upgrade_url_pro": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
             "upgrade_url_omega": "https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c",

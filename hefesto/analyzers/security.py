@@ -12,7 +12,6 @@ Detects 6 types of security issues:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import ast
 import re
 from typing import List
 
@@ -21,6 +20,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.ast.generic_ast import GenericAST, NodeType
 
 
 class SecurityAnalyzer:
@@ -37,21 +37,23 @@ class SecurityAnalyzer:
         (r"AWS[A-Z0-9]{16,}", "AWS key"),
     ]
 
-    def analyze(self, tree: ast.AST, file_path: str, code: str) -> List[AnalysisIssue]:
+    def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Analyze code for security vulnerabilities."""
         issues = []
 
         issues.extend(self._check_hardcoded_secrets(tree, file_path, code))
-        issues.extend(self._check_sql_injection(tree, file_path))
-        issues.extend(self._check_eval_usage(tree, file_path))
-        issues.extend(self._check_pickle_usage(tree, file_path))
-        issues.extend(self._check_assert_usage(tree, file_path))
-        issues.extend(self._check_bare_except(tree, file_path))
+        issues.extend(self._check_sql_injection(tree, file_path, code))
+        issues.extend(self._check_eval_usage(tree, file_path, code))
+
+        if tree.language == "python":
+            issues.extend(self._check_pickle_usage(tree, file_path))
+            issues.extend(self._check_assert_usage(tree, file_path))
+            issues.extend(self._check_bare_except(tree, file_path))
 
         return issues
 
     def _check_hardcoded_secrets(
-        self, tree: ast.AST, file_path: str, code: str
+        self, tree: GenericAST, file_path: str, code: str
     ) -> List[AnalysisIssue]:
         """Detect hardcoded secrets in code."""
         issues = []
@@ -81,122 +83,102 @@ class SecurityAnalyzer:
 
         return issues
 
-    def _check_sql_injection(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
+    def _check_sql_injection(
+        self, tree: GenericAST, file_path: str, code: str
+    ) -> List[AnalysisIssue]:
         """Detect potential SQL injection vulnerabilities."""
         issues = []
 
-        for node in ast.walk(tree):
-            # Look for string formatting with SQL keywords
-            if isinstance(node, ast.JoinedStr):
-                # f-string with SQL keywords
-                sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE"]
-                for value in node.values:
-                    if isinstance(value, ast.Constant) and isinstance(value.value, str):
-                        if any(keyword in value.value.upper() for keyword in sql_keywords):
-                            issues.append(
-                                AnalysisIssue(
-                                    file_path=file_path,
-                                    line=node.lineno,
-                                    column=node.col_offset,
-                                    issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
-                                    severity=AnalysisIssueSeverity.HIGH,
-                                    message=("Potential SQL injection via f-string"),
-                                    suggestion=(
-                                        "Use parameterized queries instead:\n"
-                                        "cursor.execute('SELECT * FROM users "
-                                        "WHERE id = ?', (user_id,))"
-                                    ),
-                                    metadata={"pattern": "f-string"},
-                                )
-                            )
-
-            # Look for string concatenation with SQL
-            if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
-                if isinstance(node.left, ast.Constant) and isinstance(node.left.value, str):
-                    sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE"]
-                    if any(keyword in node.left.value.upper() for keyword in sql_keywords):
-                        issues.append(
-                            AnalysisIssue(
-                                file_path=file_path,
-                                line=node.lineno,
-                                column=node.col_offset,
-                                issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
-                                severity=AnalysisIssueSeverity.HIGH,
-                                message="Potential SQL injection via string concatenation",
-                                suggestion="Use parameterized queries with placeholders",
-                                metadata={"pattern": "concatenation"},
-                            )
-                        )
-
-        return issues
-
-    def _check_eval_usage(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
-        """Detect dangerous eval() usage."""
-        issues = []
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name) and node.func.id in ["eval", "exec"]:
+        sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE"]
+        for line_num, line in enumerate(code.split("\n"), start=1):
+            line_upper = line.upper()
+            if any(keyword in line_upper for keyword in sql_keywords):
+                if "+" in line or "%" in line or "${" in line or "`" in line:
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
-                            issue_type=AnalysisIssueType.EVAL_USAGE,
-                            severity=AnalysisIssueSeverity.CRITICAL,
-                            message=f"Dangerous {node.func.id}() usage detected",
-                            suggestion="Avoid eval/exec. Use safe alternatives:\n"
-                            "- ast.literal_eval() for literals\n"
-                            "- json.loads() for JSON\n"
-                            "- Implement proper parsing logic",
-                            metadata={"function": node.func.id},
+                            line=line_num,
+                            column=0,
+                            issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
+                            severity=AnalysisIssueSeverity.HIGH,
+                            message="Potential SQL injection via string concatenation",
+                            suggestion="Use parameterized queries with placeholders",
+                            metadata={"pattern": "sql_concatenation"},
                         )
                     )
 
         return issues
 
-    def _check_pickle_usage(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
-        """Detect unsafe pickle usage."""
+    def _check_eval_usage(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
+        """Detect dangerous eval() usage."""
         issues = []
 
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name == "pickle":
-                        issues.append(
-                            AnalysisIssue(
-                                file_path=file_path,
-                                line=node.lineno,
-                                column=node.col_offset,
-                                issue_type=AnalysisIssueType.PICKLE_USAGE,
-                                severity=AnalysisIssueSeverity.HIGH,
-                                message="Unsafe pickle module usage",
-                                suggestion="Use safer alternatives:\n"
-                                "- json module for simple data\n"
-                                "- msgpack for binary data\n"
-                                "- protobuf for structured data\n"
-                                "Only use pickle with trusted data sources",
-                                metadata={"module": "pickle"},
-                            )
+        patterns = [
+            (r"\beval\s*\(", "eval"),
+            (r"\bexec\s*\(", "exec"),
+        ]
+
+        for line_num, line in enumerate(code.split("\n"), start=1):
+            for pattern, func_name in patterns:
+                if re.search(pattern, line):
+                    issues.append(
+                        AnalysisIssue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=0,
+                            issue_type=AnalysisIssueType.EVAL_USAGE,
+                            severity=AnalysisIssueSeverity.CRITICAL,
+                            message=f"Dangerous {func_name}() usage detected",
+                            suggestion="Avoid eval/exec. Use safe alternatives:\n"
+                            "- ast.literal_eval() for literals\n"
+                            "- json.loads() for JSON\n"
+                            "- Implement proper parsing logic",
+                            metadata={"function": func_name},
                         )
+                    )
 
         return issues
 
-    def _check_assert_usage(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
+    def _check_pickle_usage(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
+        """Detect unsafe pickle usage."""
+        issues = []
+
+        for node in tree.walk():
+            if node.type == NodeType.IMPORT:
+                if "pickle" in node.text:
+                    issues.append(
+                        AnalysisIssue(
+                            file_path=file_path,
+                            line=node.line_start,
+                            column=node.column_start,
+                            issue_type=AnalysisIssueType.PICKLE_USAGE,
+                            severity=AnalysisIssueSeverity.HIGH,
+                            message="Unsafe pickle module usage",
+                            suggestion="Use safer alternatives:\n"
+                            "- json module for simple data\n"
+                            "- msgpack for binary data\n"
+                            "- protobuf for structured data\n"
+                            "Only use pickle with trusted data sources",
+                            metadata={"module": "pickle"},
+                        )
+                    )
+
+        return issues
+
+    def _check_assert_usage(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
         """Detect assert statements in production code."""
         issues = []
 
-        # Skip test files
         if "test" in file_path.lower():
             return issues
 
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assert):
+        for node in tree.walk():
+            if "assert " in node.text.lower() and node.type != NodeType.COMMENT:
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
+                        line=node.line_start,
+                        column=node.column_start,
                         issue_type=AnalysisIssueType.ASSERT_IN_PRODUCTION,
                         severity=AnalysisIssueSeverity.MEDIUM,
                         message="Assert statement in production code",
@@ -209,18 +191,18 @@ class SecurityAnalyzer:
 
         return issues
 
-    def _check_bare_except(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
+    def _check_bare_except(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
         """Detect bare except clauses that swallow all exceptions."""
         issues = []
 
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ExceptHandler):
-                if node.type is None:
+        for node in tree.walk():
+            if node.type == NodeType.CATCH:
+                if re.search(r"except\s*:", node.text):
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
-                            line=node.lineno,
-                            column=node.col_offset,
+                            line=node.line_start,
+                            column=node.column_start,
                             issue_type=AnalysisIssueType.BARE_EXCEPT,
                             severity=AnalysisIssueSeverity.MEDIUM,
                             message="Bare except clause catches all exceptions",

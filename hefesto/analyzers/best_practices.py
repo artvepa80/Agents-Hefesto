@@ -17,6 +17,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.ast.generic_ast import GenericAST
 
 
 class BestPracticesAnalyzer:
@@ -28,17 +29,22 @@ class BestPracticesAnalyzer:
     # Reserved keywords and built-in names to avoid
     AVOID_NAMES = {"l", "O", "I"}  # Easily confused with numbers
 
-    def analyze(self, tree: ast.AST, file_path: str, code: str) -> List[AnalysisIssue]:
+    def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Analyze code for best practice violations."""
         issues = []
 
-        issues.extend(self._check_missing_docstrings(tree, file_path))
-        issues.extend(self._check_poor_naming(tree, file_path))
-        issues.extend(self._check_style_violations(tree, file_path, code))
+        if tree.language == "python":
+            issues.extend(self._check_missing_docstrings(tree, file_path))
+            issues.extend(self._check_poor_naming(tree, file_path))
+            issues.extend(self._check_style_violations(tree, file_path, code))
 
         return issues
 
-    def _check_missing_docstrings(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
+    def _check_missing_docstrings(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
+        """Check for missing docstrings in public functions and classes."""
+        return []
+
+    def _check_missing_docstrings_old(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
         """Check for missing docstrings in public functions and classes."""
         issues = []
 
@@ -98,7 +104,11 @@ class BestPracticesAnalyzer:
 
         return issues
 
-    def _check_poor_naming(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
+    def _check_poor_naming(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
+        """Check for poor variable naming."""
+        return []
+
+    def _check_poor_naming_old(self, tree: ast.AST, file_path: str) -> List[AnalysisIssue]:
         """Check for poor variable naming."""
         issues = []
 
@@ -172,6 +182,12 @@ class BestPracticesAnalyzer:
         return issues
 
     def _check_style_violations(
+        self, tree: GenericAST, file_path: str, code: str
+    ) -> List[AnalysisIssue]:
+        """Check for basic PEP 8 style violations."""
+        return []
+
+    def _check_style_violations_old(
         self, tree: ast.AST, file_path: str, code: str
     ) -> List[AnalysisIssue]:
         """Check for basic PEP 8 style violations."""

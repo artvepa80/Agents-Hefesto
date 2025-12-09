@@ -14,7 +14,6 @@ Pipeline:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import ast
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -26,6 +25,8 @@ from hefesto.core.analysis_models import (
     AnalysisSummary,
     FileAnalysisResult,
 )
+from hefesto.core.language_detector import Language, LanguageDetector
+from hefesto.core.parsers.parser_factory import ParserFactory
 
 # Phase 0 imports (always available)
 try:
@@ -121,12 +122,12 @@ class AnalyzerEngine:
             print("=" * 50)
             print()
 
-        # Find Python files
+        # Find supported files
         path_obj = Path(path)
-        python_files = self._find_python_files(path_obj, exclude_patterns or [])
+        source_files = self._find_files(path_obj, exclude_patterns or [])
 
         if self.verbose:
-            print(f"📁 Found {len(python_files)} Python file(s)")
+            print(f"📁 Found {len(source_files)} file(s)")
             print()
 
         # STEP 1: Run static analyzers
@@ -136,7 +137,7 @@ class AnalyzerEngine:
         file_results = []
         all_issues = []
 
-        for py_file in python_files:
+        for py_file in source_files:
             file_result = self._analyze_file(py_file)
             if file_result:
                 file_results.append(file_result)
@@ -228,38 +229,44 @@ class AnalyzerEngine:
 
         return enhanced
 
-    def _find_python_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
-        """Find all Python files in the given path."""
+    def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
+        """Find all supported files in the given path."""
         if path.is_file():
-            return [path] if path.suffix == ".py" else []
+            return [path] if LanguageDetector.is_supported(path) else []
 
-        python_files = []
-        for py_file in path.rglob("*.py"):
-            # Check if file should be excluded
-            should_exclude = False
-            for pattern in exclude_patterns:
-                if pattern in str(py_file):
-                    should_exclude = True
-                    break
+        supported_files = []
+        for ext in LanguageDetector.get_supported_extensions():
+            for file in path.rglob(f"*{ext}"):
+                should_exclude = False
+                for pattern in exclude_patterns:
+                    if pattern in str(file):
+                        should_exclude = True
+                        break
 
-            if not should_exclude:
-                python_files.append(py_file)
+                if not should_exclude:
+                    supported_files.append(file)
 
-        return python_files
+        return supported_files
 
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
-        """Analyze a single Python file."""
+        """Analyze a single file (multi-language support)."""
         start_time = time.time()
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 code = f.read()
 
-            # Parse to AST
+            # Detect language
+            language = LanguageDetector.detect(file_path)
+            if language == Language.UNKNOWN:
+                return None
+
+            # Get appropriate parser
             try:
-                tree = ast.parse(code, filename=str(file_path))
-            except SyntaxError:
-                # File has syntax errors, skip it
+                parser = ParserFactory.get_parser(language)
+                tree = parser.parse(code, str(file_path))
+            except Exception:
+                # File has syntax errors or unsupported language, skip it
                 return None
 
             # Count lines of code

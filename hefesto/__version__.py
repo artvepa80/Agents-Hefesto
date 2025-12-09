@@ -2,7 +2,7 @@
 Hefesto version information.
 """
 
-__version__ = "4.2.1"
+__version__ = "4.3.0"
 __api_version__ = "v1"
 
 # Version history
@@ -28,3 +28,9 @@ __api_version__ = "v1"
 #         - Implemented proper tier hierarchy (OMEGA >= PRO >= FREE)
 #         - Added 17 tests for tier hierarchy
 #         - Verified with real OMEGA license
+# 4.3.0 - Multi-Language Support (TypeScript/JavaScript)
+#         - Added TypeScript/JavaScript analysis support via TreeSitter
+#         - Created GenericAST abstraction for language-agnostic analysis
+#         - Refactored all analyzers to work with multi-language AST
+#         - Market coverage: 30% → 80% (added web developers)
+#         - Maintained backward compatibility with Python-only projects

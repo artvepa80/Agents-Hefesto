@@ -12,7 +12,6 @@ Thresholds:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-import ast
 from typing import List, Optional
 
 from hefesto.core.analysis_models import (
@@ -20,17 +19,18 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.ast.generic_ast import GenericAST, NodeType
 
 
 class ComplexityAnalyzer:
     """Analyzes cyclomatic complexity of functions."""
 
-    def analyze(self, tree: ast.AST, file_path: str, code: str) -> List[AnalysisIssue]:
+    def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """
         Analyze code for complexity issues.
 
         Args:
-            tree: AST of the code
+            tree: GenericAST of the code
             file_path: Path to the file being analyzed
             code: Source code as string
 
@@ -39,16 +39,16 @@ class ComplexityAnalyzer:
         """
         issues = []
 
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        for node in tree.walk():
+            if node.type in [NodeType.FUNCTION, NodeType.ASYNC_FUNCTION, NodeType.METHOD]:
                 complexity = self._calculate_complexity(node)
                 severity = self._get_severity(complexity)
 
                 if severity:
                     issue = AnalysisIssue(
                         file_path=file_path,
-                        line=node.lineno,
-                        column=node.col_offset,
+                        line=node.line_start,
+                        column=node.column_start,
                         issue_type=(
                             AnalysisIssueType.HIGH_COMPLEXITY
                             if severity != AnalysisIssueSeverity.CRITICAL
@@ -64,7 +64,7 @@ class ComplexityAnalyzer:
 
         return issues
 
-    def _calculate_complexity(self, node: ast.FunctionDef) -> int:
+    def _calculate_complexity(self, node) -> int:
         """
         Calculate cyclomatic complexity of a function.
 
@@ -72,28 +72,15 @@ class ComplexityAnalyzer:
         """
         complexity = 1
 
-        for child in ast.walk(node):
-            # Decision points
-            if isinstance(
-                child,
-                (
-                    ast.If,
-                    ast.While,
-                    ast.For,
-                    ast.AsyncFor,
-                    ast.ExceptHandler,
-                    ast.With,
-                    ast.AsyncWith,
-                    ast.Assert,
-                ),
-            ):
+        for child in node.walk():
+            if child.type == NodeType.CONDITIONAL:
                 complexity += 1
-            # Boolean operators
-            elif isinstance(child, ast.BoolOp):
-                complexity += len(child.values) - 1
-            # List/set/dict comprehensions
-            elif isinstance(child, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                complexity += len(child.generators)
+            elif child.type == NodeType.LOOP:
+                complexity += 1
+            elif child.type == NodeType.TRY:
+                complexity += 1
+            elif child.type == NodeType.CATCH:
+                complexity += 1
 
         return complexity
 
