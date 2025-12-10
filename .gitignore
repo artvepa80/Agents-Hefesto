@@ -143,3 +143,11 @@ customer_data/
 # - hefesto/llm/license_validator.py (STUB)
 #
 # Real implementations are in: Agents-Hefesto-Pro-Private
+
+# OMEGA Guardian configuration (contains sensitive data)
+OMEGA_GUARDIAN_SETUP.md
+iris_config.yaml
+
+# TreeSitter build artifacts
+build/grammars/
+build/languages.so
