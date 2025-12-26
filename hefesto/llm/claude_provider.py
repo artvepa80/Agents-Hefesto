@@ -21,7 +21,7 @@ try:
 except ImportError:
     raise ImportError("anthropic SDK not installed. Install with: pip install anthropic")
 
-from hefesto.llm.provider import (
+from hefesto.llm.provider import (  # noqa: F401
     IssueFinding,
     LLMProvider,
     ProviderConfig,
@@ -302,7 +302,10 @@ class ClaudeProvider(LLMProvider):
                 raise ValueError("Sensitive data detected in context after masking")
 
         # Build prompt for code refactoring
-        system_prompt = "You are HEFESTO v3.0, an expert code quality assistant. Your responses must be precise, secure, and follow best practices."
+        system_prompt = (
+            "You are HEFESTO v3.0, an expert code quality assistant. "
+            "Your responses must be precise, secure, and follow best practices."
+        )
 
         prompt = f"""TASK: Propose a code fix for the following issue.
 
@@ -408,7 +411,10 @@ Generate the JSON response now:"""
             mask_result = mask_text(code_context)
             code_context = mask_result.masked_text
 
-        system_prompt = "You are HEFESTO v3.0, an expert code quality assistant specializing in detailed issue analysis."
+        system_prompt = (
+            "You are HEFESTO v3.0, an expert code quality assistant "
+            "specializing in detailed issue analysis."
+        )
 
         prompt = f"""Explain this code issue in detail:
 
@@ -513,7 +519,10 @@ Format as JSON:
         Returns:
             TestSuggestion with generated test code
         """
-        system_prompt = "You are HEFESTO v3.0, an expert in test generation. Generate comprehensive, production-ready tests."
+        system_prompt = (
+            "You are HEFESTO v3.0, an expert in test generation. "
+            "Generate comprehensive, production-ready tests."
+        )
 
         prompt = f"""Generate comprehensive pytest tests for this function:
 
@@ -674,7 +683,7 @@ def test_claude_client():
 
         # Test generation
         response = client.generate("Say 'Hello, HEFESTO v3.0!' and nothing else.")
-        print(f"\n📤 Test prompt: 'Say Hello, HEFESTO v3.0!'")
+        print("\n📤 Test prompt: 'Say Hello, HEFESTO v3.0!'")
         print(f"📥 Response: {response.text}")
         print(f"✅ Success: {response.success}")
 

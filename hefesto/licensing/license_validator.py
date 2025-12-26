@@ -292,5 +292,5 @@ class LicenseValidator:
             "tier_display": tier.title(),
             "limits": limits,
             "upgrade_url": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
-            "founding_url": "https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
+            "founding_url": "https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05",
         }
