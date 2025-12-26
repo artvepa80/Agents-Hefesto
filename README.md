@@ -6,7 +6,7 @@
 
 **Multi-language AI code quality validation powered by Gemini that works seamlessly with AI coding assistants.**
 
-Hefesto is the AI-powered code quality guardian that validates your Python, TypeScript, and JavaScript code before it hits production. It caught 3 critical bugs in its own v4.0.1 release through self-validation (dogfooding). Now it's protecting codebases worldwide.
+Hefesto is the AI-powered code quality guardian that validates your Python, TypeScript, JavaScript, Java, Go, Rust, and C# code before it hits production. It caught 3 critical bugs in its own v4.0.1 release through self-validation (dogfooding). Now it's protecting codebases worldwide.
 
 ---
 
@@ -14,7 +14,7 @@ Hefesto is the AI-powered code quality guardian that validates your Python, Type
 
 Hefesto analyzes your code using AI and catches issues that traditional linters miss:
 
-- **Multi-Language Support:** Python, TypeScript, JavaScript (Java & Go coming soon)
+- **Multi-Language Support:** Python, TypeScript, JavaScript, Java, Go, Rust, C# (7 languages!)
 - **AI-Powered Analysis:** Uses Google Gemini for semantic code understanding
 - **ML Enhancement:** Detects code smells, duplications, and anti-patterns
 - **Security Scanning:** Finds hardcoded secrets, SQL injections, command injections
