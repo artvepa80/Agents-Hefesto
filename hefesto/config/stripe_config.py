@@ -104,7 +104,7 @@ STRIPE_CONFIG = {
             "checkout_url": PAYMENT_LINKS["omega"],
         },
     },
-        "limits": {
+    "limits": {
         "free": {
             "tier": "free",
             "users": 1,

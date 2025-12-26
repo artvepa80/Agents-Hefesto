@@ -350,11 +350,11 @@ def status():
 
     limits = tier_info["limits"]
     click.echo(f"Repositories: {limits['repositories']}")
-    loc_val = limits['loc_monthly']
+    loc_val = limits["loc_monthly"]
     if isinstance(loc_val, str):
-        click.echo(f'LOC/month: {loc_val}')
+        click.echo(f"LOC/month: {loc_val}")
     else:
-        click.echo(f'LOC/month: {loc_val:,}')
+        click.echo(f"LOC/month: {loc_val:,}")
 
     if limits["analysis_runs"] == float("inf"):
         click.echo("Analysis runs: Unlimited")

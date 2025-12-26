@@ -98,9 +98,7 @@ class LicenseValidator:
         """
         # Try to use real validator from hefesto-pro package if installed
         try:
-            from hefesto_pro.licensing.license_validator import (
-                LicenseValidator as ProValidator,
-            )
+            from hefesto_pro.licensing.license_validator import LicenseValidator as ProValidator
 
             pro_validator = ProValidator()
             tier = pro_validator.get_tier_for_key(self.license_key)

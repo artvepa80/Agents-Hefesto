@@ -57,6 +57,7 @@ class FeatureGate:
         # Then check config file
         try:
             from hefesto.config.config_manager import ConfigManager
+
             config = ConfigManager()
             return config.get_license_key()
         except Exception:
