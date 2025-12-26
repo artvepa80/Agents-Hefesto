@@ -24,6 +24,12 @@ from hefesto.core.analysis_models import (
 )
 from hefesto.core.ast.generic_ast import GenericAST, NodeType
 
+# Thresholds as constants for clarity
+LONG_FUNCTION_THRESHOLD = 50
+LONG_PARAMETER_THRESHOLD = 5
+DEEP_NESTING_THRESHOLD = 4
+GOD_CLASS_THRESHOLD = 500
+
 
 class CodeSmellAnalyzer:
     """Analyzes code for common code smells."""
@@ -42,13 +48,15 @@ class CodeSmellAnalyzer:
         return issues
 
     def _check_long_functions(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect functions longer than 50 lines."""
+        """Detect functions longer than threshold lines."""
         issues = []
 
         for node in tree.walk():
             if node.type in [NodeType.FUNCTION, NodeType.ASYNC_FUNCTION, NodeType.METHOD]:
                 func_length = node.line_end - node.line_start
-                if func_length > 50:
+                if func_length > LONG_FUNCTION_THRESHOLD:
+                    # Use <anonymous> if no name
+                    func_name = node.name or "<anonymous>"
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
@@ -56,26 +64,38 @@ class CodeSmellAnalyzer:
                             column=node.column_start,
                             issue_type=AnalysisIssueType.LONG_FUNCTION,
                             severity=AnalysisIssueSeverity.MEDIUM,
-                            message=f"Function '{node.name}' is too long ({func_length} lines)",
-                            function_name=node.name,
-                            suggestion="Break down into smaller, focused functions. "
-                            "Each function should do one thing well.",
-                            metadata={"length": func_length},
+                            message=(
+                                f"Function '{func_name}' is too long "
+                                f"({func_length} lines, threshold={LONG_FUNCTION_THRESHOLD})"
+                            ),
+                            function_name=func_name,
+                            suggestion=(
+                                f"Break down into smaller, focused functions. "
+                                f"Lines {node.line_start}-{node.line_end}. "
+                                f"Each function should do one thing well."
+                            ),
+                            metadata={
+                                "length": func_length,
+                                "threshold": LONG_FUNCTION_THRESHOLD,
+                                "line_start": node.line_start,
+                                "line_end": node.line_end,
+                            },
                         )
                     )
 
         return issues
 
     def _check_long_parameter_lists(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect functions with more than 5 parameters."""
+        """Detect functions with more than threshold parameters."""
         issues = []
 
         for node in tree.walk():
             if node.type in [NodeType.FUNCTION, NodeType.ASYNC_FUNCTION, NodeType.METHOD]:
-                param_count = (
-                    node.text.count(",") + 1 if "(" in node.text and node.text.count(",") > 0 else 0
-                )
-                if param_count > 5:
+                # Use param_count from metadata (extracted from formal_parameters)
+                param_count = node.metadata.get("param_count", 0)
+
+                if param_count > LONG_PARAMETER_THRESHOLD:
+                    func_name = node.name or "<anonymous>"
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
@@ -84,29 +104,33 @@ class CodeSmellAnalyzer:
                             issue_type=AnalysisIssueType.LONG_PARAMETER_LIST,
                             severity=AnalysisIssueSeverity.MEDIUM,
                             message=(
-                                f"Function '{node.name}' has too many "
-                                f"parameters ({param_count})"
+                                f"Function '{func_name}' has too many parameters "
+                                f"({param_count}, threshold={LONG_PARAMETER_THRESHOLD})"
                             ),
-                            function_name=node.name,
+                            function_name=func_name,
                             suggestion=(
                                 "Consider using a config object, dataclass, "
                                 "or **kwargs. Group related parameters into "
                                 "objects."
                             ),
-                            metadata={"param_count": param_count},
+                            metadata={
+                                "param_count": param_count,
+                                "threshold": LONG_PARAMETER_THRESHOLD,
+                            },
                         )
                     )
 
         return issues
 
     def _check_deep_nesting(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect code with nesting depth > 4."""
+        """Detect code with nesting depth > threshold."""
         issues = []
 
         for node in tree.walk():
             if node.type in [NodeType.FUNCTION, NodeType.ASYNC_FUNCTION, NodeType.METHOD]:
                 max_depth = self._calculate_max_nesting(node)
-                if max_depth > 4:
+                if max_depth > DEEP_NESTING_THRESHOLD:
+                    func_name = node.name or "<anonymous>"
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
@@ -114,13 +138,21 @@ class CodeSmellAnalyzer:
                             column=node.column_start,
                             issue_type=AnalysisIssueType.DEEP_NESTING,
                             severity=AnalysisIssueSeverity.HIGH,
-                            message=f"Function '{node.name}' has deep nesting (level {max_depth})",
-                            function_name=node.name,
-                            suggestion="Reduce nesting by:\n"
-                            "- Using early returns\n"
-                            "- Extracting nested blocks into functions\n"
-                            "- Inverting conditionals",
-                            metadata={"max_depth": max_depth},
+                            message=(
+                                f"Function '{func_name}' has deep nesting "
+                                f"(level {max_depth}, threshold={DEEP_NESTING_THRESHOLD})"
+                            ),
+                            function_name=func_name,
+                            suggestion=(
+                                "Reduce nesting by:\n"
+                                "- Using early returns\n"
+                                "- Extracting nested blocks into functions\n"
+                                "- Inverting conditionals"
+                            ),
+                            metadata={
+                                "max_depth": max_depth,
+                                "threshold": DEEP_NESTING_THRESHOLD,
+                            },
                         )
                     )
 
@@ -146,13 +178,14 @@ class CodeSmellAnalyzer:
     def _check_god_classes(
         self, tree: GenericAST, file_path: str, code: str
     ) -> List[AnalysisIssue]:
-        """Detect classes with more than 500 lines."""
+        """Detect classes with more than threshold lines."""
         issues = []
 
         for node in tree.walk():
             if node.type == NodeType.CLASS:
                 class_length = node.line_end - node.line_start
-                if class_length > 500:
+                if class_length > GOD_CLASS_THRESHOLD:
+                    class_name = node.name or "<anonymous>"
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
@@ -160,13 +193,24 @@ class CodeSmellAnalyzer:
                             column=node.column_start,
                             issue_type=AnalysisIssueType.GOD_CLASS,
                             severity=AnalysisIssueSeverity.HIGH,
-                            message=f"Class '{node.name}' is too large ({class_length} lines)",
-                            suggestion="Break down into smaller, focused classes following "
-                            "Single Responsibility Principle. Consider:\n"
-                            "- Extracting related methods into separate classes\n"
-                            "- Using composition over inheritance\n"
-                            "- Creating utility classes for shared functionality",
-                            metadata={"length": class_length},
+                            message=(
+                                f"Class '{class_name}' is too large "
+                                f"({class_length} lines, threshold={GOD_CLASS_THRESHOLD})"
+                            ),
+                            suggestion=(
+                                f"Lines {node.line_start}-{node.line_end}. "
+                                "Break down into smaller, focused classes following "
+                                "Single Responsibility Principle. Consider:\n"
+                                "- Extracting related methods into separate classes\n"
+                                "- Using composition over inheritance\n"
+                                "- Creating utility classes for shared functionality"
+                            ),
+                            metadata={
+                                "length": class_length,
+                                "threshold": GOD_CLASS_THRESHOLD,
+                                "line_start": node.line_start,
+                                "line_end": node.line_end,
+                            },
                         )
                     )
 
@@ -178,7 +222,11 @@ class CodeSmellAnalyzer:
         """Detect TODO/FIXME comments."""
         issues = []
 
-        todo_pattern = re.compile(r"#\s*(TODO|FIXME|XXX|HACK)[:|\s]+(.*)", re.IGNORECASE)
+        # Support multiple comment styles
+        todo_pattern = re.compile(
+            r"(?://|#|/\*|\*)\s*(TODO|FIXME|XXX|HACK)[:|\s]+(.*)",
+            re.IGNORECASE,
+        )
 
         for line_num, line in enumerate(code.split("\n"), start=1):
             match = todo_pattern.search(line)
@@ -193,7 +241,10 @@ class CodeSmellAnalyzer:
                         column=line.find(marker),
                         issue_type=AnalysisIssueType.INCOMPLETE_TODO,
                         severity=AnalysisIssueSeverity.LOW,
-                        message=f"{marker} found: {comment[:50]}...",
+                        message=(
+                            f"{marker} found: {comment[:50]}"
+                            f"{'...' if len(comment) > 50 else ''}"
+                        ),
                         suggestion=(
                             "Either complete the TODO or create a tracked "
                             "issue and remove the comment"

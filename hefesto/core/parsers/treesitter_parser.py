@@ -9,7 +9,6 @@ from hefesto.core.parsers.base_parser import CodeParser
 
 # Try to use tree-sitter-languages for pre-built grammars
 try:
-
     from tree_sitter_languages import get_parser as get_ts_parser
 
     USE_PREBUILT = True
@@ -59,23 +58,29 @@ class TreeSitterParser(CodeParser):
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
         tree = self.parser.parse(bytes(code, "utf8"))
-        root = self._convert_treesitter_to_generic(tree.root_node, code)
+        root = self._convert_treesitter_to_generic(tree.root_node, code, parent=None)
         return GenericAST(root, self.language, code)
 
     def supports_language(self, language: str) -> bool:
         return language in self.LANG_MAP
 
-    def _convert_treesitter_to_generic(self, node, source: str) -> GenericNode:
+    def _convert_treesitter_to_generic(self, node, source: str, parent=None) -> GenericNode:
         """Convert TreeSitter node to GenericNode."""
         node_type = self._map_node_type(node.type, self.language)
 
         children = []
         for child in node.children:
-            children.append(self._convert_treesitter_to_generic(child, source))
+            children.append(self._convert_treesitter_to_generic(child, source, parent=node))
+
+        # Extract name with parent context for arrow functions
+        name = self._extract_name(node, source, parent)
+
+        # Extract parameter count for functions
+        param_count = self._extract_parameter_count(node, source)
 
         return GenericNode(
             type=node_type,
-            name=self._extract_name(node, source),
+            name=name,
             line_start=node.start_point[0] + 1,
             line_end=node.end_point[0] + 1,
             column_start=node.start_point[1],
@@ -86,7 +91,11 @@ class TreeSitterParser(CodeParser):
                 else ""
             ),
             children=children,
-            metadata={"treesitter_type": node.type, "language": self.language},
+            metadata={
+                "treesitter_type": node.type,
+                "language": self.language,
+                "param_count": param_count,
+            },
         )
 
     def _map_node_type(self, ts_type: str, language: str) -> NodeType:
@@ -190,9 +199,107 @@ class TreeSitterParser(CodeParser):
 
         return NodeType.UNKNOWN
 
-    def _extract_name(self, node, source: str) -> str:
-        """Extract name from node (function name, class name, etc.)."""
+    def _extract_name(self, node, source: str, parent=None) -> str:
+        """
+        Extract name from node with smart inference for arrow functions.
+
+        Priority order:
+        1. Direct identifier child (function foo() {})
+        2. Parent variable_declarator name (const foo = () => {})
+        3. Property name in object (foo: () => {})
+        4. Method name
+        5. '<anonymous>' for truly unnamed functions
+        """
+        # 1. Direct identifier child (standard function declaration)
         for child in node.children:
             if child.type == "identifier":
                 return source[child.start_byte : child.end_byte]
+
+        # 2. For arrow functions, look at parent context
+        if node.type in ["arrow_function", "function_expression", "function"]:
+            if parent is not None:
+                # Check if parent is variable_declarator: const NAME = () => {}
+                if parent.type == "variable_declarator":
+                    for child in parent.children:
+                        if child.type == "identifier":
+                            return source[child.start_byte : child.end_byte]
+
+                # Check if parent is pair/property: { NAME: () => {} }
+                if parent.type in ["pair", "property", "property_assignment"]:
+                    for child in parent.children:
+                        if child.type in [
+                            "property_identifier",
+                            "identifier",
+                            "string",
+                        ]:
+                            name = source[child.start_byte : child.end_byte]
+                            # Remove quotes from string keys
+                            return name.strip("'\"")
+
+                # Check if parent is assignment: NAME = () => {}
+                if parent.type == "assignment_expression":
+                    for child in parent.children:
+                        if child.type == "identifier":
+                            return source[child.start_byte : child.end_byte]
+
+        # 3. Method definition name
+        if node.type == "method_definition":
+            for child in node.children:
+                if child.type == "property_identifier":
+                    return source[child.start_byte : child.end_byte]
+
+        # 4. Return '<anonymous>' instead of None for unnamed functions
+        if node.type in [
+            "arrow_function",
+            "function_expression",
+            "function",
+            "function_declaration",
+            "method_definition",
+        ]:
+            return "<anonymous>"
+
         return None
+
+    def _extract_parameter_count(self, node, source: str) -> int:
+        """
+        Extract the actual parameter count from formal_parameters.
+
+        Only counts parameters in function declarations, NOT in call expressions.
+        """
+        if node.type not in [
+            "function_declaration",
+            "arrow_function",
+            "function_expression",
+            "function",
+            "method_definition",
+            "method_declaration",
+            "function_item",  # Rust
+        ]:
+            return 0
+
+        # Find formal_parameters child
+        for child in node.children:
+            if child.type in [
+                "formal_parameters",
+                "parameters",
+                "parameter_list",
+            ]:
+                # Count actual parameter nodes, not commas
+                param_count = 0
+                for param in child.children:
+                    if param.type in [
+                        "identifier",
+                        "required_parameter",
+                        "optional_parameter",
+                        "rest_parameter",
+                        "parameter",
+                        "simple_parameter",
+                        "typed_parameter",
+                        "default_parameter",
+                        "formal_parameter",
+                        "spread_element",
+                    ]:
+                        param_count += 1
+                return param_count
+
+        return 0
