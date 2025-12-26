@@ -2,31 +2,59 @@
 
 from pathlib import Path
 
-from tree_sitter import Language, Parser
+from tree_sitter import Parser
 
 from hefesto.core.ast.generic_ast import GenericAST, GenericNode, NodeType
 from hefesto.core.parsers.base_parser import CodeParser
+
+# Try to use tree-sitter-languages for pre-built grammars
+try:
+
+    from tree_sitter_languages import get_parser as get_ts_parser
+
+    USE_PREBUILT = True
+except ImportError:
+    from tree_sitter import Language
+
+    USE_PREBUILT = False
 
 
 class TreeSitterParser(CodeParser):
     """Universal parser using TreeSitter."""
 
+    # Map our language names to tree-sitter-languages names
+    LANG_MAP = {
+        "typescript": "typescript",
+        "javascript": "javascript",
+        "java": "java",
+        "go": "go",
+        "rust": "rust",
+        "c_sharp": "c_sharp",
+    }
+
     def __init__(self, language: str):
         self.language = language
-        self.parser = Parser()
 
-        build_path = Path(__file__).parent.parent.parent.parent / "build" / "languages.so"
+        if USE_PREBUILT:
+            # Use tree-sitter-languages pre-built grammars
+            ts_lang = self.LANG_MAP.get(language, language)
+            self.parser = get_ts_parser(ts_lang)
+        else:
+            # Fallback to custom-built grammars
+            self.parser = Parser()
+            build_path = Path(__file__).parent.parent.parent.parent / "build" / "languages.so"
 
-        grammar_map = {
-            "typescript": "tsx",
-            "javascript": "javascript",
-            "java": "java",
-            "go": "go",
-        }
-
-        grammar_name = grammar_map.get(language, language)
-        self.ts_language = Language(str(build_path), grammar_name)
-        self.parser.set_language(self.ts_language)
+            grammar_map = {
+                "typescript": "tsx",
+                "javascript": "javascript",
+                "java": "java",
+                "go": "go",
+                "rust": "rust",
+                "c_sharp": "c_sharp",
+            }
+            grammar_name = grammar_map.get(language, language)
+            self.ts_language = Language(str(build_path), grammar_name)
+            self.parser.set_language(self.ts_language)
 
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
@@ -35,7 +63,7 @@ class TreeSitterParser(CodeParser):
         return GenericAST(root, self.language, code)
 
     def supports_language(self, language: str) -> bool:
-        return language in ["typescript", "javascript", "java", "go"]
+        return language in self.LANG_MAP
 
     def _convert_treesitter_to_generic(self, node, source: str) -> GenericNode:
         """Convert TreeSitter node to GenericNode."""
@@ -120,6 +148,43 @@ class TreeSitterParser(CodeParser):
                 "call_expression": NodeType.CALL,
                 "return_statement": NodeType.RETURN,
                 "import_declaration": NodeType.IMPORT,
+            }
+            return mapping.get(ts_type, NodeType.UNKNOWN)
+
+        elif language == "rust":
+            mapping = {
+                "function_item": NodeType.FUNCTION,
+                "impl_item": NodeType.CLASS,
+                "struct_item": NodeType.CLASS,
+                "enum_item": NodeType.CLASS,
+                "if_expression": NodeType.CONDITIONAL,
+                "match_expression": NodeType.CONDITIONAL,
+                "for_expression": NodeType.LOOP,
+                "while_expression": NodeType.LOOP,
+                "loop_expression": NodeType.LOOP,
+                "call_expression": NodeType.CALL,
+                "return_expression": NodeType.RETURN,
+                "use_declaration": NodeType.IMPORT,
+            }
+            return mapping.get(ts_type, NodeType.UNKNOWN)
+
+        elif language == "c_sharp":
+            mapping = {
+                "method_declaration": NodeType.METHOD,
+                "class_declaration": NodeType.CLASS,
+                "struct_declaration": NodeType.CLASS,
+                "if_statement": NodeType.CONDITIONAL,
+                "switch_statement": NodeType.CONDITIONAL,
+                "for_statement": NodeType.LOOP,
+                "foreach_statement": NodeType.LOOP,
+                "while_statement": NodeType.LOOP,
+                "do_statement": NodeType.LOOP,
+                "invocation_expression": NodeType.CALL,
+                "return_statement": NodeType.RETURN,
+                "using_directive": NodeType.IMPORT,
+                "try_statement": NodeType.TRY,
+                "catch_clause": NodeType.CATCH,
+                "throw_statement": NodeType.THROW,
             }
             return mapping.get(ts_type, NodeType.UNKNOWN)
 
