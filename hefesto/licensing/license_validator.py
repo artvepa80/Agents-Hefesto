@@ -90,17 +90,14 @@ class LicenseValidator:
         """
         Get usage limits for the current license.
 
-        ⚠️  STUB: Returns FREE tier limits in public version.
-
         Args:
             license_key: Optional license key
 
         Returns:
             Dictionary with tier limits
         """
-        # Public version always returns free tier limits
-        # Real version validates against backend
-        return get_limits_for_tier("free")
+        tier = self.get_tier_for_key(license_key)
+        return get_limits_for_tier(tier)
 
     def check_repository_limit(
         self, current_repos: int, license_key: Optional[str] = None
@@ -192,8 +189,6 @@ class LicenseValidator:
         """
         Check if feature is available in current tier.
 
-        ⚠️  STUB: Public version denies all PRO features.
-
         Args:
             feature: Feature name (e.g., 'ml_semantic_analysis')
             license_key: Optional license key
@@ -201,6 +196,12 @@ class LicenseValidator:
         Returns:
             (has_access, error_message)
         """
+        limits = self.get_limits(license_key)
+        available_features = limits.get("features", [])
+
+        if feature in available_features:
+            return (True, "")
+
         # Map feature codes to user-friendly names
         pro_only_features = {
             "ml_semantic_analysis": "ML Semantic Code Analysis",
@@ -277,21 +278,19 @@ class LicenseValidator:
         """
         Get detailed information about current tier.
 
-        ⚠️  STUB: Returns FREE tier info in public version.
-
         Args:
             license_key: Optional license key
 
         Returns:
             Dictionary with tier information
         """
-        tier = "free"
+        tier = self.get_tier_for_key(license_key)
         limits = self.get_limits(license_key)
 
         return {
             "tier": tier,
             "tier_display": tier.title(),
             "limits": limits,
-            "upgrade_url_pro": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
-            "upgrade_url_omega": "https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c",
+            "upgrade_url": "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
+            "founding_url": "https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40",
         }

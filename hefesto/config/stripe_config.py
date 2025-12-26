@@ -104,7 +104,7 @@ STRIPE_CONFIG = {
             "checkout_url": PAYMENT_LINKS["omega"],
         },
     },
-    "limits": {
+        "limits": {
         "free": {
             "tier": "free",
             "users": 1,
@@ -113,6 +113,11 @@ STRIPE_CONFIG = {
             "loc_per_analysis": 10_000,
             "api_requests_daily": 100,
             "bigquery_gb_monthly": 0,
+            "analysis_runs": 100,
+            "features": [
+                "basic_quality",
+                "pr_analysis",
+            ],
         },
         "professional": {
             "tier": "professional",
@@ -122,6 +127,15 @@ STRIPE_CONFIG = {
             "loc_per_analysis": "unlimited",
             "api_requests_daily": "unlimited",
             "bigquery_gb_monthly": 100,
+            "analysis_runs": float("inf"),
+            "features": [
+                "basic_quality",
+                "pr_analysis",
+                "ide_integration",
+                "ml_semantic_analysis",
+                "ai_recommendations",
+                "security_scanning",
+            ],
         },
         "omega": {
             "tier": "omega",
@@ -131,6 +145,20 @@ STRIPE_CONFIG = {
             "loc_per_analysis": "unlimited",
             "api_requests_daily": "unlimited",
             "bigquery_gb_monthly": "unlimited",
+            "analysis_runs": float("inf"),
+            "features": [
+                "basic_quality",
+                "pr_analysis",
+                "ide_integration",
+                "ml_semantic_analysis",
+                "ai_recommendations",
+                "security_scanning",
+                "iris_monitoring",
+                "auto_correlation",
+                "jira_slack_integration",
+                "priority_support",
+                "analytics_dashboard",
+            ],
         },
     },
 }

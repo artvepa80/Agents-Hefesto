@@ -1,15 +1,14 @@
 """
-Feature Gating System (STUB - Public Version)
-=============================================
+Feature Gating System
+=====================
 
-⚠️  This is a public stub. Real implementation is in private repository.
-
-The actual feature gating enforcement logic is proprietary.
+Provides tier-based feature access control for Hefesto.
 
 Copyright © 2025 Narapa LLC
 """
 
 import functools
+import os
 from typing import Callable, Optional
 
 from hefesto.licensing.license_validator import LicenseValidator
@@ -38,9 +37,6 @@ def get_tier_level(tier: str) -> int:
 class FeatureGate:
     """
     Decorator and context manager for enforcing tier-based feature access.
-
-    ⚠️  STUB: Public version provides basic interface only.
-    Real enforcement logic is in private repository.
     """
 
     validator = LicenseValidator()
@@ -48,34 +44,39 @@ class FeatureGate:
     @classmethod
     def get_current_license(cls) -> Optional[str]:
         """
-        Get license key from config.
-
-        ⚠️  STUB: Public version returns None.
+        Get license key from environment or config.
 
         Returns:
             License key string or None if not activated
         """
-        # Public version doesn't have access to config
-        return None
+        # First check environment variable
+        license_key = os.environ.get("HEFESTO_LICENSE_KEY")
+        if license_key:
+            return license_key
+
+        # Then check config file
+        try:
+            from hefesto.config.config_manager import ConfigManager
+            config = ConfigManager()
+            return config.get_license_key()
+        except Exception:
+            return None
 
     @classmethod
     def get_current_tier(cls) -> str:
         """
         Get current tier from license.
 
-        ⚠️  STUB: Public version always returns 'free'.
-
         Returns:
-            'free' (public version)
+            Tier name ('free', 'professional', or 'omega')
         """
-        return "free"
+        license_key = cls.get_current_license()
+        return cls.validator.get_tier_for_key(license_key)
 
     @classmethod
     def check_feature_access(cls, feature: str) -> tuple:
         """
         Check if current tier has access to feature.
-
-        ⚠️  STUB: Public version denies all PRO features.
 
         Args:
             feature: Feature code (e.g., 'ml_semantic_analysis')
@@ -91,8 +92,6 @@ class FeatureGate:
         """
         Decorator to require a specific feature tier.
 
-        ⚠️  STUB: Public version denies access to all PRO features.
-
         Args:
             feature: Feature code from stripe_config.py
             fallback: Optional function to call if access denied
@@ -104,7 +103,7 @@ class FeatureGate:
                 pass
 
         Raises:
-            FeatureAccessDenied: If user doesn't have access to feature
+            FeatureAccessDenied: If user does not have access to feature
         """
 
         def decorator(func):
@@ -129,8 +128,6 @@ class FeatureGate:
         """
         Decorator to require a minimum tier level.
 
-        ⚠️  STUB: Public version denies all tiers above FREE.
-
         Args:
             required_tier: Minimum tier required ('free', 'professional', 'omega')
 
@@ -141,7 +138,7 @@ class FeatureGate:
                 pass
 
         Raises:
-            FeatureAccessDenied: If user's tier level is below required level
+            FeatureAccessDenied: If user tier level is below required level
         """
 
         def decorator(func):
@@ -151,34 +148,33 @@ class FeatureGate:
                 user_level = get_tier_level(current_tier)
                 required_level = get_tier_level(required_tier)
 
-                # Public version: user is always FREE tier
                 if user_level < required_level:
                     if required_tier.lower() == "omega":
                         upgrade_msg = (
-                            f"❌ This feature requires OMEGA Guardian tier.\n"
+                            "❌ This feature requires OMEGA Guardian tier.\n"
                             f"   Current tier: {current_tier}\n"
-                            f"\n"
-                            f"   Upgrade to OMEGA Guardian:\n"
-                            f"   → $19/month (launch pricing)\n"
-                            f"   → https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c\n"
-                            f"\n"
-                            f"   ✨ Full production monitoring with IRIS Agent\n"
-                            f"   ✨ Auto-correlation between code & production issues\n"
-                            f"   ✨ All PRO features + ML enhancement\n"
-                            f"\n"
-                            f"   🚀 First 100 customers get pricing locked forever"
+                            "\n"
+                            "   Upgrade to OMEGA Guardian:\n"
+                            "   → $19/month (launch pricing)\n"
+                            "   → https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c\n"
+                            "\n"
+                            "   ✨ Full production monitoring with IRIS Agent\n"
+                            "   ✨ Auto-correlation between code & production issues\n"
+                            "   ✨ All PRO features + ML enhancement\n"
+                            "\n"
+                            "   🚀 First 100 customers get pricing locked forever"
                         )
                     elif required_tier.lower() == "professional":
                         upgrade_msg = (
-                            f"❌ This feature requires Professional tier.\n"
+                            "❌ This feature requires Professional tier.\n"
                             f"   Current tier: {current_tier}\n"
-                            f"\n"
-                            f"   Upgrade to Professional:\n"
-                            f"   → $8/month (launch pricing)\n"
-                            f"   → https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
-                            f"\n"
-                            f"   🚀 First 100 customers get pricing locked forever\n"
-                            f"   → 14 days free trial, no credit card required"
+                            "\n"
+                            "   Upgrade to Professional:\n"
+                            "   → $8/month (launch pricing)\n"
+                            "   → https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b\n"
+                            "\n"
+                            "   🚀 First 100 customers get pricing locked forever\n"
+                            "   → 14 days free trial, no credit card required"
                         )
                     else:
                         upgrade_msg = (
@@ -198,8 +194,6 @@ class FeatureGate:
     def get_tier_info(cls) -> dict:
         """
         Get information about current tier and limits.
-
-        ⚠️  STUB: Public version returns FREE tier info.
 
         Returns:
             Dictionary with tier information
