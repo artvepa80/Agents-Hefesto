@@ -2,6 +2,7 @@
 """Build TreeSitter language grammars."""
 import os
 from pathlib import Path
+
 from tree_sitter import Language
 
 # Create build directory
@@ -38,7 +39,7 @@ Language.build_library(
         str(grammars_dir / "tree-sitter-typescript" / "typescript"),
         str(grammars_dir / "tree-sitter-typescript" / "tsx"),
         str(grammars_dir / "tree-sitter-javascript"),
-    ]
+    ],
 )
 
 print("✅ Grammars built successfully: build/languages.so")
