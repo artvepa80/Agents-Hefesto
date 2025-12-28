@@ -269,6 +269,12 @@ class AnalyzerEngine:
                 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
                 yaml_issues = YamlAnalyzer().analyze(str(file_path), code)
                 all_issues.extend(yaml_issues)
+
+            elif language == Language.SHELL:
+                from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
+                loc = len([line for line in code.split("\n") if line.strip()])
+                shell_issues = ShellAnalyzer().analyze(str(file_path), code)
+                all_issues.extend(shell_issues)
                 # Calculate LOC for YAML
                 loc = len([l for l in code.split("\n") if l.strip() and not l.strip().startswith("#")])
                 # Skip parser for YAML, go directly to filtering
