@@ -10,7 +10,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
-from hefesto.core.languages.specs import Language, LanguageSpec, LANGUAGE_SPECS, ProviderRef
+from hefesto.core.languages.specs import LANGUAGE_SPECS, Language, LanguageSpec, ProviderRef
 
 
 class LanguageRegistry:
@@ -50,7 +50,7 @@ class LanguageRegistry:
                     self._by_extension[ext] = spec.language
                     continue
 
-                # Otherwise treat as glob pattern (covers "*.tf.json", "Dockerfile.*", "*.Dockerfile")
+                # Otherwise treat as glob (*.tf.json, Dockerfile.*, *.Dockerfile)
                 self._glob_patterns.append((g, spec.language))
 
             # Index detect_by_filename patterns (often wildcard patterns)

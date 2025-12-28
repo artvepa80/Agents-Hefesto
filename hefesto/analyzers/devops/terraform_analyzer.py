@@ -193,57 +193,103 @@ class TerraformAnalyzer:
         for line_num, line in enumerate(lines, start=1):
             for pattern, msg, conf, sev, rule in self.OPEN_SG_PATTERNS:
                 if pattern.search(line):
-                    issues.append(self._create_issue(
-                        file_path=file_path, line=line_num, column=1,
-                        issue_type=AnalysisIssueType.TF_OPEN_SECURITY_GROUP,
-                        severity=sev, message=msg,
-                        suggestion="Restrict CIDR blocks to specific IP ranges or reference known security groups.",
-                        confidence=conf, rule_id=rule, line_content=line,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=1,
+                            issue_type=AnalysisIssueType.TF_OPEN_SECURITY_GROUP,
+                            severity=sev,
+                            message=msg,
+                            suggestion=(
+                                "Restrict CIDR blocks to specific IP ranges "
+                                "or reference known security groups."
+                            ),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=line,
+                        )
+                    )
                     break
 
             for pattern, msg, conf, sev, rule in self.SECRET_PATTERNS:
                 if pattern.search(line):
-                    issues.append(self._create_issue(
-                        file_path=file_path, line=line_num, column=1,
-                        issue_type=AnalysisIssueType.TF_HARDCODED_SECRET,
-                        severity=sev, message=msg,
-                        suggestion="Use variables with sensitive=true and inject via Secret Manager or Vault.",
-                        confidence=conf, rule_id=rule, line_content=line,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=1,
+                            issue_type=AnalysisIssueType.TF_HARDCODED_SECRET,
+                            severity=sev,
+                            message=msg,
+                            suggestion=(
+                                "Use variables with sensitive=true and inject via "
+                                "Secret Manager or Vault."
+                            ),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=line,
+                        )
+                    )
                     break
 
             for pattern, msg, conf, sev, rule in self.ENCRYPTION_PATTERNS:
                 if pattern.search(line):
-                    issues.append(self._create_issue(
-                        file_path=file_path, line=line_num, column=1,
-                        issue_type=AnalysisIssueType.TF_MISSING_ENCRYPTION,
-                        severity=sev, message=msg,
-                        suggestion="Enable encryption (encrypted=true) and configure a KMS key.",
-                        confidence=conf, rule_id=rule, line_content=line,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=1,
+                            issue_type=AnalysisIssueType.TF_MISSING_ENCRYPTION,
+                            severity=sev,
+                            message=msg,
+                            suggestion=(
+                                "Enable encryption (encrypted=true) and configure a " "KMS key."
+                            ),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=line,
+                        )
+                    )
                     break
 
             for pattern, msg, conf, sev, rule in self.PUBLIC_ACCESS_PATTERNS:
                 if pattern.search(line):
-                    issues.append(self._create_issue(
-                        file_path=file_path, line=line_num, column=1,
-                        issue_type=AnalysisIssueType.TF_PUBLIC_ACCESS,
-                        severity=sev, message=msg,
-                        suggestion="Disable public access unless explicitly required.",
-                        confidence=conf, rule_id=rule, line_content=line,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=1,
+                            issue_type=AnalysisIssueType.TF_PUBLIC_ACCESS,
+                            severity=sev,
+                            message=msg,
+                            suggestion=("Disable public access unless explicitly required."),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=line,
+                        )
+                    )
                     break
 
             for pattern, msg, conf, sev, rule in self.IAM_PATTERNS:
                 if pattern.search(line):
-                    issues.append(self._create_issue(
-                        file_path=file_path, line=line_num, column=1,
-                        issue_type=AnalysisIssueType.TF_OVERLY_PERMISSIVE,
-                        severity=sev, message=msg,
-                        suggestion="Apply least privilege with specific actions and scoped resources.",
-                        confidence=conf, rule_id=rule, line_content=line,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=line_num,
+                            column=1,
+                            issue_type=AnalysisIssueType.TF_OVERLY_PERMISSIVE,
+                            severity=sev,
+                            message=msg,
+                            suggestion=(
+                                "Apply least privilege with specific actions and "
+                                "scoped resources."
+                            ),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=line,
+                        )
+                    )
                     break
 
         return issues

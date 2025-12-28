@@ -1,14 +1,14 @@
 """Language specifications and registry for Hefesto."""
 
-from hefesto.core.languages.specs import (
-    Language,
-    LanguageSpec,
-    ProviderRef,
-    LANGUAGE_SPECS,
-)
 from hefesto.core.languages.registry import (
     LanguageRegistry,
     get_registry,
+)
+from hefesto.core.languages.specs import (
+    LANGUAGE_SPECS,
+    Language,
+    LanguageSpec,
+    ProviderRef,
 )
 
 __all__ = [

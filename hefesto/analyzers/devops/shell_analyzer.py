@@ -40,10 +40,12 @@ class ShellAnalyzer:
     ]
 
     DESTRUCTIVE_PATTERNS: List[Tuple[str, str, float]] = [
-        (r"\brm\b(?=[^\n]*\s-[^\s]*r)(?=[^\n]*\s-[^\s]*f)[^\n]*\s+/(?:\s|$|;|&&|\|\|)",
-         "rm -rf /", 0.98),
-        (r"\brm\b(?=[^\n]*\s-[^\s]*r)(?=[^\n]*\s-[^\s]*f)[^\n]*\s+/\*",
-         "rm -rf /*", 0.95),
+        (
+            r"\brm\b(?=[^\n]*\s-[^\s]*r)(?=[^\n]*\s-[^\s]*f)[^\n]*\s+/(?:\s|$|;|&&|\|\|)",
+            "rm -rf /",
+            0.98,
+        ),
+        (r"\brm\b(?=[^\n]*\s-[^\s]*r)(?=[^\n]*\s-[^\s]*f)[^\n]*\s+/\*", "rm -rf /*", 0.95),
         (r'rm\s+-rf\s+"\$\{?[^}]*:-/\}?"', "rm -rf with default /", 0.90),
         (r":\s*>\s*/etc/passwd", "truncating /etc/passwd", 0.98),
         (r"mkfs\s+/dev/sd[a-z]", "formatting disk", 0.85),
@@ -66,41 +68,58 @@ class ShellAnalyzer:
 
             for pattern, desc, conf in self.RCE_PATTERNS:
                 if re.search(pattern, code_part, re.IGNORECASE):
-                    issues.append(self._create_issue(
-                        file_path, line_num, line,
-                        AnalysisIssueType.SHELL_COMMAND_INJECTION,
-                        AnalysisIssueSeverity.CRITICAL,
-                        f"Remote code execution: {desc}",
-                        "Never pipe untrusted remote content to shell.",
-                        conf, "rce-pipe",
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            line,
+                            AnalysisIssueType.SHELL_COMMAND_INJECTION,
+                            AnalysisIssueSeverity.CRITICAL,
+                            f"Remote code execution: {desc}",
+                            "Never pipe untrusted remote content to shell.",
+                            conf,
+                            "rce-pipe",
+                        )
+                    )
                     break
 
             for pattern, desc, conf in self.EVAL_PATTERNS:
                 if re.search(pattern, code_part):
-                    issues.append(self._create_issue(
-                        file_path, line_num, line,
-                        AnalysisIssueType.SHELL_COMMAND_INJECTION,
-                        AnalysisIssueSeverity.HIGH,
-                        f"Dangerous eval: {desc}",
-                        "Avoid eval with dynamic content.",
-                        conf, "eval-dynamic",
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            line,
+                            AnalysisIssueType.SHELL_COMMAND_INJECTION,
+                            AnalysisIssueSeverity.HIGH,
+                            f"Dangerous eval: {desc}",
+                            "Avoid eval with dynamic content.",
+                            conf,
+                            "eval-dynamic",
+                        )
+                    )
                     break
 
             for pattern, desc, conf in self.DESTRUCTIVE_PATTERNS:
                 if re.search(pattern, code_part, re.IGNORECASE):
-                    severity = (AnalysisIssueSeverity.CRITICAL
-                               if conf >= 0.95
-                               else AnalysisIssueSeverity.HIGH)
-                    issues.append(self._create_issue(
-                        file_path, line_num, line,
-                        AnalysisIssueType.SHELL_UNSAFE_COMMAND,
-                        severity,
-                        f"Destructive command: {desc}",
-                        "Add safety checks before destructive operations.",
-                        conf, "destructive",
-                    ))
+                    severity = (
+                        AnalysisIssueSeverity.CRITICAL
+                        if conf >= 0.95
+                        else AnalysisIssueSeverity.HIGH
+                    )
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            line,
+                            AnalysisIssueType.SHELL_UNSAFE_COMMAND,
+                            severity,
+                            f"Destructive command: {desc}",
+                            "Add safety checks before destructive operations.",
+                            conf,
+                            "destructive",
+                        )
+                    )
                     break
 
             issues.extend(self._check_unquoted_vars(file_path, line_num, code_part))
@@ -114,9 +133,7 @@ class ShellAnalyzer:
         issues: List[AnalysisIssue] = []
 
         has_shebang = lines and lines[0].startswith("#!")
-        is_bash = has_shebang and (
-            ("bash" in lines[0]) or lines[0].rstrip().endswith("sh")
-        )
+        is_bash = has_shebang and (("bash" in lines[0]) or lines[0].rstrip().endswith("sh"))
 
         if not is_bash:
             return issues
@@ -131,20 +148,23 @@ class ShellAnalyzer:
                 break
 
         if not has_safety and len(lines) > 10:
-            issues.append(self._create_issue(
-                file_path, 1, lines[0] if lines else "",
-                AnalysisIssueType.SHELL_MISSING_SAFETY,
-                AnalysisIssueSeverity.MEDIUM,
-                "Missing safety flags (set -euo pipefail)",
-                "Add set -euo pipefail for safer scripts.",
-                0.70, "missing-safety",
-            ))
+            issues.append(
+                self._create_issue(
+                    file_path,
+                    1,
+                    lines[0] if lines else "",
+                    AnalysisIssueType.SHELL_MISSING_SAFETY,
+                    AnalysisIssueSeverity.MEDIUM,
+                    "Missing safety flags (set -euo pipefail)",
+                    "Add set -euo pipefail for safer scripts.",
+                    0.70,
+                    "missing-safety",
+                )
+            )
 
         return issues
 
-    def _check_unquoted_vars(
-        self, file_path: str, line_num: int, line: str
-    ) -> List[AnalysisIssue]:
+    def _check_unquoted_vars(self, file_path: str, line_num: int, line: str) -> List[AnalysisIssue]:
         """Check for unquoted variables in dangerous contexts."""
         issues: List[AnalysisIssue] = []
 
@@ -156,14 +176,19 @@ class ShellAnalyzer:
 
         for pattern, desc in dangerous:
             if re.search(pattern, line):
-                issues.append(self._create_issue(
-                    file_path, line_num, line,
-                    AnalysisIssueType.SHELL_UNQUOTED_VARIABLE,
-                    AnalysisIssueSeverity.MEDIUM,
-                    f"Unquoted variable: {desc}",
-                    'Quote variables: "$var" instead of $var.',
-                    0.65, "unquoted-var",
-                ))
+                issues.append(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        line,
+                        AnalysisIssueType.SHELL_UNQUOTED_VARIABLE,
+                        AnalysisIssueSeverity.MEDIUM,
+                        f"Unquoted variable: {desc}",
+                        'Quote variables: "$var" instead of $var.',
+                        0.65,
+                        "unquoted-var",
+                    )
+                )
                 break
 
         return issues
@@ -186,9 +211,16 @@ class ShellAnalyzer:
         return "".join(result)
 
     def _create_issue(
-        self, file_path: str, line: int, line_content: str,
-        issue_type: AnalysisIssueType, severity: AnalysisIssueSeverity,
-        message: str, suggestion: str, confidence: float, rule_id: str,
+        self,
+        file_path: str,
+        line: int,
+        line_content: str,
+        issue_type: AnalysisIssueType,
+        severity: AnalysisIssueSeverity,
+        message: str,
+        suggestion: str,
+        confidence: float,
+        rule_id: str,
     ) -> AnalysisIssue:
         """Create an AnalysisIssue with enterprise fields."""
         return AnalysisIssue(

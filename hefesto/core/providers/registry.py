@@ -16,7 +16,7 @@ from hefesto.core.providers.base import ExternalProvider
 class ProviderRegistry:
     """
     Registry for external analysis providers.
-    
+
     Handles provider discovery, availability checking, and resolution
     based on language, mode, and configuration.
     """
@@ -29,7 +29,7 @@ class ProviderRegistry:
     def register(self, provider_class: Type[ExternalProvider]) -> None:
         """
         Register a provider class.
-        
+
         Args:
             provider_class: ExternalProvider subclass to register
         """
@@ -49,11 +49,11 @@ class ProviderRegistry:
     ) -> Optional[ExternalProvider]:
         """
         Get or create a provider instance by name.
-        
+
         Args:
             name: Provider name
             config: Optional configuration
-            
+
         Returns:
             Provider instance or None if not registered
         """
@@ -86,7 +86,7 @@ class ProviderRegistry:
     ) -> List[ExternalProvider]:
         """
         Resolve which providers to use for a language.
-        
+
         Args:
             language: Target language
             mode: Resolution mode
@@ -96,7 +96,7 @@ class ProviderRegistry:
             enabled: Explicit allowlist of provider names
             disabled: Explicit denylist of provider names
             config: Provider configuration
-            
+
         Returns:
             List of resolved provider instances
         """
@@ -132,13 +132,15 @@ class ProviderRegistry:
         result = []
         for name, provider_class in self._providers.items():
             instance = self.get_provider(name)
-            result.append({
-                "name": name,
-                "display_name": provider_class.display_name,
-                "languages": [lang.value for lang in provider_class.supported_languages],
-                "available": instance.is_available() if instance else False,
-                "version": instance.get_version() if instance else "N/A",
-            })
+            result.append(
+                {
+                    "name": name,
+                    "display_name": provider_class.display_name,
+                    "languages": [lang.value for lang in provider_class.supported_languages],
+                    "available": instance.is_available() if instance else False,
+                    "version": instance.get_version() if instance else "N/A",
+                }
+            )
         return result
 
 

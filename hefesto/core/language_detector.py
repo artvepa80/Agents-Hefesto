@@ -10,8 +10,8 @@ Copyright 2025 Narapa LLC, Miami, Florida
 from pathlib import Path
 from typing import List, Optional
 
+from hefesto.core.languages.registry import LanguageRegistry, get_registry
 from hefesto.core.languages.specs import Language
-from hefesto.core.languages.registry import get_registry, LanguageRegistry
 
 
 class LanguageDetector:

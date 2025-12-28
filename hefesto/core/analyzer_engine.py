@@ -233,6 +233,7 @@ class AnalyzerEngine:
 
     def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
         """Find all supported files in the given path."""
+
         def excluded(p: Path) -> bool:
             sp = str(p)
             return any(pattern in sp for pattern in exclude_patterns)
@@ -266,7 +267,6 @@ class AnalyzerEngine:
         # Dedupe preserving order
         return list(dict.fromkeys(supported_files))
 
-
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
         start_time = time.time()
@@ -281,12 +281,14 @@ class AnalyzerEngine:
                 return None
 
             # Calculate LOC early (for all languages including DevOps)
-            loc = len([l for l in code.split("\n") if l.strip() and not l.strip().startswith("#")])
-
+            loc = len(
+                [ln for ln in code.split("\n") if ln.strip() and not ln.strip().startswith("#")]
+            )
 
             # DevOps languages - use dedicated analyzers without TreeSitter parser
             if language == Language.YAML:
                 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
+
                 yaml_issues = YamlAnalyzer().analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(yaml_issues)
                 duration_ms = (time.time() - start_time) * 1000
@@ -300,6 +302,7 @@ class AnalyzerEngine:
 
             elif language == Language.SHELL:
                 from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
+
                 shell_issues = ShellAnalyzer().analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(shell_issues)
                 duration_ms = (time.time() - start_time) * 1000
@@ -313,6 +316,7 @@ class AnalyzerEngine:
 
             elif language == Language.DOCKERFILE:
                 from hefesto.analyzers.devops.dockerfile_analyzer import DockerfileAnalyzer
+
                 docker_issues = DockerfileAnalyzer().analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(docker_issues)
                 duration_ms = (time.time() - start_time) * 1000
@@ -326,6 +330,7 @@ class AnalyzerEngine:
 
             elif language == Language.TERRAFORM:
                 from hefesto.analyzers.devops.terraform_analyzer import TerraformAnalyzer
+
                 tf_issues = TerraformAnalyzer().analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(tf_issues)
                 duration_ms = (time.time() - start_time) * 1000

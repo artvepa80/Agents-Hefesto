@@ -8,8 +8,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -19,6 +18,7 @@ from hefesto.core.analysis_models import (
 
 try:
     import yaml  # type: ignore
+
     YAML_AVAILABLE = True
 except ImportError:
     yaml = None
@@ -28,7 +28,7 @@ except ImportError:
 class YamlAnalyzer:
     """
     Internal YAML analyzer for DevOps configurations.
-    
+
     Provides fallback analysis when external providers (yamllint)
     are not available. Focuses on high-value, low-false-positive rules.
     """
@@ -93,9 +93,7 @@ class YamlAnalyzer:
                 return line[:i]
         return line
 
-    def _check_syntax(
-        self, file_path: str, content: str, lines: List[str]
-    ) -> List[AnalysisIssue]:
+    def _check_syntax(self, file_path: str, content: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check for basic YAML syntax issues."""
         issues = []
 
@@ -205,9 +203,7 @@ class YamlAnalyzer:
 
         return issues
 
-    def _check_indentation(
-        self, file_path: str, lines: List[str]
-    ) -> List[AnalysisIssue]:
+    def _check_indentation(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check for inconsistent indentation."""
         issues = []
         indent_sizes = set()
@@ -235,16 +231,14 @@ class YamlAnalyzer:
 
         return issues
 
-    def _check_github_actions(
-        self, file_path: str, lines: List[str]
-    ) -> List[AnalysisIssue]:
+    def _check_github_actions(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check GitHub Actions specific issues."""
         issues = []
         content = "\n".join(lines)
 
         for pattern, description in self.GITHUB_ACTIONS_RISKS:
             for match in re.finditer(pattern, content, re.MULTILINE):
-                line_num = content[:match.start()].count("\n") + 1
+                line_num = content[: match.start()].count("\n") + 1
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,
@@ -262,16 +256,14 @@ class YamlAnalyzer:
 
         return issues
 
-    def _check_kubernetes(
-        self, file_path: str, lines: List[str]
-    ) -> List[AnalysisIssue]:
+    def _check_kubernetes(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check Kubernetes manifest specific issues."""
         issues = []
         content = "\n".join(lines)
 
         for pattern, description in self.K8S_RISKS:
             for match in re.finditer(pattern, content, re.IGNORECASE):
-                line_num = content[:match.start()].count("\n") + 1
+                line_num = content[: match.start()].count("\n") + 1
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,

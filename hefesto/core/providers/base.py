@@ -21,7 +21,7 @@ from hefesto.core.languages.specs import Language
 class ExternalProvider(ABC):
     """
     Abstract base class for external analysis providers.
-    
+
     Providers wrap external tools (yamllint, shellcheck, etc.) and
     normalize their output to Hefesto AnalysisIssue format.
     """
@@ -34,7 +34,7 @@ class ExternalProvider(ABC):
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize provider with optional configuration.
-        
+
         Args:
             config: Provider-specific configuration (timeout, rules, etc.)
         """
@@ -51,11 +51,11 @@ class ExternalProvider(ABC):
     def parse_output(self, output: str, file_path: Path) -> List[AnalysisIssue]:
         """
         Parse provider output into AnalysisIssue list.
-        
+
         Args:
             output: Raw stdout/stderr from the tool
             file_path: Path to the analyzed file
-            
+
         Returns:
             List of normalized AnalysisIssue objects
         """
@@ -89,13 +89,13 @@ class ExternalProvider(ABC):
     def build_command(self, files: List[Path], cwd: Path) -> List[str]:
         """
         Build the command to execute the external tool.
-        
+
         Override in subclasses for tool-specific arguments.
-        
+
         Args:
             files: List of files to analyze
             cwd: Working directory for execution
-            
+
         Returns:
             Command as list of strings
         """
@@ -111,12 +111,12 @@ class ExternalProvider(ABC):
     ) -> ProviderResult:
         """
         Run the provider on a batch of files.
-        
+
         Args:
             files: List of files to analyze
             cwd: Working directory
             config: Runtime configuration overrides
-            
+
         Returns:
             ProviderResult with issues and metadata
         """

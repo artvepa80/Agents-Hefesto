@@ -97,7 +97,9 @@ class DockerfileAnalyzer:
     COPY_SENSITIVE: List[Tuple[re.Pattern, str, float, AnalysisIssueSeverity, str]] = [
         (
             re.compile(
-                r"^\s*COPY\s+.*\b(\.env|\.pem|\.key|id_rsa|id_ed25519|credentials|\.npmrc|\.pypirc|\.netrc)\b",
+                r"^\s*COPY\s+.*\b("
+                r"\.env|\.pem|\.key|id_rsa|id_ed25519|credentials|\.npmrc|\.pypirc|\.netrc"
+                r")\b",
                 re.IGNORECASE,
             ),
             "Sensitive file copied into image",
@@ -154,23 +156,39 @@ class DockerfileAnalyzer:
                     continue
 
                 if image_ref.lower().endswith(":latest"):
-                    issues.append(self._create_issue(
-                        file_path, line_num, 1,
-                        AnalysisIssueType.DOCKERFILE_LATEST_TAG,
-                        AnalysisIssueSeverity.HIGH,
-                        "Using :latest tag is non-reproducible and risky",
-                        "Pin to a specific tag or digest (e.g., python:3.11-slim)",
-                        0.95, "DOCKER002", raw, extra={"image": image_ref},
-                    ))
-                elif ":" not in image_ref and "@" not in image_ref and image_ref.lower() != "scratch":
-                    issues.append(self._create_issue(
-                        file_path, line_num, 1,
-                        AnalysisIssueType.DOCKERFILE_LATEST_TAG,
-                        AnalysisIssueSeverity.MEDIUM,
-                        f"No tag specified for '{image_ref}' (defaults to latest)",
-                        f"Add explicit version tag (e.g., {image_ref}:<version>)",
-                        0.85, "DOCKER003", raw, extra={"image": image_ref},
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            1,
+                            AnalysisIssueType.DOCKERFILE_LATEST_TAG,
+                            AnalysisIssueSeverity.HIGH,
+                            "Using :latest tag is non-reproducible and risky",
+                            "Pin to a specific tag or digest (e.g., python:3.11-slim)",
+                            0.95,
+                            "DOCKER002",
+                            raw,
+                            extra={"image": image_ref},
+                        )
+                    )
+                elif (
+                    ":" not in image_ref and "@" not in image_ref and image_ref.lower() != "scratch"
+                ):
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            1,
+                            AnalysisIssueType.DOCKERFILE_LATEST_TAG,
+                            AnalysisIssueSeverity.MEDIUM,
+                            f"No tag specified for '{image_ref}' (defaults to latest)",
+                            f"Add explicit version tag (e.g., {image_ref}:<version>)",
+                            0.85,
+                            "DOCKER003",
+                            raw,
+                            extra={"image": image_ref},
+                        )
+                    )
 
             m_user = self.RE_USER.match(line)
             if m_user:
@@ -178,101 +196,163 @@ class DockerfileAnalyzer:
                 last_user = m_user.group("user")
 
             if self.ADD_REMOTE[0].search(line):
-                issues.append(self._create_issue(
-                    file_path, line_num, 1,
-                    AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
-                    self.ADD_REMOTE[3], self.ADD_REMOTE[1],
-                    "Prefer COPY local files or download with checksum in RUN",
-                    self.ADD_REMOTE[2], self.ADD_REMOTE[4], raw,
-                ))
+                issues.append(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        1,
+                        AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
+                        self.ADD_REMOTE[3],
+                        self.ADD_REMOTE[1],
+                        "Prefer COPY local files or download with checksum in RUN",
+                        self.ADD_REMOTE[2],
+                        self.ADD_REMOTE[4],
+                        raw,
+                    )
+                )
 
             for pat, msg, conf, sev, rid in self.RUN_RCE_PATTERNS:
                 mm = pat.search(line)
                 if mm:
-                    issues.append(self._create_issue(
-                        file_path, line_num, mm.start() + 1,
-                        AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
-                        sev, msg,
-                        "Download first, verify checksum, then execute.",
-                        conf, rid, raw,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            mm.start() + 1,
+                            AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
+                            sev,
+                            msg,
+                            "Download first, verify checksum, then execute.",
+                            conf,
+                            rid,
+                            raw,
+                        )
+                    )
                     break
 
             for pat, msg, conf, sev, rid in self.SECRET_STRICT:
                 mm = pat.search(line)
                 if mm:
-                    issues.append(self._create_issue(
-                        file_path, line_num, mm.start() + 1,
-                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                        sev, msg,
-                        "Do not bake secrets into images. Use runtime secrets.",
-                        conf, rid, raw,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            mm.start() + 1,
+                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                            sev,
+                            msg,
+                            "Do not bake secrets into images. Use runtime secrets.",
+                            conf,
+                            rid,
+                            raw,
+                        )
+                    )
                     break
 
             for pat, msg, conf, sev, rid in self.SECRET_GENERIC:
                 mm = pat.search(line)
                 if mm:
-                    issues.append(self._create_issue(
-                        file_path, line_num, mm.start() + 1,
-                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                        sev, msg,
-                        "Avoid ARG/ENV secrets. Use runtime secret injection.",
-                        conf, rid, raw,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            mm.start() + 1,
+                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                            sev,
+                            msg,
+                            "Avoid ARG/ENV secrets. Use runtime secret injection.",
+                            conf,
+                            rid,
+                            raw,
+                        )
+                    )
                     break
 
             for pat, msg, conf, sev, rid in self.COPY_SENSITIVE:
                 mm = pat.search(line)
                 if mm:
-                    issues.append(self._create_issue(
-                        file_path, line_num, mm.start() + 1,
-                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                        sev, msg,
-                        "Remove sensitive files from build context.",
-                        conf, rid, raw,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            mm.start() + 1,
+                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                            sev,
+                            msg,
+                            "Remove sensitive files from build context.",
+                            conf,
+                            rid,
+                            raw,
+                        )
+                    )
                     break
 
             for pat, msg, conf, sev, rid in self.PERMS:
                 mm = pat.search(line)
                 if mm:
-                    issues.append(self._create_issue(
-                        file_path, line_num, mm.start() + 1,
-                        AnalysisIssueType.DOCKERFILE_WEAK_PERMISSIONS,
-                        sev, msg,
-                        "Use least-privilege perms (e.g., 644 files, 755 dirs).",
-                        conf, rid, raw,
-                    ))
+                    issues.append(
+                        self._create_issue(
+                            file_path,
+                            line_num,
+                            mm.start() + 1,
+                            AnalysisIssueType.DOCKERFILE_WEAK_PERMISSIONS,
+                            sev,
+                            msg,
+                            "Use least-privilege perms (e.g., 644 files, 755 dirs).",
+                            conf,
+                            rid,
+                            raw,
+                        )
+                    )
                     break
 
         if has_from and not has_any_user:
-            issues.append(self._create_issue(
-                file_path, 1, 1,
-                AnalysisIssueType.DOCKERFILE_MISSING_USER,
-                AnalysisIssueSeverity.MEDIUM,
-                "No USER instruction - container runs as root by default",
-                "Add a non-root user and set USER for the final stage.",
-                0.80, "DOCKER001", lines[0] if lines else "",
-            ))
+            issues.append(
+                self._create_issue(
+                    file_path,
+                    1,
+                    1,
+                    AnalysisIssueType.DOCKERFILE_MISSING_USER,
+                    AnalysisIssueSeverity.MEDIUM,
+                    "No USER instruction - container runs as root by default",
+                    "Add a non-root user and set USER for the final stage.",
+                    0.80,
+                    "DOCKER001",
+                    lines[0] if lines else "",
+                )
+            )
         elif has_from and last_user is not None and last_user.lower() in ("root", "0"):
-            issues.append(self._create_issue(
-                file_path, 1, 1,
-                AnalysisIssueType.DOCKERFILE_PRIVILEGE_ESCALATION,
-                AnalysisIssueSeverity.HIGH,
-                "Final USER is root - privilege escalation risk",
-                "Switch to a non-root user for runtime.",
-                0.85, "DOCKER004", f"USER {last_user}",
-                extra={"user": last_user},
-            ))
+            issues.append(
+                self._create_issue(
+                    file_path,
+                    1,
+                    1,
+                    AnalysisIssueType.DOCKERFILE_PRIVILEGE_ESCALATION,
+                    AnalysisIssueSeverity.HIGH,
+                    "Final USER is root - privilege escalation risk",
+                    "Switch to a non-root user for runtime.",
+                    0.85,
+                    "DOCKER004",
+                    f"USER {last_user}",
+                    extra={"user": last_user},
+                )
+            )
 
         return issues
 
     def _create_issue(
-        self, file_path: str, line: int, column: int,
-        issue_type: AnalysisIssueType, severity: AnalysisIssueSeverity,
-        message: str, suggestion: str, confidence: float, rule_id: str,
-        line_content: str, extra: Optional[dict] = None,
+        self,
+        file_path: str,
+        line: int,
+        column: int,
+        issue_type: AnalysisIssueType,
+        severity: AnalysisIssueSeverity,
+        message: str,
+        suggestion: str,
+        confidence: float,
+        rule_id: str,
+        line_content: str,
+        extra: Optional[dict] = None,
     ) -> AnalysisIssue:
         md = {"line_content": (line_content or "").strip()[:200]}
         if extra:
