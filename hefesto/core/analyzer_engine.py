@@ -324,6 +324,19 @@ class AnalyzerEngine:
                     language=language.value,
                 )
 
+            elif language == Language.TERRAFORM:
+                from hefesto.analyzers.devops.terraform_analyzer import TerraformAnalyzer
+                tf_issues = TerraformAnalyzer().analyze(str(file_path), code)
+                filtered_issues = self._filter_by_severity(tf_issues)
+                duration_ms = (time.time() - start_time) * 1000
+                return FileAnalysisResult(
+                    file_path=str(file_path),
+                    issues=filtered_issues,
+                    lines_of_code=loc,
+                    analysis_duration_ms=duration_ms,
+                    language=language.value,
+                )
+
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
