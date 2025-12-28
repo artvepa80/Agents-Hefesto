@@ -241,12 +241,19 @@ class SqlAnalyzer:
             # Check dangerous patterns
             for pattern, msg, conf, sev, rule in self.DANGEROUS_PATTERNS:
                 if pattern.search(line):
+                    # Map rule to specific issue type
+                    if rule == "SQL022":
+                        issue_type = AnalysisIssueType.SQL_DELETE_WITHOUT_WHERE
+                    elif rule == "SQL023":
+                        issue_type = AnalysisIssueType.SQL_UPDATE_WITHOUT_WHERE
+                    else:
+                        issue_type = AnalysisIssueType.SQL_DROP_WITHOUT_WHERE
                     issues.append(
                         self._create_issue(
                             file_path=file_path,
                             line=line_num,
                             column=1,
-                            issue_type=AnalysisIssueType.SQL_DROP_WITHOUT_WHERE,
+                            issue_type=issue_type,
                             severity=sev,
                             message=msg,
                             suggestion=(
@@ -289,7 +296,7 @@ class SqlAnalyzer:
                             file_path=file_path,
                             line=line_num,
                             column=1,
-                            issue_type=AnalysisIssueType.TF_OVERLY_PERMISSIVE,
+                            issue_type=AnalysisIssueType.SQL_OVERLY_PERMISSIVE_GRANT,
                             severity=sev,
                             message=msg,
                             suggestion=(
