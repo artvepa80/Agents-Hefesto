@@ -342,6 +342,20 @@ class AnalyzerEngine:
                     language=language.value,
                 )
 
+            elif language == Language.SQL:
+                from hefesto.analyzers.devops.sql_analyzer import SqlAnalyzer
+
+                sql_issues = SqlAnalyzer().analyze(str(file_path), code)
+                filtered_issues = self._filter_by_severity(sql_issues)
+                duration_ms = (time.time() - start_time) * 1000
+                return FileAnalysisResult(
+                    file_path=str(file_path),
+                    issues=filtered_issues,
+                    lines_of_code=loc,
+                    analysis_duration_ms=duration_ms,
+                    language=language.value,
+                )
+
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))

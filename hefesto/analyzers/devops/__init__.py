@@ -2,6 +2,7 @@
 
 from hefesto.analyzers.devops.dockerfile_analyzer import DockerfileAnalyzer
 from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
+from hefesto.analyzers.devops.sql_analyzer import SqlAnalyzer
 from hefesto.analyzers.devops.terraform_analyzer import TerraformAnalyzer
 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
 
@@ -9,5 +10,6 @@ __all__ = [
     "YamlAnalyzer",
     "ShellAnalyzer",
     "DockerfileAnalyzer",
+    "SqlAnalyzer",
     "TerraformAnalyzer",
 ]
