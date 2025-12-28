@@ -26,6 +26,7 @@ from hefesto.core.analysis_models import (
     FileAnalysisResult,
 )
 from hefesto.core.language_detector import Language, LanguageDetector
+from hefesto.core.languages.registry import get_registry
 from hefesto.core.parsers.parser_factory import ParserFactory
 
 # Phase 0 imports (always available)
@@ -67,6 +68,7 @@ class AnalyzerEngine:
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
         self.analyzers = []
         self.verbose = verbose
+        self._registry = get_registry()
 
         # Check license and PRO features
         self.has_pro_license = False
@@ -261,7 +263,26 @@ class AnalyzerEngine:
             if language == Language.UNKNOWN:
                 return None
 
-            # Get appropriate parser
+            # DevOps languages (YAML) - use dedicated analyzers without parser
+            all_issues = []
+            if language == Language.YAML:
+                from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
+                yaml_issues = YamlAnalyzer().analyze(str(file_path), code)
+                all_issues.extend(yaml_issues)
+                # Calculate LOC for YAML
+                loc = len([l for l in code.split("\n") if l.strip() and not l.strip().startswith("#")])
+                # Skip parser for YAML, go directly to filtering
+                filtered_issues = self._filter_by_severity(all_issues)
+                duration_ms = (time.time() - start_time) * 1000
+                return FileAnalysisResult(
+                    file_path=str(file_path),
+                    issues=filtered_issues,
+                    lines_of_code=loc,
+                    analysis_duration_ms=duration_ms,
+                    language=language.value,
+                )
+
+            # Get appropriate parser for code languages
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
@@ -294,6 +315,7 @@ class AnalyzerEngine:
                 issues=filtered_issues,
                 lines_of_code=loc,
                 analysis_duration_ms=duration_ms,
+                language=language.value,
             )
 
         except Exception:

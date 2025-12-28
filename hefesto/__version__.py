@@ -2,10 +2,17 @@
 Hefesto version information.
 """
 
-__version__ = "4.3.4"
+__version__ = "4.4.0"
 __api_version__ = "v1"
 
 # Version history
+# 4.4.0 - DevOps Language Support (Ola 1)
+#         - YAML analysis with internal YamlAnalyzer
+#         - LanguageSpec + LanguageRegistry architecture
+#         - ExternalProvider + ProviderRegistry for future external tools
+#         - Enterprise fields: engine, rule_id, confidence, source
+#         - Support for 12 languages total (7 code + 5 DevOps)
+#         - python -m hefesto entrypoint
 # 4.3.4 - CLI Improvements
 #         - Multiple paths support: hefesto analyze src/ lib/ types/
 #         - --fail-on option for CI exit codes (LOW|MEDIUM|HIGH|CRITICAL)
