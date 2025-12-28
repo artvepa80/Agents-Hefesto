@@ -227,6 +227,133 @@ class SqlAnalyzer:
         col_in_line = len(prefix) - last_nl
         return stmt_line + line_offset, col_in_line
 
+    def _build_stmt_scan(self, stmt: str) -> str:
+        """
+        Build a length-preserving scan string for regex checks:
+        - Removes line comments (-- / #) and block comments (/* */) by replacing
+          with spaces (newlines preserved).
+        - Masks single-quoted string literal contents with spaces so keywords
+          like WHERE inside strings do NOT count.
+        - Preserves quoted identifiers in double-quotes/backticks/brackets.
+        """
+        NL = chr(10)
+
+        out: List[str] = []
+        n = len(stmt)
+        i = 0
+
+        in_single = False
+        in_double = False
+        in_backtick = False
+        in_line_comment = False
+        in_block_comment = False
+
+        while i < n:
+            ch = stmt[i]
+            nxt = stmt[i + 1] if i + 1 < n else ""
+
+            if in_line_comment:
+                if ch == NL:
+                    in_line_comment = False
+                    out.append(ch)
+                else:
+                    out.append(" ")
+                i += 1
+                continue
+
+            if in_block_comment:
+                if ch == "*" and nxt == "/":
+                    out.append(" ")
+                    out.append(" ")
+                    in_block_comment = False
+                    i += 2
+                    continue
+                out.append(ch if ch == NL else " ")
+                i += 1
+                continue
+
+            if in_single:
+                if ch == "'" and nxt == "'":
+                    out.append("'")
+                    out.append("'")
+                    i += 2
+                    continue
+                if ch == "'":
+                    in_single = False
+                    out.append(ch)
+                    i += 1
+                    continue
+                out.append(ch if ch == NL else " ")
+                i += 1
+                continue
+
+            if in_double:
+                if ch == '"' and nxt == '"':
+                    out.append(ch)
+                    out.append(nxt)
+                    i += 2
+                    continue
+                if ch == '"':
+                    in_double = False
+                out.append(ch)
+                i += 1
+                continue
+
+            if in_backtick:
+                if ch == "`" and nxt == "`":
+                    out.append(ch)
+                    out.append(nxt)
+                    i += 2
+                    continue
+                if ch == "`":
+                    in_backtick = False
+                out.append(ch)
+                i += 1
+                continue
+
+            if ch == "/" and nxt == "*":
+                in_block_comment = True
+                out.append(" ")
+                out.append(" ")
+                i += 2
+                continue
+
+            if ch == "-" and nxt == "-":
+                prev = stmt[i - 1] if i > 0 else " "
+                if prev.isspace() or i == 0:
+                    in_line_comment = True
+                    out.append(" ")
+                    out.append(" ")
+                    i += 2
+                    continue
+
+            if ch == "#":
+                in_line_comment = True
+                out.append(" ")
+                i += 1
+                continue
+
+            if ch == "'":
+                in_single = True
+                out.append(ch)
+                i += 1
+                continue
+            if ch == '"':
+                in_double = True
+                out.append(ch)
+                i += 1
+                continue
+            if ch == "`":
+                in_backtick = True
+                out.append(ch)
+                i += 1
+                continue
+
+            out.append(ch)
+            i += 1
+
+        return "".join(out)
+
     def _create_issue(
         self,
         file_path: str,
@@ -353,58 +480,54 @@ class SqlAnalyzer:
                     )
                     break
 
-        # Statement-level checks (dangerous ops) for multi-line WHERE handling
-        NL = chr(10)
+        # Statement-level checks (dangerous ops) with comment/string-safe scanning
         statements = self._iter_sql_statements(content)
         for stmt, stmt_line, stmt_col in statements:
-            # Remove only leading full-line comments (preserves offsets within scan)
-            stmt_lines = stmt.splitlines(True)  # keep newlines
-            skip = 0
-            while skip < len(stmt_lines):
-                s = stmt_lines[skip].strip()
-                if not s or s.startswith("--") or s.startswith("#"):
-                    skip += 1
-                else:
-                    break
-
-            stmt_scan = "".join(stmt_lines[skip:])
+            stmt_scan = self._build_stmt_scan(stmt)
             if not stmt_scan.strip():
                 continue
 
-            scan_start_line = stmt_line + skip
-            scan_start_col = stmt_col if skip == 0 else 1
+            # Pick a meaningful preview line (first non-empty scanned line)
+            stmt_lines = stmt.splitlines()
+            scan_lines = stmt_scan.splitlines()
+            line_content = ""
+            for idx, sl in enumerate(scan_lines):
+                if sl.strip():
+                    if idx < len(stmt_lines):
+                        line_content = stmt_lines[idx].rstrip()
+                    break
 
             for pattern, msg, conf, sev, rule in self.DANGEROUS_PATTERNS:
                 mm = pattern.search(stmt_scan)
-                if mm:
-                    if rule == "SQL022":
-                        issue_type = AnalysisIssueType.SQL_DELETE_WITHOUT_WHERE
-                    elif rule == "SQL023":
-                        issue_type = AnalysisIssueType.SQL_UPDATE_WITHOUT_WHERE
-                    else:
-                        issue_type = AnalysisIssueType.SQL_DROP_WITHOUT_WHERE
+                if not mm:
+                    continue
 
-                    issue_line, issue_col = self._pos_from_stmt_offset(
-                        stmt_scan, scan_start_line, scan_start_col, mm.start()
-                    )
+                if rule == "SQL022":
+                    issue_type = AnalysisIssueType.SQL_DELETE_WITHOUT_WHERE
+                elif rule == "SQL023":
+                    issue_type = AnalysisIssueType.SQL_UPDATE_WITHOUT_WHERE
+                else:
+                    issue_type = AnalysisIssueType.SQL_DROP_WITHOUT_WHERE
 
-                    issues.append(
-                        self._create_issue(
-                            file_path=file_path,
-                            line=issue_line,
-                            column=issue_col,
-                            issue_type=issue_type,
-                            severity=sev,
-                            message=msg,
-                            suggestion=(
-                                "Add WHERE clause or IF EXISTS to prevent " "accidental data loss."
-                            ),
-                            confidence=conf,
-                            rule_id=rule,
-                            line_content=stmt_scan.split(NL)[0] if stmt_scan else "",
-                        )
+                issue_line, issue_col = self._pos_from_stmt_offset(
+                    stmt_scan, stmt_line, stmt_col, mm.start()
+                )
+
+                issues.append(
+                    self._create_issue(
+                        file_path=file_path,
+                        line=issue_line,
+                        column=issue_col,
+                        issue_type=issue_type,
+                        severity=sev,
+                        message=msg,
+                        suggestion="Add WHERE clause or IF EXISTS to prevent accidental data loss.",
+                        confidence=conf,
+                        rule_id=rule,
+                        line_content=line_content,
                     )
-                    break
+                )
+                break
 
         return issues
 
