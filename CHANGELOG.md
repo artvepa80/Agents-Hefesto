@@ -5,6 +5,190 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [4.3.4] - 2025-12-27 ✅ RELEASED
+
+### 🛠️ CLI Improvements
+
+**Enhanced Developer Experience for CI/CD Integration**
+
+This release focuses on making Hefesto more practical for CI/CD pipelines and large codebases.
+
+#### Added
+
+##### Multiple Paths Support
+- **Feature:** Analyze multiple directories in a single command
+- **Usage:** `hefesto analyze src/ lib/ types/ tests/`
+- **Benefit:** Single command for monorepo analysis
+- **Implementation:** Click `nargs=-1` with path validation
+
+##### Exit Code Control (`--fail-on`)
+- **Feature:** Control when Hefesto returns non-zero exit code
+- **Options:** `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+- **Usage:** `hefesto analyze . --fail-on HIGH`
+- **Benefit:** Fine-grained CI/CD gate control
+- **Example:** Only fail build on HIGH+ severity issues
+
+##### Quiet Mode (`--quiet`)
+- **Feature:** Minimal output showing only summary
+- **Usage:** `hefesto analyze . --quiet`
+- **Benefit:** Clean CI logs, faster parsing
+- **Output:** Issue counts only, no detailed messages
+
+##### Issue Limit (`--max-issues`)
+- **Feature:** Limit number of issues displayed
+- **Usage:** `hefesto analyze . --max-issues 20`
+- **Benefit:** Manageable output for large codebases
+- **Default:** Unlimited (show all)
+
+#### Changed
+
+- Removed emojis from CLI output per coding guidelines
+- Improved output formatting for terminal readability
+- Used `file_results` and `get_all_issues()` instead of direct `issues` attribute
+
+#### Fixed
+
+- Fixed `AnalysisReport` object attribute access (was using non-existent `issues`)
+
+---
+
+## [4.3.3] - 2025-12-26 ✅ RELEASED
+
+### 🔧 TypeScript/JavaScript Analysis Fixes
+
+**Accurate Parameter Counting and Function Naming**
+
+This release fixes critical issues with TypeScript/JavaScript analysis accuracy.
+
+#### Fixed
+
+##### LONG_PARAMETER_LIST Detection
+- **Problem:** Was counting commas in function signature text
+- **Impact:** `(a, b, options = {x: 1, y: 2})` counted as 5 params (4 commas)
+- **Solution:** Use AST `formal_parameters` node children count
+- **Result:** Accurate parameter count from AST structure
+
+##### Arrow Function Naming
+- **Problem:** Arrow functions reported as `None` or unnamed
+- **Impact:** `const handleClick = () => {}` showed as "Function 'None'`
+- **Solution:** Traverse to `variable_declarator` parent, extract identifier
+- **Result:** Correctly infers `handleClick` from assignment
+
+##### Anonymous Function Display
+- **Problem:** Unnamed functions displayed as `None`
+- **Solution:** Use `<anonymous>` placeholder
+- **Result:** Clearer "Function '<anonymous>' is too long"
+
+#### Added
+
+##### Threshold Visibility
+- All code smell messages now include threshold values
+- Example: `(13 lines, threshold=10)` instead of just `(13 lines)`
+- Helps developers understand why issue was flagged
+
+##### Line Ranges in Suggestions
+- LONG_FUNCTION suggestions now include line range
+- Example: "Lines 45-120. Break down into smaller functions."
+- Easier to locate problematic code
+
+#### Changed
+
+- Refactored `CodeSmellAnalyzer` to use metadata `param_count`
+- TreeSitter parser now extracts `param_count` during AST conversion
+- Consistent `<anonymous>` naming across all analyzers
+
+---
+
+## [4.3.2] - 2025-12-26 ✅ RELEASED
+
+### 🌐 Complete Multi-Language Support
+
+**All 7 Languages Now Fully Operational**
+
+This release completes the multi-language vision with Rust and C# support.
+
+#### Added
+
+##### Rust Support (.rs)
+- **Parser:** TreeSitter with `tree-sitter-rust` grammar
+- **Analysis:** Functions, structs, traits, impl blocks
+- **Security:** Unsafe blocks, raw pointers, FFI boundaries
+- **Code Smells:** Long functions, complex match statements
+- **Market:** Systems programming, WebAssembly, embedded
+
+##### C# Support (.cs)
+- **Parser:** TreeSitter with `tree-sitter-c-sharp` grammar
+- **Analysis:** Classes, methods, properties, events
+- **Security:** SQL injection, XML injection, unsafe code
+- **Code Smells:** God classes, long methods, deep inheritance
+- **Market:** Enterprise .NET, Unity game development, Azure
+
+#### Fixed
+
+##### TreeSitter Grammar Loading
+- **Problem:** Dynamic grammar loading failed for some languages
+- **Solution:** Use `tree-sitter-languages` package with pre-built grammars
+- **Result:** Reliable parsing for all 7 languages
+
+#### Language Support Matrix (Complete)
+
+| Language | Parser | Status |
+|----------|--------|--------|
+| Python | Native AST | ✅ Full |
+| TypeScript | TreeSitter | ✅ Full |
+| JavaScript | TreeSitter | ✅ Full |
+| Java | TreeSitter | ✅ Full |
+| Go | TreeSitter | ✅ Full |
+| Rust | TreeSitter | ✅ Full |
+| C# | TreeSitter | ✅ Full |
+
+---
+
+## [4.3.1] - 2025-12-25 ✅ RELEASED
+
+### 🔐 License Validation Fix
+
+**OMEGA Tier Access Restored**
+
+Critical bugfix for OMEGA users who were incorrectly blocked from PRO features.
+
+#### Fixed
+
+##### OMEGA Users Blocked from Features
+- **Problem:** OMEGA license holders couldn't access PRO features
+- **Root Cause:** Tier comparison used equality instead of hierarchy
+- **Impact:** OMEGA (/mo) users had fewer features than PRO (/mo)
+- **Solution:** Implemented proper tier hierarchy (OMEGA >= PRO >= FREE)
+
+##### CLI Handling of Unlimited Values
+- **Problem:** CLI crashed on "unlimited" string for numeric limits
+- **Solution:** Special handling for "unlimited" in tier config
+- **Result:** Clean display of "Repos: unlimited" in status command
+
+#### Technical Details
+
+**Before (Broken):**
+```python
+if user_tier == required_tier:  # Only exact match
+    allow_feature()
+```
+
+**After (Fixed):**
+```python
+TIER_HIERARCHY = {"FREE": 0, "PRO": 1, "OMEGA": 2}
+if TIER_HIERARCHY[user_tier] >= TIER_HIERARCHY[required_tier]:
+    allow_feature()
+```
+
+#### Added
+
+- 17 new tests for tier hierarchy validation
+- Test coverage for OMEGA accessing PRO features
+- Test coverage for PRO accessing FREE features
+- Regression tests for license validation edge cases
+
+
 ## [4.3.0] - 2025-12-10 ✅ RELEASED
 
 ### 🚀 Major Release: Multi-Language Support
