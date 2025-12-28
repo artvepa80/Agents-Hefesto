@@ -84,7 +84,10 @@ class SqlAnalyzer:
     # Dangerous operations patterns
     DANGEROUS_PATTERNS: List[Tuple[re.Pattern, str, float, AnalysisIssueSeverity, str]] = [
         (
-            re.compile(r"\bDROP\s+(?:TABLE|DATABASE|SCHEMA)\b(?!.*\bIF\s+EXISTS\b)", re.IGNORECASE),
+            re.compile(
+                r"\bDROP\s+(?:TABLE|DATABASE|SCHEMA)\b(?!.*\bIF\s+EXISTS\b)",
+                re.IGNORECASE | re.DOTALL,
+            ),
             "DROP statement without IF EXISTS (data loss risk)",
             0.85,
             AnalysisIssueSeverity.HIGH,
@@ -98,14 +101,14 @@ class SqlAnalyzer:
             "SQL021",
         ),
         (
-            re.compile(r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", re.IGNORECASE),
+            re.compile(r"\bDELETE\s+FROM\s+\w+\b(?!.*\bWHERE\b)", re.IGNORECASE | re.DOTALL),
             "DELETE without WHERE clause (deletes all rows)",
             0.92,
             AnalysisIssueSeverity.CRITICAL,
             "SQL022",
         ),
         (
-            re.compile(r"\bUPDATE\s+\w+\s+SET\s+.*(?:;|$)(?!.*WHERE)", re.IGNORECASE),
+            re.compile(r"\bUPDATE\s+\w+\s+SET\b(?!.*\bWHERE\b)", re.IGNORECASE | re.DOTALL),
             "UPDATE without WHERE clause (updates all rows)",
             0.90,
             AnalysisIssueSeverity.CRITICAL,
@@ -155,6 +158,74 @@ class SqlAnalyzer:
             "SQL042",
         ),
     ]
+
+    def _iter_sql_statements(self, content: str) -> List[Tuple[str, int, int]]:
+        """
+        Split SQL content into statements by semicolon, respecting quotes.
+        Returns list of (statement_text, start_line, start_col) 1-based.
+        """
+        NL = chr(10)
+        TAB = chr(9)
+        CR = chr(13)
+
+        statements: List[Tuple[str, int, int]] = []
+        in_single = False
+        in_double = False
+
+        buf: List[str] = []
+        line = 1
+        col = 1
+
+        stmt_start_line = 1
+        stmt_start_col = 1
+        started = False
+
+        def flush():
+            nonlocal buf, started
+            text = "".join(buf).strip()
+            if text:
+                statements.append((text, stmt_start_line, stmt_start_col))
+            buf = []
+            started = False
+
+        for ch in content:
+            if (not started) and (ch not in (" ", TAB, CR, NL)):
+                stmt_start_line, stmt_start_col = line, col
+                started = True
+
+            if ch == "'" and (not in_double):
+                in_single = not in_single
+            elif ch == '"' and (not in_single):
+                in_double = not in_double
+
+            if ch == ";" and (not in_single) and (not in_double):
+                buf.append(ch)
+                flush()
+            else:
+                buf.append(ch)
+
+            if ch == NL:
+                line += 1
+                col = 1
+            else:
+                col += 1
+
+        flush()
+        return statements
+
+    def _pos_from_stmt_offset(
+        self, stmt: str, stmt_line: int, stmt_col: int, offset: int
+    ) -> Tuple[int, int]:
+        """Convert character offset inside stmt to (line, col) 1-based."""
+        NL = chr(10)
+        prefix = stmt[:offset]
+        if NL not in prefix:
+            return stmt_line, stmt_col + offset
+
+        line_offset = prefix.count(NL)
+        last_nl = prefix.rfind(NL)
+        col_in_line = len(prefix) - last_nl
+        return stmt_line + line_offset, col_in_line
 
     def _create_issue(
         self,
@@ -238,34 +309,6 @@ class SqlAnalyzer:
                     )
                     break
 
-            # Check dangerous patterns
-            for pattern, msg, conf, sev, rule in self.DANGEROUS_PATTERNS:
-                if pattern.search(line):
-                    # Map rule to specific issue type
-                    if rule == "SQL022":
-                        issue_type = AnalysisIssueType.SQL_DELETE_WITHOUT_WHERE
-                    elif rule == "SQL023":
-                        issue_type = AnalysisIssueType.SQL_UPDATE_WITHOUT_WHERE
-                    else:
-                        issue_type = AnalysisIssueType.SQL_DROP_WITHOUT_WHERE
-                    issues.append(
-                        self._create_issue(
-                            file_path=file_path,
-                            line=line_num,
-                            column=1,
-                            issue_type=issue_type,
-                            severity=sev,
-                            message=msg,
-                            suggestion=(
-                                "Add WHERE clause or IF EXISTS to prevent " "accidental data loss."
-                            ),
-                            confidence=conf,
-                            rule_id=rule,
-                            line_content=line,
-                        )
-                    )
-                    break
-
             # Check quality patterns
             for pattern, msg, conf, sev, rule in self.QUALITY_PATTERNS:
                 if pattern.search(line):
@@ -306,6 +349,59 @@ class SqlAnalyzer:
                             confidence=conf,
                             rule_id=rule,
                             line_content=line,
+                        )
+                    )
+                    break
+
+        # Statement-level checks (dangerous ops) for multi-line WHERE handling
+        NL = chr(10)
+        statements = self._iter_sql_statements(content)
+        for stmt, stmt_line, stmt_col in statements:
+            # Remove only leading full-line comments (preserves offsets within scan)
+            stmt_lines = stmt.splitlines(True)  # keep newlines
+            skip = 0
+            while skip < len(stmt_lines):
+                s = stmt_lines[skip].strip()
+                if not s or s.startswith("--") or s.startswith("#"):
+                    skip += 1
+                else:
+                    break
+
+            stmt_scan = "".join(stmt_lines[skip:])
+            if not stmt_scan.strip():
+                continue
+
+            scan_start_line = stmt_line + skip
+            scan_start_col = stmt_col if skip == 0 else 1
+
+            for pattern, msg, conf, sev, rule in self.DANGEROUS_PATTERNS:
+                mm = pattern.search(stmt_scan)
+                if mm:
+                    if rule == "SQL022":
+                        issue_type = AnalysisIssueType.SQL_DELETE_WITHOUT_WHERE
+                    elif rule == "SQL023":
+                        issue_type = AnalysisIssueType.SQL_UPDATE_WITHOUT_WHERE
+                    else:
+                        issue_type = AnalysisIssueType.SQL_DROP_WITHOUT_WHERE
+
+                    issue_line, issue_col = self._pos_from_stmt_offset(
+                        stmt_scan, scan_start_line, scan_start_col, mm.start()
+                    )
+
+                    issues.append(
+                        self._create_issue(
+                            file_path=file_path,
+                            line=issue_line,
+                            column=issue_col,
+                            issue_type=issue_type,
+                            severity=sev,
+                            message=msg,
+                            suggestion=(
+                                "Add WHERE clause or IF EXISTS to prevent " "accidental data loss."
+                            ),
+                            confidence=conf,
+                            rule_id=rule,
+                            line_content=stmt_scan.split(NL)[0] if stmt_scan else "",
                         )
                     )
                     break
