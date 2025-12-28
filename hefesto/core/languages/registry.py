@@ -8,7 +8,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Set
+from typing import Dict, List, Literal, Optional, Set, Tuple
 
 from hefesto.core.languages.specs import Language, LanguageSpec, LANGUAGE_SPECS, ProviderRef
 
@@ -27,6 +27,7 @@ class LanguageRegistry:
         self._by_extension: Dict[str, Language] = {}
         self._by_filename: Dict[str, Language] = {}
         self._shebang_languages: List[LanguageSpec] = []
+        self._glob_patterns: List[Tuple[str, Language]] = []  # (pattern, Language)
 
         self._build_indexes()
 
@@ -36,15 +37,30 @@ class LanguageRegistry:
             self._by_language[spec.language] = spec
 
             for glob in spec.file_globs:
-                if glob.startswith("*."):
-                    ext = glob[1:]
-                    self._by_extension[ext] = spec.language
-                elif not "*" in glob:
-                    self._by_filename[glob.lower()] = spec.language
+                g = glob.lower()
 
+                # Exact filename (no wildcard)
+                if ("*" not in g) and ("?" not in g):
+                    self._by_filename[g] = spec.language
+                    continue
+
+                # Simple extension glob like "*.py" (single dot after *)
+                if g.startswith("*.") and g.count(".") == 1:
+                    ext = g[1:]  # ".py"
+                    self._by_extension[ext] = spec.language
+                    continue
+
+                # Otherwise treat as glob pattern (covers "*.tf.json", "Dockerfile.*", "*.Dockerfile")
+                self._glob_patterns.append((g, spec.language))
+
+            # Index detect_by_filename patterns (often wildcard patterns)
             if spec.detect_by_filename:
                 for pattern in spec.filename_patterns:
-                    self._by_filename[pattern.lower()] = spec.language
+                    p = pattern.lower()
+                    if ("*" in p) or ("?" in p):
+                        self._glob_patterns.append((p, spec.language))
+                    else:
+                        self._by_filename[p] = spec.language
 
             if spec.detect_by_shebang:
                 self._shebang_languages.append(spec)
@@ -68,8 +84,9 @@ class LanguageRegistry:
         if filename in self._by_filename:
             return self._by_filename[filename]
 
-        for pattern, lang in self._by_filename.items():
-            if fnmatch(filename, pattern.lower()):
+        # Wildcards (Dockerfile.*, *.Dockerfile, *.tf.json, etc.)
+        for pattern, lang in self._glob_patterns:
+            if fnmatch(filename, pattern):
                 return lang
 
         if suffix in self._by_extension:
@@ -96,6 +113,21 @@ class LanguageRegistry:
     def get_supported_languages(self) -> List[Language]:
         """Get all supported languages."""
         return [lang for lang in self._by_language.keys() if lang != Language.UNKNOWN]
+
+    def get_supported_file_globs(self) -> List[str]:
+        """Return all file globs across specs (for file discovery)."""
+        globs: List[str] = []
+        for spec in self._specs:
+            globs.extend(spec.file_globs)
+
+        # stable dedupe (preserve order)
+        seen: set = set()
+        out: List[str] = []
+        for g in globs:
+            if g not in seen:
+                out.append(g)
+                seen.add(g)
+        return out
 
     def resolve_providers(
         self,

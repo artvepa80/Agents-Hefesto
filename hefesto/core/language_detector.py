@@ -61,6 +61,11 @@ class LanguageDetector:
         return cls._get_registry().get_supported_extensions()
 
     @classmethod
+    def get_supported_file_globs(cls) -> List[str]:
+        """Get list of supported file globs (used for file discovery)."""
+        return cls._get_registry().get_supported_file_globs()
+
+    @classmethod
     def get_supported_languages(cls) -> List[str]:
         """Get list of supported language names."""
         return [lang.value for lang in cls._get_registry().get_supported_languages()]

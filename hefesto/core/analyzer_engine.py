@@ -233,30 +233,39 @@ class AnalyzerEngine:
 
     def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
         """Find all supported files in the given path."""
-        if path.is_file():
-            return [path] if LanguageDetector.is_supported(path) else []
-
         def excluded(p: Path) -> bool:
             sp = str(p)
             return any(pattern in sp for pattern in exclude_patterns)
 
+        # If a single file is provided, evaluate support with shebang-aware detection.
+        if path.is_file():
+            try:
+                txt = path.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                txt = None
+            return [path] if LanguageDetector.is_supported(path, txt) else []
+
         supported_files: List[Path] = []
 
-        # 1) Extension-based files
-        for ext in LanguageDetector.get_supported_extensions():
-            for file in path.rglob(f"*{ext}"):
-                if not excluded(file):
-                    supported_files.append(file)
+        # Use registry-backed globs to discover files (Dockerfile.*, *.tf.json, etc.)
+        for glob in LanguageDetector.get_supported_file_globs():
+            for file in path.rglob(glob):
+                if excluded(file) or not file.is_file():
+                    continue
+                supported_files.append(file)
 
-        # 2) Files without extension but supported (Dockerfile, Makefile, etc.)
-        special_names = ("Dockerfile", "dockerfile", "Containerfile", "containerfile", "Makefile", "makefile")
-        for name in special_names:
+        # Optional: keep a small fallback for common special filenames not yet in specs.
+        fallback_names = ("Makefile", "makefile", "Containerfile", "containerfile")
+        for name in fallback_names:
             for file in path.rglob(name):
-                if not excluded(file) and LanguageDetector.is_supported(file):
+                if excluded(file) or not file.is_file():
+                    continue
+                if LanguageDetector.is_supported(file):
                     supported_files.append(file)
 
-        # Dedupe (in case any detector also picks up by extension)
+        # Dedupe preserving order
         return list(dict.fromkeys(supported_files))
+
 
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
@@ -267,7 +276,7 @@ class AnalyzerEngine:
                 code = f.read()
 
             # Detect language
-            language = LanguageDetector.detect(file_path)
+            language = LanguageDetector.detect(file_path, code)
             if language == Language.UNKNOWN:
                 return None
 
