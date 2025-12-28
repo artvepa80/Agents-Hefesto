@@ -2,5 +2,6 @@
 
 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
 from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
+from hefesto.analyzers.devops.dockerfile_analyzer import DockerfileAnalyzer
 
-__all__ = ["YamlAnalyzer", "ShellAnalyzer"]
+__all__ = ["YamlAnalyzer", "ShellAnalyzer", "DockerfileAnalyzer"]

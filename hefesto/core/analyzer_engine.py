@@ -236,19 +236,27 @@ class AnalyzerEngine:
         if path.is_file():
             return [path] if LanguageDetector.is_supported(path) else []
 
-        supported_files = []
+        def excluded(p: Path) -> bool:
+            sp = str(p)
+            return any(pattern in sp for pattern in exclude_patterns)
+
+        supported_files: List[Path] = []
+
+        # 1) Extension-based files
         for ext in LanguageDetector.get_supported_extensions():
             for file in path.rglob(f"*{ext}"):
-                should_exclude = False
-                for pattern in exclude_patterns:
-                    if pattern in str(file):
-                        should_exclude = True
-                        break
-
-                if not should_exclude:
+                if not excluded(file):
                     supported_files.append(file)
 
-        return supported_files
+        # 2) Files without extension but supported (Dockerfile, Makefile, etc.)
+        special_names = ("Dockerfile", "dockerfile", "Containerfile", "containerfile", "Makefile", "makefile")
+        for name in special_names:
+            for file in path.rglob(name):
+                if not excluded(file) and LanguageDetector.is_supported(file):
+                    supported_files.append(file)
+
+        # Dedupe (in case any detector also picks up by extension)
+        return list(dict.fromkeys(supported_files))
 
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
@@ -263,22 +271,15 @@ class AnalyzerEngine:
             if language == Language.UNKNOWN:
                 return None
 
-            # DevOps languages (YAML) - use dedicated analyzers without parser
-            all_issues = []
+            # Calculate LOC early (for all languages including DevOps)
+            loc = len([l for l in code.split("\n") if l.strip() and not l.strip().startswith("#")])
+
+
+            # DevOps languages - use dedicated analyzers without TreeSitter parser
             if language == Language.YAML:
                 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
                 yaml_issues = YamlAnalyzer().analyze(str(file_path), code)
-                all_issues.extend(yaml_issues)
-
-            elif language == Language.SHELL:
-                from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
-                loc = len([line for line in code.split("\n") if line.strip()])
-                shell_issues = ShellAnalyzer().analyze(str(file_path), code)
-                all_issues.extend(shell_issues)
-                # Calculate LOC for YAML
-                loc = len([l for l in code.split("\n") if l.strip() and not l.strip().startswith("#")])
-                # Skip parser for YAML, go directly to filtering
-                filtered_issues = self._filter_by_severity(all_issues)
+                filtered_issues = self._filter_by_severity(yaml_issues)
                 duration_ms = (time.time() - start_time) * 1000
                 return FileAnalysisResult(
                     file_path=str(file_path),
@@ -288,7 +289,32 @@ class AnalyzerEngine:
                     language=language.value,
                 )
 
-            # Get appropriate parser for code languages
+            elif language == Language.SHELL:
+                from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
+                shell_issues = ShellAnalyzer().analyze(str(file_path), code)
+                filtered_issues = self._filter_by_severity(shell_issues)
+                duration_ms = (time.time() - start_time) * 1000
+                return FileAnalysisResult(
+                    file_path=str(file_path),
+                    issues=filtered_issues,
+                    lines_of_code=loc,
+                    analysis_duration_ms=duration_ms,
+                    language=language.value,
+                )
+
+            elif language == Language.DOCKERFILE:
+                from hefesto.analyzers.devops.dockerfile_analyzer import DockerfileAnalyzer
+                docker_issues = DockerfileAnalyzer().analyze(str(file_path), code)
+                filtered_issues = self._filter_by_severity(docker_issues)
+                duration_ms = (time.time() - start_time) * 1000
+                return FileAnalysisResult(
+                    file_path=str(file_path),
+                    issues=filtered_issues,
+                    lines_of_code=loc,
+                    analysis_duration_ms=duration_ms,
+                    language=language.value,
+                )
+
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
@@ -296,14 +322,7 @@ class AnalyzerEngine:
                 # File has syntax errors or unsupported language, skip it
                 return None
 
-            # Count lines of code
-            loc = len(
-                [
-                    line
-                    for line in code.split("\n")
-                    if line.strip() and not line.strip().startswith("#")
-                ]
-            )
+            # LOC already calculated above
 
             # Run all analyzers
             all_issues = []
