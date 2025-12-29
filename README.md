@@ -3,9 +3,9 @@
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Languages](https://img.shields.io/badge/languages-7-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
+[![Languages](https://img.shields.io/badge/languages-17-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
-**Multi-language AI code analysis for Python, TypeScript, JavaScript, Java, Go, Rust, and C#.**
+**Multi-language AI code analysis for 7 programming languages + 10 DevOps/config formats.**
 
 Hefesto validates your code before production using AI-powered static analysis and ML enhancement. It caught 3 critical bugs in its own v4.0.1 release through self-validation.
 
@@ -17,7 +17,8 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 
 | Feature | Description |
 |---------|-------------|
-| **7 Languages** | Python, TypeScript, JavaScript, Java, Go, Rust, C# |
+| **Code Languages (7)** | Python, TypeScript, JavaScript, Java, Go, Rust, C# |
+| **DevOps/Config (10)** | Dockerfile, Jenkins/Groovy, JSON, Makefile, PowerShell, Shell, SQL, Terraform, TOML, YAML |
 | **AI Analysis** | Google Gemini for semantic code understanding |
 | **Security Scanning** | SQL injection, hardcoded secrets, command injection |
 | **Code Smells** | Long functions, deep nesting, high complexity |
