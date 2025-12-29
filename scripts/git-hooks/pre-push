@@ -1,40 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Allow skipping locally when needed
-if [[ "${SKIP_HEFESTO_HOOKS:-}" == "1" ]]; then
+# Allow bypass
+if [[ "${SKIP_HEFESTO_HOOKS:-0}" == "1" ]]; then
   echo "[hefesto] SKIP_HEFESTO_HOOKS=1 set; skipping pre-push checks."
   exit 0
 fi
 
-echo "[hefesto] Running fast pre-push checks (CI enforces full gate)."
+ROOT="$(git rev-parse --show-toplevel)"
 
-# Prefer local venv binaries if present
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-
-# If timeout exists (Linux), cap runtime to avoid hangs
-TIMEOUT_BIN=""
-if command -v timeout >/dev/null 2>&1; then
-  TIMEOUT_BIN="timeout ${HEFESTO_HOOK_TIMEOUT_SEC:-180}"
+# Prefer local venv if present
+if [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+else
+  PY="python"
 fi
 
 run() {
-  if [[ -n "$TIMEOUT_BIN" ]]; then
-    $TIMEOUT_BIN "$@"
-  else
-    "$@"
-  fi
+  echo "[hefesto] $*"
+  "$@"
 }
 
-run $PYTHON_BIN -m py_compile \
-  hefesto/core/analysis_models.py \
-  hefesto/analyzers/devops/*.py >/dev/null 2>&1 || true
+cd "$ROOT"
 
-run /home/user/.local/bin/black --check hefesto tests
-run /home/user/.local/bin/isort --check-only hefesto tests
-run /home/user/.local/bin/flake8 hefesto tests
+# Optional: timeout if available (Linux); otherwise run normally
+if command -v timeout >/dev/null 2>&1; then
+  T="timeout 120"
+else
+  T=""
+fi
 
-# Fast test slice (evita el full-suite que puede colgar por coverage/config)
-run /home/user/.local/bin/pytest -q tests/test_*analyzer.py --tb=no --maxfail=1
+# Fast gate (CI enforces full gate)
+$T $PY -m black --check hefesto tests omega
+$T $PY -m isort --check-only hefesto tests omega
+$T $PY -m flake8 hefesto tests omega
+$T $PY -m pytest -q --tb=short --maxfail=1 tests/api/test_health.py tests/test_sql_analyzer.py
 
 echo "[hefesto] Pre-push checks OK."
