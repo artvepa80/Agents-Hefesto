@@ -70,6 +70,7 @@ All PRs must:
 - Maintain or improve coverage (currently 96%)
 - Pass all existing tests
 - Pass linters (black, isort, mypy)
+- Run local verification checks: `./scripts/run_checks.sh`
 
 ## 📤 Pull Request Process
 
