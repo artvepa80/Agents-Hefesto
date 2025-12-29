@@ -1722,3 +1722,8 @@ For issues, feature requests, or questions:
 - Email: support@narapallc.com
 - Pro Support: contact@narapallc.com
 
+
+## [Unreleased] (Ola 3 Internal)
+- Added capabilities matrix (capabilities.yml) as source of truth
+- Added CI guardrails for capabilities parity
+- Hardened verification scripts with schema validation
