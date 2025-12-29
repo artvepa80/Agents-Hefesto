@@ -101,14 +101,26 @@ class SqlAnalyzer:
             "SQL021",
         ),
         (
-            re.compile(r"\bDELETE\s+FROM\s+\w+\b(?!.*\bWHERE\b)", re.IGNORECASE | re.DOTALL),
+            re.compile(
+                r"\bDELETE\s+(?:\w+\s+)?FROM\s+"
+                r"(?:`[^`]+`|\"[^\"]+\"|\[[^\]]+\]|\w+)"
+                r"(?:\s*\.\s*(?:`[^`]+`|\"[^\"]+\"|\[[^\]]+\]|\w+))*"
+                r"(?:\s|;|$)(?!.*\bWHERE\b)",
+                re.IGNORECASE | re.DOTALL,
+            ),
             "DELETE without WHERE clause (deletes all rows)",
             0.92,
             AnalysisIssueSeverity.CRITICAL,
             "SQL022",
         ),
         (
-            re.compile(r"\bUPDATE\s+\w+\s+SET\b(?!.*\bWHERE\b)", re.IGNORECASE | re.DOTALL),
+            re.compile(
+                r"\bUPDATE\s+"
+                r"(?:`[^`]+`|\"[^\"]+\"|\[[^\]]+\]|\w+)"
+                r"(?:\s*\.\s*(?:`[^`]+`|\"[^\"]+\"|\[[^\]]+\]|\w+))*"
+                r"\s+SET\b(?!.*\bWHERE\b)",
+                re.IGNORECASE | re.DOTALL,
+            ),
             "UPDATE without WHERE clause (updates all rows)",
             0.90,
             AnalysisIssueSeverity.CRITICAL,
