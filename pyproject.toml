@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.5.1"
+version = "4.5.2"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -84,7 +84,9 @@ all = [
     "pytest-asyncio>=0.21.0,<1.0.0",
     "black>=23.0.0",
     "isort>=5.12.0",
+    "flake8>=6.1.0",
     "mypy>=1.7.0",
+    "tree-sitter>=0.20.0,<1.0.0",
 ]
 
 [project.scripts]
@@ -133,4 +135,3 @@ markers = [
     "integration: Integration tests that may require external services",
     "slow: Tests that take significant time to run",
 ]
-
