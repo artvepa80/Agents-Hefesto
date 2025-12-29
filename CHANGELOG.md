@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.5.4] - 2025-12-29
+
+### Changed
+- Separated development tools from runtime extras to prevent package downgrades
+- `[all]` extra now only includes runtime features (ML, BigQuery, Pub/Sub, tree-sitter)
+- Development tools (pytest, black, isort, flake8, mypy) remain in `[dev]` extra only
+
+### Fixed
+- Installing `hefesto-ai[all]` no longer downgrades pytest, numpy, or sentence-transformers
+
+---
+
 ## [4.5.3] - 2025-12-29
 
 ### Fixed
