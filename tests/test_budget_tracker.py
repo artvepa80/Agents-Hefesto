@@ -8,6 +8,7 @@ OMEGA Sports Analytics Foundation
 """
 
 import os
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,6 +17,28 @@ from hefesto.llm.budget_tracker import (
     TokenUsage,
     get_budget_tracker,
 )
+
+
+@pytest.fixture
+def mock_bigquery_client(mocker):
+    """Mocks the BigQuery client and its query method."""
+    mock_client = MagicMock()
+    mock_query_job = MagicMock()
+
+    # Mock the result of the query to simulate one row of data
+    mock_row = MagicMock()
+    mock_row.request_count = 10
+    mock_row.total_input_tokens = 10000
+    mock_row.total_output_tokens = 20000
+    mock_row.total_tokens = 30000
+    mock_row.active_days = 1
+    mock_query_job.result.return_value = [mock_row]
+
+    mock_client.query.return_value = mock_query_job
+
+    # Patch the bigquery.Client constructor in the module where it's used
+    mocker.patch("hefesto.llm.budget_tracker.bigquery.Client", return_value=mock_client)
+    return mock_client
 
 
 class TestBudgetTrackerBasics:
@@ -193,9 +216,7 @@ class TestBudgetAvailability:
 class TestBudgetStatus:
     """Test budget status and alert levels"""
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_get_budget_status_structure(self):
+    def test_get_budget_status_structure(self, mock_bigquery_client):
         """Test budget status returns correct structure"""
         tracker = BudgetTracker(daily_limit_usd=10.0)
 
@@ -206,11 +227,11 @@ class TestBudgetStatus:
         assert "message" in status
         assert "utilization_pct" in status
         assert "cost_usd" in status
-        assert "limit_usd" in status or status["level"] == "UNKNOWN"
-        assert "remaining_usd" in status or status["level"] == "UNKNOWN"
+        assert "limit_usd" in status
+        assert "remaining_usd" in status
         assert "usage_summary" in status
 
-    def test_get_budget_status_levels(self):
+    def test_get_budget_status_levels(self, mock_bigquery_client):
         """Test budget status level calculation"""
         tracker = BudgetTracker(daily_limit_usd=10.0)
 
@@ -229,9 +250,7 @@ class TestBudgetStatus:
 class TestUsageSummary:
     """Test usage summary queries"""
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_get_usage_summary_today(self):
+    def test_get_usage_summary_today(self, mock_bigquery_client):
         """Test getting today's usage summary"""
         tracker = BudgetTracker(daily_limit_usd=10.0)
 
@@ -246,41 +265,32 @@ class TestUsageSummary:
         assert "estimated_cost_usd" in summary
 
         # Values should be valid
-        if "error" not in summary:
-            assert isinstance(summary["request_count"], int)
-            assert isinstance(summary["total_tokens"], int)
-            assert isinstance(summary["estimated_cost_usd"], float)
-            assert summary["request_count"] >= 0
-            assert summary["total_tokens"] >= 0
-            assert summary["estimated_cost_usd"] >= 0.0
+        assert isinstance(summary["request_count"], int)
+        assert isinstance(summary["total_tokens"], int)
+        assert isinstance(summary["estimated_cost_usd"], float)
+        assert summary["request_count"] >= 0
+        assert summary["total_tokens"] >= 0
+        assert summary["estimated_cost_usd"] >= 0.0
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_get_usage_summary_month(self):
+    def test_get_usage_summary_month(self, mock_bigquery_client):
         """Test getting monthly usage summary"""
         tracker = BudgetTracker(monthly_limit_usd=200.0)
 
         summary = tracker.get_usage_summary(period="month")
 
         assert "period" in summary
-        if "error" not in summary:
-            assert summary["period"] == "This Month"
+        assert summary["period"] == "This Month"
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_get_usage_summary_7d(self):
+    def test_get_usage_summary_7d(self, mock_bigquery_client):
         """Test getting 7-day usage summary"""
         tracker = BudgetTracker()
 
         summary = tracker.get_usage_summary(period="7d")
 
         assert "period" in summary
-        if "error" not in summary:
-            assert summary["period"] == "Last 7 days"
+        assert summary["period"] == "Last 7 days"
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_get_usage_summary_30d(self):
+    def test_get_usage_summary_30d(self, mock_bigquery_client):
         """Test getting 30-day usage summary"""
         tracker = BudgetTracker()
 
@@ -367,10 +377,7 @@ class TestEdgeCases:
 class TestBudgetTrackerIntegration:
     """Integration tests combining multiple features"""
 
-    @pytest.mark.requires_gcp
-    @pytest.mark.integration
-    @pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
-    def test_full_budget_workflow(self):
+    def test_full_budget_workflow(self, mock_bigquery_client):
         """Test complete budget tracking workflow"""
         tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=200.0)
 
@@ -441,10 +448,8 @@ def test_model_pricing_status(model, expected_free):
         assert cost > 0.0
 
 
-@pytest.mark.requires_gcp
-@pytest.mark.skipif(not os.getenv("GCP_PROJECT_ID"), reason="Requires GCP credentials")
 @pytest.mark.parametrize("period", ["today", "month", "7d", "30d"])
-def test_usage_summary_all_periods(period):
+def test_usage_summary_all_periods(period, mock_bigquery_client):
     """Test usage summary for all valid periods"""
     tracker = BudgetTracker(daily_limit_usd=10.0, monthly_limit_usd=200.0)
 
@@ -452,7 +457,7 @@ def test_usage_summary_all_periods(period):
 
     # Should return valid summary for all periods
     assert "period" in summary
-    assert "request_count" in summary or "error" in summary
+    assert "request_count" in summary
 
 
 if __name__ == "__main__":
