@@ -147,3 +147,12 @@ release_policy:
   # Optional but useful if you want “docs-only patch” rules.
   documentation_only_patch_allowed: true
   requires_changelog_entry: true
+
+roadmap:
+  ola4_cloud_formats:
+    status: PLANNED
+    items:
+      - cloudformation
+      - helm
+      - arm_templates
+      - serverless
