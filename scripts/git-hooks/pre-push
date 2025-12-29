@@ -30,11 +30,11 @@ run $PYTHON_BIN -m py_compile \
   hefesto/core/analysis_models.py \
   hefesto/analyzers/devops/*.py >/dev/null 2>&1 || true
 
-run black --check hefesto tests
-run isort --check-only hefesto tests
-run flake8 hefesto tests
+run /home/user/.local/bin/black --check hefesto tests
+run /home/user/.local/bin/isort --check-only hefesto tests
+run /home/user/.local/bin/flake8 hefesto tests
 
 # Fast test slice (evita el full-suite que puede colgar por coverage/config)
-run pytest -q tests/test_*analyzer.py --tb=no --maxfail=1
+run /home/user/.local/bin/pytest -q tests/test_*analyzer.py --tb=no --maxfail=1
 
 echo "[hefesto] Pre-push checks OK."
