@@ -1,4 +1,20 @@
-"""LLM integration modules for Hefesto."""
+"""
+LLM integration modules for Hefesto.
+
+v4.5.0: Added DatastoreClient abstraction for platform-agnostic storage.
+"""
+
+# Datastore Abstraction Layer (v4.5.0)
+from hefesto.llm.datastore import (
+    DatastoreClient,
+    GCPBigQueryClient,
+    MockClient,
+    QueryParameter,
+    QueryResult,
+    SQLiteClient,
+    get_datastore_client,
+    reset_datastore_client,
+)
 
 # Phase 0 (Free - MIT License)
 from hefesto.llm.budget_tracker import (
@@ -24,6 +40,15 @@ from hefesto.llm.validators import (
 )
 
 __all__ = [
+    # Datastore Abstraction
+    "DatastoreClient",
+    "GCPBigQueryClient",
+    "SQLiteClient",
+    "MockClient",
+    "QueryResult",
+    "QueryParameter",
+    "get_datastore_client",
+    "reset_datastore_client",
     # Validators
     "SuggestionValidator",
     "SuggestionValidationResult",

@@ -1,5 +1,5 @@
 """
-HEFESTO v3.5 - Budget Control System
+HEFESTO v4.5 - Budget Control System
 
 Purpose: Track LLM API usage and costs to prevent budget overruns.
 Location: llm/budget_tracker.py
@@ -11,19 +11,42 @@ This module provides budget monitoring and enforcement:
 - Generate usage reports
 - Alert when thresholds exceeded
 
-Copyright © 2025 Narapa LLC, Miami, Florida
+v4.5.0: Now uses abstracted DatastoreClient for platform-agnostic storage.
+        Supports GCP BigQuery, SQLite, and custom backends.
+
+Copyright 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
-from google.cloud import bigquery
+from hefesto.llm.datastore import (
+    DatastoreClient,
+    GCPBigQueryClient,
+    MockClient,
+    QueryParameter,
+    SQLiteClient,
+    get_datastore_client,
+)
 
-# Configure logging
 logger = logging.getLogger(__name__)
+
+
+LLM_EVENTS_SCHEMA = [
+    {"name": "event_id", "type": "STRING"},
+    {"name": "timestamp", "type": "TIMESTAMP"},
+    {"name": "model", "type": "STRING"},
+    {"name": "prompt_tokens", "type": "INT64"},
+    {"name": "completion_tokens", "type": "INT64"},
+    {"name": "total_tokens", "type": "INT64"},
+    {"name": "estimated_cost_usd", "type": "FLOAT64"},
+    {"name": "request_type", "type": "STRING"},
+    {"name": "metadata", "type": "STRING"},
+]
 
 
 @dataclass
@@ -51,6 +74,11 @@ class BudgetTracker:
     Monitors token usage and costs to prevent unexpected bills.
     Queries existing llm_events table for usage data.
 
+    Now supports multiple backends through the DatastoreClient abstraction:
+    - GCP BigQuery (production)
+    - SQLite (local development)
+    - Mock (testing)
+
     Usage:
         >>> tracker = BudgetTracker(
         ...     daily_limit_usd=10.0,
@@ -75,33 +103,27 @@ class BudgetTracker:
         >>> print(f"Today: ${summary['estimated_cost_usd']:.2f}")
     """
 
-    # Pricing per 1M tokens (as of January 2025)
-    # Source: https://ai.google.dev/pricing
     PRICING = {
-        # Gemini 2.0 Flash (most common)
         "gemini-2.0-flash-exp": {
-            "input": 0.00,  # FREE during experimental period
-            "output": 0.00,  # FREE during experimental period
+            "input": 0.00,
+            "output": 0.00,
         },
         "gemini-2.0-flash": {
-            "input": 0.075,  # $0.075 per 1M input tokens
-            "output": 0.30,  # $0.30 per 1M output tokens
+            "input": 0.075,
+            "output": 0.30,
         },
-        # Gemini 1.5 Flash (fallback)
         "gemini-1.5-flash": {
             "input": 0.075,
             "output": 0.30,
         },
         "gemini-1.5-flash-8b": {
-            "input": 0.0375,  # Cheaper variant
+            "input": 0.0375,
             "output": 0.15,
         },
-        # Gemini 1.5 Pro (more expensive)
         "gemini-1.5-pro": {
             "input": 1.25,
             "output": 5.00,
         },
-        # Default pricing (conservative estimate)
         "default": {
             "input": 0.075,
             "output": 0.30,
@@ -114,32 +136,52 @@ class BudgetTracker:
         daily_limit_usd: Optional[float] = None,
         monthly_limit_usd: Optional[float] = None,
         enable_alerts: bool = True,
+        datastore_client: Optional[
+            Union[GCPBigQueryClient, SQLiteClient, MockClient, DatastoreClient]
+        ] = None,
+        backend: Optional[str] = None,
     ):
         """
         Initialize BudgetTracker.
 
         Args:
-            project_id: GCP project ID
+            project_id: Project ID (for table naming)
             daily_limit_usd: Daily budget limit in USD (None = no limit)
             monthly_limit_usd: Monthly budget limit in USD (None = no limit)
             enable_alerts: Whether to enable budget alerts
+            datastore_client: Optional pre-configured datastore client
+            backend: Force specific backend ("gcp", "sqlite", "mock")
         """
         self.project_id = project_id
         self.daily_limit = daily_limit_usd
         self.monthly_limit = monthly_limit_usd
         self.enable_alerts = enable_alerts
 
-        try:
-            self.client = bigquery.Client(project=project_id)
-            # Table where LLM events are logged
-            self.llm_events_table = f"{project_id}.omega_agent.llm_events"
-            logger.info(
-                f"BudgetTracker initialized - "
-                f"Daily: ${daily_limit_usd}, Monthly: ${monthly_limit_usd}"
-            )
-        except Exception as e:
-            logger.error(f"Failed to initialize BigQuery client: {e}")
-            self.client = None
+        dataset_id = os.getenv("HEFESTO_DATASET_ID", "omega_agent")
+        self.llm_events_table = f"{project_id}.{dataset_id}.llm_events"
+
+        if datastore_client is not None:
+            self.client = datastore_client
+        else:
+            try:
+                self.client = get_datastore_client(
+                    backend=backend,
+                    project_id=project_id,
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize datastore client: {e}")
+                self.client = None
+
+        if self.client:
+            try:
+                self.client.ensure_table_exists(self.llm_events_table, LLM_EVENTS_SCHEMA)
+            except Exception as e:
+                logger.warning(f"Could not ensure table exists: {e}")
+
+        logger.info(
+            f"BudgetTracker initialized - "
+            f"Daily: ${daily_limit_usd}, Monthly: ${monthly_limit_usd}"
+        )
 
     def calculate_cost(
         self,
@@ -171,14 +213,12 @@ class BudgetTracker:
             >>> print(f"Cost: ${cost:.4f}")
             Cost: $0.0024
         """
-        # Get pricing for model (or use default)
         if model not in self.PRICING:
             logger.warning(f"Unknown model '{model}', using default pricing")
             pricing = self.PRICING["default"]
         else:
             pricing = self.PRICING[model]
 
-        # Cost = (tokens / 1M) * price_per_1M
         input_cost = (input_tokens / 1_000_000) * pricing["input"]
         output_cost = (output_tokens / 1_000_000) * pricing["output"]
         total_cost = input_cost + output_cost
@@ -200,7 +240,7 @@ class BudgetTracker:
         """
         Track LLM usage for a request.
 
-        NOTE: This calculates cost only. Actual logging to BigQuery
+        NOTE: This calculates cost only. Actual logging to the datastore
         happens in llm_tracking module. This method is for cost
         calculation and monitoring.
 
@@ -245,12 +285,12 @@ class BudgetTracker:
 
     def get_usage_summary(
         self,
-        period: str = "today",  # "today", "month", "7d", "30d"
+        period: str = "today",
     ) -> Dict[str, Any]:
         """
         Get usage summary for a time period.
 
-        Queries llm_events table to calculate total usage and cost.
+        Queries the datastore to calculate total usage and cost.
         Returns aggregated statistics including token counts and costs.
 
         Args:
@@ -280,10 +320,9 @@ class BudgetTracker:
             >>> print(f"Remaining: ${summary['budget_remaining_usd']:.2f}")
         """
         if not self.client:
-            return {"error": "BigQuery client not initialized"}
+            return {"error": "Datastore client not initialized"}
 
         try:
-            # Determine time range
             if period == "today":
                 start_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 period_name = "Today"
@@ -297,9 +336,8 @@ class BudgetTracker:
                 start_time = datetime.now() - timedelta(days=days)
                 period_name = f"Last {days} days"
             else:
-                raise ValueError(f"Invalid period: {period}")
+                return {"error": f"Invalid period: {period}"}
 
-            # Query llm_events for usage
             query = f"""
             SELECT
                 COUNT(*) as request_count,
@@ -311,16 +349,17 @@ class BudgetTracker:
             WHERE timestamp >= @start_time
             """
 
-            job_config = bigquery.QueryJobConfig(
-                query_parameters=[
-                    bigquery.ScalarQueryParameter("start_time", "TIMESTAMP", start_time.isoformat())
-                ]
+            result = self.client.query(
+                query,
+                parameters=[
+                    QueryParameter("start_time", "TIMESTAMP", start_time.isoformat())
+                ],
             )
 
-            query_job = self.client.query(query, job_config=job_config)
-            results = list(query_job.result())
+            if not result.success:
+                return {"error": result.error or "Query failed"}
 
-            if not results or results[0].request_count == 0:
+            if not result.rows or result.rows[0].get("request_count", 0) == 0:
                 return {
                     "period": period_name,
                     "start_time": start_time.isoformat(),
@@ -338,17 +377,14 @@ class BudgetTracker:
                     "budget_utilization_pct": 0.0,
                 }
 
-            row = results[0]
+            row = result.rows[0]
 
-            # Estimate cost (assuming gemini-2.0-flash pricing)
-            # This is approximate - real cost varies by model
             estimated_cost = self.calculate_cost(
-                input_tokens=row.total_input_tokens,
-                output_tokens=row.total_output_tokens,
+                input_tokens=row.get("total_input_tokens", 0),
+                output_tokens=row.get("total_output_tokens", 0),
                 model="gemini-2.0-flash",
             )
 
-            # Calculate budget remaining and utilization
             if period == "today" and self.daily_limit:
                 budget_limit = self.daily_limit
                 budget_remaining = max(0.0, self.daily_limit - estimated_cost)
@@ -365,11 +401,11 @@ class BudgetTracker:
             return {
                 "period": period_name,
                 "start_time": start_time.isoformat(),
-                "request_count": row.request_count,
-                "total_input_tokens": row.total_input_tokens,
-                "total_output_tokens": row.total_output_tokens,
-                "total_tokens": row.total_tokens,
-                "active_days": row.active_days,
+                "request_count": row.get("request_count", 0),
+                "total_input_tokens": row.get("total_input_tokens", 0),
+                "total_output_tokens": row.get("total_output_tokens", 0),
+                "total_tokens": row.get("total_tokens", 0),
+                "active_days": row.get("active_days", 0),
                 "estimated_cost_usd": estimated_cost,
                 "daily_limit_usd": self.daily_limit,
                 "monthly_limit_usd": self.monthly_limit,
@@ -408,11 +444,9 @@ class BudgetTracker:
             usage = self.get_usage_summary(period=period)
 
             if "error" in usage:
-                # On error, allow request (fail open)
                 logger.warning("Budget check failed, allowing request (fail open)")
                 return True
 
-            # Check daily limit
             if period == "today" and self.daily_limit:
                 if usage["estimated_cost_usd"] >= self.daily_limit:
                     logger.warning(
@@ -421,7 +455,6 @@ class BudgetTracker:
                     )
                     return False
 
-            # Check monthly limit
             if period == "month" and self.monthly_limit:
                 if usage["estimated_cost_usd"] >= self.monthly_limit:
                     logger.warning(
@@ -434,7 +467,6 @@ class BudgetTracker:
 
         except Exception as e:
             logger.error(f"Budget check error: {e}", exc_info=True)
-            # Fail open - allow request on error
             return True
 
     def get_budget_status(self, period: str = "today") -> Dict[str, Any]:
@@ -494,7 +526,6 @@ class BudgetTracker:
         }
 
 
-# Singleton instance
 _budget_tracker_instance: Optional[BudgetTracker] = None
 
 
