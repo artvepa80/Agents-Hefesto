@@ -6,11 +6,13 @@ from hefesto.analyzers.devops.powershell_analyzer import PowerShellAnalyzer
 from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
 from hefesto.analyzers.devops.sql_analyzer import SqlAnalyzer
 from hefesto.analyzers.devops.terraform_analyzer import TerraformAnalyzer
+from hefesto.analyzers.devops.toml_analyzer import TomlAnalyzer
 from hefesto.analyzers.devops.yaml_analyzer import YamlAnalyzer
 
 __all__ = [
     "PowerShellAnalyzer",
     "JsonAnalyzer",
+    "TomlAnalyzer",
     "YamlAnalyzer",
     "ShellAnalyzer",
     "DockerfileAnalyzer",
