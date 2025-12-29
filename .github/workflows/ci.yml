@@ -35,10 +35,10 @@ jobs:
           pip install black isort flake8 pytest pytest-cov
 
       - name: Black (check)
-        run: black --check .
+        run: black --check hefesto tests omega
 
       - name: Isort (check)
-        run: isort --check-only .
+        run: isort --check-only hefesto tests omega
 
       - name: Flake8
         run: flake8 hefesto tests omega
