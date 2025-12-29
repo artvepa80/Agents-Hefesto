@@ -1,0 +1,149 @@
+# capabilities.yml
+# Source of truth for Hefesto capability coverage.
+# Used by scripts/verify_capabilities.py and CI parity checks.
+
+schema_version: 1
+product:
+  name: hefesto
+  package_name: hefesto-ai
+  repo: artvepa80/Agents-Hefesto
+
+coverage:
+  # Ola 1: Code languages (semantic + structural analyzers)
+  code_languages:
+    declared_count: 7
+    items:
+      - id: python
+        display: Python
+        status: GA
+      - id: typescript
+        display: TypeScript
+        status: GA
+      - id: javascript
+        display: JavaScript
+        status: GA
+      - id: java
+        display: Java
+        status: GA
+      - id: go
+        display: Go
+        status: GA
+      - id: rust
+        display: Rust
+        status: GA
+      - id: csharp
+        display: C#
+        status: GA
+
+  # Ola 2: DevOps / Config analyzers (file-format analyzers)
+  devops_formats:
+    declared_count: 10
+    items:
+      - id: dockerfile
+        display: Dockerfile
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.dockerfile_analyzer
+        file_globs: ["Dockerfile", "**/Dockerfile*"]
+      - id: jenkins_groovy
+        display: Jenkins/Groovy
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.groovy_jenkins_analyzer
+        file_globs: ["Jenkinsfile", "**/*.groovy"]
+      - id: json
+        display: JSON
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.json_analyzer
+        file_globs: ["**/*.json"]
+      - id: makefile
+        display: Makefile
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.makefile_analyzer
+        file_globs: ["Makefile", "**/Makefile"]
+      - id: powershell
+        display: PowerShell
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.powershell_analyzer
+        file_globs: ["**/*.ps1", "**/*.psm1", "**/*.psd1"]
+      - id: shell
+        display: Shell
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.shell_analyzer
+        file_globs: ["**/*.sh", "**/*.bash", "**/*.zsh"]
+      - id: sql
+        display: SQL
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.sql_analyzer
+        file_globs: ["**/*.sql"]
+      - id: terraform
+        display: Terraform
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.terraform_analyzer
+        file_globs: ["**/*.tf", "**/*.tfvars"]
+      - id: toml
+        display: TOML
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.toml_analyzer
+        file_globs: ["**/*.toml"]
+      - id: yaml
+        display: YAML
+        status: GA
+        analyzer_module: hefesto.analyzers.devops.yaml_analyzer
+        file_globs: ["**/*.yml", "**/*.yaml"]
+
+  # Convenience rollup (used for badges, README display, etc.)
+  totals:
+    declared_total_formats: 17
+    computed_from:
+      - coverage.code_languages.declared_count
+      - coverage.devops_formats.declared_count
+
+capabilities:
+  # Keep these high-level and stable; they map to docs, pricing, and CI assertions.
+  features:
+    - id: ai_semantic_analysis
+      display: AI Analysis (semantic understanding)
+      status: GA
+      notes: "Gemini provider for semantic code understanding (in-house integration)."
+    - id: security_scanning
+      display: Security Scanning
+      status: GA
+      checks:
+        - sql_injection
+        - hardcoded_secrets
+        - command_injection
+    - id: code_smells
+      display: Code Smells
+      status: GA
+      checks:
+        - long_functions
+        - deep_nesting
+        - high_complexity
+    - id: pre_push_hooks
+      display: Pre-Push Hooks
+      status: GA
+      notes: "Runs validation before every commit."
+    - id: rest_api
+      display: REST API
+      status: GA
+      declared_endpoints: 8
+
+quality_gates:
+  # CI parity rules; scripts should enforce these.
+  readme_parity:
+    enabled: true
+    checks:
+      - code_languages_count_matches
+      - devops_formats_count_matches
+      - total_formats_badge_matches
+      - quickstart_version_matches_latest
+  capabilities_parity:
+    enabled: true
+    checks:
+      - analyzer_modules_importable
+      - devops_analyzer_modules_discoverable
+      - declared_counts_match_discovery
+
+release_policy:
+  # Optional but useful if you want “docs-only patch” rules.
+  documentation_only_patch_allowed: true
+  requires_changelog_entry: true
