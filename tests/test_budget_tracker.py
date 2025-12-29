@@ -7,20 +7,18 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
-import os
 from unittest.mock import MagicMock
 
 import pytest
 
 from hefesto.llm.budget_tracker import (
     BudgetTracker,
-    TokenUsage,
     get_budget_tracker,
 )
 
 
 @pytest.fixture
-def mock_bigquery_client(mocker):
+def mock_bigquery_client(monkeypatch):
     """Mocks the BigQuery client and its query method."""
     mock_client = MagicMock()
     mock_query_job = MagicMock()
@@ -37,7 +35,9 @@ def mock_bigquery_client(mocker):
     mock_client.query.return_value = mock_query_job
 
     # Patch the bigquery.Client constructor in the module where it's used
-    mocker.patch("hefesto.llm.budget_tracker.bigquery.Client", return_value=mock_client)
+    monkeypatch.setattr(
+        "hefesto.llm.budget_tracker.bigquery.Client", lambda *args, **kwargs: mock_client
+    )
     return mock_client
 
 

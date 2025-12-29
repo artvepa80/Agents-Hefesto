@@ -7,7 +7,6 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
-import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,7 +19,7 @@ from hefesto.llm.feedback_logger import (
 
 
 @pytest.fixture
-def mock_bigquery_client(mocker):
+def mock_bigquery_client(monkeypatch):
     """Mocks the BigQuery client and its query method."""
     mock_client = MagicMock()
     mock_query_job = MagicMock()
@@ -40,7 +39,9 @@ def mock_bigquery_client(mocker):
     mock_client.insert_rows_json.return_value = []  # Simulate successful insertion
 
     # Patch the bigquery.Client constructor in the module where it's used
-    mocker.patch("hefesto.llm.feedback_logger.bigquery.Client", return_value=mock_client)
+    monkeypatch.setattr(
+        "hefesto.llm.feedback_logger.bigquery.Client", lambda *args, **kwargs: mock_client
+    )
     return mock_client
 
 

@@ -7,8 +7,6 @@ including multiline support and comment handling.
 Copyright 2025 Narapa LLC, Miami, Florida
 """
 
-import pytest
-
 from hefesto.analyzers.devops.sql_analyzer import SqlAnalyzer
 from hefesto.core.analysis_models import AnalysisIssueType
 
@@ -152,8 +150,7 @@ class TestSqlAnalyzerCredentials:
         sql = "-- mysql://admin:password@localhost/db"
         issues = self.analyzer.analyze("test.sql", sql)
         # Comments are skipped, so this should not be detected
-        # Unless we want to scan comments too
-        # For now, this is expected behavior
+        assert len(issues) == 0
 
 
 class TestSqlAnalyzerEdgeCases:

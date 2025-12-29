@@ -10,7 +10,6 @@ OMEGA Sports Analytics Foundation
 import pytest
 
 from hefesto.llm.suggestion_validator import (
-    SuggestionValidationResult,
     SuggestionValidator,
     get_validator,
 )
@@ -223,7 +222,7 @@ class TestValidSuggestions:
         validator = SuggestionValidator()
 
         original = "def calculate_score(x, y):\n    return x * y"
-        suggested = '"""Calculate product score"""\ndef calculate_score(x, y):\n    """Multiply x and y"""\n    return x * y'
+        suggested = '"""Calculate product score"""\ndef calculate_score(x, y):\n    """Multiply x and y"""\n    return x * y'  # noqa: E501
 
         result = validator.validate(
             original_code=original,
