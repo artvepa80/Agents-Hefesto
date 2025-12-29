@@ -1,11 +1,38 @@
 """
 Hefesto version information.
+
+The version is now read dynamically from package metadata to ensure
+CLI, API, and package metadata stay in sync.
 """
 
-__version__ = "4.4.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("hefesto-ai")
+except PackageNotFoundError:
+    # Fallback for development/editable installs
+    __version__ = "dev"
+
 __api_version__ = "v1"
 
 # Version history
+# 4.5.3 - Version Fix
+#         - Dynamic version reading from package metadata
+#         - Fixes CLI/API version mismatch
+# 4.5.2 - Extras[all] Complete
+#         - Added tree-sitter and flake8 to [all] extras
+# 4.5.1 - CI/CD Hotfixes
+#         - tree-sitter dependency fix
+#         - Portable pre-push hook
+#         - CI scope corrections
+# 4.5.0 - Ola 2 DevOps Analyzers + P5 Release Hardening
+#         - PowerShellAnalyzer (PS001-PS006)
+#         - JsonAnalyzer (J001-J005)
+#         - TomlAnalyzer (T001-T003)
+#        - MakefileAnalyzer (MF001-MF005)
+#         - GroovyJenkinsAnalyzer (GJ001-GJ005)
+#         - GitHub Actions CI workflow
+#         - Improved pre-push hook
 # 4.4.0 - DevOps Language Support (Ola 1)
 #         - YAML analysis with internal YamlAnalyzer
 #         - LanguageSpec + LanguageRegistry architecture
@@ -19,19 +46,3 @@ __api_version__ = "v1"
 #         - --quiet mode for minimal output (summary only)
 #         - --max-issues to limit displayed issues
 #         - Removed emojis from CLI per coding guidelines
-# 4.3.3 - TypeScript Analysis Fixes
-#         - Fixed LONG_PARAMETER_LIST using AST formal_parameters
-#         - Fixed function naming for arrow functions (variable_declarator)
-#         - Added threshold values to all code smell messages
-#         - Added line ranges to LONG_FUNCTION suggestions
-# 4.3.2 - Multi-Language Support Complete
-#         - Complete support for all 7 languages
-#         - Fixed TreeSitter grammar loading
-#         - Added Rust and C# parser support
-# 4.3.1 - License validation fixes for OMEGA tier
-# 4.3.0 - Multi-Language Support (TypeScript/JavaScript/Java/Go/Rust/C#)
-# 4.2.1 - CRITICAL BUGFIX: Tier Hierarchy
-# 4.2.0 - OMEGA Guardian Release
-# 4.1.0 - Unified Package Architecture
-# 4.0.1 - REST API release (8 endpoints)
-# 4.0.0 - Initial PyPI release
