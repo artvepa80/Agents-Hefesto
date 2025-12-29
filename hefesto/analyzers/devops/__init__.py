@@ -2,6 +2,7 @@
 
 from hefesto.analyzers.devops.dockerfile_analyzer import DockerfileAnalyzer
 from hefesto.analyzers.devops.json_analyzer import JsonAnalyzer
+from hefesto.analyzers.devops.makefile_analyzer import MakefileAnalyzer
 from hefesto.analyzers.devops.powershell_analyzer import PowerShellAnalyzer
 from hefesto.analyzers.devops.shell_analyzer import ShellAnalyzer
 from hefesto.analyzers.devops.sql_analyzer import SqlAnalyzer
@@ -13,6 +14,7 @@ __all__ = [
     "PowerShellAnalyzer",
     "JsonAnalyzer",
     "TomlAnalyzer",
+    "MakefileAnalyzer",
     "YamlAnalyzer",
     "ShellAnalyzer",
     "DockerfileAnalyzer",
