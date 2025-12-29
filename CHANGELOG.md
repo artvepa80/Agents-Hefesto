@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.5.1] - 2025-12-29 — CI/CD Hotfixes
+
+### Fixed
+
+**CI/CD Infrastructure**
+- Missing `tree-sitter` dependency in `pyproject.toml` (caused `ModuleNotFoundError` in GitHub Actions)
+- CI lint scope inconsistency (`black`/`isort` scanning entire repo instead of production paths)
+- Pre-push hook using non-portable paths (hardcoded `/home/user/.local/bin/`)
+
+**Improvements**
+- Pre-push hook now uses `python -m <tool>` for portability across environments
+- CI workflow uses `pip install -e ".[dev]"` and `python -m` for all linting tools
+- Hook properly detects local `.venv` and falls back gracefully
+
+### Changed
+
+- All CI steps now use `python -m black/isort/flake8/pytest` for consistency
+- Pre-push hook located in `scripts/git-hooks/pre-push` (versioned, reproducible)
+
+---
+
 ## [4.5.0] - 2025-12-29 — Ola 2 DevOps Analyzers + P5 Release Hardening
 
 ### Added — Ola 2 DevOps Analyzers
