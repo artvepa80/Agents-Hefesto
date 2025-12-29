@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install black isort flake8 pytest pytest-cov
+
+      - name: Black (check)
+        run: black --check .
+
+      - name: Isort (check)
+        run: isort --check-only .
+
+      - name: Flake8
+        run: flake8 .
+
+      - name: Pytest
+        env:
+          PYTHONPATH: .
+        run: |
+          pytest -q --tb=short --maxfail=5

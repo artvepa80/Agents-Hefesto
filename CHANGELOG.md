@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [4.5.0] - 2025-12-29 — Ola 2 DevOps Analyzers
+
+### Added
+- **PowerShellAnalyzer (P6)**: PS001–PS006 security rules (+30 tests)
+- **JsonAnalyzer (P7)**: J001, J002, J004, J005 security rules (+20 tests)  
+- **TomlAnalyzer (P7.2)**: T001–T003 security rules (+18 tests)
+- **MakefileAnalyzer (P8)**: MF001–MF005 security rules (+20 tests)
+- **GroovyJenkinsAnalyzer (P9)**: GJ001–GJ005 security rules (+21 tests)
+
+### Infrastructure
+- New cross-language issue types: INSECURE_COMMUNICATION, SECURITY_MISCONFIGURATION
+- GitHub Actions CI workflow with Python 3.10/3.11/3.12 matrix
+- Improved pre-push hook with timeout support
+
+### Stats
+- **23 new security rules** across 5 DevOps analyzers
+- **109 new tests** for Ola 2 analyzers
+
+---
+
+## [4.4.0] - 2025-12 — Ola 1 DevOps Analyzers
+
+### Added
+- YamlAnalyzer, TerraformAnalyzer, ShellAnalyzer, DockerfileAnalyzer
+- SqlAnalyzer with P3/P4 hardening
+
+---
+
 ## [4.3.4] - 2025-12-27 ✅ RELEASED
 
 ### 🛠️ CLI Improvements
