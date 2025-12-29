@@ -6,23 +6,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [4.5.0] - 2025-12-29 — Ola 2 DevOps Analyzers
+## [4.5.0] - 2025-12-29 — Ola 2 DevOps Analyzers + P5 Release Hardening
 
-### Added
+### Added — Ola 2 DevOps Analyzers
+
+Five new security analyzers for DevOps tooling and configuration formats:
+
 - **PowerShellAnalyzer (P6)**: PS001–PS006 security rules (+30 tests)
+  - `Invoke-Expression` injection, download+execute patterns, hardcoded secrets
 - **JsonAnalyzer (P7)**: J001, J002, J004, J005 security rules (+20 tests)  
+  - Hardcoded secrets, insecure URLs, Docker credentials, dangerous flags
 - **TomlAnalyzer (P7.2)**: T001–T003 security rules (+18 tests)
+  - Secrets in config, dangerous flags, insecure communication
+  - Compatible with `tomllib` (3.11+) / `tomli` (3.10) + regex fallback
 - **MakefileAnalyzer (P8)**: MF001–MF005 security rules (+20 tests)
+  - Shell injection in recipes, `curl|sh` patterns, sudo abuse, TLS bypass, dangerous deletes
 - **GroovyJenkinsAnalyzer (P9)**: GJ001–GJ005 security rules (+21 tests)
+  - `sh`/`bat` interpolation, download+execute, credential exposure, TLS bypass, dangerous `evaluate`
 
-### Infrastructure
-- New cross-language issue types: INSECURE_COMMUNICATION, SECURITY_MISCONFIGURATION
-- GitHub Actions CI workflow with Python 3.10/3.11/3.12 matrix
-- Improved pre-push hook with timeout support
+**Stats**: 23 new security rules, 109 new tests across 5 analyzers.
 
-### Stats
-- **23 new security rules** across 5 DevOps analyzers
-- **109 new tests** for Ola 2 analyzers
+### Infrastructure — P5 Release Hardening
+
+Production-grade CI/CD and code quality infrastructure:
+
+#### GitHub Actions CI
+- **File**: `.github/workflows/ci.yml`
+- **Matrix**: Python 3.10, 3.11, 3.12
+- **Checks**: `black`, `isort`, `flake8`, `pytest`
+- **Scope**: Limited to production paths (`hefesto`, `tests`, `omega`), excludes `examples/`
+
+#### Improved Git Hooks
+- **File**: `scripts/git-hooks/pre-push`
+- Versioned pre-push hook with timeout protection
+- Bypass capability via `SKIP_HEFESTO_HOOKS=1` environment variable
+- Fast verification (linting + smoke tests only, full suite runs in CI)
+
+#### Cross-language Issue Types
+- `INSECURE_COMMUNICATION`: HTTP URLs, TLS verification disabled
+- `SECURITY_MISCONFIGURATION`: Dangerous flags, overly permissive settings
+
+### Fixed — Legacy Test Suite Cleanup
+
+Resolved technical debt to ensure clean CI state:
+
+- **Mocking**: Replaced `pytest-mock` dependency with built-in `monkeypatch` fixture
+  - `tests/test_budget_tracker.py`
+  - `tests/test_feedback_logger.py`
+- **Linting**: Surgical fixes for pre-existing F841, E501 violations
+  - `tests/test_sql_analyzer.py`: Reverted incorrect assertions from global replacements
+  - `tests/test_suggestion_validator.py`: Added `# noqa: E501` for long string literals
+  - `omega/__init__.py`: Line length exception for unavoidable long line
+- **Performance tests**: Relaxed empirical threshold (3.0x → 3.2x) to reduce flakiness on VMs
+
+### Changed
+
+- CI lint scope narrowed to production code paths (excludes `examples/`)
+- Pre-push hook execution moved from `.git/hooks/` to versioned `scripts/git-hooks/`
 
 ---
 
