@@ -1,5 +1,5 @@
 """
-HEFESTO v4.5 - Feedback Loop Logger
+HEFESTO v3.5 - Feedback Loop Logger
 
 Purpose: Track user acceptance/rejection of LLM suggestions for continuous improvement.
 Location: llm/feedback_logger.py
@@ -10,52 +10,22 @@ This module enables the feedback loop by logging:
 - Application success/failure
 - CI/CD results (future)
 
-v4.5.0: Now uses abstracted DatastoreClient for platform-agnostic storage.
-        Supports GCP BigQuery, SQLite, and custom backends.
+All data is stored in BigQuery for analysis and model improvement.
 
-Copyright 2025 Narapa LLC, Miami, Florida
+Copyright © 2025 Narapa LLC, Miami, Florida
 OMEGA Sports Analytics Foundation
 """
 
 import logging
-import os
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from hefesto.llm.datastore import (
-    DatastoreClient,
-    GCPBigQueryClient,
-    MockClient,
-    QueryParameter,
-    SQLiteClient,
-    get_datastore_client,
-)
+from google.cloud import bigquery
 
+# Configure logging
 logger = logging.getLogger(__name__)
-
-
-SUGGESTION_FEEDBACK_SCHEMA = [
-    {"name": "suggestion_id", "type": "STRING"},
-    {"name": "llm_event_id", "type": "STRING"},
-    {"name": "ts", "type": "TIMESTAMP"},
-    {"name": "file_path", "type": "STRING"},
-    {"name": "issue_type", "type": "STRING"},
-    {"name": "severity", "type": "STRING"},
-    {"name": "shown_to_user", "type": "BOOL"},
-    {"name": "user_accepted", "type": "BOOL"},
-    {"name": "applied_successfully", "type": "BOOL"},
-    {"name": "time_to_apply_seconds", "type": "INT64"},
-    {"name": "ci_passed", "type": "BOOL"},
-    {"name": "tests_passed", "type": "BOOL"},
-    {"name": "coverage_improved", "type": "BOOL"},
-    {"name": "user_comment", "type": "STRING"},
-    {"name": "rejection_reason", "type": "STRING"},
-    {"name": "confidence_score", "type": "FLOAT64"},
-    {"name": "validation_passed", "type": "BOOL"},
-    {"name": "similarity_score", "type": "FLOAT64"},
-]
 
 
 @dataclass
@@ -104,12 +74,7 @@ class SuggestionFeedback:
 
 class FeedbackLogger:
     """
-    Logs suggestion feedback for analysis and improvement.
-
-    Now supports multiple backends through the DatastoreClient abstraction:
-    - GCP BigQuery (production)
-    - SQLite (local development)
-    - Mock (testing)
+    Logs suggestion feedback to BigQuery for analysis and improvement.
 
     This class handles the complete feedback loop:
     1. Log when suggestion is shown
@@ -139,45 +104,26 @@ class FeedbackLogger:
         project_id: str = "your-project-id",
         dataset_id: str = "omega_agent",
         table_id: str = "suggestion_feedback",
-        datastore_client: Optional[
-            Union[GCPBigQueryClient, SQLiteClient, MockClient, DatastoreClient]
-        ] = None,
-        backend: Optional[str] = None,
     ):
         """
         Initialize FeedbackLogger.
 
         Args:
-            project_id: Project ID (for table naming)
-            dataset_id: Dataset ID
-            table_id: Table name
-            datastore_client: Optional pre-configured datastore client
-            backend: Force specific backend ("gcp", "sqlite", "mock")
+            project_id: GCP project ID
+            dataset_id: BigQuery dataset ID
+            table_id: BigQuery table name
         """
         self.project_id = project_id
         self.dataset_id = dataset_id
         self.table_id = table_id
         self.full_table_id = f"{project_id}.{dataset_id}.{table_id}"
 
-        if datastore_client is not None:
-            self.client = datastore_client
-        else:
-            try:
-                self.client = get_datastore_client(
-                    backend=backend,
-                    project_id=project_id,
-                )
-            except Exception as e:
-                logger.error(f"Failed to initialize datastore client: {e}")
-                self.client = None
-
-        if self.client:
-            try:
-                self.client.ensure_table_exists(self.full_table_id, SUGGESTION_FEEDBACK_SCHEMA)
-            except Exception as e:
-                logger.warning(f"Could not ensure table exists: {e}")
-
-        logger.info(f"FeedbackLogger initialized for {self.full_table_id}")
+        try:
+            self.client = bigquery.Client(project=project_id)
+            logger.info(f"FeedbackLogger initialized for {self.full_table_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize BigQuery client: {e}")
+            self.client = None
 
     def generate_suggestion_id(self) -> str:
         """
@@ -259,7 +205,7 @@ class FeedbackLogger:
             return suggestion_id
         except Exception as e:
             logger.error(f"Failed to log suggestion: {e}", exc_info=True)
-            return suggestion_id
+            return suggestion_id  # Return ID anyway, don't fail request
 
     def log_user_action(
         self,
@@ -295,11 +241,10 @@ class FeedbackLogger:
             ... )
         """
         if not self.client:
-            logger.error("Datastore client not initialized, cannot log user action")
+            logger.error("BigQuery client not initialized, cannot log user action")
             return
 
         try:
-            table_name = self.full_table_id.split(".")[-1]
             query = f"""
             UPDATE `{self.full_table_id}`
             SET
@@ -311,27 +256,29 @@ class FeedbackLogger:
             WHERE suggestion_id = @suggestion_id
             """
 
-            success = self.client.execute(
-                query,
-                parameters=[
-                    QueryParameter("suggestion_id", "STRING", suggestion_id),
-                    QueryParameter("accepted", "BOOL", accepted),
-                    QueryParameter("applied_successfully", "BOOL", applied_successfully),
-                    QueryParameter("time_to_apply_seconds", "INT64", time_to_apply_seconds),
-                    QueryParameter("rejection_reason", "STRING", rejection_reason),
-                    QueryParameter("user_comment", "STRING", user_comment),
-                ],
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("suggestion_id", "STRING", suggestion_id),
+                    bigquery.ScalarQueryParameter("accepted", "BOOL", accepted),
+                    bigquery.ScalarQueryParameter(
+                        "applied_successfully", "BOOL", applied_successfully
+                    ),
+                    bigquery.ScalarQueryParameter(
+                        "time_to_apply_seconds", "INT64", time_to_apply_seconds
+                    ),
+                    bigquery.ScalarQueryParameter("rejection_reason", "STRING", rejection_reason),
+                    bigquery.ScalarQueryParameter("user_comment", "STRING", user_comment),
+                ]
             )
 
-            if success:
-                action = "accepted" if accepted else "rejected"
-                logger.info(
-                    f"Logged user action for {suggestion_id}: {action} "
-                    f"(applied={applied_successfully}, time={time_to_apply_seconds}s)"
-                )
-            else:
-                logger.error(f"Failed to update user action for {suggestion_id}")
+            query_job = self.client.query(query, job_config=job_config)
+            query_job.result()  # Wait for completion
 
+            action = "accepted" if accepted else "rejected"
+            logger.info(
+                f"Logged user action for {suggestion_id}: {action} "
+                f"(applied={applied_successfully}, time={time_to_apply_seconds}s)"
+            )
         except Exception as e:
             logger.error(f"Failed to log user action: {e}", exc_info=True)
 
@@ -364,7 +311,7 @@ class FeedbackLogger:
             ... )
         """
         if not self.client:
-            logger.error("Datastore client not initialized, cannot log CI results")
+            logger.error("BigQuery client not initialized, cannot log CI results")
             return
 
         try:
@@ -377,23 +324,23 @@ class FeedbackLogger:
             WHERE suggestion_id = @suggestion_id
             """
 
-            success = self.client.execute(
-                query,
-                parameters=[
-                    QueryParameter("suggestion_id", "STRING", suggestion_id),
-                    QueryParameter("ci_passed", "BOOL", ci_passed),
-                    QueryParameter("tests_passed", "BOOL", tests_passed),
-                    QueryParameter("coverage_improved", "BOOL", coverage_improved),
-                ],
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("suggestion_id", "STRING", suggestion_id),
+                    bigquery.ScalarQueryParameter("ci_passed", "BOOL", ci_passed),
+                    bigquery.ScalarQueryParameter("tests_passed", "BOOL", tests_passed),
+                    bigquery.ScalarQueryParameter("coverage_improved", "BOOL", coverage_improved),
+                ]
             )
 
-            if success:
-                logger.info(
-                    f"Logged CI results for {suggestion_id}: "
-                    f"ci_passed={ci_passed}, tests_passed={tests_passed}, "
-                    f"coverage_improved={coverage_improved}"
-                )
+            query_job = self.client.query(query, job_config=job_config)
+            query_job.result()
 
+            logger.info(
+                f"Logged CI results for {suggestion_id}: "
+                f"ci_passed={ci_passed}, tests_passed={tests_passed}, "
+                f"coverage_improved={coverage_improved}"
+            )
         except Exception as e:
             logger.error(f"Failed to log CI results: {e}", exc_info=True)
 
@@ -406,7 +353,7 @@ class FeedbackLogger:
         """
         Get suggestion acceptance rate metrics.
 
-        Query the datastore to calculate acceptance rates, average confidence,
+        Query BigQuery to calculate acceptance rates, average confidence,
         and other metrics for analysis.
 
         Args:
@@ -435,23 +382,25 @@ class FeedbackLogger:
             Acceptance rate: 75.0%
         """
         if not self.client:
-            logger.error("Datastore client not initialized")
-            return {"error": "Datastore client not initialized"}
+            logger.error("BigQuery client not initialized")
+            return {"error": "BigQuery client not initialized"}
 
         try:
             where_clauses = ["ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL @days DAY)"]
 
-            query_params: List[QueryParameter] = [
-                QueryParameter("days", "INT64", days)
+            query_params: List[bigquery.ScalarQueryParameter] = [
+                bigquery.ScalarQueryParameter("days", "INT64", days)
             ]
 
             if issue_type:
                 where_clauses.append("issue_type = @issue_type")
-                query_params.append(QueryParameter("issue_type", "STRING", issue_type))
+                query_params.append(
+                    bigquery.ScalarQueryParameter("issue_type", "STRING", issue_type)
+                )
 
             if severity:
                 where_clauses.append("severity = @severity")
-                query_params.append(QueryParameter("severity", "STRING", severity))
+                query_params.append(bigquery.ScalarQueryParameter("severity", "STRING", severity))
 
             where_clause = " AND ".join(where_clauses)
 
@@ -472,22 +421,24 @@ class FeedbackLogger:
             WHERE {where_clause}
             """
 
-            result = self.client.query(query, parameters=query_params)
+            job_config = bigquery.QueryJobConfig(query_parameters=query_params)
 
-            if not result.success:
-                return {"error": result.error or "Query failed"}
+            query_job = self.client.query(query, job_config=job_config)
+            results = list(query_job.result())
 
-            if result.rows:
-                row = result.rows[0]
+            if results:
+                row = results[0]
                 return {
-                    "total": int(row.get("total", 0) or 0),
-                    "accepted": int(row.get("accepted", 0) or 0),
-                    "rejected": int(row.get("rejected", 0) or 0),
-                    "pending": int(row.get("pending", 0) or 0),
-                    "acceptance_rate": float(row.get("acceptance_rate", 0) or 0.0),
-                    "avg_confidence": float(row.get("avg_confidence", 0) or 0.0),
-                    "avg_similarity": float(row.get("avg_similarity", 0) or 0.0),
-                    "avg_time_to_apply": float(row.get("avg_time_to_apply", 0) or 0.0),
+                    "total": int(row.total) if row.total else 0,
+                    "accepted": int(row.accepted) if row.accepted else 0,
+                    "rejected": int(row.rejected) if row.rejected else 0,
+                    "pending": int(row.pending) if row.pending else 0,
+                    "acceptance_rate": float(row.acceptance_rate) if row.acceptance_rate else 0.0,
+                    "avg_confidence": float(row.avg_confidence) if row.avg_confidence else 0.0,
+                    "avg_similarity": float(row.avg_similarity) if row.avg_similarity else 0.0,
+                    "avg_time_to_apply": (
+                        float(row.avg_time_to_apply) if row.avg_time_to_apply else 0.0
+                    ),
                 }
 
             return {
@@ -500,14 +451,13 @@ class FeedbackLogger:
                 "avg_similarity": 0.0,
                 "avg_time_to_apply": 0.0,
             }
-
         except Exception as e:
             logger.error(f"Failed to get acceptance rate: {e}", exc_info=True)
             return {"error": str(e)}
 
     def _insert_feedback(self, feedback: SuggestionFeedback):
         """
-        Insert feedback row to datastore.
+        Insert feedback row to BigQuery.
 
         Internal method to insert new feedback record.
 
@@ -515,10 +465,10 @@ class FeedbackLogger:
             feedback: SuggestionFeedback dataclass instance
 
         Raises:
-            Exception: If insert fails
+            Exception: If BigQuery insert fails
         """
         if not self.client:
-            raise Exception("Datastore client not initialized")
+            raise Exception("BigQuery client not initialized")
 
         rows_to_insert = [
             {
@@ -543,11 +493,12 @@ class FeedbackLogger:
             }
         ]
 
-        success = self.client.insert_rows(self.full_table_id, rows_to_insert)
-        if not success:
-            raise Exception("Failed to insert feedback row")
+        errors = self.client.insert_rows_json(self.full_table_id, rows_to_insert)
+        if errors:
+            raise Exception(f"BigQuery insert errors: {errors}")
 
 
+# Singleton instance
 _feedback_logger_instance: Optional[FeedbackLogger] = None
 
 
@@ -555,11 +506,11 @@ def get_feedback_logger(project_id: str = "your-project-id") -> FeedbackLogger:
     """
     Get singleton FeedbackLogger instance.
 
-    This ensures only one datastore client is created for the lifetime
+    This ensures only one BigQuery client is created for the lifetime
     of the application, improving performance.
 
     Args:
-        project_id: Project ID (default: your-project-id)
+        project_id: GCP project ID (default: your-project-id)
 
     Returns:
         Singleton FeedbackLogger instance
