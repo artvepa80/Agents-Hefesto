@@ -23,6 +23,7 @@ def validate_schema(manifest):
         ['coverage', 'devops_formats', 'items'],
         ['coverage', 'devops_formats', 'declared_count'],
         ['coverage', 'code_languages', 'items'],
+        ['coverage', 'code_languages', 'declared_count'],
         ['coverage', 'totals', 'declared_total_formats']
     ]
     
