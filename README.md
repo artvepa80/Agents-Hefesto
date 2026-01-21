@@ -110,8 +110,8 @@ Files analyzed: 15 | Issues: 8
 
 ## Features by Tier
 
-| Feature | FREE | PRO ($8/mo) | OMEGA ($19/mo) |
-|---------|------|-------------|----------------|
+| Feature | FREE | PRO ($15/mo)* | OMEGA ($30/mo) |
+|---------|------|---------------|----------------|
 | Static Analysis | Yes | Yes | Yes |
 | Security Scanning | Basic | Advanced | Advanced |
 | Pre-push Hooks | Yes | Yes | Yes |
@@ -123,10 +123,10 @@ Files analyzed: 15 | Issues: 8
 | Production Correlation | No | No | Yes |
 | Repos/LOC | Limited | Unlimited | Unlimited |
 
-### Get PRO or OMEGA
+*\*Early Adopter pricing (first 100 users). Standard price $30/mo.*
 
-- **PRO**: [Start Free Trial](https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b) - $8/month
-- **OMEGA**: [Start Free Trial](https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c) - $19/month
+- **PRO**: [Start Free Trial](https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b) - $15/month
+- **OMEGA**: [Start Free Trial](https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c) - $30/month
 
 14-day free trial, no credit card required.
 
