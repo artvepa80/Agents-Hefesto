@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.5.5
+hefesto --version  # Should show: 4.6.0
 
 # 3. Analyze
 cd your-project

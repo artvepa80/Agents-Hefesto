@@ -5,6 +5,35 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] - 2026-02-09 — Ola 3 Infrastructure & CI Guardrails
+
+### Added — Ola 3 CI Guardrails
+
+**Capabilities Matrix & CI Parity Enforcement**
+
+This release completes Ola 3 by wiring verification infrastructure into GitHub Actions CI, ensuring documentation and code stay in sync automatically.
+
+- **`capabilities.yml`**: Single source of truth for all supported formats
+  - 7 Code Languages (Python, TypeScript, JavaScript, Java, Go, Rust, C#)
+  - 10 DevOps/Config Formats (Dockerfile, Jenkins, JSON, Makefile, PowerShell, Shell, SQL, Terraform, TOML, YAML)
+  - Schema-validated structure with quality gates
+
+- **CI Guardrails** (new workflow steps):
+  - `Verify Capabilities Parity`: Runs `scripts/verify_capabilities.py` to ensure all declared analyzers exist and are importable
+  - `Verify README Parity`: Runs `scripts/verify_readme.py` to ensure README counts/versions match reality
+
+- **CIParityChecker** (`hefesto/validators/ci_parity.py`):
+  - Validates local dev environment matches CI configuration
+  - Checks Python version, tool versions, Flake8 config parity
+  - 20+ tests in `tests/validators/test_ci_parity.py`
+
+### Infrastructure
+
+- CI workflow now fails fast if documentation drifts from code
+- Scripts integrated: `verify_capabilities.py`, `verify_readme.py`
+- All verification scripts use exit codes for CI compatibility
+
+---
 
 ## [4.5.5] - 2025-12-29
 
@@ -1721,9 +1750,3 @@ For issues, feature requests, or questions:
 - GitHub Issues: https://github.com/artvepa80/Agents-Hefesto/issues
 - Email: support@narapallc.com
 - Pro Support: contact@narapallc.com
-
-
-## [Unreleased] (Ola 3 Internal)
-- Added capabilities matrix (capabilities.yml) as source of truth
-- Added CI guardrails for capabilities parity
-- Hardened verification scripts with schema validation
