@@ -25,6 +25,12 @@ run() {
 
 cd "$ROOT"
 
+# Hefesto self-analysis (dogfooding) - fails on CRITICAL security issues only
+# Excludes complexity-related types (VERY_HIGH_COMPLEXITY, LONG_FUNCTION) which are quality debt, not exploits
+echo "[hefesto] Running Hefesto security gate..."
+hefesto analyze hefesto/ --fail-on CRITICAL --quiet --exclude-types VERY_HIGH_COMPLEXITY,LONG_FUNCTION
+echo "[hefesto] Hefesto security gate passed."
+
 # Optional: timeout if available (Linux); otherwise run normally
 if command -v timeout >/dev/null 2>&1; then
   T="timeout 120"

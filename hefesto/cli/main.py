@@ -107,6 +107,11 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     default=None,
     help="Maximum number of issues to display (default: all)",
 )
+@click.option(
+    "--exclude-types",
+    default="",
+    help="Comma-separated issue types to exclude from gate (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)",
+)
 def analyze(
     paths: Tuple[str, ...],
     severity: str,
@@ -116,6 +121,7 @@ def analyze(
     fail_on: Optional[str],
     quiet: bool,
     max_issues: Optional[int],
+    exclude_types: str,
 ):
     """
     Analyze code files or directories.
@@ -230,7 +236,18 @@ def analyze(
             severity_order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
             fail_on_idx = severity_order.index(fail_on.upper())
 
-            for issue in combined_report.get_all_issues():
+            # Parse exclude_types for gate filtering
+            excluded_types = set()
+            if exclude_types:
+                excluded_types = {t.strip().upper() for t in exclude_types.split(",") if t.strip()}
+
+            # Filter issues for gate evaluation (exclude specified types)
+            gate_issues = [
+                issue for issue in combined_report.get_all_issues()
+                if issue.issue_type.value not in excluded_types
+            ]
+
+            for issue in gate_issues:
                 issue_idx = severity_order.index(issue.severity.value)
                 if issue_idx >= fail_on_idx:
                     exit_code = 2
@@ -239,7 +256,10 @@ def analyze(
             if exit_code == 2 and not quiet:
                 click.echo(f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)")
             elif not quiet:
-                click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
+                if excluded_types:
+                    click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues after excluding {len(excluded_types)} type(s))")
+                else:
+                    click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
         else:
             # Default: exit 1 only for CRITICAL
             if combined_report.summary.critical_issues > 0:
