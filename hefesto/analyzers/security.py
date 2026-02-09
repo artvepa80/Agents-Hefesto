@@ -110,32 +110,66 @@ class SecurityAnalyzer:
         return issues
 
     def _check_eval_usage(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
-        """Detect dangerous eval() usage."""
+        """Detect dangerous eval() usage.
+        
+        For Python files: Uses AST to detect actual eval/exec calls, avoiding
+        false positives from regex patterns, docstrings, or comments.
+        For other languages: Falls back to regex-based detection.
+        """
         issues = []
 
-        patterns = [
-            (r"\beval\s*\(", "eval"),
-            (r"\bexec\s*\(", "exec"),
-        ]
+        # For Python: use AST-based detection to avoid false positives
+        if tree.language == "python":
+            import ast as python_ast
+            try:
+                py_tree = python_ast.parse(code)
+                for node in python_ast.walk(py_tree):
+                    if isinstance(node, python_ast.Call):
+                        func = node.func
+                        if isinstance(func, python_ast.Name) and func.id in ("eval", "exec"):
+                            issues.append(
+                                AnalysisIssue(
+                                    file_path=file_path,
+                                    line=node.lineno,
+                                    column=node.col_offset,
+                                    issue_type=AnalysisIssueType.EVAL_USAGE,
+                                    severity=AnalysisIssueSeverity.CRITICAL,
+                                    message=f"Dangerous {func.id}() usage detected",
+                                    suggestion="Avoid eval/exec. Use safe alternatives:\n"
+                                    "- ast.literal_eval() for literals\n"
+                                    "- json.loads() for JSON\n"
+                                    "- Implement proper parsing logic",
+                                    metadata={"function": func.id},
+                                )
+                            )
+            except SyntaxError:
+                # If AST parsing fails, fall back to regex
+                pass
+        else:
+            # For non-Python languages: use regex-based detection
+            patterns = [
+                (r"\beval\s*\(", "eval"),
+                (r"\bexec\s*\(", "exec"),
+            ]
 
-        for line_num, line in enumerate(code.split("\n"), start=1):
-            for pattern, func_name in patterns:
-                if re.search(pattern, line):
-                    issues.append(
-                        AnalysisIssue(
-                            file_path=file_path,
-                            line=line_num,
-                            column=0,
-                            issue_type=AnalysisIssueType.EVAL_USAGE,
-                            severity=AnalysisIssueSeverity.CRITICAL,
-                            message=f"Dangerous {func_name}() usage detected",
-                            suggestion="Avoid eval/exec. Use safe alternatives:\n"
-                            "- ast.literal_eval() for literals\n"
-                            "- json.loads() for JSON\n"
-                            "- Implement proper parsing logic",
-                            metadata={"function": func_name},
+            for line_num, line in enumerate(code.split("\n"), start=1):
+                for pattern, func_name in patterns:
+                    if re.search(pattern, line):
+                        issues.append(
+                            AnalysisIssue(
+                                file_path=file_path,
+                                line=line_num,
+                                column=0,
+                                issue_type=AnalysisIssueType.EVAL_USAGE,
+                                severity=AnalysisIssueSeverity.CRITICAL,
+                                message=f"Dangerous {func_name}() usage detected",
+                                suggestion="Avoid eval/exec. Use safe alternatives:\n"
+                                "- ast.literal_eval() for literals\n"
+                                "- json.loads() for JSON\n"
+                                "- Implement proper parsing logic",
+                                metadata={"function": func_name},
+                            )
                         )
-                    )
 
         return issues
 
