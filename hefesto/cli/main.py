@@ -233,11 +233,11 @@ def analyze(
             for issue in combined_report.get_all_issues():
                 issue_idx = severity_order.index(issue.severity.value)
                 if issue_idx >= fail_on_idx:
-                    exit_code = 1
+                    exit_code = 2
                     break
 
-            if exit_code == 1 and not quiet:
-                click.echo(f"\nExit code: 1 ({fail_on.upper()} or higher issues found)")
+            if exit_code == 2 and not quiet:
+                click.echo(f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)")
             elif not quiet:
                 click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
         else:
