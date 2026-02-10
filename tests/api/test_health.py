@@ -26,6 +26,13 @@ class TestHealthEndpoint:
         response = client.get("/health")
         assert response.status_code == 200
 
+    def test_ping_endpoint(self):
+        """Test ping endpoint returns 200 OK and simple JSON"""
+        response = client.get("/ping")
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+
+
     def test_health_check_structure(self):
         """Test health check response has correct structure"""
         response = client.get("/health")
