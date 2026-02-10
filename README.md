@@ -409,7 +409,8 @@ We used Hefesto to validate itself before publishing v4.0.1:
 - **Patch C: API Hardening** — secure-by-default `hefesto serve`
 - API key authentication, rate limiting, CORS allowlist, docs toggle
 - Path sandbox via `resolve_under_root()`, cache guardrails (TTL + LRU)
-- Host default changed to `127.0.0.1`, 8 new security env vars
+- **Deployment**: Switched to Workload Identity Federation (keyless) & Docker build
+- **Fixed**: Restored `/ping` endpoint for health checks
 
 ### v4.6.0 (2026-02-09)
 - Ola 3 Infrastructure & CI Guardrails

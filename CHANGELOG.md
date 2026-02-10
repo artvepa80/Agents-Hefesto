@@ -48,6 +48,15 @@ This release makes the REST API production-ready with layered security that is s
 - Default API host changed from `0.0.0.0` to `127.0.0.1` (loopback only)
 - Middleware module converted from file to package (`hefesto/api/middleware/`)
 - `create_app()` factory function introduced for testability
+- **Deployment**: Switched Cloud Run auth to Workload Identity Federation (keyless)
+- **Deployment**: Replaced Cloud Build with direct `docker build` + `docker push`
+- **CI**: Bumped project version to 4.7.0 to match README
+
+### Fixed
+
+- Restored `/ping` endpoint (required for Cloud Run smoke tests)
+- Fixed `flake8` and `isort` style issues in health router
+
 
 ### Security Environment Variables (New)
 
