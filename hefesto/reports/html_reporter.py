@@ -241,7 +241,9 @@ class HTMLReporter:
         if not issues:
             return ""
 
-        icon = {"CRITICAL": "🔥", "HIGH": "❌", "MEDIUM": "⚠️", "LOW": "💡"}.get(severity.value, "•")
+        icon = {"CRITICAL": "🔥", "HIGH": "❌", "MEDIUM": "⚠️", "LOW": "💡"}.get(
+            severity.value, "•"
+        )
 
         html = f"""
         <div class="severity-section">

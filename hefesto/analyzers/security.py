@@ -121,6 +121,7 @@ class SecurityAnalyzer:
         # For Python: use AST-based detection to avoid false positives
         if tree.language == "python":
             import ast as python_ast
+
             try:
                 py_tree = python_ast.parse(code)
                 for node in python_ast.walk(py_tree):

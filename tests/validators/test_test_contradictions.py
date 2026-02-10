@@ -64,8 +64,7 @@ def test_find_contradictions_with_arguments(temp_test_dir):
 def test_no_contradictions_different_arguments(temp_test_dir):
     """Test no contradictions when using different arguments."""
     test_file = temp_test_dir / "test_different_args.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_with_empty_list():
     result = validate([])
     assert result == False
@@ -73,8 +72,7 @@ def test_with_empty_list():
 def test_with_items():
     result = validate([1, 2, 3])
     assert result == True
-"""
-    )
+""")
 
     detector = TestContradictionDetector(str(temp_test_dir))
     contradictions = detector.find_contradictions()
@@ -86,8 +84,7 @@ def test_with_items():
 def test_no_contradictions_same_expectations(temp_test_dir):
     """Test no contradictions when expectations match."""
     test_file = temp_test_dir / "test_same_expectations.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_always_true_1():
     result = is_valid()
     assert result == True
@@ -95,8 +92,7 @@ def test_always_true_1():
 def test_always_true_2():
     result = is_valid()
     assert result == True
-"""
-    )
+""")
 
     detector = TestContradictionDetector(str(temp_test_dir))
     contradictions = detector.find_contradictions()
@@ -107,8 +103,7 @@ def test_always_true_2():
 def test_multiple_contradictions(temp_test_dir):
     """Test detecting multiple contradictions."""
     test_file = temp_test_dir / "test_multiple.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_func1_returns_1():
     assert func1() == 1
 
@@ -120,8 +115,7 @@ def test_func2_returns_true():
 
 def test_func2_returns_false():
     assert func2() == False
-"""
-    )
+""")
 
     detector = TestContradictionDetector(str(temp_test_dir))
     contradictions = detector.find_contradictions()
@@ -152,15 +146,13 @@ def test_recursive_test_discovery(temp_test_dir):
     subdir.mkdir()
 
     test_file = subdir / "test_nested.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_contradiction_1():
     assert my_func() == 1
 
 def test_contradiction_2():
     assert my_func() == 2
-"""
-    )
+""")
 
     detector = TestContradictionDetector(str(temp_test_dir))
     contradictions = detector.find_contradictions()
@@ -182,8 +174,7 @@ def test_print_report_no_contradictions(capsys):
 def test_print_report_with_contradictions(capsys, temp_test_dir):
     """Test printing report with contradictions."""
     test_file = temp_test_dir / "test_sample.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_returns_true():
     result = check()
     assert result == True
@@ -191,8 +182,7 @@ def test_returns_true():
 def test_returns_false():
     result = check()
     assert result == False
-"""
-    )
+""")
 
     detector = TestContradictionDetector(str(temp_test_dir))
     contradictions = detector.find_contradictions()
@@ -248,15 +238,13 @@ def test_main_cli_entry_point(temp_test_dir, capsys, monkeypatch):
 
     # Create test file with contradiction
     test_file = temp_test_dir / "test_cli.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_1():
     assert func() == 1
 
 def test_2():
     assert func() == 2
-"""
-    )
+""")
 
     # Mock sys.argv to pass test directory
     monkeypatch.setattr(sys, "argv", ["test_contradictions.py", str(temp_test_dir)])
@@ -279,12 +267,10 @@ def test_main_cli_no_contradictions(temp_test_dir, capsys, monkeypatch):
 
     # Create test file with no contradictions
     test_file = temp_test_dir / "test_ok.py"
-    test_file.write_text(
-        """
+    test_file.write_text("""
 def test_always_true():
     assert func() == True
-"""
-    )
+""")
 
     monkeypatch.setattr(sys, "argv", ["test_contradictions.py", str(temp_test_dir)])
 
