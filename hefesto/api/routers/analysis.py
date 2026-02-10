@@ -10,8 +10,9 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
 
 import time
+from collections import OrderedDict
 from datetime import datetime
-from typing import Dict
+from typing import Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Path, status
 
@@ -32,13 +33,49 @@ from hefesto.api.services.analysis_service import (
     validate_file_path,
 )
 from hefesto.api.services.bigquery_service import get_bigquery_client
+from hefesto.config.settings import get_settings
 from hefesto.core.analyzer_engine import AnalyzerEngine
 
 router = APIRouter(tags=["Code Analysis"], prefix="/api/v1")
 
-# In-memory cache for Phase 2 (synchronous analysis)
-# Phase 3 will use BigQuery for persistence
-_analysis_cache: Dict[str, AnalysisResponse] = {}
+
+class BoundedCache:
+    """TTL + LRU bounded cache to prevent DoS via memory growth."""
+
+    def __init__(self, max_items: int = 256, ttl: int = 600):
+        self._store: OrderedDict[str, Tuple[float, AnalysisResponse]] = OrderedDict()
+        self.max_items = max_items
+        self.ttl = ttl
+
+    def get(self, key: str) -> Optional[AnalysisResponse]:
+        """Get item; returns None if missing or expired."""
+        if key not in self._store:
+            return None
+        ts, value = self._store[key]
+        if time.time() - ts > self.ttl:
+            del self._store[key]
+            return None
+        # Move to end (most recently used)
+        self._store.move_to_end(key)
+        return value
+
+    def set(self, key: str, value: AnalysisResponse) -> None:
+        """Set item; evict oldest if over capacity."""
+        if key in self._store:
+            self._store.move_to_end(key)
+        self._store[key] = (time.time(), value)
+        while len(self._store) > self.max_items:
+            self._store.popitem(last=False)
+
+    def __contains__(self, key: str) -> bool:
+        return self.get(key) is not None
+
+
+_settings = get_settings()
+_analysis_cache = BoundedCache(
+    max_items=_settings.cache_max_items,
+    ttl=_settings.cache_ttl_seconds,
+)
 
 
 @router.post(
@@ -104,7 +141,7 @@ async def analyze_code(request: AnalysisRequest):
         )
 
         # Cache result for GET endpoint
-        _analysis_cache[analysis_id] = analysis_response
+        _analysis_cache.set(analysis_id, analysis_response)
 
         # Phase 3: Persist to BigQuery if configured
         bq_client = get_bigquery_client()
@@ -194,7 +231,7 @@ async def analyze_code(request: AnalysisRequest):
         )
 
         # Cache failed result
-        _analysis_cache[analysis_id] = error_response
+        _analysis_cache.set(analysis_id, error_response)
 
         return APIResponse(
             success=False,
@@ -230,14 +267,14 @@ async def get_analysis(
     Returns:
         APIResponse with AnalysisResponse data
     """
-    if analysis_id not in _analysis_cache:
+    result = _analysis_cache.get(analysis_id)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis not found: {analysis_id}",
         )
 
-    analysis = _analysis_cache[analysis_id]
-    return APIResponse(success=True, data=analysis)
+    return APIResponse(success=True, data=result)
 
 
 @router.post(

@@ -10,9 +10,7 @@ Business logic for code analysis operations including:
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
 
-import os
 import uuid
-from pathlib import Path
 from typing import Any, Dict, List
 
 from hefesto.api.types import AnalysisId, FindingId  # noqa: F401
@@ -55,7 +53,7 @@ def is_safe_path(path: str) -> bool:
 
     Blocks:
     - Paths containing .. (parent directory references)
-    - Paths attempting to access sensitive system directories
+    - Paths attempting to escape the workspace root
 
     Args:
         path: File or directory path to validate
@@ -63,19 +61,15 @@ def is_safe_path(path: str) -> bool:
     Returns:
         True if path is safe, False otherwise
     """
-    # Block directory traversal patterns
-    if ".." in path:
-        return False
+    from hefesto.config.settings import get_settings
+    from hefesto.security.path_sandbox import resolve_under_root
 
-    # Normalize path to check if it attempts to escape
     try:
-        normalized = os.path.normpath(path)
-        if ".." in normalized:
-            return False
-    except (ValueError, TypeError):
+        root = get_settings().resolved_workspace_root
+        resolve_under_root(path, root)
+        return True
+    except ValueError:
         return False
-
-    return True
 
 
 def validate_file_path(path: str) -> bool:
@@ -83,7 +77,7 @@ def validate_file_path(path: str) -> bool:
     Validate that file path exists and is safe.
 
     Performs:
-    1. Security validation (directory traversal check)
+    1. Sandbox enforcement (must be under workspace root)
     2. Existence check (file or directory must exist)
 
     Args:
@@ -95,13 +89,13 @@ def validate_file_path(path: str) -> bool:
     Raises:
         ValueError: If path is invalid or unsafe
     """
-    # Security check
-    if not is_safe_path(path):
-        raise ValueError(f"Path contains unsafe directory traversal: {path}")
+    from hefesto.config.settings import get_settings
+    from hefesto.security.path_sandbox import resolve_under_root
 
-    # Existence check
-    path_obj = Path(path)
-    if not path_obj.exists():
+    root = get_settings().resolved_workspace_root
+    resolved = resolve_under_root(path, root)
+
+    if not resolved.exists():
         raise ValueError(f"Path does not exist: {path}")
 
     return True

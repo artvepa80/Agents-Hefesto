@@ -5,6 +5,8 @@ Includes:
 - Request ID generation
 - Request timing/logging
 - Structured logging
+- API Key authentication (optional)
+- Rate limiting (optional)
 """
 
 import logging
@@ -17,7 +19,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 # Configure structured logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("hefesto.api")
 
@@ -69,7 +72,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def add_middlewares(app):
+def add_middlewares(app, settings=None):
     """
     Add all custom middleware to FastAPI app.
 
@@ -77,6 +80,27 @@ def add_middlewares(app):
 
     Args:
         app: FastAPI application instance
+        settings: Optional Settings instance for auth/rate limit
     """
     app.add_middleware(TimingMiddleware)
     app.add_middleware(RequestIDMiddleware)
+
+    if settings is not None:
+        # Auth middleware (only active if api_key is set)
+        if settings.api_key:
+            from hefesto.api.middleware.auth import (
+                ApiKeyMiddleware,
+            )
+
+            app.add_middleware(ApiKeyMiddleware, api_key=settings.api_key)
+
+        # Rate limiting (only active if > 0)
+        if settings.api_rate_limit_per_minute > 0:
+            from hefesto.api.middleware.rate_limit import (
+                RateLimitMiddleware,
+            )
+
+            app.add_middleware(
+                RateLimitMiddleware,
+                max_requests=settings.api_rate_limit_per_minute,
+            )
