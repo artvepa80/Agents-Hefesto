@@ -1,21 +1,45 @@
 # Hefesto API Reference
 
-Complete API documentation for Hefesto v3.5.
+Complete API documentation for Hefesto v4.7.
 
 ## Base URL
 
 ```
-http://localhost:8080  (local)
+http://127.0.0.1:8000  (local, default)
 https://your-hefesto.run.app  (production)
 ```
 
 ## Authentication
 
-Currently no authentication required. API key validation coming in v3.6.
+API key authentication is available when `HEFESTO_API_KEY` is set:
 
-For Pro features, set:
 ```bash
-export HEFESTO_LICENSE_KEY='hef_your_key'
+export HEFESTO_API_KEY="your-secret-key"
+```
+
+All requests (except `/health`, `/ping`, `/`) must include:
+```
+X-API-Key: your-secret-key
+```
+
+If `HEFESTO_API_KEY` is not set, no authentication is required.
+
+## CORS
+
+Default: Only `http://localhost:*` and `http://127.0.0.1:*` origins allowed.
+
+```bash
+# Allow specific origins
+export HEFESTO_CORS_ORIGINS="https://app.example.com,https://admin.example.com"
+```
+
+## API Documentation
+
+Swagger/Redoc endpoints are **disabled by default**:
+
+```bash
+# Enable /docs, /redoc, /openapi.json
+export HEFESTO_EXPOSE_DOCS=true
 ```
 
 ---
@@ -229,7 +253,8 @@ Check if budget available.
 | Code | Meaning | Solution |
 |------|---------|----------|
 | 400 | Bad Request | Check request body format |
-| 429 | Budget Exceeded | Wait for daily/monthly reset |
+| 401 | Unauthorized | Missing or invalid API key |
+| 429 | Rate Limit Exceeded | Too many requests, try again later |
 | 500 | Internal Error | Check logs, report bug |
 | 503 | Service Unavailable | Check GEMINI_API_KEY is set |
 
@@ -237,9 +262,21 @@ Check if budget available.
 
 ## Rate Limits
 
-- **Free**: 60 requests/minute
-- **Pro**: 100 requests/minute
-- **Enterprise**: Custom limits
+Rate limiting uses a sliding-window algorithm, keyed by API key (if set) or client IP.
+
+```bash
+# Enable with 60 requests per minute
+export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60
+```
+
+When enabled, exceeding the limit returns `429 Too Many Requests`:
+```json
+{
+  "detail": "Rate limit exceeded. Try again later."
+}
+```
+
+Set to `0` (default) to disable rate limiting.
 
 ---
 

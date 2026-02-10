@@ -1,9 +1,9 @@
 # Hefesto API Architecture Specification
 
-**Version:** v4.1.0
-**Status:** Design Phase
-**Target Release:** November 2025
-**Last Updated:** October 30, 2025
+**Version:** v4.7.0
+**Status:** Implemented
+**Target Release:** February 2026
+**Last Updated:** February 10, 2026
 
 ---
 
@@ -65,10 +65,12 @@ This document specifies the complete REST API architecture for Hefesto v4.1.0, d
 - Caching headers
 
 ### 4. Security
-- Authentication-ready (placeholder for v1)
+- API key authentication via `X-API-Key` header (v4.7.0)
+- CORS allowlist enforcement
 - Input validation with Pydantic
 - SQL injection prevention
-- CORS configuration
+- Path sandbox via `resolve_under_root()`
+- Rate limiting per client
 
 ### 5. Maintainability
 - Versioned API paths (`/api/v1/`)
@@ -100,7 +102,10 @@ hefesto/
 │   ├── __init__.py
 │   ├── main.py                  # FastAPI app initialization
 │   ├── dependencies.py          # Dependency injection
-│   ├── middleware.py            # CORS, logging, rate limiting
+│   ├── middleware/             # Middleware package
+│   │   ├── __init__.py         # CORS, logging, add_middlewares()
+│   │   ├── auth.py             # API key authentication
+│   │   └── rate_limit.py       # Sliding-window rate limiter
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── health.py            # Health & monitoring endpoints
@@ -127,12 +132,24 @@ hefesto/
 
 ## Authentication & Authorization
 
-### V1 (Current Release)
-**Status:** Not implemented
-**Access:** Public (no authentication required)
+### V1 (Current Release — v4.7.0)
+**Status:** Implemented
+**Method:** API Key via `X-API-Key` header
+
+Set `HEFESTO_API_KEY` environment variable to enable authentication:
+```bash
+export HEFESTO_API_KEY="your-secret-key"
+```
+
+All requests (except `/health`, `/ping`, `/`) must include the key:
+```
+X-API-Key: your-secret-key
+```
+
+If `HEFESTO_API_KEY` is not set, no authentication is required (backward compatible).
 
 ### V2 (Future Release)
-**Status:** Planned for Q2 2026
+**Status:** Planned
 
 **Authentication Methods:**
 1. **API Keys** - For programmatic access

@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.6.0
+hefesto --version  # Should show: 4.7.0
 
 # 3. Analyze
 cd your-project
@@ -234,13 +234,36 @@ subprocess.run(["rm", user_input], check=True)
 ## REST API (PRO)
 
 ```bash
-# Start server
+# Start server (binds to 127.0.0.1 by default)
 hefesto serve --port 8000
 
 # Analyze code
 curl -X POST http://localhost:8000/analyze \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: $HEFESTO_API_KEY" \
   -d '{"code": "def test(): pass", "severity": "MEDIUM"}'
+```
+
+### API Security (v4.7.0)
+
+The API server is **secure by default**:
+
+| Feature | Default | Configure via |
+|---------|---------|---------------|
+| Host binding | `127.0.0.1` (loopback) | `HEFESTO_API_HOST` |
+| CORS | Localhost only | `HEFESTO_CORS_ORIGINS` |
+| API docs | Disabled | `HEFESTO_EXPOSE_DOCS=true` |
+| Auth | Off (no key set) | `HEFESTO_API_KEY` |
+| Rate limit | Off | `HEFESTO_API_RATE_LIMIT_PER_MINUTE` |
+| Path sandbox | `cwd()` | `HEFESTO_WORKSPACE_ROOT` |
+
+```bash
+# Production example
+export HEFESTO_API_KEY=my-secret-key
+export HEFESTO_CORS_ORIGINS=https://app.example.com
+export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60
+export HEFESTO_EXPOSE_DOCS=true
+hefesto serve --host 0.0.0.0 --port 8000
 ```
 
 ### Endpoints
@@ -248,7 +271,8 @@ curl -X POST http://localhost:8000/analyze \
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/analyze` | POST | Analyze code |
-| `/health` | GET | Health check |
+| `/health` | GET | Health check (no auth required) |
+| `/ping` | GET | Fast health ping (no auth required) |
 | `/batch` | POST | Batch analysis |
 | `/metrics` | GET | Quality metrics |
 | `/history` | GET | Analysis history |
@@ -295,9 +319,19 @@ hefesto:
 ### Environment Variables
 
 ```bash
+# Core
 export HEFESTO_LICENSE_KEY="your-key"
 export HEFESTO_SEVERITY="MEDIUM"
 export HEFESTO_OUTPUT="json"
+
+# API Security (v4.7.0)
+export HEFESTO_API_KEY="your-api-key"                # Enable API key auth
+export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60           # Enable rate limiting
+export HEFESTO_CORS_ORIGINS="https://app.example.com" # Restrict CORS
+export HEFESTO_EXPOSE_DOCS=true                       # Enable /docs, /redoc
+export HEFESTO_WORKSPACE_ROOT="/srv/code"              # Path sandbox root
+export HEFESTO_CACHE_MAX_ITEMS=256                     # Cache size limit
+export HEFESTO_CACHE_TTL_SECONDS=300                   # Cache entry TTL
 ```
 
 ### Config File (.hefesto.yaml)
@@ -370,6 +404,16 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.7.0 (2026-02-10)
+- **Patch C: API Hardening** — secure-by-default `hefesto serve`
+- API key authentication, rate limiting, CORS allowlist, docs toggle
+- Path sandbox via `resolve_under_root()`, cache guardrails (TTL + LRU)
+- Host default changed to `127.0.0.1`, 8 new security env vars
+
+### v4.6.0 (2026-02-09)
+- Ola 3 Infrastructure & CI Guardrails
+- Capabilities matrix, CI parity enforcement, README verification
 
 ### v4.3.3 (2025-12-26)
 - Fix LONG_PARAMETER_LIST: use AST formal_parameters instead of comma counting

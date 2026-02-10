@@ -5,6 +5,71 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] - 2026-02-10 — Patch C: API Hardening
+
+### Added — API Security Defaults
+
+**Secure-by-default API server for `hefesto serve`**
+
+This release makes the REST API production-ready with layered security that is secure out-of-the-box and fully configurable via environment variables.
+
+- **API Key Authentication** (`hefesto/api/middleware/auth.py`):
+  - Optional `X-API-Key` header enforcement when `HEFESTO_API_KEY` is set
+  - Health/ping endpoints bypass authentication
+  - Returns `401 Unauthorized` with clear error message
+
+- **Rate Limiting** (`hefesto/api/middleware/rate_limit.py`):
+  - Sliding-window rate limiter per client (keyed by API key or client IP)
+  - Configurable via `HEFESTO_API_RATE_LIMIT_PER_MINUTE` (default: 0 = off)
+  - Returns `429 Too Many Requests` with retry guidance
+  - Automatic stale entry cleanup to prevent memory leaks
+
+- **CORS Allowlist Enforcement** (`hefesto/api/main.py`):
+  - Default origins restricted to `http://localhost:*` and `http://127.0.0.1:*`
+  - Configurable via `HEFESTO_CORS_ORIGINS` (comma-separated)
+  - Blocks dangerous `*` + `allow_credentials=True` combination
+
+- **API Docs Toggle**:
+  - `/docs`, `/redoc`, `/openapi.json` disabled by default
+  - Enable via `HEFESTO_EXPOSE_DOCS=true`
+
+- **Path Sandbox** (`hefesto/security/path_sandbox.py`):
+  - `resolve_under_root()` replaces naive substring-based `is_safe_path()`
+  - Prevents directory traversal via `pathlib.resolve()` + `is_relative_to()`
+  - Workspace root configurable via `HEFESTO_WORKSPACE_ROOT`
+
+- **Cache Guardrails** (`hefesto/api/routers/analysis.py`):
+  - `BoundedCache` with TTL expiry + LRU eviction
+  - Prevents DoS via unbounded cache growth
+  - Configurable: `HEFESTO_CACHE_MAX_ITEMS` (default: 256), `HEFESTO_CACHE_TTL_SECONDS` (default: 300)
+
+### Changed
+
+- Default API host changed from `0.0.0.0` to `127.0.0.1` (loopback only)
+- Middleware module converted from file to package (`hefesto/api/middleware/`)
+- `create_app()` factory function introduced for testability
+
+### Security Environment Variables (New)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HEFESTO_CORS_ORIGINS` | `http://localhost:*,http://127.0.0.1:*` | Allowed CORS origins |
+| `HEFESTO_CORS_ALLOW_CREDENTIALS` | `false` | Allow credentials in CORS |
+| `HEFESTO_EXPOSE_DOCS` | `false` | Enable /docs, /redoc |
+| `HEFESTO_API_KEY` | *(empty)* | API key for `X-API-Key` auth |
+| `HEFESTO_API_RATE_LIMIT_PER_MINUTE` | `0` | Rate limit (0 = off) |
+| `HEFESTO_WORKSPACE_ROOT` | `cwd()` | Path sandbox root |
+| `HEFESTO_CACHE_MAX_ITEMS` | `256` | Max cached analysis results |
+| `HEFESTO_CACHE_TTL_SECONDS` | `300` | Cache entry TTL |
+
+### Testing
+
+- 27 new tests in `tests/test_patch_c_api_hardening.py`
+- All 490 tests pass, lint clean (black, isort, flake8)
+- Pre-existing flaky perf tests marked `@pytest.mark.slow`
+
+---
+
 ## [4.6.0] - 2026-02-09 — Ola 3 Infrastructure & CI Guardrails
 
 ### Added — Ola 3 CI Guardrails

@@ -93,6 +93,35 @@ Run Hefesto on your code:
 hefesto analyze --min-severity CRITICAL
 ```
 
+## API Hardening (v4.7.0)
+
+The `hefesto serve` API server is **secure by default** with layered protections:
+
+### Authentication
+- **API Key** via `X-API-Key` header (set `HEFESTO_API_KEY` to enable)
+- Health and ping endpoints are always accessible without auth
+
+### Network Security
+- **Host binding** defaults to `127.0.0.1` (loopback only, not `0.0.0.0`)
+- **CORS** restricted to `localhost` origins by default
+- Blocks dangerous `*` + `allow_credentials=True` CORS configuration
+
+### Rate Limiting
+- Sliding-window rate limiter per client (API key or IP)
+- Set `HEFESTO_API_RATE_LIMIT_PER_MINUTE` to enable
+
+### Path Sandbox
+- All file paths resolved and validated against `HEFESTO_WORKSPACE_ROOT`
+- Prevents directory traversal attacks via `resolve_under_root()`
+
+### Cache Guardrails
+- Bounded in-memory cache with TTL and LRU eviction
+- Prevents DoS via unbounded memory growth
+
+### API Documentation
+- `/docs`, `/redoc`, `/openapi.json` disabled by default
+- Set `HEFESTO_EXPOSE_DOCS=true` to enable in development
+
 ## Security Updates
 
 We release security patches as soon as possible after discovering vulnerabilities.
