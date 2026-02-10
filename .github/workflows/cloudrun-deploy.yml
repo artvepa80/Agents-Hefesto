@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # Required for Workload Identity Federation
 
 concurrency:
   group: cloudrun-${{ github.ref }}
@@ -38,11 +39,12 @@ jobs:
         run: |
           ./scripts/run_checks.sh
 
-      # Auth to GCP (JSON key)
+      # Auth to GCP via Workload Identity Federation (keyless)
       - name: Auth to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -93,3 +95,4 @@ jobs:
           URL="$(gcloud run services describe "${{ steps.target.outputs.service }}" --region "${REGION}" --project "${{ secrets.GCP_PROJECT_ID }}" --format='value(status.url)')"
           echo "Service URL: ${URL}"
           bash scripts/smoke_test.sh "${URL}"
+
