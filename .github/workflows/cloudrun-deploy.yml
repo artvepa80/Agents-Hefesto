@@ -73,12 +73,13 @@ jobs:
               --project="${{ secrets.GCP_PROJECT_ID }}"
           fi
 
-      - name: Build image (Cloud Build)
+      - name: Build and push image
         run: |
           SHA="${GITHUB_SHA::7}"
           IMAGE_URI="${REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${AR_REPO}/${IMAGE_NAME}:${SHA}"
           echo "IMAGE_URI=${IMAGE_URI}" >> $GITHUB_ENV
-          gcloud builds submit --tag "${IMAGE_URI}" --project "${{ secrets.GCP_PROJECT_ID }}"
+          docker build -t "${IMAGE_URI}" .
+          docker push "${IMAGE_URI}"
 
       - name: Deploy to Cloud Run
         run: |
