@@ -93,14 +93,17 @@ class TestFilePathValidation(unittest.TestCase):
 
     def test_directory_traversal_blocked(self):
         """Test validation blocks directory traversal attempts."""
+        from hefesto.security.path_sandbox import resolve_under_root
+
+        root = Path("/home")
         malicious_paths = [
             "../../../etc/passwd",
-            "..\\..\\..\\windows\\system32",
-            "/etc/../etc/passwd",
-            "test/../../sensitive.py",
+            "/etc/passwd",
+            "test/../../etc/shadow",
         ]
         for path in malicious_paths:
-            assert is_safe_path(path) is False
+            with pytest.raises(ValueError, match="escapes"):
+                resolve_under_root(path, root)
 
     def test_safe_paths_allowed(self):
         """Test validation allows safe paths."""

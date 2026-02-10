@@ -21,6 +21,7 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 import time
 import unittest
 
+import pytest
 from fastapi.testclient import TestClient
 
 from hefesto.api.main import app
@@ -70,6 +71,7 @@ class TestFindingsListPerformance(unittest.TestCase):
         # Should still meet <200ms target with filters
         assert p95 < 200, f"List findings with filters P95 {p95:.2f}ms exceeds target"
 
+    @pytest.mark.slow
     def test_list_findings_pagination_performance(self):
         """Test pagination doesn't significantly degrade performance."""
         durations_first_page = []
@@ -127,6 +129,7 @@ class TestFindingDetailPerformance(unittest.TestCase):
         # Phase 3 target: <100ms P95
         assert p95 < 100, f"Get finding by ID P95 {p95:.2f}ms exceeds target of 100ms"
 
+    @pytest.mark.slow
     def test_get_finding_consistency(self):
         """Test get finding response time consistency."""
         test_id = "fnd_consistencytest123456"

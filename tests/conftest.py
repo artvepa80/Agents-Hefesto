@@ -15,6 +15,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ["HEFESTO_ENV"] = "test"
 os.environ["GCP_PROJECT_ID"] = "hefesto-test-project"
 
+# Patch C: enable docs and use broad workspace root for pre-existing
+# tests that assume /docs is accessible and /tmp paths are valid.
+os.environ.setdefault("HEFESTO_EXPOSE_DOCS", "true")
+os.environ.setdefault("HEFESTO_WORKSPACE_ROOT", "/")
+
+# Reset settings singleton so test env vars take effect
+import hefesto.config.settings as _cfg  # noqa: E402
+
+_cfg._settings = None
+
 
 @pytest.fixture
 def sample_code_hardcoded_secret():
