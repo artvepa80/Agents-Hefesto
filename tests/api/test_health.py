@@ -32,7 +32,6 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         assert response.json() == {"ok": True}
 
-
     def test_health_check_structure(self):
         """Test health check response has correct structure"""
         response = client.get("/health")

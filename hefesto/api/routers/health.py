@@ -93,6 +93,7 @@ def check_integrations() -> dict:
 
     return integrations_status
 
+
 @router.get(
     "/ping",
     summary="Fast health ping",
@@ -101,7 +102,6 @@ def check_integrations() -> dict:
 async def ping():
     """Fast health ping."""
     return {"ok": True}
-
 
 
 @router.get(
