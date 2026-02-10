@@ -243,7 +243,8 @@ def analyze(
 
             # Filter issues for gate evaluation (exclude specified types)
             gate_issues = [
-                issue for issue in combined_report.get_all_issues()
+                issue
+                for issue in combined_report.get_all_issues()
                 if issue.issue_type.value not in excluded_types
             ]
 
@@ -254,10 +255,14 @@ def analyze(
                     break
 
             if exit_code == 2 and not quiet:
-                click.echo(f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)")
+                click.echo(
+                    f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)"
+                )
             elif not quiet:
                 if excluded_types:
-                    click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues after excluding {len(excluded_types)} type(s))")
+                    click.echo(
+                        f"\nExit code: 0 (no {fail_on.upper()}+ issues after excluding {len(excluded_types)} type(s))"
+                    )
                 else:
                     click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
         else:
@@ -582,62 +587,99 @@ def check_test_contradictions(test_directory: str):
 @click.option("--force", is_flag=True, help="Overwrite existing hooks")
 def install_hooks(force: bool):
     """
-    Install Hefesto git pre-push hook.
+    Install/update Hefesto git pre-push hook.
 
-    The pre-push hook runs before git push to prevent CI failures:
-    - Black formatting check
-    - isort import ordering check
-    - Flake8 linting check (prevents CI failures!)
-    - Unit tests
-    - Hefesto code analysis
+    Copies the hook from scripts/git-hooks/pre-push to .git/hooks/pre-push.
+    This ensures the hook uses the latest configuration (e.g., security-only gate).
 
     Example:
         hefesto install-hooks
-        hefesto install-hooks --force  # Overwrite existing hook
+        hefesto install-hooks --force
     """
+    import os
     import shutil
+    import stat
+    import subprocess
     from pathlib import Path
 
-    # Check if we're in a git repo
-    git_dir = Path(".git")
-    if not git_dir.exists():
-        click.echo("Not a git repository!", err=True)
-        click.echo("   Run this command from the root of your git repository.")
+    # Find repo root
+    repo_root = None
+    try:
+        # Try asking git directly
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
+        )
+        repo_root = Path(result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Fallback: walk up looking for .git
+        current = Path.cwd()
+        for parent in [current] + list(current.parents):
+            if (parent / ".git").exists():
+                repo_root = parent
+                break
+
+    if not repo_root:
+        click.echo("Error: Not a git repository!", err=True)
+        click.echo("   Run this command from within a git repository.")
+        sys.exit(1)
+
+    git_dir = repo_root / ".git"
+
+    # Source hook file (scripts/git-hooks/pre-push)
+    source_hook = repo_root / "scripts" / "git-hooks" / "pre-push"
+
+    if not source_hook.exists():
+        click.echo(f"Error: Hook source not found at {source_hook}", err=True)
+        click.echo("This command requires scripts/git-hooks/pre-push to exist in the current repo.")
         sys.exit(1)
 
     # Create hooks directory if it doesn't exist
     hooks_dir = git_dir / "hooks"
     hooks_dir.mkdir(exist_ok=True)
 
-    # Source hook file
-    source_hook = Path(__file__).parent.parent / "hooks" / "pre_push.py"
-
-    if not source_hook.exists():
-        click.echo(f"Hook source not found: {source_hook}", err=True)
-        sys.exit(1)
-
     # Destination hook file
     dest_hook = hooks_dir / "pre-push"
 
     # Check if hook already exists
     if dest_hook.exists() and not force:
-        click.echo("Pre-push hook already exists!")
-        click.echo(f"   Location: {dest_hook}")
-        click.echo("\n   Use --force to overwrite, or remove the existing hook manually.")
+        # Check if contents are identical
+        try:
+            with open(source_hook, "r") as src, open(dest_hook, "r") as dst:
+                if src.read() == dst.read():
+                    click.echo("Pre-push hook is already up to date.")
+                    return
+        except Exception:
+            pass  # Continue to overwrite check
+
+        click.echo(f"Pre-push hook already exists at {dest_hook}")
+        click.echo("Use --force to overwrite.")
         sys.exit(1)
 
-    # Copy hook
-    shutil.copy(source_hook, dest_hook)
+    # Install hook
+    try:
+        shutil.copy2(source_hook, dest_hook)
 
-    # Make executable
-    dest_hook.chmod(0o755)
+        # Make executable
+        st = os.stat(dest_hook)
+        os.chmod(dest_hook, st.st_mode | stat.S_IEXEC)
 
-    click.echo("Pre-push hook installed successfully!")
-    click.echo(f"   Location: {dest_hook}")
-    click.echo("\n   The hook will run automatically before every 'git push'.")
-    click.echo("   It checks: Black, isort, Flake8, tests, and Hefesto analysis.")
-    click.echo("\nTo test the hook manually:")
-    click.echo(f"   python3 {dest_hook}")
+        # Validate content (check for new exclusions)
+        with open(dest_hook, "r") as f:
+            content = f.read()
+            if "--exclude-types" not in content:
+                click.echo(
+                    "ERROR: Installed hook does not appear to contain --exclude-types configuration.",
+                    err=True,
+                )
+                click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
+                sys.exit(1)
+
+        click.echo(f"Successfully installed pre-push hook to {dest_hook}")
+        click.echo("This hook runs 'hefesto analyze' with security gate defaults.")
+
+    except Exception as e:
+        click.echo(f"Error installing hook: {e}", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

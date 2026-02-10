@@ -22,7 +22,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 | **AI Analysis** | Google Gemini for semantic code understanding |
 | **Security Scanning** | SQL injection, hardcoded secrets, command injection |
 | **Code Smells** | Long functions, deep nesting, high complexity |
-| **Pre-Push Hooks** | Automatic validation before every commit |
+| **Pre-Push Hooks** | Automatic validation before every git push |
 | **REST API** | 8 endpoints for CI/CD integration |
 
 ---
@@ -155,13 +155,13 @@ export HEFESTO_LICENSE_KEY="your-key"
 # Analyze code
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
-hefesto analyze . --format json
+hefesto analyze . --output json
 
 # Check status
 hefesto status
 
-# Install git hook
-hefesto install-hook
+# Install/update git hook
+hefesto install-hooks
 
 # Start API server (PRO)
 hefesto serve --port 8000
@@ -171,30 +171,25 @@ hefesto serve --port 8000
 
 ## Pre-Push Hook
 
-Automatic validation before every git push:
+Automatic validation before every `git push`:
 
 ```bash
-# Install hook
-hefesto install-hook
+# Install/update hook (copies scripts/git-hooks/pre-push → .git/hooks/pre-push)
+hefesto install-hooks
 
-# Now every push validates automatically
-git push
+# Update an existing hook
+hefesto install-hooks --force
 
-# Output:
-# HEFESTO Pre-Push Validation
-# ================================
-# 1. Running linters...
-#    - Black formatting... OK
-#    - Import sorting... OK
-#    - Flake8 linting... OK
-# 2. Running unit tests...
-#    - Unit tests... OK
-# 3. Hefesto code analysis...
-#    - Analyzing changed files...
-# ================================
-# All validations passed!
-# Pushing to remote...
+# Bypass temporarily
+SKIP_HEFESTO_HOOKS=1 git push
 ```
+
+The hook runs two gates:
+
+1. **Security gate** — `hefesto analyze` with `--fail-on CRITICAL --exclude-types VERY_HIGH_COMPLEXITY,LONG_FUNCTION` (blocks security issues, ignores complexity debt)
+2. **Fast lint/test gate** — Black, isort, Flake8, and a minimal test suite
+
+> **Note:** Hooks are local to your machine and not committed to git. Run `hefesto install-hooks` after cloning or whenever `scripts/git-hooks/pre-push` is updated.
 
 ---
 
