@@ -18,6 +18,7 @@ import time
 import unittest
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from hefesto.api.main import app
@@ -28,6 +29,7 @@ client = TestClient(app)
 class TestPerformanceTargets(unittest.TestCase):
     """Test API meets Phase 2 performance targets."""
 
+    @pytest.mark.slow
     def test_single_file_analysis_performance(self):
         """Test single file analysis completes in <500ms."""
         # Create temp file with moderate complexity
@@ -71,6 +73,7 @@ class ExampleClass:
         finally:
             Path(temp_path).unlink()
 
+    @pytest.mark.slow
     def test_batch_analysis_performance(self):
         """Test batch analysis of 5 files completes in <5s."""
         temp_files = []

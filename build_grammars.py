@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build TreeSitter language grammars for all supported languages."""
+
 import os
 from pathlib import Path
 

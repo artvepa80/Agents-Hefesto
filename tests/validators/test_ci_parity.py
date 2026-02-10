@@ -146,13 +146,11 @@ def test_extract_flake8_config_from_ci(temp_project, sample_workflow):
 def test_get_local_flake8_config_from_file(temp_project):
     """Test reading local Flake8 config from .flake8 file."""
     flake8_file = temp_project / ".flake8"
-    flake8_file.write_text(
-        """
+    flake8_file.write_text("""
 [flake8]
 max-line-length = 100
 extend-ignore = E203,W503
-"""
-    )
+""")
 
     checker = CIParityChecker(temp_project)
     config = checker._get_local_flake8_config()
@@ -164,16 +162,14 @@ extend-ignore = E203,W503
 def test_get_local_flake8_config_from_setup_cfg(temp_project):
     """Test reading local Flake8 config from setup.cfg."""
     setup_cfg = temp_project / "setup.cfg"
-    setup_cfg.write_text(
-        """
+    setup_cfg.write_text("""
 [metadata]
 name = test-project
 
 [flake8]
 max-line-length = 88
 ignore = E501
-"""
-    )
+""")
 
     checker = CIParityChecker(temp_project)
     config = checker._get_local_flake8_config()
@@ -249,12 +245,10 @@ def test_check_flake8_config_mismatch(temp_project, sample_workflow):
 
     # Create local config with max-line-length=88 (mismatch)
     flake8_file = temp_project / ".flake8"
-    flake8_file.write_text(
-        """
+    flake8_file.write_text("""
 [flake8]
 max-line-length = 88
-"""
-    )
+""")
 
     checker = CIParityChecker(temp_project)
     issues = checker.check_flake8_config()
@@ -274,13 +268,11 @@ def test_check_flake8_config_ignore_rules_mismatch(temp_project, sample_workflow
 
     # Create local config missing some ignore rules
     flake8_file = temp_project / ".flake8"
-    flake8_file.write_text(
-        """
+    flake8_file.write_text("""
 [flake8]
 max-line-length = 100
 extend-ignore = E203
-"""
-    )
+""")
 
     checker = CIParityChecker(temp_project)
     issues = checker.check_flake8_config()

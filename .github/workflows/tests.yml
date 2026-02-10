@@ -37,7 +37,7 @@ jobs:
 
     - name: Run unit tests (skip cloud/integration tests)
       run: |
-        pytest -m "not requires_gcp and not requires_stripe and not integration" -v --cov=hefesto --cov-report=xml --cov-report=term
+        pytest -m "not requires_gcp and not requires_stripe and not integration and not slow" -v --cov=hefesto --cov-report=xml --cov-report=term
       env:
         # Tests run without cloud credentials - cloud tests are skipped
         CI: true

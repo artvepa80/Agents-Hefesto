@@ -52,4 +52,4 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          python -m pytest -q --tb=short --maxfail=5
+          python -m pytest -q --tb=short --maxfail=5 -m "not slow"

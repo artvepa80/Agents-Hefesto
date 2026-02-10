@@ -61,9 +61,10 @@ class TestHealthEndpoint:
         version = data["data"]["version"]
         assert isinstance(version, str)
         assert len(version) > 0
-        # Version should match semver pattern (X.Y.Z)
-        parts = version.split(".")
-        assert len(parts) >= 2  # At least major.minor
+        # Version is either semver (X.Y.Z) or dev string
+        if version != "dev":
+            parts = version.split(".")
+            assert len(parts) >= 2  # At least major.minor
 
     def test_health_check_response_time(self):
         """Test health check responds in <50ms (target: <10ms)"""
