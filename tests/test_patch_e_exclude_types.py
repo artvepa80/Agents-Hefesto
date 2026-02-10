@@ -9,8 +9,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
-
 
 def _find_repo_root() -> Path:
     """Find repository root by searching upward for pyproject.toml."""

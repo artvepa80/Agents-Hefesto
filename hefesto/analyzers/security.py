@@ -111,7 +111,7 @@ class SecurityAnalyzer:
 
     def _check_eval_usage(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Detect dangerous eval() usage.
-        
+
         For Python files: Uses AST to detect actual eval/exec calls, avoiding
         false positives from regex patterns, docstrings, or comments.
         For other languages: Falls back to regex-based detection.
