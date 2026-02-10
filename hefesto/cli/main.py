@@ -110,7 +110,10 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 @click.option(
     "--exclude-types",
     default="",
-    help="Comma-separated issue types to exclude from gate (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)",
+    help=(
+        "Comma-separated issue types to exclude from gate"
+        " (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)"
+    ),
 )
 def analyze(
     paths: Tuple[str, ...],
@@ -261,7 +264,8 @@ def analyze(
             elif not quiet:
                 if excluded_types:
                     click.echo(
-                        f"\nExit code: 0 (no {fail_on.upper()}+ issues after excluding {len(excluded_types)} type(s))"
+                        f"\nExit code: 0 (no {fail_on.upper()}+ issues"
+                        f" after excluding {len(excluded_types)} type(s))"
                     )
                 else:
                     click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
@@ -668,7 +672,8 @@ def install_hooks(force: bool):
             content = f.read()
             if "--exclude-types" not in content:
                 click.echo(
-                    "ERROR: Installed hook does not appear to contain --exclude-types configuration.",
+                    "ERROR: Installed hook does not appear to contain"
+                    " --exclude-types configuration.",
                     err=True,
                 )
                 click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
