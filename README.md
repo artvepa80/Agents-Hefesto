@@ -406,11 +406,11 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ## Changelog
 
 ### v4.7.0 (2026-02-10)
-- **Patch C: API Hardening** — secure-by-default `hefesto serve`
-- API key authentication, rate limiting, CORS allowlist, docs toggle
-- Path sandbox via `resolve_under_root()`, cache guardrails (TTL + LRU)
-- **Deployment**: Switched to Workload Identity Federation (keyless) & Docker build
-- **Fixed**: Restored `/ping` endpoint for health checks
+- **Patch C: API Hardening** — `hefesto serve` is secure-by-default (local-first)
+- **Security**: API key auth, CORS allowlist, docs toggle, path sandbox
+- **Reliability**: Rate limiting, cache guardrails to prevent DoS
+- **Deployment**: Migrated to Workload Identity Federation (keyless) & Docker build
+- **Fixed**: Restored `/ping` endpoint (unauthenticated)
 
 ### v4.6.0 (2026-02-09)
 - Ola 3 Infrastructure & CI Guardrails
