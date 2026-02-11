@@ -16,14 +16,15 @@ def test_helm_secrets_detection():
       - name: main
         credentials:
           password: "mysecretpassword"
-      
+
     apiKey: "AIzaSyFakeKeyWithMoreThan30CharactersHere123456"
     nonSecret: "{{ .Values.stuff }}"
     """
     findings = analyzer.analyze(content, "values.yaml")
 
     # Expect:
-    # 1. password -> HIGH or CRITICAL? "mysecretpassword" is not critical pattern, but key is suspicious. -> HIGH
+    # 1. password -> HIGH or CRITICAL? "mysecretpassword" is not critical pattern,
+    #    but key is suspicious. -> HIGH
     # 2. apiKey -> AIzaSy... matches critical pattern -> CRITICAL
 
     passwords = [f for f in findings if "password" in f.evidence]
@@ -74,10 +75,10 @@ def test_helm_insecure_defaults():
     securityContext:
       privileged: true
       runAsUser: 0
-    
+
     # Host Namespaces
     hostPID: true
-    
+
     # LoadBalancer
     service:
       type: LoadBalancer

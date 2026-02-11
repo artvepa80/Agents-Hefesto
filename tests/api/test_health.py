@@ -13,8 +13,9 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from hefesto.api.main import app
+from hefesto.api.main import create_app
 
+app = create_app()
 client = TestClient(app)
 
 

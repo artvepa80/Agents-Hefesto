@@ -3,8 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 # Path to the script under test
 SCRIPT_PATH = Path(__file__).parents[2] / "scripts" / "verify_release_tag.py"
 

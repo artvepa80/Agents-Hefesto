@@ -60,7 +60,7 @@ def test_serverless_insecure_defaults():
             - Effect: Allow
               Action: "*"
               Resource: "*"
-    
+
     functions:
       myFunc:
         handler: index.handler

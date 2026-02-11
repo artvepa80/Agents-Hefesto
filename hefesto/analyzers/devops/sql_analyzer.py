@@ -21,6 +21,137 @@ from hefesto.core.analysis_models import (
 )
 
 
+class _ScanContext:
+    def __init__(self, stmt: str):
+        self.stmt = stmt
+        self.n = len(stmt)
+        self.i = 0
+        self.out: List[str] = []
+        self.in_single = False
+        self.in_double = False
+        self.in_backtick = False
+        self.in_line_comment = False
+        self.in_block_comment = False
+
+    @property
+    def ch(self):
+        return self.stmt[self.i]
+
+    @property
+    def nxt(self):
+        return self.stmt[self.i + 1] if self.i + 1 < self.n else ""
+
+    def append(self, s: str):
+        self.out.append(s)
+
+    def advance(self, n: int = 1):
+        self.i += n
+
+
+def _handle_line_comment(ctx: _ScanContext, NL: str):
+    if ctx.ch == NL:
+        ctx.in_line_comment = False
+        ctx.append(ctx.ch)
+    else:
+        ctx.append(" ")
+    ctx.advance()
+
+
+def _handle_block_comment(ctx: _ScanContext, NL: str):
+    if ctx.ch == "*" and ctx.nxt == "/":
+        ctx.append("  ")
+        ctx.in_block_comment = False
+        ctx.advance(2)
+    else:
+        ctx.append(ctx.ch if ctx.ch == NL else " ")
+        ctx.advance()
+
+
+def _handle_single_quote(ctx: _ScanContext, NL: str):
+    if ctx.ch == "'" and ctx.nxt == "'":
+        ctx.append("''")
+        ctx.advance(2)
+    elif ctx.ch == "'":
+        ctx.in_single = False
+        ctx.append("'")
+        ctx.advance()
+    else:
+        ctx.append(ctx.ch if ctx.ch == NL else " ")
+        ctx.advance()
+
+
+def _handle_double_quote(ctx: _ScanContext):
+    if ctx.ch == '"' and ctx.nxt == '"':
+        ctx.append(ctx.ch + ctx.nxt)
+        ctx.advance(2)
+    elif ctx.ch == '"':
+        ctx.in_double = False
+        ctx.append(ctx.ch)
+        ctx.advance()
+    else:
+        ctx.append(ctx.ch)
+        ctx.advance()
+
+
+def _handle_backtick(ctx: _ScanContext):
+    if ctx.ch == "`" and ctx.nxt == "`":
+        ctx.append(ctx.ch + ctx.nxt)
+        ctx.advance(2)
+    elif ctx.ch == "`":
+        ctx.in_backtick = False
+        ctx.append(ctx.ch)
+        ctx.advance()
+    else:
+        ctx.append(ctx.ch)
+        ctx.advance()
+
+
+def _handle_normal_state(ctx: _ScanContext, NL: str) -> bool:
+    # return True if handled, False if default char
+    ch = ctx.ch
+    nxt = ctx.nxt
+
+    if ch == "/" and nxt == "*":
+        ctx.in_block_comment = True
+        ctx.append("  ")
+        ctx.advance(2)
+        return True
+
+    if ch == "-" and nxt == "-":
+        prev = ctx.stmt[ctx.i - 1] if ctx.i > 0 else " "
+        if prev.isspace() or ctx.i == 0:
+            ctx.in_line_comment = True
+            ctx.append("  ")
+            ctx.advance(2)
+            return True
+
+    if ch == "#":
+        ctx.in_line_comment = True
+        ctx.append(" ")
+        ctx.advance()
+        return True
+
+    if ch == "'":
+        ctx.in_single = True
+        ctx.append("'")
+        ctx.advance()
+        return True
+
+    if ch == '"':
+        ctx.in_double = True
+        ctx.append('"')
+        ctx.advance()
+        return True
+
+    if ch == "`":
+        ctx.in_backtick = True
+        ctx.append("`")
+        ctx.advance()
+        return True
+
+    return False
+
+
 class SqlAnalyzer:
     ENGINE = "internal:sql_analyzer"
 
@@ -249,122 +380,24 @@ class SqlAnalyzer:
         - Preserves quoted identifiers in double-quotes/backticks/brackets.
         """
         NL = chr(10)
+        ctx = _ScanContext(stmt)
 
-        out: List[str] = []
-        n = len(stmt)
-        i = 0
+        while ctx.i < ctx.n:
+            if ctx.in_line_comment:
+                _handle_line_comment(ctx, NL)
+            elif ctx.in_block_comment:
+                _handle_block_comment(ctx, NL)
+            elif ctx.in_single:
+                _handle_single_quote(ctx, NL)
+            elif ctx.in_double:
+                _handle_double_quote(ctx)
+            elif ctx.in_backtick:
+                _handle_backtick(ctx)
+            elif not _handle_normal_state(ctx, NL):
+                ctx.append(ctx.ch)
+                ctx.advance()
 
-        in_single = False
-        in_double = False
-        in_backtick = False
-        in_line_comment = False
-        in_block_comment = False
-
-        while i < n:
-            ch = stmt[i]
-            nxt = stmt[i + 1] if i + 1 < n else ""
-
-            if in_line_comment:
-                if ch == NL:
-                    in_line_comment = False
-                    out.append(ch)
-                else:
-                    out.append(" ")
-                i += 1
-                continue
-
-            if in_block_comment:
-                if ch == "*" and nxt == "/":
-                    out.append(" ")
-                    out.append(" ")
-                    in_block_comment = False
-                    i += 2
-                    continue
-                out.append(ch if ch == NL else " ")
-                i += 1
-                continue
-
-            if in_single:
-                if ch == "'" and nxt == "'":
-                    out.append("'")
-                    out.append("'")
-                    i += 2
-                    continue
-                if ch == "'":
-                    in_single = False
-                    out.append(ch)
-                    i += 1
-                    continue
-                out.append(ch if ch == NL else " ")
-                i += 1
-                continue
-
-            if in_double:
-                if ch == '"' and nxt == '"':
-                    out.append(ch)
-                    out.append(nxt)
-                    i += 2
-                    continue
-                if ch == '"':
-                    in_double = False
-                out.append(ch)
-                i += 1
-                continue
-
-            if in_backtick:
-                if ch == "`" and nxt == "`":
-                    out.append(ch)
-                    out.append(nxt)
-                    i += 2
-                    continue
-                if ch == "`":
-                    in_backtick = False
-                out.append(ch)
-                i += 1
-                continue
-
-            if ch == "/" and nxt == "*":
-                in_block_comment = True
-                out.append(" ")
-                out.append(" ")
-                i += 2
-                continue
-
-            if ch == "-" and nxt == "-":
-                prev = stmt[i - 1] if i > 0 else " "
-                if prev.isspace() or i == 0:
-                    in_line_comment = True
-                    out.append(" ")
-                    out.append(" ")
-                    i += 2
-                    continue
-
-            if ch == "#":
-                in_line_comment = True
-                out.append(" ")
-                i += 1
-                continue
-
-            if ch == "'":
-                in_single = True
-                out.append(ch)
-                i += 1
-                continue
-            if ch == '"':
-                in_double = True
-                out.append(ch)
-                i += 1
-                continue
-            if ch == "`":
-                in_backtick = True
-                out.append(ch)
-                i += 1
-                continue
-
-            out.append(ch)
-            i += 1
-
-        return "".join(out)
+        return "".join(ctx.out)
 
     def _create_issue(
         self,

@@ -13,7 +13,7 @@ def test_arm_secrets_detection():
     # Test case: Insecure parameters
     content = """
     {
-        "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+        "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",  # noqa: E501
         "contentVersion": "1.0.0.0",
         "parameters": {
             "adminPassword": {

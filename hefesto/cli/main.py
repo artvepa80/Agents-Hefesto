@@ -37,50 +37,46 @@ def _detect_command(argv: list[str]) -> str:
     if any(a == "--version" for a in tokens):
         return "version"
 
-    cmd_parts: list[str] = []
+    cmd_parts = _parse_command_parts(tokens)
 
+    if not cmd_parts:
+        return "unknown"
+    return " ".join(cmd_parts)
+
+
+def _parse_command_parts(tokens: list[str]) -> list[str]:
+    cmd_parts: list[str] = []
     i = 0
     while i < len(tokens):
         t = tokens[i]
 
-        # Skip global flags (and possible values)
         if t.startswith("-"):
-            # Flags that carry a value: --port 8080, --output json, etc.
             if "=" not in t and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
-                # Heuristic: only treat next token as value if current looks like an option
-                # (click options always start with -)
                 i += 2
             else:
                 i += 1
             continue
 
-        # First positional is main command
         cmd_parts.append(t)
         i += 1
 
-        # If the command is a group (telemetry), capture one more subcommand if present
         if t == "telemetry":
-            # Skip any flags between group and subcommand (rare, but possible)
-            while i < len(tokens) and tokens[i].startswith("-"):
-                # skip flag + value
-                if (
-                    "=" not in tokens[i]
-                    and (i + 1) < len(tokens)
-                    and not tokens[i + 1].startswith("-")
-                ):
-                    i += 2
-                else:
-                    i += 1
-            if i < len(tokens) and not tokens[i].startswith("-"):
-                cmd_parts.append(tokens[i])
+            i = _parse_telemetry_subcommand(tokens, i, cmd_parts)
             break
 
-        # For non-group commands, stop after first command word
         break
+    return cmd_parts
 
-    if not cmd_parts:
-        return "unknown"
-    return " ".join(cmd_parts)
+
+def _parse_telemetry_subcommand(tokens, i, cmd_parts) -> int:
+    while i < len(tokens) and tokens[i].startswith("-"):
+        if "=" not in tokens[i] and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
+            i += 2
+        else:
+            i += 1
+    if i < len(tokens) and not tokens[i].startswith("-"):
+        cmd_parts.append(tokens[i])
+    return i
 
 
 def _exit(code: int) -> None:
@@ -222,146 +218,43 @@ def analyze(
         hefesto analyze . --fail-on HIGH  # CI gate
         hefesto analyze . --quiet  # Summary only
     """
-    from hefesto.analyzers import (
-        BestPracticesAnalyzer,
-        CodeSmellAnalyzer,
-        ComplexityAnalyzer,
-        SecurityAnalyzer,
-    )
-    from hefesto.core.analysis_models import AnalysisReport, AnalysisSummary
-    from hefesto.core.analyzer_engine import AnalyzerEngine
-    from hefesto.reports import HTMLReporter, JSONReporter, TextReporter
-
     paths_list = list(paths)
-
-    if not quiet:
-        click.echo(f"Analyzing: {', '.join(paths_list)}")
-        click.echo(f"Minimum severity: {severity.upper()}")
+    _echo_analysis_config(paths_list, severity, exclude, quiet)
 
     # Parse exclude patterns
     exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
 
-    if exclude_patterns and not quiet:
-        click.echo(f"Excluding: {', '.join(exclude_patterns)}")
-
-    if not quiet:
-        click.echo("")
-
     try:
-        engine = AnalyzerEngine(severity_threshold=severity, verbose=not quiet)
+        engine = _setup_analyzer_engine(severity, quiet)
+        if not engine:
+            _exit(1)
 
-        # Register all analyzers
-        engine.register_analyzer(ComplexityAnalyzer())
-        engine.register_analyzer(CodeSmellAnalyzer())
-        engine.register_analyzer(SecurityAnalyzer())
-        engine.register_analyzer(BestPracticesAnalyzer())
-
-        # Run analysis on all paths
-        all_file_results = []
-        total_loc = 0
-        total_duration = 0.0
-
-        for path in paths_list:
-            report = engine.analyze_path(path, exclude_patterns)
-            all_file_results.extend(report.file_results)
-            total_loc += report.summary.total_loc
-            total_duration += report.summary.duration_seconds
-
-        # Get all issues from combined file results
-        all_issues = []
-        for file_result in all_file_results:
-            all_issues.extend(file_result.issues)
-
-        # Create combined report
-        combined_summary = AnalysisSummary(
-            files_analyzed=len(all_file_results),
-            total_issues=len(all_issues),
-            critical_issues=sum(1 for i in all_issues if i.severity.value == "CRITICAL"),
-            high_issues=sum(1 for i in all_issues if i.severity.value == "HIGH"),
-            medium_issues=sum(1 for i in all_issues if i.severity.value == "MEDIUM"),
-            low_issues=sum(1 for i in all_issues if i.severity.value == "LOW"),
-            total_loc=total_loc,
-            duration_seconds=total_duration,
+        all_file_results, total_loc, total_duration = _run_analysis_loop(
+            engine, paths_list, exclude_patterns
         )
 
-        combined_report = AnalysisReport(
-            summary=combined_summary,
-            file_results=all_file_results,
+        combined_report = _generate_report(
+            all_file_results, total_loc, total_duration, output, save_html
         )
 
-        # Apply max_issues limit if specified (affects display only)
-        display_issues = combined_report.get_all_issues()
-        if max_issues and len(display_issues) > max_issues:
-            if not quiet:
-                click.echo(f"(Showing first {max_issues} of {len(display_issues)} issues)")
+        _print_report(combined_report, output, save_html, quiet, max_issues)
 
-        # Generate output
-        if output == "text":
-            reporter = TextReporter()
-            result = reporter.generate(combined_report)
-            click.echo(result)
-        elif output == "json":
-            reporter = JSONReporter()
-            result = reporter.generate(combined_report)
-            click.echo(result)
-        elif output == "html":
-            reporter = HTMLReporter()
-            result = reporter.generate(combined_report)
-
-            if save_html:
-                with open(save_html, "w", encoding="utf-8") as f:
-                    f.write(result)
-                click.echo(f"HTML report saved to: {save_html}")
-            else:
-                click.echo(result)
-
-        # Determine exit code based on --fail-on
-        exit_code = 0
-
-        if fail_on:
-            severity_order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-            fail_on_idx = severity_order.index(fail_on.upper())
-
-            # Parse exclude_types for gate filtering
-            excluded_types = set()
-            if exclude_types:
-                excluded_types = {t.strip().upper() for t in exclude_types.split(",") if t.strip()}
-
-            # Filter issues for gate evaluation (exclude specified types)
-            gate_issues = [
-                issue
-                for issue in combined_report.get_all_issues()
-                if issue.issue_type.value not in excluded_types
-            ]
-
-            for issue in gate_issues:
-                issue_idx = severity_order.index(issue.severity.value)
-                if issue_idx >= fail_on_idx:
-                    exit_code = 2
-                    break
-
-            if exit_code == 2 and not quiet:
-                click.echo(
-                    f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)"
-                )
-            elif not quiet:
-                if excluded_types:
-                    click.echo(
-                        f"\nExit code: 0 (no {fail_on.upper()}+ issues"
-                        f" after excluding {len(excluded_types)} type(s))"
-                    )
-                else:
-                    click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
-        else:
-            # Default: exit 1 only for CRITICAL
-            if combined_report.summary.critical_issues > 0:
-                exit_code = 1
-
+        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet)
         _exit(exit_code)
 
     except Exception as e:
         click.echo(f"Analysis failed: {e}", err=True)
         _exit(1)
+
+
+def _echo_analysis_config(paths_list, severity, exclude, quiet):
+    if not quiet:
+        click.echo(f"Analyzing: {', '.join(paths_list)}")
+        click.echo(f"Minimum severity: {severity.upper()}")
+
+    exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
+    if exclude_patterns and not quiet:
+        click.echo(f"Excluding: {', '.join(exclude_patterns)}")
 
 
 @cli.command()
@@ -551,6 +444,15 @@ def status():
     click.echo("HEFESTO LICENSE STATUS")
     click.echo("═" * 60)
 
+    _print_license_header(license_key, tier_info)
+    _print_usage_limits(tier_info["limits"])
+    _print_features(tier_info["limits"]["features"])
+    _print_upgrade_info(tier_info)
+
+    click.echo("=" * 60)
+
+
+def _print_license_header(license_key, tier_info):
     if license_key:
         click.echo(f"Tier: {tier_info['tier_display']}")
         click.echo(f"License: {license_key}")
@@ -558,11 +460,11 @@ def status():
         click.echo("Tier: Free")
         click.echo("License: Not activated")
 
+
+def _print_usage_limits(limits):
     click.echo("\n" + "─" * 60)
     click.echo("USAGE LIMITS")
     click.echo("─" * 60)
-
-    limits = tier_info["limits"]
     click.echo(f"Repositories: {limits['repositories']}")
     loc_val = limits["loc_monthly"]
     if isinstance(loc_val, str):
@@ -575,6 +477,8 @@ def status():
     else:
         click.echo(f"Analysis runs: {limits['analysis_runs']}/month")
 
+
+def _print_features(features):
     click.echo("\n" + "─" * 60)
     click.echo("AVAILABLE FEATURES")
     click.echo("─" * 60)
@@ -593,10 +497,12 @@ def status():
         "analytics_dashboard": "Usage analytics dashboard",
     }
 
-    for feature in limits["features"]:
+    for feature in features:
         if feature in feature_names:
             click.echo(f"[x] {feature_names[feature]}")
 
+
+def _print_upgrade_info(tier_info):
     if tier_info["tier"] == "free":
         click.echo("\n" + "=" * 60)
         click.echo("UPGRADE TO PROFESSIONAL")
@@ -605,8 +511,6 @@ def status():
         click.echo(f"   -> {tier_info['founding_url']}")
         click.echo("\n   Or start 14-day free trial:")
         click.echo(f"   -> {tier_info['upgrade_url']}")
-
-    click.echo("=" * 60)
 
 
 @cli.command()
@@ -683,91 +587,11 @@ def install_hooks(force: bool):
         hefesto install-hooks
         hefesto install-hooks --force
     """
-    import os
-    import shutil
-    import stat
-    import subprocess
-    from pathlib import Path
-
-    # Find repo root
-    repo_root = None
-    try:
-        # Try asking git directly
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
-        )
-        repo_root = Path(result.stdout.strip())
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # Fallback: walk up looking for .git
-        current = Path.cwd()
-        for parent in [current] + list(current.parents):
-            if (parent / ".git").exists():
-                repo_root = parent
-                break
-
+    repo_root = _find_repo_root()
     if not repo_root:
-        click.echo("Error: Not a git repository!", err=True)
-        click.echo("   Run this command from within a git repository.")
         _exit(1)
 
-    git_dir = repo_root / ".git"
-
-    # Source hook file (scripts/git-hooks/pre-push)
-    source_hook = repo_root / "scripts" / "git-hooks" / "pre-push"
-
-    if not source_hook.exists():
-        click.echo(f"Error: Hook source not found at {source_hook}", err=True)
-        click.echo("This command requires scripts/git-hooks/pre-push to exist in the current repo.")
-        _exit(1)
-
-    # Create hooks directory if it doesn't exist
-    hooks_dir = git_dir / "hooks"
-    hooks_dir.mkdir(exist_ok=True)
-
-    # Destination hook file
-    dest_hook = hooks_dir / "pre-push"
-
-    # Check if hook already exists
-    if dest_hook.exists() and not force:
-        # Check if contents are identical
-        try:
-            with open(source_hook, "r") as src, open(dest_hook, "r") as dst:
-                if src.read() == dst.read():
-                    click.echo("Pre-push hook is already up to date.")
-                    return
-        except Exception:
-            pass  # Continue to overwrite check
-
-        click.echo(f"Pre-push hook already exists at {dest_hook}")
-        click.echo("Use --force to overwrite.")
-        _exit(1)
-
-    # Install hook
-    try:
-        shutil.copy2(source_hook, dest_hook)
-
-        # Make executable
-        st = os.stat(dest_hook)
-        os.chmod(dest_hook, st.st_mode | stat.S_IEXEC)
-
-        # Validate content (check for new exclusions)
-        with open(dest_hook, "r") as f:
-            content = f.read()
-            if "--exclude-types" not in content:
-                click.echo(
-                    "ERROR: Installed hook does not appear to contain"
-                    " --exclude-types configuration.",
-                    err=True,
-                )
-                click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
-                _exit(1)
-
-        click.echo(f"Successfully installed pre-push hook to {dest_hook}")
-        click.echo("This hook runs 'hefesto analyze' with security gate defaults.")
-
-    except Exception as e:
-        click.echo(f"Error installing hook: {e}", err=True)
-        _exit(1)
+    _install_pre_push(repo_root, force)
 
 
 @cli.group()
@@ -835,3 +659,224 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+def _find_repo_root():
+    import subprocess
+    from pathlib import Path
+
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
+        )
+        return Path(result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        current = Path.cwd()
+        for parent in [current] + list(current.parents):
+            if (parent / ".git").exists():
+                return parent
+
+    click.echo("Error: Not a git repository!", err=True)
+    click.echo("   Run this command from within a git repository.")
+    return None
+
+
+def _install_pre_push(repo_root, force):
+    import os
+    import shutil
+    import stat
+
+    git_dir = repo_root / ".git"
+    source_hook = repo_root / "scripts" / "git-hooks" / "pre-push"
+
+    if not source_hook.exists():
+        click.echo(f"Error: Hook source not found at {source_hook}", err=True)
+        click.echo("This command requires scripts/git-hooks/pre-push to exist in the current repo.")
+        _exit(1)
+
+    hooks_dir = git_dir / "hooks"
+    hooks_dir.mkdir(exist_ok=True)
+    dest_hook = hooks_dir / "pre-push"
+
+    if dest_hook.exists() and not force:
+        try:
+            with open(source_hook, "r") as src, open(dest_hook, "r") as dst:
+                if src.read() == dst.read():
+                    click.echo("Pre-push hook is already up to date.")
+                    return
+        except Exception:
+            pass
+        click.echo(f"Pre-push hook already exists at {dest_hook}")
+        click.echo("Use --force to overwrite.")
+        _exit(1)
+
+    try:
+        shutil.copy2(source_hook, dest_hook)
+        st = os.stat(dest_hook)
+        os.chmod(dest_hook, st.st_mode | stat.S_IEXEC)
+
+        with open(dest_hook, "r") as f:
+            content = f.read()
+            if "--exclude-types" not in content:
+                click.echo(
+                    "ERROR: Installed hook does not appear to contain"
+                    " --exclude-types configuration.",
+                    err=True,
+                )
+                click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
+                _exit(1)
+
+        click.echo(f"Successfully installed pre-push hook to {dest_hook}")
+        click.echo("This hook runs 'hefesto analyze' with security gate defaults.")
+
+    except Exception as e:
+        click.echo(f"Error installing hook: {e}", err=True)
+        _exit(1)
+
+
+def _setup_analyzer_engine(severity, quiet):
+    from hefesto.analyzers import (
+        BestPracticesAnalyzer,
+        CodeSmellAnalyzer,
+        ComplexityAnalyzer,
+        SecurityAnalyzer,
+    )
+    from hefesto.core.analyzer_engine import AnalyzerEngine
+
+    if not quiet:
+        import click
+
+        click.echo("")
+
+    try:
+        engine = AnalyzerEngine(severity_threshold=severity, verbose=not quiet)
+
+        # Register all analyzers
+        engine.register_analyzer(ComplexityAnalyzer())
+        engine.register_analyzer(CodeSmellAnalyzer())
+        engine.register_analyzer(SecurityAnalyzer())
+        engine.register_analyzer(BestPracticesAnalyzer())
+        return engine
+    except Exception as e:
+        import click
+
+        click.echo(f"Analysis failed: {e}", err=True)
+        return None
+
+
+def _run_analysis_loop(engine, paths_list, exclude_patterns):
+    all_file_results = []
+    total_loc = 0
+    total_duration = 0.0
+
+    for path in paths_list:
+        report = engine.analyze_path(path, exclude_patterns)
+        all_file_results.extend(report.file_results)
+        total_loc += report.summary.total_loc
+        total_duration += report.summary.duration_seconds
+
+    return all_file_results, total_loc, total_duration
+
+
+def _generate_report(all_file_results, total_loc, total_duration, output, save_html):
+    from hefesto.core.analysis_models import AnalysisReport, AnalysisSummary
+
+    # Get all issues from combined file results
+    all_issues = []
+    for file_result in all_file_results:
+        all_issues.extend(file_result.issues)
+
+    # Create combined report
+    combined_summary = AnalysisSummary(
+        files_analyzed=len(all_file_results),
+        total_issues=len(all_issues),
+        critical_issues=sum(1 for i in all_issues if i.severity.value == "CRITICAL"),
+        high_issues=sum(1 for i in all_issues if i.severity.value == "HIGH"),
+        medium_issues=sum(1 for i in all_issues if i.severity.value == "MEDIUM"),
+        low_issues=sum(1 for i in all_issues if i.severity.value == "LOW"),
+        total_loc=total_loc,
+        duration_seconds=total_duration,
+    )
+
+    combined_report = AnalysisReport(
+        summary=combined_summary,
+        file_results=all_file_results,
+    )
+    return combined_report
+
+
+def _print_report(combined_report, output, save_html, quiet, max_issues):
+    import click
+
+    from hefesto.reports import HTMLReporter, JSONReporter, TextReporter
+
+    # Apply max_issues limit if specified (affects display only)
+    display_issues = combined_report.get_all_issues()
+    if max_issues and len(display_issues) > max_issues:
+        if not quiet:
+            click.echo(f"(Showing first {max_issues} of {len(display_issues)} issues)")
+
+    # Generate output
+    if output == "text":
+        reporter = TextReporter()
+        result = reporter.generate(combined_report)
+        click.echo(result)
+    elif output == "json":
+        reporter = JSONReporter()
+        result = reporter.generate(combined_report)
+        click.echo(result)
+    elif output == "html":
+        reporter = HTMLReporter()
+        result = reporter.generate(combined_report)
+
+        if save_html:
+            with open(save_html, "w", encoding="utf-8") as f:
+                f.write(result)
+            click.echo(f"HTML report saved to: {save_html}")
+        else:
+            click.echo(result)
+
+
+def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
+    import click
+
+    exit_code = 0
+
+    if fail_on:
+        severity_order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        fail_on_idx = severity_order.index(fail_on.upper())
+
+        # Parse exclude_types for gate filtering
+        excluded_types = set()
+        if exclude_types:
+            excluded_types = {t.strip().upper() for t in exclude_types.split(",") if t.strip()}
+
+        # Filter issues for gate evaluation (exclude specified types)
+        gate_issues = [
+            issue
+            for issue in combined_report.get_all_issues()
+            if issue.issue_type.value not in excluded_types
+        ]
+
+        for issue in gate_issues:
+            issue_idx = severity_order.index(issue.severity.value)
+            if issue_idx >= fail_on_idx:
+                exit_code = 2
+                break
+
+        if exit_code == 2 and not quiet:
+            click.echo(f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)")
+        elif not quiet:
+            if excluded_types:
+                click.echo(
+                    f"\nExit code: 0 (no {fail_on.upper()}+ issues"
+                    f" after excluding {len(excluded_types)} type(s))"
+                )
+            else:
+                click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
+    else:
+        # Default: exit 1 only for CRITICAL
+        if combined_report.summary.critical_issues > 0:
+            exit_code = 1
+
+    return exit_code

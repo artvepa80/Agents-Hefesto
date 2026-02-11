@@ -54,7 +54,7 @@ class ArmAnalyzer:
                             format="arm",
                             rule_id="ARM_S001",
                             severity="MEDIUM",
-                            evidence=f"Sensitive parameter '{param_name}' uses type 'string' instead of 'secureString'.",
+                            evidence=f"Sensitive parameter '{param_name}' uses type 'string' instead of 'secureString'.",  # noqa: E501
                             location=CloudLocation(path=file_path),
                             confidence="MEDIUM",
                             remediation="Change type to 'secureString'.",
@@ -72,7 +72,6 @@ class ArmAnalyzer:
     def _check_insecure_defaults(
         self, resources: List[Dict[str, Any]], file_path: str, findings: List[CloudFinding]
     ):
-        from ..detectors_insecure_defaults import InsecureDefaultsDetector
 
         for res in resources:
             if not isinstance(res, dict):
@@ -94,7 +93,7 @@ class ArmAnalyzer:
 
             # 2. Storage Accounts
             elif res_type == "Microsoft.Storage/storageAccounts":
-                # Check allowBlobPublicAccess (default is null/true in older API versions, modern is false)
+                # Check allowBlobPublicAccess (default is null/true in older API versions, modern is false)  # noqa: E501
                 # But if explicitly true -> HIGH
                 # Also check publicNetworkAccess (Enabled/Disabled)
 
@@ -105,14 +104,14 @@ class ArmAnalyzer:
                             format="arm",
                             rule_id="ARM_I001",
                             severity="HIGH",
-                            evidence=f"Storage Account '{res.get('name')}' has allowBlobPublicAccess set to true.",
+                            evidence=f"Storage Account '{res.get('name')}' has allowBlobPublicAccess set to true.",  # noqa: E501
                             location=CloudLocation(path=file_path),
                             confidence="HIGH",
                             remediation="Set allowBlobPublicAccess to false.",
                         )
                     )
 
-                # Check publicNetworkAccess (if 'Enabled' and no firewall rules -> risky), simplified for v1
+                # Check publicNetworkAccess (if 'Enabled' and no firewall rules -> risky), simplified for v1  # noqa: E501
                 network_acls = props.get("networkAcls", {})
                 default_action = network_acls.get("defaultAction")
                 if default_action == "Allow":
@@ -121,7 +120,7 @@ class ArmAnalyzer:
                             format="arm",
                             rule_id="ARM_I001",
                             severity="MEDIUM",
-                            evidence=f"Storage Account '{res.get('name')}' allows default public access (networkAcls.defaultAction: Allow).",
+                            evidence=f"Storage Account '{res.get('name')}' allows default public access (networkAcls.defaultAction: Allow).",  # noqa: E501
                             location=CloudLocation(path=file_path),
                             confidence="MEDIUM",
                             remediation="Set defaultAction to Deny and use VNet rules.",
@@ -155,7 +154,7 @@ class ArmAnalyzer:
                             format="arm",
                             rule_id="ARM_I001",
                             severity="CRITICAL",
-                            evidence=f"NSG Rule '{nsg_name}/{name}' allows public access ({source}) to sensitive port ({dest_port}).",
+                            evidence=f"NSG Rule '{nsg_name}/{name}' allows public access ({source}) to sensitive port ({dest_port}).",  # noqa: E501
                             location=CloudLocation(path=file_path),
                             confidence="HIGH",
                             remediation="Restrict sourceAddressPrefix.",
@@ -194,7 +193,7 @@ class ArmAnalyzer:
                                 format="arm",
                                 rule_id="ARM_S001",
                                 severity="CRITICAL",
-                                evidence=f"Critical secret pattern found in '{current_path}': {match}",
+                                evidence=f"Critical secret pattern found in '{current_path}': {match}",  # noqa: E501
                                 location=CloudLocation(path=file_path),
                                 confidence="HIGH",
                                 remediation="Revoke secret. Use Key Vault.",

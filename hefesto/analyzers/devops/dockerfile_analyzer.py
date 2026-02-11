@@ -21,6 +21,17 @@ from hefesto.core.analysis_models import (
 )
 
 
+class _DockerContext:
+    def __init__(self):
+        self.has_from = False
+        self.last_user = None
+        self.has_any_user = False
+        self.issues: List[AnalysisIssue] = []
+
+    def add_issue(self, issue: AnalysisIssue):
+        self.issues.append(issue)
+
+
 class DockerfileAnalyzer:
     ENGINE = "internal:dockerfile_analyzer"
 
@@ -135,179 +146,212 @@ class DockerfileAnalyzer:
     RE_USER = re.compile(r"^\s*USER\s+(?P<user>\S+)", re.IGNORECASE)
 
     def analyze(self, file_path: str, content: str) -> List[AnalysisIssue]:
-        issues: List[AnalysisIssue] = []
+        ctx = _DockerContext()
         lines = content.split("\n")
-
-        has_from = False
-        last_user: Optional[str] = None
-        has_any_user = False
 
         for line_num, raw in enumerate(lines, start=1):
             line = raw.strip()
             if not line or line.startswith("#"):
                 continue
 
-            m_from = self.RE_FROM.match(line)
-            if m_from:
-                has_from = True
-                image_ref = m_from.group("img")
+            self._analyze_line(ctx, file_path, line_num, raw, line)
 
-                if image_ref.startswith("$"):
-                    continue
+        self._check_final_state(ctx, file_path, lines)
+        return ctx.issues
 
-                if image_ref.lower().endswith(":latest"):
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            1,
-                            AnalysisIssueType.DOCKERFILE_LATEST_TAG,
-                            AnalysisIssueSeverity.HIGH,
-                            "Using :latest tag is non-reproducible and risky",
-                            "Pin to a specific tag or digest (e.g., python:3.11-slim)",
-                            0.95,
-                            "DOCKER002",
-                            raw,
-                            extra={"image": image_ref},
-                        )
-                    )
-                elif (
-                    ":" not in image_ref and "@" not in image_ref and image_ref.lower() != "scratch"
-                ):
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            1,
-                            AnalysisIssueType.DOCKERFILE_LATEST_TAG,
-                            AnalysisIssueSeverity.MEDIUM,
-                            f"No tag specified for '{image_ref}' (defaults to latest)",
-                            f"Add explicit version tag (e.g., {image_ref}:<version>)",
-                            0.85,
-                            "DOCKER003",
-                            raw,
-                            extra={"image": image_ref},
-                        )
-                    )
+    def _analyze_line(
+        self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str
+    ):
+        if self._check_from(ctx, file_path, line_num, raw, line):
+            pass
 
-            m_user = self.RE_USER.match(line)
-            if m_user:
-                has_any_user = True
-                last_user = m_user.group("user")
+        if self._check_user(ctx, line):
+            pass
 
-            if self.ADD_REMOTE[0].search(line):
-                issues.append(
+        self._check_remote(ctx, file_path, line_num, raw, line)
+        self._check_rce(ctx, file_path, line_num, raw, line)
+        self._check_secrets(ctx, file_path, line_num, raw, line)
+        self._check_perms(ctx, file_path, line_num, raw, line)
+
+    def _check_from(
+        self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str
+    ) -> bool:
+        m_from = self.RE_FROM.match(line)
+        if not m_from:
+            return False
+
+        ctx.has_from = True
+        image_ref = m_from.group("img")
+        if image_ref.startswith("$"):
+            return True
+
+        if image_ref.lower().endswith(":latest"):
+            ctx.add_issue(
+                self._create_issue(
+                    file_path,
+                    line_num,
+                    1,
+                    AnalysisIssueType.DOCKERFILE_LATEST_TAG,
+                    AnalysisIssueSeverity.HIGH,
+                    "Using :latest tag is non-reproducible and risky",
+                    "Pin to a specific tag or digest (e.g., python:3.11-slim)",
+                    0.95,
+                    "DOCKER002",
+                    raw,
+                    extra={"image": image_ref},
+                )
+            )
+        elif ":" not in image_ref and "@" not in image_ref and image_ref.lower() != "scratch":
+            ctx.add_issue(
+                self._create_issue(
+                    file_path,
+                    line_num,
+                    1,
+                    AnalysisIssueType.DOCKERFILE_LATEST_TAG,
+                    AnalysisIssueSeverity.MEDIUM,
+                    f"No tag specified for '{image_ref}' (defaults to latest)",
+                    f"Add explicit version tag (e.g., {image_ref}:<version>)",
+                    0.85,
+                    "DOCKER003",
+                    raw,
+                    extra={"image": image_ref},
+                )
+            )
+        return True
+
+    def _check_user(self, ctx: _DockerContext, line: str) -> bool:
+        m_user = self.RE_USER.match(line)
+        if m_user:
+            ctx.has_any_user = True
+            ctx.last_user = m_user.group("user")
+            return True
+        return False
+
+    def _check_remote(
+        self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str
+    ):
+        if self.ADD_REMOTE[0].search(line):
+            ctx.add_issue(
+                self._create_issue(
+                    file_path,
+                    line_num,
+                    1,
+                    AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
+                    self.ADD_REMOTE[3],
+                    self.ADD_REMOTE[1],
+                    "Prefer COPY local files or download with checksum in RUN",
+                    self.ADD_REMOTE[2],
+                    self.ADD_REMOTE[4],
+                    raw,
+                )
+            )
+
+    def _check_rce(self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str):
+        for pat, msg, conf, sev, rid in self.RUN_RCE_PATTERNS:
+            mm = pat.search(line)
+            if mm:
+                ctx.add_issue(
                     self._create_issue(
                         file_path,
                         line_num,
-                        1,
+                        mm.start() + 1,
                         AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
-                        self.ADD_REMOTE[3],
-                        self.ADD_REMOTE[1],
-                        "Prefer COPY local files or download with checksum in RUN",
-                        self.ADD_REMOTE[2],
-                        self.ADD_REMOTE[4],
+                        sev,
+                        msg,
+                        "Download first, verify checksum, then execute.",
+                        conf,
+                        rid,
                         raw,
                     )
                 )
+                break
 
-            for pat, msg, conf, sev, rid in self.RUN_RCE_PATTERNS:
-                mm = pat.search(line)
-                if mm:
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            mm.start() + 1,
-                            AnalysisIssueType.DOCKERFILE_INSECURE_BASE_IMAGE,
-                            sev,
-                            msg,
-                            "Download first, verify checksum, then execute.",
-                            conf,
-                            rid,
-                            raw,
-                        )
+    def _check_secrets(
+        self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str
+    ):
+        # Strict secrets
+        for pat, msg, conf, sev, rid in self.SECRET_STRICT:
+            mm = pat.search(line)
+            if mm:
+                ctx.add_issue(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        mm.start() + 1,
+                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                        sev,
+                        msg,
+                        "Do not bake secrets into images. Use runtime secrets.",
+                        conf,
+                        rid,
+                        raw,
                     )
-                    break
+                )
+                return
 
-            for pat, msg, conf, sev, rid in self.SECRET_STRICT:
-                mm = pat.search(line)
-                if mm:
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            mm.start() + 1,
-                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                            sev,
-                            msg,
-                            "Do not bake secrets into images. Use runtime secrets.",
-                            conf,
-                            rid,
-                            raw,
-                        )
+        # Generic secrets
+        for pat, msg, conf, sev, rid in self.SECRET_GENERIC:
+            mm = pat.search(line)
+            if mm:
+                ctx.add_issue(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        mm.start() + 1,
+                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                        sev,
+                        msg,
+                        "Avoid ARG/ENV secrets. Use runtime secret injection.",
+                        conf,
+                        rid,
+                        raw,
                     )
-                    break
+                )
+                return
 
-            for pat, msg, conf, sev, rid in self.SECRET_GENERIC:
-                mm = pat.search(line)
-                if mm:
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            mm.start() + 1,
-                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                            sev,
-                            msg,
-                            "Avoid ARG/ENV secrets. Use runtime secret injection.",
-                            conf,
-                            rid,
-                            raw,
-                        )
+        # Sensitive COPY
+        for pat, msg, conf, sev, rid in self.COPY_SENSITIVE:
+            mm = pat.search(line)
+            if mm:
+                ctx.add_issue(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        mm.start() + 1,
+                        AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
+                        sev,
+                        msg,
+                        "Remove sensitive files from build context.",
+                        conf,
+                        rid,
+                        raw,
                     )
-                    break
+                )
+                return
 
-            for pat, msg, conf, sev, rid in self.COPY_SENSITIVE:
-                mm = pat.search(line)
-                if mm:
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            mm.start() + 1,
-                            AnalysisIssueType.DOCKERFILE_SECRET_EXPOSURE,
-                            sev,
-                            msg,
-                            "Remove sensitive files from build context.",
-                            conf,
-                            rid,
-                            raw,
-                        )
+    def _check_perms(self, ctx: _DockerContext, file_path: str, line_num: int, raw: str, line: str):
+        for pat, msg, conf, sev, rid in self.PERMS:
+            mm = pat.search(line)
+            if mm:
+                ctx.add_issue(
+                    self._create_issue(
+                        file_path,
+                        line_num,
+                        mm.start() + 1,
+                        AnalysisIssueType.DOCKERFILE_WEAK_PERMISSIONS,
+                        sev,
+                        msg,
+                        "Use least-privilege perms (e.g., 644 files, 755 dirs).",
+                        conf,
+                        rid,
+                        raw,
                     )
-                    break
+                )
+                break
 
-            for pat, msg, conf, sev, rid in self.PERMS:
-                mm = pat.search(line)
-                if mm:
-                    issues.append(
-                        self._create_issue(
-                            file_path,
-                            line_num,
-                            mm.start() + 1,
-                            AnalysisIssueType.DOCKERFILE_WEAK_PERMISSIONS,
-                            sev,
-                            msg,
-                            "Use least-privilege perms (e.g., 644 files, 755 dirs).",
-                            conf,
-                            rid,
-                            raw,
-                        )
-                    )
-                    break
-
-        if has_from and not has_any_user:
-            issues.append(
+    def _check_final_state(self, ctx: _DockerContext, file_path: str, lines: List[str]):
+        if ctx.has_from and not ctx.has_any_user:
+            ctx.add_issue(
                 self._create_issue(
                     file_path,
                     1,
@@ -321,8 +365,8 @@ class DockerfileAnalyzer:
                     lines[0] if lines else "",
                 )
             )
-        elif has_from and last_user is not None and last_user.lower() in ("root", "0"):
-            issues.append(
+        elif ctx.has_from and ctx.last_user is not None and ctx.last_user.lower() in ("root", "0"):
+            ctx.add_issue(
                 self._create_issue(
                     file_path,
                     1,
@@ -333,12 +377,10 @@ class DockerfileAnalyzer:
                     "Switch to a non-root user for runtime.",
                     0.85,
                     "DOCKER004",
-                    f"USER {last_user}",
-                    extra={"user": last_user},
+                    f"USER {ctx.last_user}",
+                    extra={"user": ctx.last_user},
                 )
             )
-
-        return issues
 
     def _create_issue(
         self,

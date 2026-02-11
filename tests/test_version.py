@@ -1,6 +1,6 @@
 import importlib
-import sys
 from importlib.metadata import PackageNotFoundError
+from pathlib import Path
 
 import pytest
 
@@ -66,7 +66,6 @@ def test_version_drift():
     This ensures the single source of truth is respected.
     """
     import sys
-    from pathlib import Path
 
     import hefesto
 

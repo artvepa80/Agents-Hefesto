@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, List
 
 try:
     import yaml
@@ -94,7 +94,9 @@ class HelmAnalyzer:
                         evidence=f"Possible hardcoded secret in '{path_str}' (key: {key}).",
                         location=CloudLocation(path=file_path),
                         confidence="MEDIUM",
-                        remediation="Use secrets management (e.g. external-secrets) or value references.",
+                        remediation=(
+                            "Use secrets management (e.g. external-secrets) or value references."
+                        ),
                     )
                 )
 
@@ -163,7 +165,10 @@ class HelmAnalyzer:
                         format="helm",
                         rule_id="HELM_I001",
                         severity="MEDIUM",
-                        evidence=f"allowPrivilegeEscalation: true found at '{current_path}.allowPrivilegeEscalation'",
+                        evidence=(
+                            f"allowPrivilegeEscalation: true found at "
+                            f"'{current_path}.allowPrivilegeEscalation'"
+                        ),
                         location=CloudLocation(path=file_path),
                         confidence="MEDIUM",
                         remediation="Set allowPrivilegeEscalation to false.",

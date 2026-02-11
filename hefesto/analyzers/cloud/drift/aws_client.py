@@ -46,7 +46,7 @@ class AwsClient:
                 return ec2.describe_security_groups(Filters=filters).get("SecurityGroups", [])
             else:
                 return []
-        except ClientError as e:
+        except ClientError:
             # TODO: In production, integrate with hefesto.core.logger
             # logging.getLogger(__name__).warning("AWS ClientError: %s", e)
             return []

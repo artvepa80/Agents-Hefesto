@@ -90,7 +90,10 @@ class ServerlessAnalyzer:
                                 evidence=f"Possible hardcoded secret in '{context}' (key: {key}).",
                                 location=CloudLocation(path=file_path),
                                 confidence="MEDIUM",
-                                remediation="Use SSM parameters or environment variable references (${env:...}).",
+                                remediation=(
+                                    "Use SSM parameters or environment variable "
+                                    "references (${env:...})."
+                                ),
                             )
                         )
 
@@ -145,7 +148,10 @@ class ServerlessAnalyzer:
                             format="serverless",
                             rule_id="SLS_I001",
                             severity="CRITICAL",
-                            evidence=f"IAM Statement at '{context}[{idx}]' allows Action:* on Resource:*.",
+                            evidence=(
+                                f"IAM Statement at '{context}[{idx}]' "
+                                "allows Action:* on Resource:*."
+                            ),
                             location=CloudLocation(path=file_path),
                             confidence="HIGH",
                             remediation="Least privilege: restrict Action and Resource.",

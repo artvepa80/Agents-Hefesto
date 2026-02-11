@@ -29,7 +29,9 @@ class AwsSgDriftDetector(DriftAnalyzer):
                         evidence=f"Drift check partial: {err}",
                         location=CloudLocation(path=file_path),
                         confidence="HIGH",
-                        remediation="Simplify template to remove intrinsic functions for drift checking.",
+                        remediation=(
+                            "Simplify template to remove intrinsic functions for drift checking."
+                        ),
                     )
                 )
 
@@ -46,7 +48,10 @@ class AwsSgDriftDetector(DriftAnalyzer):
                     evidence="Drift check skipped: missing AWS credentials/session.",
                     location=CloudLocation(path=file_path),
                     confidence="HIGH",
-                    remediation="Provide AWS credentials/session (boto3 Session) to enable live drift checks.",
+                    remediation=(
+                        "Provide AWS credentials/session (boto3 Session) "
+                        "to enable live drift checks."
+                    ),
                 )
             )
             return findings
@@ -65,10 +70,16 @@ class AwsSgDriftDetector(DriftAnalyzer):
                             format="cloud_drift",
                             rule_id="DRIFT_AWS_MAP_SKIPPED",
                             severity="MEDIUM",
-                            evidence="Drift check skipped: missing resource_map and resolver could not resolve.",
+                            evidence=(
+                                "Drift check skipped: missing resource_map "
+                                "and resolver could not resolve."
+                            ),
                             location=CloudLocation(path=file_path),
                             confidence="HIGH",
-                            remediation="Provide resource_map or configure resolver (stack name / tags / name heuristics).",
+                            remediation=(
+                                "Provide resource_map or configure resolver "
+                                "(stack name / tags / name heuristics)."
+                            ),
                         )
                     )
                     return findings
@@ -112,7 +123,9 @@ class AwsSgDriftDetector(DriftAnalyzer):
                         format="cloud_drift",
                         rule_id="DRIFT_AWS_SG_NOT_FOUND",
                         severity="HIGH",
-                        evidence=f"[{logical_id}] Resource mapped to {physical_id} not found in AWS.",
+                        evidence=(
+                            f"[{logical_id}] Resource mapped to {physical_id} not found in AWS."
+                        ),
                         location=CloudLocation(path=file_path),
                         confidence="HIGH",
                         remediation="Verify resource exists in region.",
@@ -194,11 +207,11 @@ class AwsSgDriftDetector(DriftAnalyzer):
             # Helper to safely cast ports to int if they come as string
             try:
                 from_p = int(from_p) if from_p is not None else -1
-            except:
+            except (ValueError, TypeError):
                 from_p = -1
             try:
                 to_p = int(to_p) if to_p is not None else -1
-            except:
+            except (ValueError, TypeError):
                 to_p = -1
 
             if proto == "-1":

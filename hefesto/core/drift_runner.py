@@ -53,7 +53,8 @@ class DriftRunner:
         resource_map = {}
         if resolver:
             # Resolve physical IDs
-            # Note: We pass None for session/credentials here to let resolver/factory handle it (e.g. env vars)
+            # Note: We pass None for session/credentials here to let resolver
+            # or factory handle it (e.g. env vars)
             # But ResourceResolver.resolve needs explicit credentials or relies on boto3 default
             res_result = resolver.resolve(template=template, region=region, credentials=None)
             resource_map = res_result.resource_map

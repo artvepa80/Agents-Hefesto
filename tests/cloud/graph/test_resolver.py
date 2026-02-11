@@ -1,11 +1,6 @@
 from unittest.mock import MagicMock
 
-from hefesto.analyzers.cloud.graph.resolver import (
-    NameResolver,
-    ResourceResolver,
-    StackResolver,
-    TagResolver,
-)
+from hefesto.analyzers.cloud.graph.resolver import ResourceResolver
 
 
 def test_resolver_merges_with_precedence():
