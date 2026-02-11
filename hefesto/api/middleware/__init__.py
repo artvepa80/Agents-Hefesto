@@ -12,10 +12,12 @@ Includes:
 import logging
 import time
 import uuid
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from hefesto.api.middleware.sandbox import PathSandboxMiddleware, SandboxConfig
 
 # Configure structured logging
 logging.basicConfig(
@@ -86,6 +88,12 @@ def add_middlewares(app, settings=None):
     app.add_middleware(RequestIDMiddleware)
 
     if settings is not None:
+        # Sandbox (always active)
+        app.add_middleware(
+            PathSandboxMiddleware,
+            config=SandboxConfig(workspace_root=settings.resolved_workspace_root),
+        )
+
         # Auth middleware (only active if api_key is set)
         if settings.api_key:
             from hefesto.api.middleware.auth import (
@@ -94,7 +102,8 @@ def add_middlewares(app, settings=None):
 
             app.add_middleware(ApiKeyMiddleware, api_key=settings.api_key)
 
-        # Rate limiting (only active if > 0)
+        # Rate limiting (ALWAYS active if > 0, defaults to 0 in settings but 60 in env/factory)
+        # We ensure it's registered if configured.
         if settings.api_rate_limit_per_minute > 0:
             from hefesto.api.middleware.rate_limit import (
                 RateLimitMiddleware,

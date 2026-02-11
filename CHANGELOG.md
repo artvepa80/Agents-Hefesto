@@ -5,6 +5,55 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.0] - 2026-02-11 — Patch S: API Security Defaults
+### Added — Patch S: API Security Defaults
+- **Secure-by-Default**:
+  - Host binds to `127.0.0.1` by default (was `0.0.0.0` depending on env).
+  - Docs (`/docs`, `/redoc`) DISABLED by default. Enable via `HEFESTO_EXPOSE_DOCS=1`.
+- **Hardening**:
+  - **Path Sandbox**: Restricts file access to `HEFESTO_WORKSPACE_ROOT` (traversal protection).
+  - **CORS**: Strict allowlist support; blocking `*` + credentials.
+  - **API Key**: Optional `X-API-Key` auth via `HEFESTO_API_KEY`.
+  - **Rate Limiting**: Token bucket per IP/Key via `HEFESTO_RATE_LIMIT_PER_MINUTE`.
+
+### Fixed — Patch S: API Security Defaults (Fixups)
+- **Test Isolation**: Hardened `test_security_defaults.py` with `monkeypatch` to prevent host env leakage.
+- **Lazy App Creation**: Refactored `hefesto/cli` to use `create_app` factory, removing module-level side effects.
+- **Smoke Test**: Updated Cloud Run check to probe `/health` (since `/docs` is now disabled).
+- **Documentation**: Standardized API contact email to `support@narapallc.com`.
+
+### Added — Patch O: Telemetry Defensive Defaults
+- **Validation**: Enforced strict clamping for telemetry env vars (Bytes: 1KB-50MB, Files: 0-20).
+- **Hardening**: `clear_data()` safely targets only active and rotated telemetry files.
+- **Stability**: Prevented crashes or unlimited file growth from malformed `HEFESTO_TELEMETRY_*` vars.
+
+### Added — Patch P: Robust CLI Command Detection
+- **Telemetry**: Improved `_detect_command` to correctly identify subcommands (e.g., `telemetry status`) and ignore global flags.
+- **Reliability**: Events now consistently report the actual command executed, even when flags are interleaved.
+
+### Changed — Patch R5: Single Source of Truth Versioning
+- **Versioning**: Centralized version in `pyproject.toml`.
+- **Dynamic Resolution**: `__version__` is now read from installed package metadata with a safe `0.0.0+dev` fallback for source execution.
+
+## [4.7.1] - 2026-02-11 — Patch N & R: Enterprise & Release Hardening
+
+### Added — Patch R: Release Automation
+- **Unified CI**: Consolidated `ci.yml` with blocking type-checking (mypy) and coverage.
+- **Automated Releases**:
+  - `v*` tags trigger build & publish to PyPI.
+  - `v*rc*` tags trigger build & publish to TestPyPI.
+  - Fail-fast verification: ensures git tag matches `pyproject.toml` version.
+- **Cloud Run Deployment**:
+  - `main` branch deploys to Staging (`hefesto-api-staging`).
+  - `v*` tags deploy to Production (`hefesto-api-prod`).
+
+### Added — Patch N: Enterprise Telemetry Hygiene
+- **CLI Commands**:
+  - `hefesto telemetry status`: View enabled state, storage size, and schema version.
+  - `hefesto telemetry clear`: Deterministic cleanup of local data (with `--yes` flag for CI).
+- **Robust Rotation**: Improved file rotation logic (deterministic `MAX_BYTES`, safe deletion).
+- **Schema Versioning**: Telemetry events now include `schema_version: 1` for forward compatibility.
+
 ## [4.7.0] - 2026-02-10 — Patch C: API Hardening
 
 ### Added — API Security Defaults

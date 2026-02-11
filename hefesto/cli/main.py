@@ -14,6 +14,77 @@ import click
 
 from hefesto.__version__ import __version__
 from hefesto.config import get_settings
+from hefesto.telemetry.client import TelemetryClient
+
+# Initialize telemetry
+telemetry = TelemetryClient()
+
+
+def _detect_command(argv: list[str]) -> str:
+    """
+    Return a stable telemetry command name:
+      - "serve"
+      - "analyze"
+      - "telemetry status"
+      - "telemetry clear"
+    Ignores global flags like --help/--version and their values.
+    """
+    tokens = argv[1:]  # skip program name
+
+    # Pre-checks for help/version which might not be caught by generic logic
+    if any(a in ("-h", "--help") for a in tokens):
+        return "help"
+    if any(a == "--version" for a in tokens):
+        return "version"
+
+    cmd_parts: list[str] = []
+
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+
+        # Skip global flags (and possible values)
+        if t.startswith("-"):
+            # Flags that carry a value: --port 8080, --output json, etc.
+            if "=" not in t and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
+                # Heuristic: only treat next token as value if current looks like an option
+                # (click options always start with -)
+                i += 2
+            else:
+                i += 1
+            continue
+
+        # First positional is main command
+        cmd_parts.append(t)
+        i += 1
+
+        # If the command is a group (telemetry), capture one more subcommand if present
+        if t == "telemetry":
+            # Skip any flags between group and subcommand (rare, but possible)
+            while i < len(tokens) and tokens[i].startswith("-"):
+                # skip flag + value
+                if (
+                    "=" not in tokens[i]
+                    and (i + 1) < len(tokens)
+                    and not tokens[i + 1].startswith("-")
+                ):
+                    i += 2
+                else:
+                    i += 1
+            if i < len(tokens) and not tokens[i].startswith("-"):
+                cmd_parts.append(tokens[i])
+            break
+
+        # For non-group commands, stop after first command word
+        break
+
+    if not cmd_parts:
+        return "unknown"
+    return " ".join(cmd_parts)
+
+
+def _exit(code: int) -> None:
+    raise SystemExit(code)
 
 
 @click.group()
@@ -43,12 +114,12 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     try:
         import uvicorn
 
-        from hefesto.api.main import app
+        from hefesto.api.main import create_app
     except ImportError as e:
         click.echo(f"Error: {e}", err=True)
         click.echo("\nInstall API dependencies:", err=True)
         click.echo("   pip install hefesto-ai[api]", err=True)
-        sys.exit(1)
+        _exit(1)
 
     settings = get_settings()
 
@@ -58,16 +129,28 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     click.echo(f"HEFESTO v{__version__}")
     click.echo(f"Starting server at http://{host}:{port}")
     click.echo(f"Docs: http://{host}:{port}/docs")
-    click.echo(f"Health: http://{host}:{port}/ping")
+    click.echo(f"Health: http://{host}:{port}/health")
     click.echo("")
 
-    uvicorn.run(
-        app,
-        host=host,
-        port=port,
-        log_level="info",
-        reload=reload,
-    )
+    if reload:
+        uvicorn.run(
+            "hefesto.api.main:create_app",
+            factory=True,
+            host=host,
+            port=port,
+            log_level="info",
+            reload=True,
+        )
+    else:
+        # Create app instance lazily
+        app = create_app()
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level="info",
+            reload=False,
+        )
 
 
 @cli.command()
@@ -274,11 +357,11 @@ def analyze(
             if combined_report.summary.critical_issues > 0:
                 exit_code = 1
 
-        sys.exit(exit_code)
+        _exit(exit_code)
 
     except Exception as e:
         click.echo(f"Analysis failed: {e}", err=True)
-        sys.exit(1)
+        _exit(1)
 
 
 @cli.command()
@@ -557,7 +640,7 @@ def check_ci_parity(project_root: str):
     # Exit with error if HIGH priority issues found
     high_priority = [i for i in issues if i.severity.value == "HIGH"]
     if high_priority:
-        sys.exit(1)
+        _exit(1)
 
 
 @cli.command()
@@ -584,7 +667,7 @@ def check_test_contradictions(test_directory: str):
 
     # Exit with error if contradictions found
     if contradictions:
-        sys.exit(1)
+        _exit(1)
 
 
 @cli.command()
@@ -625,7 +708,7 @@ def install_hooks(force: bool):
     if not repo_root:
         click.echo("Error: Not a git repository!", err=True)
         click.echo("   Run this command from within a git repository.")
-        sys.exit(1)
+        _exit(1)
 
     git_dir = repo_root / ".git"
 
@@ -635,7 +718,7 @@ def install_hooks(force: bool):
     if not source_hook.exists():
         click.echo(f"Error: Hook source not found at {source_hook}", err=True)
         click.echo("This command requires scripts/git-hooks/pre-push to exist in the current repo.")
-        sys.exit(1)
+        _exit(1)
 
     # Create hooks directory if it doesn't exist
     hooks_dir = git_dir / "hooks"
@@ -657,7 +740,7 @@ def install_hooks(force: bool):
 
         click.echo(f"Pre-push hook already exists at {dest_hook}")
         click.echo("Use --force to overwrite.")
-        sys.exit(1)
+        _exit(1)
 
     # Install hook
     try:
@@ -677,15 +760,78 @@ def install_hooks(force: bool):
                     err=True,
                 )
                 click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
-                sys.exit(1)
+                _exit(1)
 
         click.echo(f"Successfully installed pre-push hook to {dest_hook}")
         click.echo("This hook runs 'hefesto analyze' with security gate defaults.")
 
     except Exception as e:
         click.echo(f"Error installing hook: {e}", err=True)
+        _exit(1)
+
+
+@cli.group()
+def telemetry_cmd():
+    """Telemetry utilities (local-only, privacy-first)."""
+    pass
+
+
+@telemetry_cmd.command("status")
+def telemetry_status():
+    """Show telemetry config and local file status."""
+    s = telemetry.get_status()
+    click.echo("Telemetry Status:")
+    click.echo(f"  Enabled:   {bool(s.get('enabled'))}")
+    click.echo(f"  Path:      {s.get('path')}")
+    click.echo(f"  Size:      {s.get('size_bytes')} bytes")
+    click.echo(f"  Max Bytes: {s.get('max_bytes')}")
+    click.echo(f"  Max Files: {s.get('max_files')}")
+    click.echo(f"  Schema:    v{s.get('schema_version')}")
+
+
+@telemetry_cmd.command("clear")
+@click.option("--yes", is_flag=True, help="Skip confirmation prompt.")
+def telemetry_clear(yes: bool):
+    """Delete local telemetry data (active + rotated backups)."""
+    if not yes:
+        ok = click.confirm(
+            "This will delete local telemetry files (active + rotated). Continue?",
+            default=False,
+        )
+        if not ok:
+            click.echo("Cancelled.")
+            return
+    telemetry.clear_data()
+    click.echo("Telemetry data cleared.")
+
+
+# Register the group
+cli.add_command(telemetry_cmd, name="telemetry")
+
+
+def main() -> None:
+    # Start telemetry if valid command
+    cmd = _detect_command(list(sys.argv))
+    telemetry.start(command=cmd, version=__version__, argv=list(sys.argv))
+
+    try:
+        cli.main(prog_name="hefesto", standalone_mode=False)
+        telemetry.end(exit_code=0)
+        sys.exit(0)
+    except SystemExit as e:
+        code = e.code
+        if code is None:
+            code = 0
+        elif not isinstance(code, int):
+            code = 1
+        telemetry.end(exit_code=int(code))
+        sys.exit(code)
+    except Exception as e:
+        # Unexpected crash
+        click.echo(f"Unexpected error: {e}", err=True)
+        telemetry.end(exit_code=1)
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    cli()
+    main()

@@ -165,6 +165,10 @@ hefesto install-hooks
 
 # Start API server (PRO)
 hefesto serve --port 8000
+
+# Telemetry Management
+hefesto telemetry status
+hefesto telemetry clear
 ```
 
 ---
@@ -244,7 +248,7 @@ curl -X POST http://localhost:8000/analyze \
   -d '{"code": "def test(): pass", "severity": "MEDIUM"}'
 ```
 
-### API Security (v4.7.0)
+### API Security (v4.8.0)
 
 The API server is **secure by default**:
 
@@ -252,9 +256,9 @@ The API server is **secure by default**:
 |---------|---------|---------------|
 | Host binding | `127.0.0.1` (loopback) | `HEFESTO_API_HOST` |
 | CORS | Localhost only | `HEFESTO_CORS_ORIGINS` |
-| API docs | Disabled | `HEFESTO_EXPOSE_DOCS=true` |
+| API docs | **Disabled** (404) | `HEFESTO_EXPOSE_DOCS=true` |
 | Auth | Off (no key set) | `HEFESTO_API_KEY` |
-| Rate limit | Off | `HEFESTO_API_RATE_LIMIT_PER_MINUTE` |
+| Rate limit | 60 req/min | `HEFESTO_RATE_LIMIT_PER_MINUTE` |
 | Path sandbox | `cwd()` | `HEFESTO_WORKSPACE_ROOT` |
 
 ```bash
@@ -262,7 +266,7 @@ The API server is **secure by default**:
 export HEFESTO_API_KEY=my-secret-key
 export HEFESTO_CORS_ORIGINS=https://app.example.com
 export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60
-export HEFESTO_EXPOSE_DOCS=true
+export HEFESTO_EXPOSE_DOCS=false
 hefesto serve --host 0.0.0.0 --port 8000
 ```
 

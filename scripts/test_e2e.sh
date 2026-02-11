@@ -27,7 +27,7 @@ test_command() {
     echo -e "\n${YELLOW}Testing: ${test_name}${NC}"
     echo "Command: ${command}"
     
-    if output=$(eval "$command" 2>&1); then
+    if output=$("$command" 2>&1); then
         if [[ -z "$expected_in_output" ]] || echo "$output" | grep -q "$expected_in_output"; then
             echo -e "${GREEN}✅ PASSED${NC}"
             ((PASSED++))

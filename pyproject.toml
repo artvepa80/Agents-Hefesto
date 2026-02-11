@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.7.0"
+version = "4.8.0"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,12 +51,8 @@ dependencies = [
 [project.optional-dependencies]
 ci = [
     "pyyaml>=6.0,<7.0",
-]
-
-pro = [
-    "sentence-transformers>=2.2.2,<3.0.0",
-    "torch>=2.0.1,<3.0.0",
-    "numpy>=1.24.0,<2.0.0",
+    "packaging>=23.0,<25.0",
+    "tomli>=2.0.1,<3.0.0 ; python_version < '3.11'",
 ]
 omega = [
     "sentence-transformers>=2.2.2,<3.0.0",
@@ -74,6 +70,8 @@ dev = [
     "isort>=5.12.0",
     "flake8>=6.1.0",
     "mypy>=1.7.0",
+    "packaging>=23.0,<25.0",
+    "tomli>=2.0.1,<3.0.0 ; python_version < '3.11'",
 ]
 all = [
     "sentence-transformers>=2.2.2,<3.0.0",

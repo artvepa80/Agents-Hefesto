@@ -391,20 +391,29 @@ flake8 hefesto/ tests/
 hefesto analyze . --severity MEDIUM
 ```
 
-### Deployment
-```bash
-# 1. Update version in hefesto/__version__.py
-# 2. Update CHANGELOG.md
-# 3. Run dogfooding validation
-hefesto analyze . --severity CRITICAL
+### Deployment (Automated)
 
-# 4. Build and upload
-python3 -m build
-twine upload dist/*
+Releases are automated via GitHub Actions:
 
-# 5. Create GitHub release
-gh release create v4.2.2 --generate-notes
-```
+1.  **TestPyPI (Release Candidate)**
+    ```bash
+    # Push RC tag (triggers release-testpypi.yml)
+    git tag v4.7.1-rc.1
+    git push origin v4.7.1-rc.1
+    ```
+
+2.  **PyPI (Production)**
+    ```bash
+    # Update version in pyproject.toml FIRST
+    # Push final tag (triggers release.yml + Cloud Run Prod)
+    git tag v4.7.1
+    git push origin v4.7.1
+    ```
+
+3.  **GitHub Release**
+    ```bash
+    gh release create v4.7.1 --generate-notes
+    ```
 
 ---
 

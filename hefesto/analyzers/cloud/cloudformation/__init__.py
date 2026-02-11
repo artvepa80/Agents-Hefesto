@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 try:
     import yaml
@@ -24,88 +24,286 @@ class CloudFormationAnalyzer:
             elif yaml:
                 template = yaml.safe_load(file_content)
             else:
-                # If no yaml parser, try simple json or skip
                 return []
         except Exception:
-            # Skip invalid templates for now
             return []
 
         if not isinstance(template, dict):
             return []
 
         findings.extend(self._check_secrets(template, file_path))
+        findings.extend(self._check_insecure_defaults(template, file_path))
         return findings
 
     def _check_secrets(self, template: Dict[str, Any], file_path: str) -> List[CloudFinding]:
         findings = []
-        
+
         # 1. Check Parameters
         parameters = template.get("Parameters", {})
         if isinstance(parameters, dict):
             for param_name, config in parameters.items():
                 if not isinstance(config, dict):
                     continue
-                
+
                 # Check for sensitive defaults
                 default_val = config.get("Default")
                 if default_val and isinstance(default_val, str):
                     if SecretDetector.is_suspicious_key(param_name):
                         findings.append(
                             CloudFinding(
-                                format="CloudFormation",
+                                format="cloudformation",
                                 rule_id="CFN_S001",
                                 severity="HIGH",
                                 evidence=f"Parameter '{param_name}' has hardcoded default value.",
                                 location=CloudLocation(path=file_path),
                                 confidence="HIGH",
-                                remediation="Remove default value or use NoEcho: true."
+                                remediation="Remove default value or use NoEcho: true.",
                             )
                         )
 
                 # Check NoEcho usage
+                # Only signal if suspicious AND (has default OR is explicitly typed as String/sensitive)
+                # User guidance: "param is suspicious and (it has a Default or Type indicates it’s secret-like)"
                 is_no_echo = config.get("NoEcho")
                 if str(is_no_echo).lower() == "true":
                     continue
-                
+
                 if SecretDetector.is_suspicious_key(param_name):
-                     findings.append(
+                    # refine: ensure we don't flag harmless params unless they really look like secrets
+                    has_default = config.get("Default") is not None
+                    # For CFN, Type: String is common. We rely on the name + context.
+                    # If it has a Default, it's definitely risky if it's a password.
+                    # If it doesn't have a default, but is named "DBPassword", it should be NoEcho.
+
+                    findings.append(
                         CloudFinding(
-                            format="CloudFormation",
+                            format="cloudformation",
                             rule_id="CFN_S001",
                             severity="MEDIUM",
                             evidence=f"Sensitive parameter '{param_name}' missing NoEcho: true.",
                             location=CloudLocation(path=file_path),
                             confidence="MEDIUM",
-                            remediation="Add 'NoEcho: true' to parameter definition."
+                            remediation="Add 'NoEcho: true' to parameter definition.",
                         )
                     )
 
-        # 2. Check Resources properties (recursive or shallow?)
-        # For sprint 1: Shallow check of Resource Properties values
+        # 2. Check Resources (recursive)
         resources = template.get("Resources", {})
         if isinstance(resources, dict):
             for res_name, res_def in resources.items():
                 if not isinstance(res_def, dict):
                     continue
-                props = res_def.get("Properties", {})
-                if not isinstance(props, dict):
-                    continue
-                
-                for key, value in props.items():
-                    if isinstance(value, str):
-                        # Use detector
-                        if SecretDetector.is_suspicious_key(key) and SecretDetector.is_hardcoded_value(value):
-                             findings.append(
+
+                # Recursive walk of the resource definition
+                self._scan_resource_recursive(res_def, file_path, findings, f"Resources.{res_name}")
+
+        return findings
+
+    def _scan_resource_recursive(
+        self, data: Any, file_path: str, findings: List[CloudFinding], current_path: str
+    ):
+        if isinstance(data, dict):
+            for key, value in data.items():
+                new_path = f"{current_path}.{key}"
+                if isinstance(value, str):
+                    # Check value
+                    if SecretDetector.is_suspicious_key(key) and SecretDetector.is_hardcoded_value(
+                        value
+                    ):
+                        findings.append(
+                            CloudFinding(
+                                format="cloudformation",
+                                rule_id="CFN_S001",
+                                severity="CRITICAL",
+                                evidence=f"Resource property '{new_path}' has hardcoded value.",
+                                location=CloudLocation(path=file_path),
+                                confidence="HIGH",
+                                remediation="Use dynamic reference ({{resolve:secretsmanager:...}}) or Ref to parameter.",
+                            )
+                        )
+
+                    # Also check for critical patterns in value regardless of key
+                    critical_matches = SecretDetector.check_value(value)
+                    if critical_matches:
+                        for match in critical_matches:
+                            findings.append(
                                 CloudFinding(
-                                    format="CloudFormation",
+                                    format="cloudformation",
                                     rule_id="CFN_S001",
                                     severity="CRITICAL",
-                                    evidence=f"Resource '{res_name}' property '{key}' has hardcoded value.",
+                                    evidence=f"Critical secret pattern found in '{new_path}': {match}",
                                     location=CloudLocation(path=file_path),
                                     confidence="HIGH",
-                                    remediation="Use dynamic reference ({{resolve:secretsmanager:...}}) or Ref to parameter."
+                                    remediation="Revoke and rotate secret immediately.",
                                 )
                             )
+                else:
+                    self._scan_resource_recursive(value, file_path, findings, new_path)
+
+        elif isinstance(data, list):
+            for i, item in enumerate(data):
+                self._scan_resource_recursive(item, file_path, findings, f"{current_path}[{i}]")
+
+    def _check_insecure_defaults(
+        self, template: Dict[str, Any], file_path: str
+    ) -> List[CloudFinding]:
+        findings: List[CloudFinding] = []
+
+        resources = template.get("Resources", {})
+        if not isinstance(resources, dict):
+            return findings
+
+        from ..detectors_insecure_defaults import InsecureDefaultsDetector
+
+        for res_name, res_def in resources.items():
+            if not isinstance(res_def, dict):
+                continue
+
+            res_type = res_def.get("Type")
+            props = res_def.get("Properties", {})
+            if not isinstance(props, dict):
+                continue
+
+            # --- CFN_I001: SecurityGroup wide-open ingress on sensitive ports ---
+            if res_type == "AWS::EC2::SecurityGroup":
+                ingress = props.get("SecurityGroupIngress", [])
+                if isinstance(ingress, list):
+                    for idx, rule in enumerate(ingress):
+                        if not isinstance(rule, dict):
+                            continue
+                        cidr = rule.get("CidrIp") or rule.get("CidrIpv6")
+                        ip_protocol = rule.get("IpProtocol")
+                        from_port = rule.get("FromPort")
+                        to_port = rule.get("ToPort")
+
+                        if isinstance(cidr, str) and InsecureDefaultsDetector.is_public_cidr(cidr):
+                            sensitive = False
+                            # "-1" means all protocols
+                            if str(ip_protocol) == "-1":
+                                sensitive = True
+                            else:
+                                if InsecureDefaultsDetector.is_sensitive_port(
+                                    from_port
+                                ) or InsecureDefaultsDetector.is_sensitive_port(to_port):
+                                    sensitive = True
+
+                            if sensitive:
+                                findings.append(
+                                    CloudFinding(
+                                        format="cloudformation",
+                                        rule_id="CFN_I001",
+                                        severity="CRITICAL",
+                                        evidence=f"Public SG ingress on sensitive port(s) at Resources.{res_name}.Properties.SecurityGroupIngress[{idx}] ({cidr}).",
+                                        location=CloudLocation(path=file_path),
+                                        confidence="HIGH",
+                                        remediation="Restrict CIDR ranges and avoid exposing sensitive ports to the internet.",
+                                    )
+                                )
+
+            # --- CFN_I001: SecurityGroupIngress (Standalone) ---
+            if res_type == "AWS::EC2::SecurityGroupIngress":
+                # Standalone ingress rule is a flat dictionary of properties
+                rule = props
+                cidr = rule.get("CidrIp") or rule.get("CidrIpv6")
+                ip_protocol = rule.get("IpProtocol")
+                from_port = rule.get("FromPort")
+                to_port = rule.get("ToPort")
+
+                if isinstance(cidr, str) and InsecureDefaultsDetector.is_public_cidr(cidr):
+                    sensitive = False
+                    if str(ip_protocol) == "-1":
+                        sensitive = True
+                    else:
+                        if InsecureDefaultsDetector.is_sensitive_port(
+                            from_port
+                        ) or InsecureDefaultsDetector.is_sensitive_port(to_port):
+                            sensitive = True
+
+                    if sensitive:
+                        findings.append(
+                            CloudFinding(
+                                format="cloudformation",
+                                rule_id="CFN_I001",
+                                severity="CRITICAL",
+                                evidence=f"Public SG ingress on sensitive port(s) at Resources.{res_name}.Properties ({cidr}).",
+                                location=CloudLocation(path=file_path),
+                                confidence="HIGH",
+                                remediation="Restrict CIDR ranges and avoid exposing sensitive ports to the internet.",
+                            )
+                        )
+
+            # --- CFN_I001: S3 bucket public access / missing PublicAccessBlock ---
+            if res_type == "AWS::S3::Bucket":
+                pab = props.get("PublicAccessBlockConfiguration")
+                # If missing, or any required block is false -> risky
+                if not isinstance(pab, dict):
+                    findings.append(
+                        CloudFinding(
+                            format="cloudformation",
+                            rule_id="CFN_I001",
+                            severity="HIGH",
+                            evidence=f"S3 Bucket missing PublicAccessBlockConfiguration at Resources.{res_name}.Properties.",
+                            location=CloudLocation(path=file_path),
+                            confidence="MEDIUM",
+                            remediation="Add PublicAccessBlockConfiguration and ensure public ACLs/policies are blocked.",
+                        )
+                    )
+                else:
+                    required = [
+                        "BlockPublicAcls",
+                        "IgnorePublicAcls",
+                        "BlockPublicPolicy",
+                        "RestrictPublicBuckets",
+                    ]
+                    for k in required:
+                        v = pab.get(k)
+                        if str(v).lower() != "true":
+                            findings.append(
+                                CloudFinding(
+                                    format="cloudformation",
+                                    rule_id="CFN_I001",
+                                    severity="HIGH",
+                                    evidence=f"S3 PublicAccessBlockConfiguration '{k}' is not true at Resources.{res_name}.Properties.PublicAccessBlockConfiguration.",
+                                    location=CloudLocation(path=file_path),
+                                    confidence="MEDIUM",
+                                    remediation="Set all PublicAccessBlockConfiguration flags to true.",
+                                )
+                            )
+                            break
+
+            # --- CFN_I001: IAM policy Action:* + Resource:* ---
+            if res_type in ("AWS::IAM::Policy", "AWS::IAM::ManagedPolicy"):
+                policy_doc = props.get("PolicyDocument")
+                if isinstance(policy_doc, dict):
+                    stmts = policy_doc.get("Statement", [])
+                    if isinstance(stmts, dict):
+                        stmts = [stmts]
+                    if isinstance(stmts, list):
+                        for idx, st in enumerate(stmts):
+                            if not isinstance(st, dict):
+                                continue
+                            actions = st.get("Action")
+                            resources_ = st.get("Resource")
+
+                            def _has_star(x: Any) -> bool:
+                                if x == "*" or x == ["*"]:
+                                    return True
+                                if isinstance(x, list):
+                                    return any(a == "*" for a in x)
+                                return False
+
+                            if _has_star(actions) and _has_star(resources_):
+                                findings.append(
+                                    CloudFinding(
+                                        format="cloudformation",
+                                        rule_id="CFN_I001",
+                                        severity="CRITICAL",
+                                        evidence=f"IAM policy allows Action:* and Resource:* at Resources.{res_name}.Properties.PolicyDocument.Statement[{idx}].",
+                                        location=CloudLocation(path=file_path),
+                                        confidence="HIGH",
+                                        remediation="Scope IAM permissions to least privilege (specific actions/resources).",
+                                    )
+                                )
 
         return findings
 

@@ -51,7 +51,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         openapi_url=openapi_url,
         contact={
             "name": "Hefesto Team",
-            "email": "sales@narapallc.com",
+            "email": "support@narapallc.com",
             "url": "https://github.com/artvepa80/Agents-Hefesto",
         },
         license_info={
@@ -60,28 +60,27 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         },
     )
 
-    # --- CORS enforcement ---
+    # --- CORS enforcement (Hardened) ---
     origins = settings.parsed_cors_origins
     allow_creds = settings.cors_allow_credentials
 
-    # Block dangerous wildcard + credentials combo
-    if "*" in origins and allow_creds:
-        raise ValueError(
-            "CORS misconfiguration: allow_origins=['*'] with "
-            "allow_credentials=True is insecure and forbidden. "
-            "Set HEFESTO_CORS_ORIGINS to an explicit allowlist "
-            "or set HEFESTO_CORS_ALLOW_CREDENTIALS=false."
+    # Block dangerous wildcard + credentials combo (Fail fast)
+    if allow_creds and "*" in origins:
+        raise RuntimeError(
+            "Security Error: Cannot use '*' in CORS origins with allow_credentials=True. "
+            "Set HEFESTO_CORS_ORIGINS to specific domains."
         )
 
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=allow_creds,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    if origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=allow_creds,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
-    # --- Custom middleware (timing, request ID, auth, rate limit) ---
+    # --- Custom middleware (timing, request ID, auth, rate limit, sandbox) ---
     add_middlewares(application, settings)
 
     # --- Register routers ---
@@ -93,23 +92,24 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     @application.get(
         "/",
         summary="API Root",
-        description=("Welcome endpoint with API information " "and documentation links"),
+        description=("Welcome endpoint with API information and documentation links"),
     )
     async def root():
         """API root endpoint."""
-        doc_links = (
-            {
+        doc_links = {}
+        if settings.expose_docs:
+            doc_links = {
                 "swagger": "/docs",
                 "redoc": "/redoc",
                 "openapi_json": "/openapi.json",
             }
-            if settings.expose_docs
-            else {"note": "Docs disabled. Set HEFESTO_EXPOSE_DOCS=true"}
-        )
+
         return {
             "message": "Welcome to Hefesto API",
             "version": __version__,
-            "documentation": doc_links,
+            "documentation": (
+                doc_links if doc_links else {"note": "Docs disabled. Set HEFESTO_EXPOSE_DOCS=true"}
+            ),
             "endpoints": {
                 "health": "/health",
                 "status": "/api/v1/status",
@@ -123,10 +123,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         print(f"🚀 Hefesto API v{__version__} starting...")
         bind = f"{settings.api_host}:{settings.api_port}"
         print(f"🔒 Binding to {bind}")
+
         if settings.expose_docs:
             print(f"📚 Documentation: http://{bind}/docs")
         else:
-            print("📚 Docs disabled (HEFESTO_EXPOSE_DOCS=false)")
+            print("📚 Documentation disabled (secure default)")
+
         print(f"🔍 Health check: http://{bind}/health")
 
     @application.on_event("shutdown")
@@ -135,7 +137,3 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         print(f"👋 Hefesto API v{__version__} shutting down...")
 
     return application
-
-
-# Module-level app for backward compatibility (uvicorn, gunicorn)
-app = create_app()

@@ -1,0 +1,169 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-7.4.4, pluggy-1.6.0 -- /home/user/Agents-Hefesto/venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/user/Agents-Hefesto
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.23.8, cov-4.1.0
+asyncio: mode=Mode.STRICT
+collecting ... collected 6 items
+
+tests/cloud/helm/test_wiring.py::test_helm_analyzer_registration PASSED  [ 16%]
+tests/cloud/helm/test_wiring.py::test_helm_secrets_detection PASSED      [ 33%]
+tests/cloud/helm/test_wiring.py::test_helm_deduplication PASSED          [ 50%]
+tests/cloud/helm/test_wiring.py::test_helm_ignore_non_values PASSED      [ 66%]
+tests/cloud/helm/test_wiring.py::test_helm_accept_yml PASSED             [ 83%]
+tests/cloud/helm/test_wiring.py::test_helm_insecure_defaults FAILED      [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_helm_insecure_defaults __________________________
+
+    def test_helm_insecure_defaults():
+        analyzer = ANALYZERS[0]
+    
+        content = """
+        # Security Context
+        securityContext:
+          privileged: true
+          runAsUser: 0
+    
+        # Host Namespaces
+        hostPID: true
+    
+        # LoadBalancer
+        service:
+          type: LoadBalancer
+          loadBalancerSourceRanges:
+            - "0.0.0.0/0"
+        """
+        findings = analyzer.analyze(content, "values.yaml")
+    
+        priv_findings = [f for f in findings if "privileged: true" in f.evidence]
+        root_findings = [f for f in findings if "runAsUser: 0" in f.evidence]
+        host_findings = [f for f in findings if "hostPID: true" in f.evidence]
+        lb_findings = [f for f in findings if "LoadBalancer allows public access" in f.evidence]
+    
+        assert len(priv_findings) == 1
+        assert priv_findings[0].severity == "CRITICAL"
+    
+        assert len(root_findings) == 1
+        assert root_findings[0].severity == "HIGH"
+    
+        assert len(host_findings) == 1
+        assert host_findings[0].severity == "HIGH"
+    
+>       assert len(lb_findings) == 1
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len([CloudFinding(format='helm', rule_id='HELM_I001', severity='HIGH', evidence='LoadBalancer allows public access: 0.0.0.0/0', location=CloudLocation(path='values.yaml', start_line=None, end_line=None), confidence='HIGH', remediation='Restrict loadBalancerSourceRanges.', metadata=None), CloudFinding(format='helm', rule_id='HELM_I001', severity='HIGH', evidence='LoadBalancer allows public access: 0.0.0.0/0', location=CloudLocation(path='values.yaml', start_line=None, end_line=None), confidence='HIGH', remediation='Restrict loadBalancerSourceRanges.', metadata=None)])
+
+tests/cloud/helm/test_wiring.py:99: AssertionError
+
+---------- coverage: platform linux, python 3.11.2-final-0 -----------
+Name                                                     Stmts   Miss  Cover
+----------------------------------------------------------------------------
+hefesto/__init__.py                                         25      7    72%
+hefesto/__main__.py                                          3      3     0%
+hefesto/__version__.py                                       6      2    67%
+hefesto/analyzers/__init__.py                                5      0   100%
+hefesto/analyzers/best_practices.py                         72     55    24%
+hefesto/analyzers/cloud/__init__.py                          7      0   100%
+hefesto/analyzers/cloud/arm/__init__.py                     92     78    15%
+hefesto/analyzers/cloud/cloudformation/__init__.py         122    105    14%
+hefesto/analyzers/cloud/detectors.py                        30      4    87%
+hefesto/analyzers/cloud/detectors_insecure_defaults.py      27     15    44%
+hefesto/analyzers/cloud/finding_schema.py                   17      0   100%
+hefesto/analyzers/cloud/helm/__init__.py                    84      9    89%
+hefesto/analyzers/cloud/serverless/__init__.py              77     62    19%
+hefesto/analyzers/code_smells.py                            75     57    24%
+hefesto/analyzers/complexity.py                             41     32    22%
+hefesto/analyzers/devops/__init__.py                        11     11     0%
+hefesto/analyzers/devops/dockerfile_analyzer.py             75     75     0%
+hefesto/analyzers/devops/groovy_jenkins_analyzer.py         35     35     0%
+hefesto/analyzers/devops/json_analyzer.py                  113    113     0%
+hefesto/analyzers/devops/makefile_analyzer.py               36     36     0%
+hefesto/analyzers/devops/powershell_analyzer.py            123    123     0%
+hefesto/analyzers/devops/shell_analyzer.py                  73     73     0%
+hefesto/analyzers/devops/sql_analyzer.py                   212    212     0%
+hefesto/analyzers/devops/terraform_analyzer.py              39     39     0%
+hefesto/analyzers/devops/toml_analyzer.py                  110    110     0%
+hefesto/analyzers/devops/yaml_analyzer.py                  110    110     0%
+hefesto/analyzers/security.py                               77     63    18%
+hefesto/api/__init__.py                                      2      2     0%
+hefesto/api/dependencies.py                                  6      6     0%
+hefesto/api/main.py                                         41     41     0%
+hefesto/api/middleware/__init__.py                          33     33     0%
+hefesto/api/middleware/auth.py                              22     22     0%
+hefesto/api/middleware/rate_limit.py                        44     44     0%
+hefesto/api/routers/__init__.py                              2      2     0%
+hefesto/api/routers/analysis.py                            106    106     0%
+hefesto/api/routers/findings.py                             77     77     0%
+hefesto/api/routers/health.py                               57     57     0%
+hefesto/api/schemas/__init__.py                              5      5     0%
+hefesto/api/schemas/analysis.py                             91     91     0%
+hefesto/api/schemas/common.py                               23     23     0%
+hefesto/api/schemas/findings.py                             61     61     0%
+hefesto/api/schemas/health.py                               27     27     0%
+hefesto/api/services/__init__.py                             3      3     0%
+hefesto/api/services/analysis_service.py                    50     50     0%
+hefesto/api/services/bigquery_service.py                   167    167     0%
+hefesto/api/types.py                                        22     22     0%
+hefesto/cli/__init__.py                                      2      2     0%
+hefesto/cli/main.py                                        342    342     0%
+hefesto/config/__init__.py                                   2      0   100%
+hefesto/config/config_manager.py                            43     43     0%
+hefesto/config/settings.py                                  52     14    73%
+hefesto/config/stripe_config.py                             30     17    43%
+hefesto/core/__init__.py                                     9      2    78%
+hefesto/core/analysis_models.py                            155     26    83%
+hefesto/core/analyzer_engine.py                            211    188    11%
+hefesto/core/ast/__init__.py                                 2      0   100%
+hefesto/core/ast/generic_ast.py                             63     21    67%
+hefesto/core/language_detector.py                           27      8    70%
+hefesto/core/languages/__init__.py                           3      0   100%
+hefesto/core/languages/registry.py                          96     78    19%
+hefesto/core/languages/specs.py                             38      0   100%
+hefesto/core/models.py                                     256     19    93%
+hefesto/core/parsers/__init__.py                             5      0   100%
+hefesto/core/parsers/base_parser.py                          9      2    78%
+hefesto/core/parsers/parser_factory.py                      14      6    57%
+hefesto/core/parsers/python_parser.py                       26     18    31%
+hefesto/core/parsers/treesitter_parser.py                   91     73    20%
+hefesto/core/providers/__init__.py                           3      3     0%
+hefesto/core/providers/base.py                              65     65     0%
+hefesto/core/providers/registry.py                          65     65     0%
+hefesto/hooks/__init__.py                                    1      1     0%
+hefesto/hooks/pre_push.py                                   75     75     0%
+hefesto/licensing/__init__.py                                4      0   100%
+hefesto/licensing/feature_gate.py                           83     52    37%
+hefesto/licensing/key_generator.py                          41     16    61%
+hefesto/licensing/license_validator.py                      67     50    25%
+hefesto/llm/__init__.py                                     11      2    82%
+hefesto/llm/budget_tracker.py                              121     98    19%
+hefesto/llm/claude_provider.py                             212    212     0%
+hefesto/llm/feedback_logger.py                             113     76    33%
+hefesto/llm/gemini_api_client.py                           226    226     0%
+hefesto/llm/license_validator.py                            63     34    46%
+hefesto/llm/openai_provider.py                             214    214     0%
+hefesto/llm/provider.py                                    101    101     0%
+hefesto/llm/semantic_analyzer.py                            94     72    23%
+hefesto/llm/suggestion_validator.py                        202    164    19%
+hefesto/llm/validators.py                                  177    143    19%
+hefesto/omega/__init__.py                                   10     10     0%
+hefesto/omega/hefesto_enricher.py                           48     48     0%
+hefesto/omega/iris_alert_manager.py                         54     54     0%
+hefesto/reports/__init__.py                                  4      4     0%
+hefesto/reports/html_reporter.py                            51     51     0%
+hefesto/reports/json_reporter.py                             9      9     0%
+hefesto/reports/text_reporter.py                            87     87     0%
+hefesto/security/__init__.py                                 2      0   100%
+hefesto/security/masking.py                                106     78    26%
+hefesto/security/path_sandbox.py                            12     12     0%
+hefesto/validators/__init__.py                               3      3     0%
+hefesto/validators/ci_parity.py                            216    216     0%
+hefesto/validators/test_contradictions.py                  211    211     0%
+----------------------------------------------------------------------------
+TOTAL                                                     6763   5579    18%
+Coverage HTML written to dir htmlcov
+
+=========================== short test summary info ============================
+FAILED tests/cloud/helm/test_wiring.py::test_helm_insecure_defaults - Asserti...
+========================= 1 failed, 5 passed in 3.00s ==========================

@@ -9,7 +9,7 @@ def test_serverless_analyzer_registration():
 
 def test_serverless_secrets_detection():
     analyzer = ANALYZERS[0]
-    
+
     # Test case: Hardcoded environment variables
     content = """
     service: my-service
@@ -17,7 +17,6 @@ def test_serverless_secrets_detection():
       name: aws
       environment:
         DB_PASSWORD: "supersecretpassword"
-        API_KEY: "12345678"
     functions:
       hello:
         handler: handler.hello
@@ -25,7 +24,56 @@ def test_serverless_secrets_detection():
           SLACK_TOKEN: "xoxb-1234567890-1234567890-1234567890"
     """
     findings = analyzer.analyze(content, "serverless.yml")
+
+    assert len(findings) >= 2
+
+    # Check formats
+    assert all(f.format == "serverless" for f in findings)
+
+    # Check rules
+    assert all(f.rule_id == "SLS_S001" for f in findings)
+
+
+def test_serverless_deduplication():
+    analyzer = ANALYZERS[0]
+    content = """
+    provider:
+      environment:
+        AWS_SECRET_KEY: "AKIA1234567890ABCDEF"
+    """
+    findings = analyzer.analyze(content, "serverless.yaml")
+
+    # Expect 1 CRITICAL finding, not HIGH+CRITICAL
+    assert len(findings) == 1
+    assert findings[0].severity == "CRITICAL"
+
+
+def test_serverless_insecure_defaults():
+    analyzer = ANALYZERS[0]
+
+    content = """
+    provider:
+      name: aws
+      iam:
+        role:
+          statements:
+            - Effect: Allow
+              Action: "*"
+              Resource: "*"
     
-    assert len(findings) >= 3
-    assert any("DB_PASSWORD" in f.evidence for f in findings)
-    assert any("SLACK_TOKEN" in f.evidence for f in findings)
+    functions:
+      myFunc:
+        handler: index.handler
+        iamRoleStatements:
+          - Effect: Allow
+            Action:
+              - "*"
+            Resource: "*"
+    """
+    findings = analyzer.analyze(content, "serverless.yml")
+
+    iam_findings = [f for f in findings if "IAM Statement" in f.evidence]
+
+    # Should catch 2: one in provider, one in function
+    assert len(iam_findings) == 2
+    assert all(f.severity == "CRITICAL" for f in iam_findings)

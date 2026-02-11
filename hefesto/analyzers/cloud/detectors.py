@@ -7,10 +7,11 @@ class SecretDetector:
 
     # Patterns that are almost certainly secrets (CRITICAL)
     CRITICAL_PATTERNS: List[Tuple[str, str]] = [
-        (r"(?<![A-Z0-9])[A-Z0-9]{20}(?![A-Z0-9])", "Potential AWS Access Key ID"),  # Naive AKIA check
         (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
         (r"-----BEGIN [A-Z ]+ PRIVATE KEY-----", "Private Key found"),
-        (r"xox[baprs]-([0-9a-zA-Z]{10,48})", "Slack Token"),
+        (r"(?i)xox[baprs]-[0-9A-Za-z-]{10,}", "Slack Token"),
+        (r"(?i)ghp_[0-9A-Za-z]{30,}", "GitHub Token"),
+        (r"(?i)AIza[0-9A-Za-z\-_]{30,}", "Google API Key"),
     ]
 
     # Patterns for key names that suggest the value is a secret (suspicious)
@@ -57,18 +58,24 @@ class SecretDetector:
     def is_hardcoded_value(value: str) -> bool:
         """Heuristic to check if a value looks like a hardcoded string (not a ref/param)."""
         if not isinstance(value, str):
-            # If it's a number/bool, it's hardcoded but usually safe (unless password=12345)
-            # For secrets, we mostly care about strings.
             return False
 
-        # If it looks like a template variable/fn, it's likely NOT a hardcoded secret
-        # CloudFormation: {"Ref": ...} or !Ref ... (if parsed as obj, not str)
-        # Helm: {{ ... }}
-        # Serverless: ${...}
-        # ARM: [...]
-        
-        # Simple string checks for template syntax
+        # Common template vars
         if "${" in value or "{{" in value or (value.startswith("[") and value.endswith("]")):
+            return False
+
+        # CloudFormation dynamic references
+        if "{{resolve:" in value:
+            return False
+
+        # CloudFormation short tags (often preserved as strings depending on loader)
+        val_stripped = value.lstrip()
+        if (
+            val_stripped.startswith("!Ref")
+            or val_stripped.startswith("!Sub")
+            or val_stripped.startswith("!Join")
+            or val_stripped.startswith("!GetAtt")
+        ):
             return False
 
         return True
