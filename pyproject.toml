@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.8.0"
+version = "4.8.1"
 description = "AI-Powered Code Quality Guardian with Gemini integration"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -38,6 +38,7 @@ dependencies = [
     "click>=8.0.0,<9.0.0",
     "google-cloud-bigquery>=3.10.0,<4.0.0",
     "google-generativeai>=0.3.0",
+    "cryptography>=46.0.5",
     "httpx>=0.25.0,<1.0.0",
     "python-dateutil>=2.8.2,<3.0.0",
     "radon>=6.0.1,<7.0.0",

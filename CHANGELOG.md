@@ -5,6 +5,12 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.1] - 2026-02-11 — Patch T: Security Fix (CVE-2026-26007)
+### Fixed
+- **Security**: Pinned `cryptography>=46.0.5` to resolve high-severity vulnerability (CVE-2026-26007).
+  - Mitigates subgroup attack on SECT curves.
+  - Updates transitive dependency via `google-auth`.
+
 ## [4.8.0] - 2026-02-11 — Patch S: API Security Defaults
 ### Added — Patch S: API Security Defaults
 - **Secure-by-Default**:
