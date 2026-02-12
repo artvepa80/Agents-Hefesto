@@ -10,6 +10,8 @@ Complete monitoring and correlation suite:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
+from typing import Any
+
 __version__ = "4.2.0"
 
 # IRIS integration
@@ -20,8 +22,8 @@ try:
     IRIS_AVAILABLE = True
 except ImportError:
     IRIS_AVAILABLE = False
-    IrisAgent = None
-    HefestoEnricher = None
+    IrisAgent: Any = None  # type: ignore
+    HefestoEnricher: Any = None  # type: ignore
 
 __all__ = [
     "IrisAgent",

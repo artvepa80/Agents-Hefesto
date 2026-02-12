@@ -12,6 +12,7 @@ from hefesto.analyzers.cloud.drift.base import DriftContext
 from hefesto.analyzers.cloud.finding_schema import CloudFinding
 from hefesto.analyzers.cloud.graph.resolver import (
     NameResolver,
+    ResolverStrategy,
     ResourceResolver,
     StackResolver,
     TagResolver,
@@ -42,7 +43,7 @@ class DriftRunner:
         template = self._load_template(template_path)
 
         # Configure strategies
-        strategies = []
+        strategies: List[ResolverStrategy] = []
         if autoresolve:
             strategies.append(StackResolver(explicit_stack_name=stack_name))
             strategies.append(TagResolver(explicit_tags=tags))
@@ -95,7 +96,7 @@ class DriftRunner:
 
         # JSON
         if suffix == ".json":
-            return json.loads(raw)
+            return dict(json.loads(raw))
 
         # YAML
         if suffix in (".yml", ".yaml"):
@@ -113,6 +114,6 @@ class DriftRunner:
             pass
 
         try:
-            return json.loads(raw)
+            return dict(json.loads(raw))
         except Exception as e:
             raise ValueError("Unsupported template format. Use .yml/.yaml/.json") from e

@@ -161,7 +161,7 @@ class OpenAIProvider(LLMProvider):
 
             response = self.client.chat.completions.create(
                 model=self.model_name,
-                messages=messages,
+                messages=messages,  # type: ignore
                 temperature=gen_config.get("temperature", 0.2),
                 max_tokens=gen_config.get("max_tokens", 2048),
             )

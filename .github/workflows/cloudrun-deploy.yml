@@ -17,6 +17,7 @@ env:
   REGION: us-central1
   AR_REPO: hefesto
   IMAGE_NAME: hefesto-api
+  HEFESTO_HOST: "0.0.0.0"
 
 jobs:
   deploy:

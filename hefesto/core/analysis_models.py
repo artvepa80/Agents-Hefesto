@@ -237,7 +237,7 @@ class AnalysisSummary:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        result = {
+        result: Dict[str, Any] = {
             "files_analyzed": self.files_analyzed,
             "total_issues": self.total_issues,
             "critical": self.critical_issues,
@@ -259,6 +259,11 @@ class AnalysisReport:
     summary: AnalysisSummary
     file_results: List[FileAnalysisResult]
     timestamp: datetime = field(default_factory=datetime.utcnow)
+    # Enterprise/Pro fields
+    license_tier: str = "COMMUNITY"
+    ml_enabled: bool = False
+    phase_0_enabled: bool = True
+    phase_1_enabled: bool = False
 
     def get_all_issues(self) -> List[AnalysisIssue]:
         """Get all issues across all files."""

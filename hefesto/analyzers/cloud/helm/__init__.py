@@ -12,11 +12,11 @@ from ..finding_schema import CloudFinding, CloudLocation
 
 class HelmAnalyzer:
     def __init__(self):
-        self.name = "HelmAnalyzer"
+        self.name = "HelmAnalyzer"  # type: ignore
         self.description = "Analyzes Helm charts for secrets and best practices."
 
     def analyze(self, file_content: str, file_path: str) -> List[CloudFinding]:
-        findings = []
+        findings: List[Any] = []
         filename = os.path.basename(file_path)
 
         # Target values.yaml and variants (yml/yaml)

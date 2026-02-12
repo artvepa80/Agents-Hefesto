@@ -90,4 +90,4 @@ class PathSandboxMiddleware(BaseHTTPMiddleware):
                         },
                     )
 
-        return await call_next(request)
+        return await call_next(request)  # type: ignore

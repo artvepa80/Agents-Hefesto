@@ -26,7 +26,9 @@ class AwsClient:
         return None
 
     def get_security_groups(
-        self, group_ids: List[str] = None, filters: List[Dict[str, Any]] = None
+        self,
+        group_ids: Optional[List[str]] = None,
+        filters: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Fetch Security Groups by ID or Filters.
@@ -41,9 +43,9 @@ class AwsClient:
         try:
             ec2 = session.client("ec2")
             if group_ids:
-                return ec2.describe_security_groups(GroupIds=group_ids).get("SecurityGroups", [])
+                return list(ec2.describe_security_groups(GroupIds=group_ids).get("SecurityGroups", []))
             elif filters:
-                return ec2.describe_security_groups(Filters=filters).get("SecurityGroups", [])
+                return list(ec2.describe_security_groups(Filters=filters).get("SecurityGroups", []))
             else:
                 return []
         except ClientError:

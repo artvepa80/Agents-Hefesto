@@ -302,7 +302,7 @@ def mask_dict_values(data: Dict, keys_to_mask: Optional[List[str]] = None) -> Di
         else:
             return obj
 
-    return _mask_recursive(data)
+    return dict(_mask_recursive(data))
 
 
 def validate_masked(text: str) -> Tuple[bool, List[str]]:

@@ -66,7 +66,7 @@ class AnalyzerEngine:
             verbose: Print detailed pipeline steps (default: False)
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
-        self.analyzers = []
+        self.analyzers: List[Any] = []
         self.verbose = verbose
         self._registry = get_registry()
 
@@ -168,7 +168,7 @@ class AnalyzerEngine:
             enhanced_issues = self._enhance_with_ml(all_issues)
 
             if self.verbose:
-                ml_enhanced = sum(1 for i in enhanced_issues if hasattr(i, "ml_confidence"))
+                ml_enhanced = sum(1 for i in enhanced_issues if i.metadata.get("ml_enhanced"))
                 print(f"   {ml_enhanced} issue(s) enhanced with ML context")
                 print()
         else:
@@ -220,12 +220,13 @@ class AnalyzerEngine:
                 # 3. Calculate confidence based on past accuracy
 
                 # For now, add a placeholder confidence
-                issue.ml_confidence = 0.85  # High confidence by default
-                issue.ml_enhanced = True
+                issue.confidence = 0.85  # High confidence by default
+                issue.metadata["ml_enhanced"] = True
 
             except Exception:
                 # ML enhancement is optional, continue without it
-                issue.ml_enhanced = False
+                if hasattr(issue, "metadata"):
+                    issue.metadata["ml_enhanced"] = False
 
             enhanced.append(issue)
 

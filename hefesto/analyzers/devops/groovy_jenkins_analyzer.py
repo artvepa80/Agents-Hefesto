@@ -234,7 +234,6 @@ class GroovyJenkinsAnalyzer:
             confidence=confidence,
             rule_id=rule_id,
             engine="hefesto-groovy-jenkins",
-            source="GroovyJenkinsAnalyzer",
             metadata={"line_content": line_content},
         )
 

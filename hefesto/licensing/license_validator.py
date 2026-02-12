@@ -68,7 +68,7 @@ class LicenseValidator:
             from hefesto_pro.licensing.license_validator import LicenseValidator as ProValidator
 
             pro_validator = ProValidator()
-            return pro_validator.get_tier_for_key(license_key)
+            return str(pro_validator.get_tier_for_key(license_key))
         except ImportError:
             pass  # Fall back to stub behavior
 

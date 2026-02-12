@@ -1,6 +1,7 @@
 """Universal parser using TreeSitter."""
 
 from pathlib import Path
+from typing import Optional
 
 from tree_sitter import Parser
 
@@ -52,8 +53,8 @@ class TreeSitterParser(CodeParser):
                 "c_sharp": "c_sharp",
             }
             grammar_name = grammar_map.get(language, language)
-            self.ts_language = Language(str(build_path), grammar_name)
-            self.parser.set_language(self.ts_language)
+            self.language = Language(str(build_path), grammar_name)  # type: ignore
+            self.parser.set_language(self.language)
 
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
@@ -199,7 +200,7 @@ class TreeSitterParser(CodeParser):
 
         return NodeType.UNKNOWN
 
-    def _extract_name(self, node, source: str, parent=None) -> str:
+    def _extract_name(self, node, source: str, parent=None) -> Optional[str]:
         """
         Extract name from node with smart inference for arrow functions.
 

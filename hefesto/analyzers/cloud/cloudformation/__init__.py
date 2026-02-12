@@ -12,7 +12,7 @@ from ..finding_schema import CloudFinding, CloudLocation
 
 class CloudFormationAnalyzer:
     def __init__(self):
-        self.name = "CloudFormationAnalyzer"
+        self.name = "CloudFormationAnalyzer"  # type: ignore
         self.description = "Analyzes CloudFormation templates for secrets and misconfigurations."
 
     def analyze(self, file_content: str, file_path: str) -> List[CloudFinding]:

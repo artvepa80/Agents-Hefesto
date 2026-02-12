@@ -20,7 +20,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -46,7 +46,7 @@ class IrisAgent:
         """
         self.project_id = project_id
         self.dry_run = dry_run
-        self.config = {}
+        self.config: Dict[str, Any] = {}
         self.bq_client = None
         self.pubsub_client = None
 

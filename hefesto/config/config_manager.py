@@ -36,7 +36,7 @@ class ConfigManager:
         """
         try:
             with open(self.config_file, "r") as f:
-                return json.load(f)
+                return dict(json.load(f))
         except Exception:
             return {}
 
@@ -95,7 +95,7 @@ class ConfigManager:
         Returns:
             License key string or None
         """
-        return self.get("license_key")
+        return str(self.get("license_key")) if self.get("license_key") else None
 
     def set_license_key(self, key: str):
         """
@@ -119,4 +119,4 @@ class ConfigManager:
         Returns:
             'free' or 'professional'
         """
-        return self.get("tier", "free")
+        return str(self.get("tier", "free"))

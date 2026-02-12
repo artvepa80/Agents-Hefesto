@@ -103,7 +103,7 @@ class CIParityChecker:
 
         try:
             with open(self.ci_workflow) as f:
-                return yaml.safe_load(f)
+                return dict(yaml.safe_load(f))
         except Exception:
             return None
 
@@ -207,7 +207,7 @@ class CIParityChecker:
 
     def check_python_version(self) -> List[ParityIssue]:
         """Check if local Python version matches CI."""
-        issues = []
+        issues: List[ParityIssue] = []
 
         workflow = self._parse_ci_workflow()
         if not workflow:
@@ -257,7 +257,7 @@ class CIParityChecker:
 
     def check_flake8_config(self) -> List[ParityIssue]:
         """Check if Flake8 configuration matches CI."""
-        issues = []
+        issues: List[ParityIssue] = []
 
         workflow = self._parse_ci_workflow()
         if not workflow:

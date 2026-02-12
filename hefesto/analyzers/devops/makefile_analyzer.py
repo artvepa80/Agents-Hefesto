@@ -189,7 +189,6 @@ class MakefileAnalyzer:
             confidence=confidence,
             rule_id=rule_id,
             engine="hefesto-makefile",
-            source="MakefileAnalyzer",
             metadata={"line_content": line_content},
         )
 

@@ -214,7 +214,6 @@ class PowerShellAnalyzer:
             confidence=confidence,
             rule_id=rule_id,
             engine="hefesto-powershell",
-            source="PowerShellAnalyzer",
             metadata={"line_content": line_content},
         )
 

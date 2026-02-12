@@ -101,7 +101,6 @@ class TomlAnalyzer:
             confidence=confidence,
             rule_id=rule_id,
             engine="hefesto-toml",
-            source="TomlAnalyzer",
             metadata={"line_content": line_content},
         )
 

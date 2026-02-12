@@ -432,7 +432,7 @@ def create_provider(provider_type: str, **kwargs) -> LLMProvider:
     # Instantiate provider with kwargs
     # Modern providers (Gemini, Claude, OpenAI) use api_key/model pattern
     provider_class = provider_map[provider_type]
-    provider = provider_class(**kwargs)
+    provider = provider_class(**kwargs)  # type: ignore
 
     logger.info(f"Created provider: {provider_type}")
     return provider

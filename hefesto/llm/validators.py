@@ -508,7 +508,7 @@ def validate_all(code: str, issue_type: str, strict: bool = True) -> Tuple[bool,
     else:
         logger.error("Validation failed - code cannot be applied")
 
-    return report["overall_valid"], report
+    return bool(report["overall_valid"]), report
 
 
 __all__ = [

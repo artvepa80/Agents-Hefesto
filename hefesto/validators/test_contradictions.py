@@ -110,7 +110,7 @@ class TestContradictionDetector:
                 function_name = left.func.id
             elif isinstance(left, ast.Call) and hasattr(left.func, "attr"):
                 # Handle method calls like client.insert_findings()
-                if hasattr(left.func.value, "id"):
+                if isinstance(left.func, ast.Attribute) and hasattr(left.func.value, "id"):
                     obj_name = left.func.value.id
                     method_name = left.func.attr
                     function_name = f"{obj_name}.{method_name}"
@@ -149,7 +149,7 @@ class TestContradictionDetector:
 
         # Handle: assert func(args) (implicit True)
         elif isinstance(node.test, ast.Call):
-            if hasattr(node.test.func, "attr"):
+            if isinstance(node.test.func, ast.Attribute):
                 if hasattr(node.test.func.value, "id"):
                     obj_name = node.test.func.value.id
                     method_name = node.test.func.attr
@@ -248,7 +248,7 @@ class TestContradictionDetector:
         """Extract function name from call node."""
         if hasattr(call_node.func, "id"):
             return call_node.func.id
-        elif hasattr(call_node.func, "attr"):
+        elif isinstance(call_node.func, ast.Attribute):
             if hasattr(call_node.func.value, "id"):
                 obj_name = call_node.func.value.id
                 method_name = call_node.func.attr
@@ -270,11 +270,12 @@ class TestContradictionDetector:
 
     def _extract_value(self, node: ast.AST) -> str:
         """Extract value as string."""
-        if isinstance(node, ast.Constant):
+        # AST structure varies by Python version, simplifying check
+        if isinstance(node, ast.Constant):  # Python 3.8+
             return repr(node.value)
-        elif isinstance(node, ast.Num):
+        elif isinstance(node, ast.Num): # Python < 3.8
             return str(node.n)
-        elif isinstance(node, ast.Str):
+        elif isinstance(node, ast.Str): # Python < 3.8
             return repr(node.s)
         elif isinstance(node, ast.List):
             elements = [self._extract_value(e) for e in node.elts]
@@ -313,7 +314,7 @@ class TestContradictionDetector:
 
         for (func_name, args), assertions in groups.items():
             # Check if there are different expected values
-            expectations = {}
+            expectations: Dict[str, List[TestAssertion]] = {}
             for assertion in assertions:
                 exp_val = assertion.expected_value
                 if exp_val not in expectations:

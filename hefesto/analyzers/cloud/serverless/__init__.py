@@ -12,11 +12,11 @@ from ..finding_schema import CloudFinding, CloudLocation
 
 class ServerlessAnalyzer:
     def __init__(self):
-        self.name = "ServerlessAnalyzer"
+        self.name = "ServerlessAnalyzer"  # type: ignore
         self.description = "Analyzes Serverless Framework configurations."
 
     def analyze(self, file_content: str, file_path: str) -> List[CloudFinding]:
-        findings = []
+        findings: List[Any] = []
         filename = os.path.basename(file_path)
 
         if filename not in ("serverless.yml", "serverless.yaml"):
@@ -142,7 +142,7 @@ class ServerlessAnalyzer:
                 action = stmt.get("Action")
                 resource = stmt.get("Resource")
 
-                if InsecureDefaultsDetector.is_wildcard_permission(action, resource):
+                if InsecureDefaultsDetector.is_wildcard_permission(action) and InsecureDefaultsDetector.is_wildcard_permission(resource):
                     findings.append(
                         CloudFinding(
                             format="serverless",

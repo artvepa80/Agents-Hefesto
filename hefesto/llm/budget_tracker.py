@@ -130,7 +130,7 @@ class BudgetTracker:
         self.enable_alerts = enable_alerts
 
         try:
-            self.client = bigquery.Client(project=project_id)
+            self.client: Optional[bigquery.Client] = bigquery.Client(project=project_id)
             # Table where LLM events are logged
             self.llm_events_table = f"{project_id}.omega_agent.llm_events"
             logger.info(

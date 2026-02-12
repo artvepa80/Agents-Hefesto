@@ -94,7 +94,6 @@ class JsonAnalyzer:
             confidence=confidence,
             rule_id=rule_id,
             engine="hefesto-json",
-            source="JsonAnalyzer",
             metadata={"line_content": line_content},
         )
 

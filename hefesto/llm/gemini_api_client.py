@@ -167,8 +167,8 @@ class GeminiAPIClient(LLMProvider):
         try:
             self.model = genai.GenerativeModel(
                 model_name=self.model_name,
-                generation_config=self.generation_config,
-                safety_settings=SAFETY_SETTINGS,
+                generation_config=self.generation_config,  # type: ignore
+                safety_settings=SAFETY_SETTINGS,  # type: ignore
             )
             logger.info(f"✅ Gemini API client initialized with model: {self.model_name}")
         except Exception as e:
@@ -179,8 +179,8 @@ class GeminiAPIClient(LLMProvider):
                 self.model_name = FALLBACK_MODEL
                 self.model = genai.GenerativeModel(
                     model_name=self.model_name,
-                    generation_config=self.generation_config,
-                    safety_settings=SAFETY_SETTINGS,
+                    generation_config=self.generation_config,  # type: ignore
+                    safety_settings=SAFETY_SETTINGS,  # type: ignore
                 )
             else:
                 raise
@@ -203,8 +203,8 @@ class GeminiAPIClient(LLMProvider):
             # Generate content
             response = self.model.generate_content(
                 prompt,
-                generation_config=gen_config,
-                safety_settings=SAFETY_SETTINGS,
+                generation_config=gen_config,  # type: ignore
+                safety_settings=SAFETY_SETTINGS,  # type: ignore
             )
 
             # Extract text

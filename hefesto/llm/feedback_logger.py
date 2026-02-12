@@ -119,7 +119,7 @@ class FeedbackLogger:
         self.full_table_id = f"{project_id}.{dataset_id}.{table_id}"
 
         try:
-            self.client = bigquery.Client(project=project_id)
+            self.client: Optional[bigquery.Client] = bigquery.Client(project=project_id)
             logger.info(f"FeedbackLogger initialized for {self.full_table_id}")
         except Exception as e:
             logger.error(f"Failed to initialize BigQuery client: {e}")

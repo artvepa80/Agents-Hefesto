@@ -305,6 +305,8 @@ class BigQueryClient:
 
         try:
             query = self._build_list_query(limit, offset, filters)
+            if self.client is None:
+                raise RuntimeError("BigQuery client is None but configured")
             query_job = self.client.query(query)
             results = query_job.result()
 
@@ -339,6 +341,8 @@ class BigQueryClient:
 
         try:
             query = self._build_get_by_id_query(finding_id)
+            if self.client is None:
+                raise RuntimeError("BigQuery client is None but configured")
             query_job = self.client.query(query)
             results = list(query_job.result())
 
@@ -399,6 +403,8 @@ class BigQueryClient:
             WHERE finding_id = '{finding_id}'
             """
 
+            if self.client is None:
+                raise RuntimeError("BigQuery client is None but configured")
             query_job = self.client.query(update_query)
             query_job.result()
 
@@ -453,7 +459,9 @@ class BigQueryClient:
             rows = [self._transform_finding_to_bq(f) for f in findings]
 
             # Get table reference
-            table_ref = self.client.dataset(self.dataset_id).table("findings")
+            if self.client is None:
+                raise RuntimeError("BigQuery client is None but configured")
+            table_ref = self.client.dataset(str(self.dataset_id)).table("findings")
 
             # Insert rows
             errors = self.client.insert_rows_json(table_ref, rows)
@@ -491,7 +499,9 @@ class BigQueryClient:
             row = self._transform_analysis_to_bq(analysis)
 
             # Get table reference
-            table_ref = self.client.dataset(self.dataset_id).table("analysis_runs")
+            if self.client is None:
+                raise RuntimeError("BigQuery client is None but configured")
+            table_ref = self.client.dataset(str(self.dataset_id)).table("analysis_runs")
 
             # Insert row
             errors = self.client.insert_rows_json(table_ref, [row])
