@@ -30,9 +30,15 @@ class InsecureDefaultsDetector:
 
         Deterministic: uses ipaddress parsing; invalid CIDRs => False.
         """
+        if cidr in ("*", "Internet", "any"):
+            return True
+
         try:
             net = ip_network(cidr, strict=False)
         except Exception:
+            # Check for other common aliases before giving up
+            if str(cidr).lower() in ("internet", "any"):
+                return True
             return False
 
         # explicit global-any

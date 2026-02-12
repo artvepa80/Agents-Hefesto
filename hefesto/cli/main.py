@@ -878,5 +878,65 @@ def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
     return exit_code
 
 
+@cli.command()
+@click.argument("template_file", type=click.Path(exists=True))
+@click.option("--region", required=True, help="AWS Region")
+@click.option("--stack-name", help="CloudFormation Stack Name")
+@click.option("--tags", help="Tags to resolve (key=value,key2=value2)")
+@click.option(
+    "--fail-on",
+    type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+    help="Fail if severity >= level",
+)
+def drift(template_file, region, stack_name, tags, fail_on):
+    """Detect configuration drift in IaC."""
+    from hefesto.core.drift_runner import DriftRunner
+
+    # Parse tags
+    tag_dict = {}
+    if tags:
+        try:
+            for item in tags.split(","):
+                k, v = item.split("=")
+                tag_dict[k.strip()] = v.strip()
+        except ValueError:
+            click.echo("Error: Invalid tags format. Use key=value,key2=value2", err=True)
+            sys.exit(1)
+
+    runner = DriftRunner()
+    result = runner.run(
+        template_path=template_file,
+        region=region,
+        stack_name=stack_name,
+        tags=tag_dict,
+    )
+
+    # Print Report
+    click.echo("\nDrift Analysis Report")
+    click.echo("---------------------")
+    click.echo(f"Region: {result.summary['region']}")
+    if result.summary.get("stack_name"):
+        click.echo(f"Stack: {result.summary['stack_name']}")
+
+    click.echo(f"\nFindings: {len(result.findings)}")
+    for finding in result.findings:
+        click.echo(f"- [{finding.severity}] {finding.evidence}")
+
+    # Exit Code Logic
+    exit_code = 0
+    severity_map = {"LOW": 0, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
+
+    # Determine threshold (default to HIGH if not specified)
+    threshold_level = fail_on if fail_on else "HIGH"
+    threshold = severity_map[threshold_level]
+
+    for finding in result.findings:
+        if severity_map.get(finding.severity, 0) >= threshold:
+            exit_code = 2
+            break
+
+    sys.exit(exit_code)
+
+
 if __name__ == "__main__":
     main()

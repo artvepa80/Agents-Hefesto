@@ -11,25 +11,26 @@ def test_arm_secrets_detection():
     analyzer = ANALYZERS[0]
 
     # Test case: Insecure parameters
-    content = """
-    {
-        "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",  # noqa: E501
+    schema_url = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+    content = f"""
+    {{
+        "$schema": "{schema_url}",
         "contentVersion": "1.0.0.0",
-        "parameters": {
-            "adminPassword": {
+        "parameters": {{
+            "adminPassword": {{
                 "type": "string",
                 "defaultValue": "CorrectHorseBatteryStaple"
-            }
-        },
+            }}
+        }},
         "resources": [
-            {
+            {{
                 "type": "Microsoft.Web/sites",
-                "properties": {
+                "properties": {{
                     "password": "MySecretPassword"
-                }
-            }
+                }}
+            }}
         ]
-    }
+    }}
     """
     findings = analyzer.analyze(content, "azuredeploy.json")
 
