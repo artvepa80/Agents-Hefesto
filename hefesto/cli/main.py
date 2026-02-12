@@ -68,7 +68,7 @@ def _parse_command_parts(tokens: list[str]) -> list[str]:
     return cmd_parts
 
 
-def _parse_telemetry_subcommand(tokens, i, cmd_parts) -> int:
+def _parse_telemetry_subcommand(tokens: list[str], i: int, cmd_parts: list[str]) -> int:
     while i < len(tokens) and tokens[i].startswith("-"):
         if "=" not in tokens[i] and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
             i += 2

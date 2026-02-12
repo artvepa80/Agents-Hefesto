@@ -10,7 +10,7 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
 
@@ -18,6 +18,7 @@ from hefesto.api.schemas.common import APIResponse, ErrorDetail
 from hefesto.api.schemas.findings import (
     FindingDetailResponse,
     FindingListResponse,
+    FindingSchema,
     FindingUpdateRequest,
     FindingUpdateResponse,
     PaginationMeta,
@@ -154,7 +155,13 @@ async def list_findings(
         bq_client = get_bigquery_client()
 
         # Query findings
-        findings = bq_client.list_findings(limit=limit, offset=offset, filters=filters)
+        findings: List[Dict[str, Any]] = bq_client.list_findings(
+            limit=limit, offset=offset, filters=filters
+        )
+
+        # Build response with validating models
+        # Phase 3: We iterate to validate each finding against the schema
+        validated_findings = [FindingSchema(**f) for f in findings]
 
         # Build pagination metadata
         # Note: For Phase 3, we approximate has_more by checking if we got a full page
@@ -168,9 +175,8 @@ async def list_findings(
             has_more=has_more,
         )
 
-        # Build response
         response_data = FindingListResponse(
-            findings=findings,
+            findings=validated_findings,
             pagination=pagination,
             filters_applied=filters,
             bigquery_available=bq_client.is_configured,
@@ -238,17 +244,20 @@ async def get_finding(
         bq_client = get_bigquery_client()
 
         # Query finding
-        finding = bq_client.get_finding_by_id(finding_id)
+        finding_dict = bq_client.get_finding_by_id(finding_id)
 
-        if not finding:
+        if not finding_dict:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Finding not found: {finding_id}",
             )
 
+        # Validate against schema
+        finding_model = FindingSchema(**finding_dict)
+
         # Build response
         response_data = FindingDetailResponse(
-            finding=finding,
+            finding=finding_model,
             related_findings=None,  # Phase 4 enhancement
             history=None,  # Phase 4 enhancement
             bigquery_available=bq_client.is_configured,

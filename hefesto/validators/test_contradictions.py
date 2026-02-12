@@ -247,7 +247,7 @@ class TestContradictionDetector:
     def _extract_function_name(self, call_node: ast.Call) -> str:
         """Extract function name from call node."""
         if hasattr(call_node.func, "id"):
-            return call_node.func.id
+            return str(call_node.func.id)
         elif isinstance(call_node.func, ast.Attribute):
             if hasattr(call_node.func.value, "id"):
                 obj_name = call_node.func.value.id

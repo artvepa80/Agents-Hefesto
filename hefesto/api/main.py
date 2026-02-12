@@ -137,3 +137,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         print(f"👋 Hefesto API v{__version__} shutting down...")
 
     return application
+
+
+# Global app instance for uvicorn/gunicorn
+app = create_app()

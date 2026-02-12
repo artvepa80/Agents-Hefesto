@@ -42,6 +42,7 @@ fi
 $T $PY -m black --check hefesto tests omega
 $T $PY -m isort --check-only hefesto tests omega
 $T $PY -m flake8 hefesto tests omega
+$T $PY -m mypy hefesto omega --ignore-missing-imports
 $T $PY -m pytest -q --tb=short --maxfail=1 tests/api/test_health.py tests/test_sql_analyzer.py
 
 echo "[hefesto] Pre-push checks OK."

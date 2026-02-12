@@ -79,7 +79,7 @@ class StackResolver:
             and self.stack_name_key in md
             and isinstance(md[self.stack_name_key], str)
         ):
-            return md[self.stack_name_key]
+            return str(md[self.stack_name_key])
 
         # Optional: allow Parameters default
         params = template.get("Parameters") or {}

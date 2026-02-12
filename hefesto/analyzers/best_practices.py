@@ -10,7 +10,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import ast
-from typing import List
+from typing import List, Union
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -245,7 +245,7 @@ class BestPracticesAnalyzer:
 
         return issues
 
-    def _is_loop_context(self, node: ast.FunctionDef) -> bool:
+    def _is_loop_context(self, node: Union[ast.FunctionDef, ast.AsyncFunctionDef]) -> bool:
         """Check if function is likely used in loop context (e.g., lambda, comprehension)."""
         # Simple heuristic: function name suggests it's a short helper
         return node.name in ("lambda", "<lambda>") or len(node.name) < 3

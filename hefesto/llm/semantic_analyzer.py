@@ -365,7 +365,7 @@ class SemanticAnalyzer:
             # Calculate similarity for each
             # NOTE: In production, we would store embeddings in BigQuery
             # and use vector similarity search for efficiency
-            similar = []
+            similar: List[Dict[str, Any]] = []
             new_embedding = self.get_code_embedding(new_code, language)
 
             if not new_embedding:

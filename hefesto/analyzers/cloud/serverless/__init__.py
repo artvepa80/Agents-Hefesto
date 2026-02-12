@@ -1,10 +1,10 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 try:
-    import yaml
+    import yaml  # type: ignore
 except ImportError:
-    yaml = None
+    yaml = None  # type: ignore
 
 from ..detectors import SecretDetector
 from ..finding_schema import CloudFinding, CloudLocation

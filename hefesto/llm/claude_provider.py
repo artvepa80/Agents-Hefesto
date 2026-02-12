@@ -247,8 +247,10 @@ class ClaudeProvider(LLMProvider):
         """
         try:
             # Use Claude's token counting
+            # Use Claude's token counting if available, else int cast
             result = self.client.count_tokens(text)
-            return result
+            return int(result)
+
         except Exception as e:
             logger.warning(f"Token counting failed: {e}")
             # Rough estimate: 1 token ≈ 4 chars for Claude

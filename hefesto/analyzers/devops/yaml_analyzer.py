@@ -8,7 +8,8 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
-from typing import List, Tuple
+from types import ModuleType
+from typing import List, Optional, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -21,7 +22,7 @@ try:
 
     YAML_AVAILABLE = True
 except ImportError:
-    yaml = None
+    yaml = None  # type: ignore
     YAML_AVAILABLE = False
 
 

@@ -68,19 +68,22 @@ class SuggestionValidationResult:
     valid: bool
     confidence: float
     issues: List[str]
-    safe_to_apply: bool
-    warnings: List[str] = None
+    can_auto_apply: bool
+    warnings: Optional[List[str]] = None
     validation_passed: bool = True
     similarity_score: float = 0.0
     semantic_similarity: Optional[float] = None
     is_duplicate: bool = False
-    details: Dict[str, Any] = None
+    details: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.warnings is None:
             self.warnings = []
         if self.details is None:
             self.details = {}
+        # Auto-fail if strict mode
+        if self.confidence < 0.8:
+            self.can_auto_apply = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
@@ -88,7 +91,7 @@ class SuggestionValidationResult:
             "valid": self.valid,
             "confidence": self.confidence,
             "issues": self.issues,
-            "safe_to_apply": self.safe_to_apply,
+            "can_auto_apply": self.can_auto_apply,
             "warnings": self.warnings,
             "validation_passed": self.validation_passed,
             "similarity_score": self.similarity_score,
@@ -603,14 +606,14 @@ class SuggestionValidator:
         )
 
         # 10. Determine if safe to auto-apply
-        safe_to_apply = valid and confidence >= self.confidence_threshold
+        can_auto_apply = valid and confidence >= self.confidence_threshold
 
         # Log result
         if valid:
             logger.info(
                 f"Validation PASSED: confidence={confidence:.2f}, "
                 f"similarity={similarity:.2f}, semantic_similarity={semantic_similarity}, "
-                f"is_duplicate={is_duplicate}, safe_to_apply={safe_to_apply}"
+                f"is_duplicate={is_duplicate}, can_auto_apply={can_auto_apply}"
             )
         else:
             logger.warning(
@@ -621,7 +624,7 @@ class SuggestionValidator:
             valid=valid,
             confidence=confidence,
             issues=issues,
-            safe_to_apply=safe_to_apply,
+            can_auto_apply=can_auto_apply,
             warnings=warnings,
             validation_passed=valid,
             similarity_score=similarity,

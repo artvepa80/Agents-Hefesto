@@ -116,7 +116,7 @@ class SecurityAnalyzer:
         false positives from regex patterns, docstrings, or comments.
         For other languages: Falls back to regex-based detection.
         """
-        issues = []
+        issues: List[AnalysisIssue] = []
 
         # For Python: use AST-based detection to avoid false positives
         if tree.language == "python":
@@ -202,7 +202,7 @@ class SecurityAnalyzer:
 
     def _check_assert_usage(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
         """Detect assert statements in production code."""
-        issues = []
+        issues: List[AnalysisIssue] = []
 
         if "test" in file_path.lower():
             return issues
