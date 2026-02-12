@@ -16,7 +16,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
