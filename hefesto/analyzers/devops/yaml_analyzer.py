@@ -8,8 +8,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
-from types import ModuleType
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,

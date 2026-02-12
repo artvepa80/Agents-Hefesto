@@ -1,5 +1,5 @@
 import os
-from typing import Any, List, Optional
+from typing import Any, List
 
 try:
     import yaml  # type: ignore
