@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.8.1
+hefesto --version  # Should show: 4.8.2
 
 # 3. Analyze
 cd your-project
@@ -408,6 +408,11 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.8.2 (2026-02-12)
+- **Patch V: CI & Deployment Fixes**
+- **Critical Fix**: CLI exit code logic (now correctly returns 2 on failure)
+- **Fix**: Cloud Run port binding and MyPy type safety hardening
 
 ### v4.7.0 (2026-02-10)
 - **Patch C: API Hardening** — `hefesto serve` is secure-by-default (local-first)

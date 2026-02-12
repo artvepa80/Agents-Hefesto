@@ -5,6 +5,13 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.2] - 2026-02-12 — Patch V: CI & Deployment Fixes
+### Fixed
+- **CLI**: Fixed critical bug where `analyze` command returned exit code 0 even with critical issues (missing return statement).
+- **Deployment**: Fixed Cloud Run port binding (`HEFESTO_HOST` now defaults correctly to `0.0.0.0` in Docker).
+- **Type Safety**: Resolved 100+ MyPy errors (missing stubs, mutable defaults, strict typing).
+- **CI**: Added `scripts/prepush_gate.sh` for comprehensive local validation before push.
+
 ## [4.8.1] - 2026-02-11 — Patch T: Security Fix (CVE-2026-26007)
 ### Fixed
 - **Security**: Pinned `cryptography>=46.0.5` to resolve high-severity vulnerability (CVE-2026-26007).
