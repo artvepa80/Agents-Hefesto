@@ -142,7 +142,9 @@ class ServerlessAnalyzer:
                 action = stmt.get("Action")
                 resource = stmt.get("Resource")
 
-                if InsecureDefaultsDetector.is_wildcard_permission(action) and InsecureDefaultsDetector.is_wildcard_permission(resource):
+                if InsecureDefaultsDetector.is_wildcard_permission(
+                    action
+                ) and InsecureDefaultsDetector.is_wildcard_permission(resource):
                     findings.append(
                         CloudFinding(
                             format="serverless",

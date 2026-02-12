@@ -273,9 +273,9 @@ class TestContradictionDetector:
         # AST structure varies by Python version, simplifying check
         if isinstance(node, ast.Constant):  # Python 3.8+
             return repr(node.value)
-        elif isinstance(node, ast.Num): # Python < 3.8
+        elif isinstance(node, ast.Num):  # Python < 3.8
             return str(node.n)
-        elif isinstance(node, ast.Str): # Python < 3.8
+        elif isinstance(node, ast.Str):  # Python < 3.8
             return repr(node.s)
         elif isinstance(node, ast.List):
             elements = [self._extract_value(e) for e in node.elts]

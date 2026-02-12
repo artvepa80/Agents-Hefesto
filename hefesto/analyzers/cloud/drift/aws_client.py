@@ -43,7 +43,9 @@ class AwsClient:
         try:
             ec2 = session.client("ec2")
             if group_ids:
-                return list(ec2.describe_security_groups(GroupIds=group_ids).get("SecurityGroups", []))
+                return list(
+                    ec2.describe_security_groups(GroupIds=group_ids).get("SecurityGroups", [])
+                )
             elif filters:
                 return list(ec2.describe_security_groups(Filters=filters).get("SecurityGroups", []))
             else:
