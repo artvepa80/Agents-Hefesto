@@ -657,8 +657,6 @@ def main() -> None:
         sys.exit(1)
 
 
-if __name__ == "__main__":
-    main()
 
 
 def _find_repo_root():
@@ -880,3 +878,9 @@ def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
             exit_code = 1
 
     return exit_code
+
+
+if __name__ == "__main__":
+    main()
+
+

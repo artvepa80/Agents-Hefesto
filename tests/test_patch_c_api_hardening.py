@@ -89,13 +89,14 @@ class TestCORSEnforcement:
     """CORS wildcard + credentials is forbidden."""
 
     def test_wildcard_with_credentials_raises(self):
-        with pytest.raises(ValueError, match="insecure"):
+        with pytest.raises(RuntimeError) as exc:
             _create_test_app(
                 _make_settings(
                     cors_origins="*",
                     cors_allow_credentials=True,
                 )
             )
+        assert "Cannot use '*'" in str(exc.value)
 
     def test_explicit_origins_with_credentials_ok(self):
         app = _create_test_app(

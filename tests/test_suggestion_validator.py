@@ -57,7 +57,7 @@ class TestSyntaxValidation:
         assert result.confidence == 0.0  # Syntax error = zero confidence
         assert len(result.issues) > 0
         assert any("Syntax error" in issue for issue in result.issues)
-        assert result.safe_to_apply is False
+        assert result.can_auto_apply is False
 
     def test_validator_accepts_valid_syntax(self):
         """Test validator accepts syntactically valid code"""
@@ -94,7 +94,7 @@ class TestDangerousPatterns:
 
         assert result.valid is False
         assert any("Dangerous" in issue or "eval" in issue for issue in result.issues)
-        assert result.safe_to_apply is False
+        assert result.can_auto_apply is False
 
     def test_validator_detects_subprocess_calls(self):
         """Test validator detects dangerous subprocess usage"""
@@ -418,7 +418,7 @@ class TestValidationResult:
         assert hasattr(result, "valid")
         assert hasattr(result, "confidence")
         assert hasattr(result, "issues")
-        assert hasattr(result, "safe_to_apply")
+        assert hasattr(result, "can_auto_apply")
         assert hasattr(result, "warnings")
         assert hasattr(result, "validation_passed")
         assert hasattr(result, "similarity_score")
@@ -428,7 +428,7 @@ class TestValidationResult:
         assert isinstance(result.valid, bool)
         assert isinstance(result.confidence, float)
         assert isinstance(result.issues, list)
-        assert isinstance(result.safe_to_apply, bool)
+        assert isinstance(result.can_auto_apply, bool)
         assert isinstance(result.warnings, list)
         assert isinstance(result.similarity_score, float)
         assert isinstance(result.details, dict)
@@ -446,7 +446,7 @@ class TestValidationResult:
         assert isinstance(result_dict, dict)
         assert "valid" in result_dict
         assert "confidence" in result_dict
-        assert "safe_to_apply" in result_dict
+        assert "can_auto_apply" in result_dict
         assert "similarity_score" in result_dict
 
 
@@ -493,7 +493,7 @@ class TestIntegration:
         # Should pass all checks
         assert result.valid is True
         assert result.confidence > 0.5
-        assert result.safe_to_apply is True
+        assert result.can_auto_apply is True
         assert 0.4 < result.similarity_score < 0.9
         assert len(result.issues) == 0
 
@@ -535,19 +535,21 @@ class TestIntegration:
     ],
 )
 def test_confidence_threshold_variations(threshold, expected_safe):
-    """Test different confidence thresholds affect safe_to_apply"""
+    """Test different confidence thresholds affect can_auto_apply"""
     validator = SuggestionValidator(confidence_threshold=threshold)
 
     # Medium-quality suggestion
     original = "def foo(): x = 1; return x"
     suggested = "def foo(): return 1"
 
-    result = validator.validate(original, suggested, "unused_variable")
+    result = validator.validate(original, suggested, "code_complexity")
 
     # With low threshold, should be safe to apply
     # With high threshold, might not be
     if threshold <= 0.5:
-        assert result.valid is True  # Should at least be valid
+        assert result.can_auto_apply is True
+    elif threshold >= 0.9:
+        assert result.can_auto_apply is False
 
 
 if __name__ == "__main__":
