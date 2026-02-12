@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.8.2
+hefesto --version  # Should show: 4.8.3
 
 # 3. Analyze
 cd your-project
@@ -408,6 +408,10 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.8.3 (2026-02-12)
+- **Patch W: Security Fixes**
+- **Critical**: Eliminated SQL injection vulnerabilities in BigQuery service via parameterized queries
 
 ### v4.8.2 (2026-02-12)
 - **Patch V: CI & Deployment Fixes**

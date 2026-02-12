@@ -15,7 +15,7 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from google.api_core import retry
 from google.cloud import bigquery
@@ -79,9 +79,11 @@ class BigQueryClient:
             )
             self.is_configured = False
 
-    def _build_list_query(self, limit: int, offset: int, filters: Dict[str, Any]) -> str:
+    def _build_list_query(
+        self, limit: int, offset: int, filters: Dict[str, Any]
+    ) -> Tuple[str, List[bigquery.ScalarQueryParameter]]:
         """
-        Build SQL query for listing findings with filters.
+        Build SQL query for listing findings with filters via parameters.
 
         Args:
             limit: Maximum number of results
@@ -95,7 +97,7 @@ class BigQueryClient:
                 - end_date: Filter by created_at <= end_date (ISO format)
 
         Returns:
-            SQL query string
+            Tuple of (SQL query string, list of query parameters)
         """
         query = f"""
         SELECT
@@ -122,24 +124,43 @@ class BigQueryClient:
 
         # Build WHERE clause from filters
         where_clauses = []
+        query_params = []
 
         if "severity" in filters:
-            where_clauses.append(f"severity = '{filters['severity']}'")
+            where_clauses.append("severity = @severity")
+            query_params.append(
+                bigquery.ScalarQueryParameter("severity", "STRING", filters["severity"])
+            )
 
         if "file_path" in filters:
-            where_clauses.append(f"file_path = '{filters['file_path']}'")
+            where_clauses.append("file_path = @file_path")
+            query_params.append(
+                bigquery.ScalarQueryParameter("file_path", "STRING", filters["file_path"])
+            )
 
         if "analyzer" in filters:
-            where_clauses.append(f"analyzer = '{filters['analyzer']}'")
+            where_clauses.append("analyzer = @analyzer")
+            query_params.append(
+                bigquery.ScalarQueryParameter("analyzer", "STRING", filters["analyzer"])
+            )
 
         if "status" in filters:
-            where_clauses.append(f"status = '{filters['status']}'")
+            where_clauses.append("status = @status")
+            query_params.append(
+                bigquery.ScalarQueryParameter("status", "STRING", filters["status"])
+            )
 
         if "start_date" in filters:
-            where_clauses.append(f"created_at >= TIMESTAMP('{filters['start_date']}')")
+            where_clauses.append("created_at >= TIMESTAMP(@start_date)")
+            query_params.append(
+                bigquery.ScalarQueryParameter("start_date", "STRING", filters["start_date"])
+            )
 
         if "end_date" in filters:
-            where_clauses.append(f"created_at <= TIMESTAMP('{filters['end_date']}')")
+            where_clauses.append("created_at <= TIMESTAMP(@end_date)")
+            query_params.append(
+                bigquery.ScalarQueryParameter("end_date", "STRING", filters["end_date"])
+            )
 
         if where_clauses:
             query += " WHERE " + " AND ".join(where_clauses)
@@ -148,21 +169,25 @@ class BigQueryClient:
         query += " ORDER BY created_at DESC"
 
         # Add pagination
-        query += f" LIMIT {limit} OFFSET {offset}"
+        query += " LIMIT @limit OFFSET @offset"
+        query_params.append(bigquery.ScalarQueryParameter("limit", "INT64", limit))
+        query_params.append(bigquery.ScalarQueryParameter("offset", "INT64", offset))
 
-        return query
+        return query, query_params
 
-    def _build_get_by_id_query(self, finding_id: str) -> str:
+    def _build_get_by_id_query(
+        self, finding_id: str
+    ) -> Tuple[str, List[bigquery.ScalarQueryParameter]]:
         """
-        Build SQL query for getting single finding by ID.
+        Build SQL query for getting single finding by ID via parameters.
 
         Args:
             finding_id: Finding identifier (fnd_*)
 
         Returns:
-            SQL query string
+            Tuple of (SQL query string, list of query parameters)
         """
-        return f"""
+        query = f"""
         SELECT
             finding_id,
             analysis_id,
@@ -183,9 +208,11 @@ class BigQueryClient:
             created_at,
             updated_at
         FROM `{self.project_id}.{self.dataset_id}.findings`
-        WHERE finding_id = '{finding_id}'
+        WHERE finding_id = @finding_id
         LIMIT 1
         """
+        params = [bigquery.ScalarQueryParameter("finding_id", "STRING", finding_id)]
+        return query, params
 
     def _transform_row_to_finding(self, row: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -304,10 +331,12 @@ class BigQueryClient:
             return []
 
         try:
-            query = self._build_list_query(limit, offset, filters)
+            query, params = self._build_list_query(limit, offset, filters)
             if self.client is None:
                 raise RuntimeError("BigQuery client is None but configured")
-            query_job = self.client.query(query)
+
+            job_config = bigquery.QueryJobConfig(query_parameters=params)
+            query_job = self.client.query(query, job_config=job_config)
             results = query_job.result()
 
             findings = []
@@ -340,10 +369,12 @@ class BigQueryClient:
             return None
 
         try:
-            query = self._build_get_by_id_query(finding_id)
+            query, params = self._build_get_by_id_query(finding_id)
             if self.client is None:
                 raise RuntimeError("BigQuery client is None but configured")
-            query_job = self.client.query(query)
+
+            job_config = bigquery.QueryJobConfig(query_parameters=params)
+            query_job = self.client.query(query, job_config=job_config)
             results = list(query_job.result())
 
             if not results:
@@ -384,6 +415,7 @@ class BigQueryClient:
 
         try:
             now = datetime.utcnow()
+            now_iso = now.isoformat()
 
             # First, get current status for history
             current_finding = self.get_finding_by_id(finding_id)
@@ -395,17 +427,27 @@ class BigQueryClient:
             update_query = f"""
             UPDATE `{self.project_id}.{self.dataset_id}.findings`
             SET
-                status = '{new_status}',
-                status_updated_at = TIMESTAMP('{now.isoformat()}'),
-                status_updated_by = {f"'{updated_by}'" if updated_by else "NULL"},
-                notes = {f"'{notes}'" if notes else "NULL"},
-                updated_at = TIMESTAMP('{now.isoformat()}')
-            WHERE finding_id = '{finding_id}'
+                status = @new_status,
+                status_updated_at = TIMESTAMP(@now_iso),
+                status_updated_by = @updated_by,
+                notes = @notes,
+                updated_at = TIMESTAMP(@now_iso)
+            WHERE finding_id = @finding_id
             """
+
+            update_params = [
+                bigquery.ScalarQueryParameter("new_status", "STRING", new_status),
+                bigquery.ScalarQueryParameter("now_iso", "STRING", now_iso),
+                bigquery.ScalarQueryParameter("updated_by", "STRING", updated_by),
+                bigquery.ScalarQueryParameter("notes", "STRING", notes),
+                bigquery.ScalarQueryParameter("finding_id", "STRING", finding_id),
+            ]
 
             if self.client is None:
                 raise RuntimeError("BigQuery client is None but configured")
-            query_job = self.client.query(update_query)
+
+            update_job_config = bigquery.QueryJobConfig(query_parameters=update_params)
+            query_job = self.client.query(update_query, job_config=update_job_config)
             query_job.result()
 
             # Insert into finding_history
@@ -414,17 +456,28 @@ class BigQueryClient:
             INSERT INTO `{self.project_id}.{self.dataset_id}.finding_history`
             (history_id, finding_id, previous_status, new_status, changed_by, changed_at, notes)
             VALUES (
-                '{history_id}',
-                '{finding_id}',
-                {f"'{previous_status}'" if previous_status else "NULL"},
-                '{new_status}',
-                {f"'{updated_by}'" if updated_by else "NULL"},
-                TIMESTAMP('{now.isoformat()}'),
-                {f"'{notes}'" if notes else "NULL"}
+                @history_id,
+                @finding_id,
+                @previous_status,
+                @new_status,
+                @updated_by,
+                TIMESTAMP(@now_iso),
+                @notes
             )
             """
 
-            history_job = self.client.query(history_query)
+            history_params = [
+                bigquery.ScalarQueryParameter("history_id", "STRING", history_id),
+                bigquery.ScalarQueryParameter("finding_id", "STRING", finding_id),
+                bigquery.ScalarQueryParameter("previous_status", "STRING", previous_status),
+                bigquery.ScalarQueryParameter("new_status", "STRING", new_status),
+                bigquery.ScalarQueryParameter("updated_by", "STRING", updated_by),
+                bigquery.ScalarQueryParameter("now_iso", "STRING", now_iso),
+                bigquery.ScalarQueryParameter("notes", "STRING", notes),
+            ]
+
+            history_job_config = bigquery.QueryJobConfig(query_parameters=history_params)
+            history_job = self.client.query(history_query, job_config=history_job_config)
             history_job.result()
 
             logger.info(f"Updated finding {finding_id} status: {previous_status} -> {new_status}")

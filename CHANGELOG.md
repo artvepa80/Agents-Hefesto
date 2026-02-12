@@ -5,6 +5,10 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.3] - 2026-02-12 — Patch W: SQL Injection Fixes
+### Security
+- **BigQuery**: Fixed critical SQL injection vulnerabilities in `list_findings`, `get_finding_by_id`, and `update_finding_status` by implementing parameterized queries.
+
 ## [4.8.2] - 2026-02-12 — Patch V: CI & Deployment Fixes
 ### Fixed
 - **CLI**: Fixed critical bug where `analyze` command returned exit code 0 even with critical issues (missing return statement).
