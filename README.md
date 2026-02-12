@@ -306,6 +306,8 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
+
+
 ### GitLab CI
 
 ```yaml

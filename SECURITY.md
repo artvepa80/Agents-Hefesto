@@ -93,6 +93,12 @@ Run Hefesto on your code:
 hefesto analyze --min-severity CRITICAL
 ```
 
+## Dependency Submission
+
+We rely on **GitHub's Automatic Dependency Submission** to generate SBOMs and detect vulnerable dependencies.
+- We **do not** use custom workflows for this to avoid duplicate submissions and API flakiness.
+- Ensure "Automatic dependency submission" is **enabled** in Repo Settings > Code security and analysis.
+
 ## API Hardening (v4.7.0)
 
 The `hefesto serve` API server is **secure by default** with layered protections:
