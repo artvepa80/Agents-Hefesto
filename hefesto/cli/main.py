@@ -657,8 +657,6 @@ def main() -> None:
         sys.exit(1)
 
 
-
-
 def _find_repo_root():
     import subprocess
     from pathlib import Path
@@ -882,5 +880,3 @@ def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
 
 if __name__ == "__main__":
     main()
-
-
