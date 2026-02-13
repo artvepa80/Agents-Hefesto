@@ -3,9 +3,9 @@
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Languages](https://img.shields.io/badge/languages-17-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
+[![Languages](https://img.shields.io/badge/languages-21-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
-**Multi-language AI code analysis for 7 programming languages + 10 DevOps/config formats.**
+**Multi-language AI code analysis for 7 programming languages + 10 DevOps/config formats + 4 Cloud formats.**
 
 Hefesto validates your code before production using AI-powered static analysis and ML enhancement. It caught 3 critical bugs in its own v4.0.1 release through self-validation.
 

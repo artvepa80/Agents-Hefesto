@@ -76,9 +76,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Robust Rotation**: Improved file rotation logic (deterministic `MAX_BYTES`, safe deletion).
 - **Schema Versioning**: Telemetry events now include `schema_version: 1` for forward compatibility.
 
-## [4.7.0] - 2026-02-10 — Patch C: API Hardening
+## [4.7.0] - 2026-02-10 — Patch C & Ola 4: API Hardening + Cloud Analyzers
 
-### Added — API Security Defaults
+### Added — Ola 4: Cloud Infrastructure Analyzers
+**Infrastructure as Code (IaC) Security & Drift Detection**
+
+- **New Analyzers** (`hefesto/analyzers/cloud/`):
+  - **CloudFormation**: 50+ rules for AWS infrastructure (Secrets, SG open ports, S3 public access).
+  - **ARM Templates**: Azure Resource Manager security scanning.
+  - **Helm Charts**: Kubernetes security best practices (Privileged containers, root FS).
+  - **Serverless**: Serverless Framework (`serverless.yml`) scanning.
+- **Drift Detection** (`hefesto analyze --drift`):
+  - Detects infrastructure drift between IaC templates and live AWS environment (Security Groups PoC).
+  - **Resource Graph**: Internal graph representation for complex dependency analysis.
+- **Telemetry**: Enhanced telemetry for cloud analysis capabilities.
+
+### Added — Patch C: API Security Defaults
 
 **Secure-by-default API server for `hefesto serve`**
 
