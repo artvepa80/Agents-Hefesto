@@ -30,5 +30,6 @@ inputs:
 runs:
   using: 'docker'
   image: 'Dockerfile.action'
-  args:
-    - ${{ inputs.target }}
+  # Inputs are automatically passed as INPUT_<NAME> environment variables
+  # args: []  <-- We use env vars for structured input handling
+

@@ -44,17 +44,37 @@ hefesto analyze . --severity HIGH
 
 Run Hefesto directly in your CI/CD pipeline without installing Python dependencies using our Docker-based Action:
 
+````markdown
 ```yaml
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
+    id: hefesto
     uses: artvepa80/Agents-Hefesto@v4.8.5
     with:
       target: '.'
       fail_on: 'CRITICAL'
       min_severity: 'MEDIUM'
+      format: 'table'
 ```
-```
+````
+
+**Inputs**:
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `target` | Path to analyze (file or directory) | `.` |
+| `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
+| `min_severity` | Minimum severity to report | `LOW` |
+| `format` | Output format (`table`, `json`, `sarif`) | `table` |
+| `telemetry` | Opt-in to anonymous telemetry (1=enable) | `0` |
+
+**Outputs**:
+
+| Output | Description |
+|--------|-------------|
+| `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
+
 
 ### Example: What Hefesto Catches
 

@@ -14,6 +14,7 @@ jobs:
       
       # Test the local action definition
       - name: Run Hefesto Action (Local)
+        id: hefesto
         uses: ./
         with:
           target: './hefesto'  # Analyze source code
@@ -22,4 +23,17 @@ jobs:
           format: 'table'
           
       - name: Verify analysis output
-        run: echo "Action finished successfully"
+        if: always()
+        run: |
+          echo "Exit Code: ${{ steps.hefesto.outputs.exit_code }}"
+          if [ -z "${{ steps.hefesto.outputs.exit_code }}" ]; then
+            echo "Error: No exit code output found"
+            exit 1
+          fi
+          # We expect success (0) or failure (2) depending on findings.
+          # For this smoke test on clean code, we expect 0.
+          if [ "${{ steps.hefesto.outputs.exit_code }}" -ne 0 ]; then
+             echo "Analysis failed with exit code ${{ steps.hefesto.outputs.exit_code }}"
+             exit ${{ steps.hefesto.outputs.exit_code }}
+          fi
+

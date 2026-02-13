@@ -31,17 +31,28 @@ echo "::endgroup::"
 echo "::group::Running Analysis"
 set +e # Allow failure to capture exit code
 
-# Construct command
-CMD="hefesto analyze \"${TARGET}\" --severity \"${SEVERITY}\" --fail-on \"${FAIL_ON}\""
+# Construct command array (safe, no eval)
+CMD=("hefesto" "analyze" "$TARGET" "--severity" "$SEVERITY" "--fail-on" "$FAIL_ON")
+
+# Add format if specified (default logic handled in CLI or verified here)
+if [ -n "$FORMAT" ]; then
+    CMD+=("--format" "$FORMAT")
+fi
 
 # Execute
-eval "$CMD"
+"${CMD[@]}"
 EXIT_CODE=$?
 
 echo "::endgroup::"
 
 # Set Outputs
 echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
+
+# If format is JSON or SARIF, we might want to expose the output file.
+# Since the CLI prints to stdout by default, users can redirect it if they run manually,
+# but in an Action, capturing stdout to a file requires wrapper logic.
+# For now, we rely on the user viewing the logs or using the CLI's --output flag if added in future.
+
 
 # Determine path for report if generated (placeholder logic if CLI supports file output)
 # For now, we just pass the exit code.
