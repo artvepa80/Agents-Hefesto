@@ -1,11 +1,19 @@
 #!/bin/bash
 set -e
 
+# Run from GitHub workspace so relative paths (e.g. tests/fixtures/action/clean.py) resolve.
+# Docker image WORKDIR is /app; the repo is mounted at GITHUB_WORKSPACE.
+if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE" ]; then
+    cd "$GITHUB_WORKSPACE"
+fi
+
 # Inputs provided by GitHub Actions (prefixed with INPUT_)
 # Defaults are handled in action.yml, but safe fallbacks here are good practice.
 TARGET="${INPUT_TARGET:-.}"
 FAIL_ON="${INPUT_FAIL_ON:-CRITICAL}"
+FAIL_ON="${FAIL_ON^^}" # Force uppercase
 SEVERITY="${INPUT_MIN_SEVERITY:-LOW}"
+SEVERITY="${SEVERITY^^}" # Force uppercase
 FORMAT="${INPUT_FORMAT:-text}"
 TELEMETRY="${INPUT_TELEMETRY:-0}"
 
@@ -13,6 +21,7 @@ TELEMETRY="${INPUT_TELEMETRY:-0}"
 export HEFESTO_TELEMETRY="${TELEMETRY}"
 
 echo "::group::Hefesto Configuration"
+echo "Workspace: $(pwd)"
 echo "Target: ${TARGET}"
 echo "Fail On: ${FAIL_ON}"
 echo "Min Severity: ${SEVERITY}"

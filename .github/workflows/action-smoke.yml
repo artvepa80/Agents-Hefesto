@@ -49,9 +49,10 @@ jobs:
         run: |
           EXIT_CODE="${{ steps.critical_scan.outputs.exit_code }}"
           echo "Critical Scan Exit Code: $EXIT_CODE"
-          # hefesto CLI returns 1 for issues found >= fail-on threshold (as per --help)
-          if [ "$EXIT_CODE" -ne 1 ]; then
-            echo "::error::Expected exit code 1 for critical file, got $EXIT_CODE"
+          # Hefesto CLI: 0=ok, 2=gate failure (issues >= fail-on), 1=other errors. Do NOT expect 1.
+          if [ "$EXIT_CODE" -ne 2 ]; then
+            echo "::error::Critical scan must get exit code 2 (gate failure). Got $EXIT_CODE"
             exit 1
           fi
+          echo "OK: exit code 2 (gate failure) as expected"
 
