@@ -12,28 +12,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # Test the local action definition
-      - name: Run Hefesto Action (Local)
-        id: hefesto
+      # Test Case A: Clean Scan (Expect Exit Code 0)
+      - name: Test Action (Clean)
+        id: clean_scan
         uses: ./
         with:
-          target: './hefesto'  # Analyze source code
+          target: 'tests/fixtures/action/clean.py'
           fail_on: 'CRITICAL'
-          min_severity: 'HIGH'
-          format: 'table'
-          
-      - name: Verify analysis output
+          min_severity: 'LOW'
+          format: 'text'
+      
+      - name: Verify Clean Scan Output
         if: always()
         run: |
-          echo "Exit Code: ${{ steps.hefesto.outputs.exit_code }}"
-          if [ -z "${{ steps.hefesto.outputs.exit_code }}" ]; then
-            echo "Error: No exit code output found"
+          EXIT_CODE="${{ steps.clean_scan.outputs.exit_code }}"
+          echo "Clean Scan Exit Code: $EXIT_CODE"
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::Expected exit code 0 for clean file, got $EXIT_CODE"
             exit 1
           fi
-          # We expect success (0) or failure (2) depending on findings.
-          # For this smoke test on clean code, we expect 0.
-          if [ "${{ steps.hefesto.outputs.exit_code }}" -ne 0 ]; then
-             echo "Analysis failed with exit code ${{ steps.hefesto.outputs.exit_code }}"
-             exit ${{ steps.hefesto.outputs.exit_code }}
+
+      # Test Case B: Critical Secret (Expect Exit Code 2)
+      - name: Test Action (Critical)
+        id: critical_scan
+        uses: ./
+        with:
+          target: 'tests/fixtures/action/critical_secret.py'
+          fail_on: 'CRITICAL'
+          min_severity: 'CRITICAL'
+          format: 'json'
+        # We expect failure, so we continue on error to verify the code
+        continue-on-error: true
+
+      - name: Verify Critical Scan Output
+        if: always()
+        run: |
+          EXIT_CODE="${{ steps.critical_scan.outputs.exit_code }}"
+          echo "Critical Scan Exit Code: $EXIT_CODE"
+          # hefesto CLI returns 1 for issues found >= fail-on threshold (as per --help)
+          if [ "$EXIT_CODE" -ne 1 ]; then
+            echo "::error::Expected exit code 1 for critical file, got $EXIT_CODE"
+            exit 1
           fi
 

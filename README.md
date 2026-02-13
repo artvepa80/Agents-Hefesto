@@ -66,14 +66,14 @@ steps:
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `min_severity` | Minimum severity to report | `LOW` |
-| `format` | Output format (`table`, `json`, `sarif`) | `table` |
+| `format` | Output format (`text`, `json`, `html`) | `text` |
 | `telemetry` | Opt-in to anonymous telemetry (1=enable) | `0` |
 
 **Outputs**:
 
 | Output | Description |
 |--------|-------------|
-| `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
+| `exit_code` | The exit code of the CLI (0=Success, 1=Issues Found/Error) |
 
 
 ### Example: What Hefesto Catches

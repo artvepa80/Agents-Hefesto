@@ -6,7 +6,7 @@ set -e
 TARGET="${INPUT_TARGET:-.}"
 FAIL_ON="${INPUT_FAIL_ON:-CRITICAL}"
 SEVERITY="${INPUT_MIN_SEVERITY:-LOW}"
-FORMAT="${INPUT_FORMAT:-sarif}"
+FORMAT="${INPUT_FORMAT:-text}"
 TELEMETRY="${INPUT_TELEMETRY:-0}"
 
 # Telemetry Opt-in
@@ -36,7 +36,7 @@ CMD=("hefesto" "analyze" "$TARGET" "--severity" "$SEVERITY" "--fail-on" "$FAIL_O
 
 # Add format if specified (default logic handled in CLI or verified here)
 if [ -n "$FORMAT" ]; then
-    CMD+=("--format" "$FORMAT")
+    CMD+=("--output" "$FORMAT")
 fi
 
 # Execute

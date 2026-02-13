@@ -19,9 +19,9 @@ inputs:
     required: false
     default: 'LOW'
   format:
-    description: 'Output format (json, sarif, table)'
+    description: 'Output format (text, json, html)'
     required: false
-    default: 'table'
+    default: 'text'
   telemetry:
     description: 'Opt-in to anonymous telemetry (1=enable, 0=disable)'
     required: false

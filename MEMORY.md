@@ -22,6 +22,12 @@
    - Publish to PyPI (with continue-on-error)
    - Create/update GitHub Release with build artifacts
 
+### Future: PyPI Resync Checklist
+1. [ ] Confirm email verification on pypi.org.
+2. [ ] Manually trigger release workflow for existing tag `v4.8.5` (or push empty commit).
+3. [ ] Verify package appears on PyPI.
+4. [ ] (Optional) Switch GitHub Action back to `pip install hefesto-ai` if simpler, but Docker approach is robust.
+
 **Context:**
 - PyPI latest is v4.5.5 (versions 4.6.x - 4.8.x never published due to this email issue)
 - Token is valid (stored in GitHub Secrets as `PYPI_API_TOKEN` and GCP Secret Manager)
@@ -64,10 +70,11 @@ git describe --tags --always      # should show v4.8.5 or ahead
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| **GCP VM** | Active | `34.172.218.79`, user `user`, SSH key `~/.ssh/google_compute_engine` |
+| **GCP VM** | Active | `34.72.88.202`, user `user`, SSH key `~/.ssh/google_compute_engine` |
 | **GCP Project** | Active | `bustling-wharf-478016-p9` |
 | **GitHub Repo** | Active | `artvepa80/Agents-Hefesto` |
 | **PyPI** | BLOCKED | Email verification needed for OmegaAI account |
+| **GitHub Action** | Ready | Docker-based (bypasses PyPI), smoke tested |
 | **ClawHub Skill** | Published | `@artvepa80/hefestoai-auditor@1.2.0` |
 
 ---
@@ -90,4 +97,4 @@ The `.github/workflows/release.yml` now:
 - **Stripe API:** stored in `~/.claude.json`
 - **PyPI Token:** Stored in GitHub Secrets (`PYPI_API_TOKEN`) and GCP Secret Manager
 - **PyPI Account:** `OmegaAI` (needs email verification)
-- **VM SSH:** `ssh -i ~/.ssh/google_compute_engine user@34.172.218.79`
+- **VM SSH:** `ssh -i ~/.ssh/google_compute_engine user@34.72.88.202`
