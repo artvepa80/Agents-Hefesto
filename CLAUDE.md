@@ -3,6 +3,43 @@
 
 ---
 
+## 0. Agent Procedural Workflow (MANDATORY)
+
+### Session Start Checklist
+
+On start of ANY task or session, the agent MUST read these files in order:
+
+1. `CLAUDE.md` (this file — project rules and standards)
+2. `MEMORY.md` (project status, pending blockers, credentials context)
+3. `CHANGELOG.md` (recent changes, current version)
+4. `README.md` (public-facing docs, version badge, feature table)
+5. `task.md` and `walkthrough.md` (if present — task-specific context)
+
+Do NOT skip this step. Do NOT guess project state from memory.
+
+### Socratic-Adaptive Rule
+
+- Ask clarifying questions **only if truly blocking** (ambiguous requirements, destructive action).
+- Maximum **2 questions** per task before proceeding.
+- If not blocking, proceed with **explicit safe assumptions** stated in your response.
+- Example: "Assuming you want this on `main` branch (safe default). Proceeding."
+
+### Session End Checklist
+
+After completing ANY non-trivial work:
+
+- [ ] Update impacted docs (at minimum `CHANGELOG.md`; `README.md` if version/features changed).
+- [ ] Run repo verification: `source venv/bin/activate && black --check hefesto/ tests/ && isort --check hefesto/ tests/ && flake8 hefesto/ tests/ && pytest tests/ -q`
+- [ ] Commit with Conventional Commits format, then push the branch.
+- [ ] Never move/delete tags without explicit user approval.
+- [ ] Update `MEMORY.md` if project status changed (new blockers, resolved items, version bumps).
+
+### PyPI Publishing Rule
+
+- If `MEMORY.md` indicates PyPI auth or email verification is pending, treat PyPI publish as **DEFERRED**.
+- Still prepare release readiness (docs parity, tag alignment, build check), but do NOT attempt upload.
+- When the blocker is resolved, follow the re-publish steps documented in `MEMORY.md`.
+
 ## Instrucciones para Claude Code
 
 ### Entorno Virtual
@@ -50,13 +87,15 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Mission**: Build the world's most trusted AI code quality guardian that catches critical bugs before production. Self-validated (dogfooding) to catch 3+ critical bugs in its own v4.0.1 release.
 
-**Current Status (v4.2.1)**:
+**Current Status (v4.8.5)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 8 REST API endpoints
 - BigQuery integration
 - IRIS Agent production monitoring
-- 118+ tests passing
+- 42 tests passing (CI green)
+- 21 language/format analyzers
 - Self-validated (dogfooding successful)
+- GitHub Release automation (hardened workflow)
 
 ---
 
@@ -410,10 +449,10 @@ Releases are automated via GitHub Actions:
     git push origin v4.7.1
     ```
 
-3.  **GitHub Release**
-    ```bash
-    gh release create v4.7.1 --generate-notes
-    ```
+3.  **GitHub Release** (automatic)
+    - The hardened `release.yml` now creates GitHub Releases automatically on tag push.
+    - Build artifacts (wheel + sdist) are attached to the release.
+    - If PyPI publish fails (e.g., email verification pending), the release is still created.
 
 ---
 
