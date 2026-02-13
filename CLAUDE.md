@@ -17,12 +17,36 @@ On start of ANY task or session, the agent MUST read these files in order:
 
 Do NOT skip this step. Do NOT guess project state from memory.
 
-### Socratic-Adaptive Rule
+### Socratic-Adaptive Method (MSA)
 
-- Ask clarifying questions **only if truly blocking** (ambiguous requirements, destructive action).
-- Maximum **2 questions** per task before proceeding.
-- If not blocking, proceed with **explicit safe assumptions** stated in your response.
-- Example: "Assuming you want this on `main` branch (safe default). Proceeding."
+**Principle:** Before acting, understand. Before proposing, diagnose.
+
+**Phase 1 — Diagnosis (always)**
+- Read the relevant code before proposing changes.
+- Ask yourself: "What already exists that solves this partially or fully?"
+- Document findings with concrete file paths and line numbers.
+- If evidence contradicts the task, report it before proceeding.
+
+**Phase 2 — Decision (max 2 questions to user)**
+- Ask only if truly blocking (ambiguity, destructive action, 2+ valid approaches).
+- If not blocking, proceed with **explicit safe assumptions**: "Assuming X (safe default). Proceeding."
+- Never ask what you can resolve by reading the repo.
+
+**Phase 3 — Execution (minimal diffs)**
+- Reuse what exists before creating new modules.
+- Every change must have evidence: "Changed X because Y (found in `file:line`)."
+- If a plan requires >3 new files, question whether it can be done with fewer.
+
+**Phase 4 — Verification (mandatory)**
+- Run repo verifiers before declaring complete.
+- Compare expected result vs actual result.
+- If something fails, diagnose (Phase 1) before retrying.
+
+**Anti-patterns to avoid:**
+- Inventing command outputs that you did not execute.
+- Proposing folder structures without checking what already exists.
+- Responding with generic plans without reading the current code.
+- Assuming a feature does not exist without searching first.
 
 ### Session End Checklist
 
