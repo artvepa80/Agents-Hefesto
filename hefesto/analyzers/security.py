@@ -35,6 +35,7 @@ class SecurityAnalyzer:
         (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API key"),
         (r"ghp_[a-zA-Z0-9]{36}", "GitHub token"),
         (r"AWS[A-Z0-9]{16,}", "AWS key"),
+        (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
     ]
 
     def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
@@ -62,8 +63,11 @@ class SecurityAnalyzer:
             for pattern, secret_type in self.SECRET_PATTERNS:
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
-                    # Skip if it's in a test file or example
-                    if "test" in file_path.lower() or "example" in file_path.lower():
+                    # Skip test/example files to reduce noise, but allow
+                    # action fixtures that are specifically designed to test detection.
+                    path_lower = file_path.lower().replace("\\", "/")
+                    is_action_fixture = "tests/fixtures/action/" in path_lower
+                    if not is_action_fixture and ("test" in path_lower or "example" in path_lower):
                         continue
 
                     issues.append(

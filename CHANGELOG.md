@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [4.8.5] - 2026-02-13 — PyPI Token Fix
+### Fixed
+- **Security**: Secret detection (`HARDCODED_SECRET`) no longer silently skips files under `tests/fixtures/action/`. The general skip for test/example paths is preserved to reduce noise in normal repos.
+- **Action**: Smoke-test contract now correct — `critical_secret.py` fixture triggers `EXIT_CODE=2` as expected.
+- **Tests**: Added `test_secret_detection.py` with regression coverage for both clean and critical fixtures.
+
 ### Infrastructure
 - **PyPI**: Updated API token for package publishing.
 - **GCP**: Stored PyPI token in Secret Manager for future CI/CD use.
