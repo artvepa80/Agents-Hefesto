@@ -5,6 +5,12 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.6] - 2026-02-13 — Deterministic Smoke Tests
+### Fixed
+- **Security**: Action fixture `critical_secret.py` now force-tracked in git (bypasses `.gitignore` `*secret*` pattern) so CI runners detect it correctly.
+- **CI**: All 7 checks green across Python 3.10/3.11/3.12.
+- **Dogfooding**: Verified 0 CRITICAL issues in changed files before release.
+
 ## [4.8.5] - 2026-02-13 — PyPI Token Fix
 ### Fixed
 - **Security**: Secret detection (`HARDCODED_SECRET`) no longer silently skips files under `tests/fixtures/action/`. The general skip for test/example paths is preserved to reduce noise in normal repos.

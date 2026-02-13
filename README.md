@@ -50,7 +50,7 @@ steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
     id: hefesto
-    uses: artvepa80/Agents-Hefesto@v4.8.5
+    uses: artvepa80/Agents-Hefesto@v4.8.6
     with:
       target: '.'
       fail_on: 'CRITICAL'

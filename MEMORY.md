@@ -1,6 +1,6 @@
 # MEMORY - HefestoAI Project Status
 
-> Last updated: 2026-02-13
+> Last updated: 2026-02-14
 
 ---
 
@@ -80,6 +80,7 @@ git describe --tags --always      # should show v4.8.5 or ahead
 ---
 
 ## Active Blockers
+- **Marketplace**: Smoke-test now deterministic after PR #5 merge (v4.8.6).
 - **PyPI Publishing**: BLOCKED due to pending email verification for `OmegaAI`.
   - Action: Use Docker-based GitHub Action (Marketplace Ready v4.8.5).
   - Resync: See checklist below when email verified.
