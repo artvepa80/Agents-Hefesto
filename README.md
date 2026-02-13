@@ -87,17 +87,31 @@ Files analyzed: 15 | Issues: 8
 | Rust | TreeSitter | Full support |
 | C# | TreeSitter | Full support |
 
-### DevOps & Configuration (Ola 2)
+### DevOps & Configuration (Ola 1 & 2)
 
 | Format | Analyzer | Rules | Status |
 |--------|----------|-------|--------|
-| PowerShell | PS001-PS006 | 6 security rules | ✅ v4.5.0 |
-| JSON | J001-J005 | 5 security rules | ✅ v4.5.0 |
-| TOML | T001-T003 | 3 security rules | ✅ v4.5.0 |
-| Makefile | MF001-MF005 | 5 security rules | ✅ v4.5.0 |
-| Groovy/Jenkins | GJ001-GJ005 | 5 security rules | ✅ v4.5.0 |
+| **YAML** | YamlAnalyzer | Generic YAML security | ✅ v4.4.0 |
+| **Terraform** | TerraformAnalyzer | TfSec-aligned rules | ✅ v4.4.0 |
+| **Shell** | ShellAnalyzer | ShellCheck-aligned | ✅ v4.4.0 |
+| **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | ✅ v4.4.0 |
+| **SQL** | SqlAnalyzer | SQL Injection prevention | ✅ v4.4.0 |
+| **PowerShell** | PS001-PS006 | 6 security rules | ✅ v4.5.0 |
+| **JSON** | J001-J005 | 5 security rules | ✅ v4.5.0 |
+| **TOML** | T001-T003 | 3 security rules | ✅ v4.5.0 |
+| **Makefile** | MF001-MF005 | 5 security rules | ✅ v4.5.0 |
+| **Groovy** | GJ001-GJ005 | 5 security rules | ✅ v4.5.0 |
 
-**Total**: 7 code languages + 5 DevOps formats = **12 languages**
+### Cloud Infrastructure (Ola 4)
+
+| Format | Analyzer | Focus | Status |
+|--------|----------|-------|--------|
+| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | ✅ v4.7.0 |
+| **ARM Templates** | ArmAnalyzer | Azure IaC Security | ✅ v4.7.0 |
+| **Helm Charts** | HelmAnalyzer | Kubernetes Security | ✅ v4.7.0 |
+| **Serverless** | ServerlessAnalyzer | Serverless Framework | ✅ v4.7.0 |
+
+**Total**: 7 code languages + 10 DevOps formats + 4 Cloud formats = **21 supported formats**
 
 ### TypeScript/JavaScript Analysis (v4.3.3)
 
