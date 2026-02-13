@@ -10,10 +10,11 @@
 On start of ANY task or session, the agent MUST read these files in order:
 
 1. `CLAUDE.md` (this file — project rules and standards)
-2. `MEMORY.md` (project status, pending blockers, credentials context)
-3. `CHANGELOG.md` (recent changes, current version)
-4. `README.md` (public-facing docs, version badge, feature table)
-5. `task.md` and `walkthrough.md` (if present — task-specific context)
+2. `docs/CLAUDE_HEFESTO.md` (Hefesto-specific development guidelines and architecture)
+3. `MEMORY.md` (project status, pending blockers, credentials context)
+4. `CHANGELOG.md` (recent changes, current version)
+5. `README.md` (public-facing docs, version badge, feature table)
+6. `task.md` and `walkthrough.md` (if present — task-specific context)
 
 Do NOT skip this step. Do NOT guess project state from memory.
 
