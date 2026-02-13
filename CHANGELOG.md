@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Infrastructure
 - **PyPI**: Updated API token for package publishing.
 - **GCP**: Stored PyPI token in Secret Manager for future CI/CD use.
+- **GitHub Action**: Added Docker-based Action support to allow usage via `uses: artvepa80/Agents-Hefesto@v4.8.5` (bypasses PyPI dependency).
+
 
 ## [4.8.4] - 2026-02-13 — Release Parity & CI Hardening
 ### Infrastructure

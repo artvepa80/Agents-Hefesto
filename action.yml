@@ -1,0 +1,34 @@
+name: 'Hefesto Code Guardian'
+description: 'AI-Powered Code Analysis & Security Guardian for Python, JS, Java, Go, Rust, and IaC.'
+author: 'Narapa LLC'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  target:
+    description: 'Path to analyze (file or directory)'
+    required: false
+    default: '.'
+  fail_on:
+    description: 'Exit with error if issues found at or above this severity (CRITICAL, HIGH, MEDIUM, LOW)'
+    required: false
+    default: 'CRITICAL'
+  min_severity:
+    description: 'Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW, INFO)'
+    required: false
+    default: 'LOW'
+  format:
+    description: 'Output format (json, sarif, table)'
+    required: false
+    default: 'table'
+  telemetry:
+    description: 'Opt-in to anonymous telemetry (1=enable, 0=disable)'
+    required: false
+    default: '0'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile.action'
+  args:
+    - ${{ inputs.target }}

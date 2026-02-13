@@ -38,7 +38,6 @@ def extract_readme_analyzers(readme_path):
     return count, formats
 
 
-
 def get_cloud_analyzers():
     """Get list of installed Cloud analyzers."""
     # We manually count these because they are structured differently (packages)
@@ -53,10 +52,10 @@ def main():
     # Get actual analyzers
     devops_actual = get_devops_analyzers()
     devops_count = len(devops_actual)
-    
+
     cloud_actual = get_cloud_analyzers()
     cloud_count = len(cloud_actual)
-    
+
     code_count = 7  # Python, TS, JS, Java, Go, Rust, C#
 
     # Get README data
@@ -128,7 +127,9 @@ def main():
         badge_count = int(badge_match.group(1))
         expected_total = code_count + devops_count + cloud_count
         print(f"   Badge shows: {badge_count}")
-        print(f"   Expected: {expected_total} (7 Code + {devops_count} DevOps + {cloud_count} Cloud)")
+        print(
+            f"   Expected: {expected_total} (7 Code + {devops_count} DevOps + {cloud_count} Cloud)"
+        )
 
         if badge_count != expected_total:
             errors.append(f"Badge count mismatch: badge={badge_count}, expected={expected_total}")

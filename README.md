@@ -39,6 +39,21 @@ hefesto --version  # Should show: 4.8.5
 # 3. Analyze
 cd your-project
 hefesto analyze . --severity HIGH
+
+## GitHub Action
+
+Run Hefesto directly in your CI/CD pipeline without installing Python dependencies using our Docker-based Action:
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - name: Run Hefesto Guardian
+    uses: artvepa80/Agents-Hefesto@v4.8.5
+    with:
+      target: '.'
+      fail_on: 'CRITICAL'
+      min_severity: 'MEDIUM'
+```
 ```
 
 ### Example: What Hefesto Catches

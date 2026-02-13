@@ -1,0 +1,32 @@
+# Dockerfile for GitHub Actions
+# Optimized for ephemeral execution, bypassing PyPI installation.
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install git (often needed for safe directory checks or git-based analysis)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency definition
+COPY pyproject.toml README.md ./
+
+# Copy source code
+COPY hefesto/ hefesto/
+COPY scripts/ scripts/
+
+# Install from source (no PyPI pull for the package itself)
+# We install minimal deps. If specific extras are needed, valid options are [ci], [dev], [omega].
+# For the Action, the base package should suffice.
+RUN pip install --no-cache-dir .
+
+# Copy and prepare entrypoint
+COPY scripts/action_entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

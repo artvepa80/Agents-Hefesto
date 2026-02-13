@@ -131,9 +131,7 @@ def validate_cloud_analyzers(manifest):
     import hefesto.analyzers.cloud as cloud_pkg
 
     # Cloud analyzers are subpackages (folders), not just modules
-    discovered_pkgs = {
-        m.name for m in pkgutil.iter_modules(cloud_pkg.__path__)
-    }
+    discovered_pkgs = {m.name for m in pkgutil.iter_modules(cloud_pkg.__path__)}
     # Filter to known analyzer names (discovery is looser here because of clutter)
     # We expect: cloudformation, arm, helm, serverless
     expected_names = {"cloudformation", "arm", "helm", "serverless"}
@@ -230,10 +228,10 @@ def main():
         for e in schema_errors:
             print(f" - {e}")
         return 1
-    
+
     # 0b. Extend schema validation for cloud (ad-hoc)
     if not isinstance(manifest["coverage"].get("cloud_formats"), dict):
-         all_errors.append("Missing 'cloud_formats' in manifest")
+        all_errors.append("Missing 'cloud_formats' in manifest")
 
     all_errors.extend(validate_devops_analyzers(manifest))
     all_errors.extend(validate_cloud_analyzers(manifest))
