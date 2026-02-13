@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - **BigQuery**: Fixed critical SQL injection vulnerabilities in `list_findings`, `get_finding_by_id`, and `update_finding_status` by implementing parameterized queries.
 
+### Infrastructure — Patch X: Dependency Submission
+- **CI/CD**: Removed custom `dependency-submission.yml` workflow.
+- **Dependency Graph**: Transitioned to GitHub's native "Automatic Dependency Submission" to eliminate execution flakiness and duplicate snapshots.
+- **Documentation**: Updated `SECURITY.md` with new dependency submission guidelines.
+
 ## [4.8.2] - 2026-02-12 — Patch V: CI & Deployment Fixes
 ### Fixed
 - **CLI**: Fixed critical bug where `analyze` command returned exit code 0 even with critical issues (missing return statement).

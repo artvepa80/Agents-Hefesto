@@ -414,6 +414,7 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ### v4.8.3 (2026-02-12)
 - **Patch W: Security Fixes**
 - **Critical**: Eliminated SQL injection vulnerabilities in BigQuery service via parameterized queries
+- **Patch X: Infrastructure**: Resolved dependency submission flakiness by transitioning to GitHub's native "Automatic Dependency Submission"
 
 ### v4.8.2 (2026-02-12)
 - **Patch V: CI & Deployment Fixes**
