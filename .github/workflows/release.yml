@@ -8,7 +8,7 @@ on:
       - "!v*-rc.*"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -49,15 +49,31 @@ jobs:
           python -m twine check dist/*
 
       - name: Publish to PyPI
+        id: pypi
         if: ${{ env.TWINE_PASSWORD != '' }}
+        continue-on-error: true
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           python -m twine upload dist/*
 
-      - name: Skip Publish (Missing Credentials)
-        if: ${{ env.TWINE_PASSWORD == '' }}
+      - name: PyPI publish status
         run: |
-          echo "::warning::Skipping PyPI publish because PYPI_API_TOKEN is not set."
-          echo "Build artifacts are available in dist/"
+          if [ "${{ steps.pypi.outcome }}" = "success" ]; then
+            echo "::notice::PyPI publish succeeded."
+          elif [ "${{ steps.pypi.outcome }}" = "skipped" ]; then
+            echo "::warning::PyPI publish skipped (no PYPI_API_TOKEN)."
+          else
+            echo "::warning::PyPI publish failed. Check token and PyPI account email verification."
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            dist/* \
+            --title "Hefesto ${{ github.ref_name }}" \
+            --generate-notes \
+            --verify-tag
