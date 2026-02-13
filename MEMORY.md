@@ -79,6 +79,18 @@ git describe --tags --always      # should show v4.8.5 or ahead
 
 ---
 
+## Active Blockers
+- **PyPI Publishing**: BLOCKED due to pending email verification for `OmegaAI`.
+  - Action: Use Docker-based GitHub Action (Marketplace Ready v4.8.5).
+  - Resync: See checklist below when email verified.
+
+## Marketplace Status
+- **State**: Ready for manual publish (v4.8.5).
+- **Contract**: CLI Exit Code 2 = Issues Found.
+- **Inputs**: `fail_on`, `min_severity` (case-insensitive in Action).
+
+---
+
 ## Release Workflow (Hardened)
 
 The `.github/workflows/release.yml` now:

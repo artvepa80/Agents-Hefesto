@@ -35,6 +35,7 @@ class SecurityAnalyzer:
         (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API key"),
         (r"ghp_[a-zA-Z0-9]{36}", "GitHub token"),
         (r"AWS[A-Z0-9]{16,}", "AWS key"),
+        (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
     ]
 
     def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:

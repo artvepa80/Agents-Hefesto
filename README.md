@@ -73,7 +73,7 @@ steps:
 
 | Output | Description |
 |--------|-------------|
-| `exit_code` | The exit code of the CLI (0=Success, 1=Issues Found/Error) |
+| `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
 
 
 ### Example: What Hefesto Catches
@@ -459,6 +459,12 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.8.5 (2026-02-13)
+- **GitHub Action**: Market-ready Docker-based action (bypassing PyPI).
+- **Security**: Deterministic smoke tests with clean/critical fixtures.
+- **CLI**: Verified exit code contract (2 = Issues Found).
+- **Fix**: Input normalization in `action_entrypoint.sh`.
 
 ### v4.8.3 (2026-02-12)
 - **Patch W: Security Fixes**
