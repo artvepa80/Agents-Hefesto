@@ -114,6 +114,61 @@ def validate_devops_analyzers(manifest):
     return errors
 
 
+def validate_cloud_analyzers(manifest):
+    """Validate Cloud analyzers existence and importability."""
+    errors = []
+    # Handle missing key if old schema
+    if "cloud_formats" not in manifest["coverage"]:
+        errors.append("Missing 'cloud_formats' in manifest (Schema update required?)")
+        return errors
+
+    declared_cloud = manifest["coverage"]["cloud_formats"]["items"]
+    declared_count = manifest["coverage"]["cloud_formats"]["declared_count"]
+
+    print(f"\n2. Checking Cloud Analyzers (Declared: {declared_count})...")
+
+    # Discovery from code
+    import hefesto.analyzers.cloud as cloud_pkg
+
+    # Cloud analyzers are subpackages (folders), not just modules
+    discovered_pkgs = {
+        m.name for m in pkgutil.iter_modules(cloud_pkg.__path__)
+    }
+    # Filter to known analyzer names (discovery is looser here because of clutter)
+    # We expect: cloudformation, arm, helm, serverless
+    expected_names = {"cloudformation", "arm", "helm", "serverless"}
+    discovered_analyzers = discovered_pkgs.intersection(expected_names)
+
+    # Check consistency count
+    if len(declared_cloud) != declared_count:
+        errors.append(
+            f"Manifest Inconsistency: declared_count={declared_count} but found {len(declared_cloud)} items"
+        )
+
+    if len(discovered_analyzers) != declared_count:
+        errors.append(
+            f"Code/Manifest Mismatch: Code has {len(discovered_analyzers)} analyzers, Manifest declares {declared_count}"
+        )
+        print(f"   (Code found: {sorted(list(discovered_analyzers))})")
+
+    for item in declared_cloud:
+        display = item.get("display", "Unknown")
+        module_path = item.get("analyzer_module")
+
+        if not module_path:
+            errors.append(f"Item '{display}' missing required 'analyzer_module'")
+            continue
+
+        try:
+            importlib.import_module(module_path)
+            print(f"  ✅ {display} -> Importable")
+        except ImportError as e:
+            errors.append(f"Module {module_path} declared but FAILED TO IMPORT: {e}")
+            print(f"  ❌ {display} -> Import Error")
+
+    return errors
+
+
 def validate_code_languages(manifest):
     """Validate Code Languages consistency."""
     errors = []
@@ -121,7 +176,7 @@ def validate_code_languages(manifest):
     items_count = len(code_decl["items"])
     declared_count = code_decl["declared_count"]
 
-    print(f"\n2. Checking Code Languages (Declared: {declared_count})...")
+    print(f"\n3. Checking Code Languages (Declared: {declared_count})...")
 
     if items_count != declared_count:
         errors.append(
@@ -137,17 +192,18 @@ def validate_code_languages(manifest):
 def validate_totals(manifest):
     """Validate calculated totals."""
     errors = []
-    print(f"\n3. Checking Totals...")
+    print(f"\n4. Checking Totals...")
 
     code_count = manifest["coverage"]["code_languages"]["declared_count"]
     devops_count = manifest["coverage"]["devops_formats"]["declared_count"]
+    cloud_count = manifest["coverage"]["cloud_formats"]["declared_count"]
     total_declared = manifest["coverage"]["totals"]["declared_total_formats"]
 
-    computed_total = code_count + devops_count
+    computed_total = code_count + devops_count + cloud_count
 
     if total_declared != computed_total:
         errors.append(
-            f"Total Formats Mismatch: Declared {total_declared} != Computed {computed_total} ({code_count} + {devops_count})"
+            f"Total Formats Mismatch: Declared {total_declared} != Computed {computed_total} ({code_count} + {devops_count} + {cloud_count})"
         )
         print(f"  ❌ Total Mismatch: {total_declared} vs {computed_total}")
     else:
@@ -174,8 +230,13 @@ def main():
         for e in schema_errors:
             print(f" - {e}")
         return 1
+    
+    # 0b. Extend schema validation for cloud (ad-hoc)
+    if not isinstance(manifest["coverage"].get("cloud_formats"), dict):
+         all_errors.append("Missing 'cloud_formats' in manifest")
 
     all_errors.extend(validate_devops_analyzers(manifest))
+    all_errors.extend(validate_cloud_analyzers(manifest))
     all_errors.extend(validate_code_languages(manifest))
     all_errors.extend(validate_totals(manifest))
 

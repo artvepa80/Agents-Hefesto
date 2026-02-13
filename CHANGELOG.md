@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency Graph**: Transitioned to GitHub's native "Automatic Dependency Submission" to eliminate execution flakiness and duplicate snapshots.
 - **Documentation**: Updated `SECURITY.md` with new dependency submission guidelines.
 
+### CI/CD
+- **Release Workflow**: Hardened GitHub Actions to skip PyPI/TestPyPI upload if credentials are missing (preventing CI failure on forks/PRs).
+- **Parity Checks**: Updated `verify_capabilities.py` to include Cloud Analyzers (Ola 4), ensuring verified support for 21 formats.
+
 ## [4.8.2] - 2026-02-12 — Patch V: CI & Deployment Fixes
 ### Fixed
 - **CLI**: Fixed critical bug where `analyze` command returned exit code 0 even with critical issues (missing return statement).

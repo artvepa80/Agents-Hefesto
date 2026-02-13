@@ -49,8 +49,15 @@ jobs:
           python -m twine check dist/*
 
       - name: Publish to PyPI
+        if: ${{ env.TWINE_PASSWORD != '' }}
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           python -m twine upload dist/*
+
+      - name: Skip Publish (Missing Credentials)
+        if: ${{ env.TWINE_PASSWORD == '' }}
+        run: |
+          echo "::warning::Skipping PyPI publish because PYPI_API_TOKEN is not set."
+          echo "Build artifacts are available in dist/"

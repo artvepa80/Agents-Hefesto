@@ -90,12 +90,38 @@ coverage:
         analyzer_module: hefesto.analyzers.devops.yaml_analyzer
         file_globs: ["**/*.yml", "**/*.yaml"]
 
+  # Ola 4: Cloud Infrastructure analyzers
+  cloud_formats:
+    declared_count: 4
+    items:
+      - id: cloudformation
+        display: CloudFormation
+        status: GA
+        analyzer_module: hefesto.analyzers.cloud.cloudformation
+        file_globs: ["**/*.yaml", "**/*.json"]
+      - id: arm
+        display: ARM Templates
+        status: GA
+        analyzer_module: hefesto.analyzers.cloud.arm
+        file_globs: ["**/*.json"]
+      - id: helm
+        display: Helm Charts
+        status: GA
+        analyzer_module: hefesto.analyzers.cloud.helm
+        file_globs: ["**/Chart.yaml", "**/values.yaml"]
+      - id: serverless
+        display: Serverless Framework
+        status: GA
+        analyzer_module: hefesto.analyzers.cloud.serverless
+        file_globs: ["serverless.yml"]
+
   # Convenience rollup (used for badges, README display, etc.)
   totals:
-    declared_total_formats: 17
+    declared_total_formats: 21
     computed_from:
       - coverage.code_languages.declared_count
       - coverage.devops_formats.declared_count
+      - coverage.cloud_formats.declared_count
 
 capabilities:
   # Keep these high-level and stable; they map to docs, pricing, and CI assertions.
