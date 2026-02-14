@@ -66,8 +66,12 @@ class TestInstallHooks:
                 assert bool(st.st_mode & stat.S_IEXEC), f"{hook_name} should be executable"
 
             # Verify content matches
-            assert (repo_root / ".git" / "hooks" / "pre-push").read_text() == pre_push_src.read_text()
-            assert (repo_root / ".git" / "hooks" / "pre-commit").read_text() == pre_commit_src.read_text()
+            assert (
+                repo_root / ".git" / "hooks" / "pre-push"
+            ).read_text() == pre_push_src.read_text()
+            assert (
+                repo_root / ".git" / "hooks" / "pre-commit"
+            ).read_text() == pre_commit_src.read_text()
 
     def test_install_hooks_skips_missing_templates(self, env_with_path):
         """Test that install-hooks skips hooks whose templates don't exist."""
@@ -77,7 +81,9 @@ class TestInstallHooks:
             (repo_root / "scripts" / "git-hooks").mkdir(parents=True)
 
             # Only create pre-push, not pre-commit
-            (repo_root / "scripts" / "git-hooks" / "pre-push").write_text("#!/bin/bash\necho ok\n")
+            (repo_root / "scripts" / "git-hooks" / "pre-push").write_text(
+                "#!/bin/bash\necho ok\n"
+            )
 
             result = subprocess.run(
                 [sys.executable, "-m", "hefesto.cli.main", "install-hooks"],
