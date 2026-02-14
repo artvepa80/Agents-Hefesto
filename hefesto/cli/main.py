@@ -378,10 +378,10 @@ def check_test_contradictions(test_directory: str):
 @click.option("--force", is_flag=True, help="Overwrite existing hooks")
 def install_hooks(force: bool):
     """
-    Install/update Hefesto git pre-push hook.
+    Install/update Hefesto git hooks (pre-commit + pre-push).
 
-    Copies the hook from scripts/git-hooks/pre-push to .git/hooks/pre-push.
-    This ensures the hook uses the latest configuration (e.g., security-only gate).
+    Copies hooks from scripts/git-hooks/ to .git/hooks/.
+    Hooks use venv-first Python resolution and are portable across platforms.
 
     Example:
         hefesto install-hooks
@@ -391,7 +391,8 @@ def install_hooks(force: bool):
     if not repo_root:
         _exit(1)
 
-    _install_pre_push(repo_root, force)
+    for hook_name in ("pre-commit", "pre-push"):
+        _install_hook(repo_root, hook_name, force)
 
 
 @cli.group()
@@ -477,56 +478,40 @@ def _find_repo_root():
     return None
 
 
-def _install_pre_push(repo_root, force):
+def _install_hook(repo_root, hook_name, force):
     import os
     import shutil
     import stat
 
     git_dir = repo_root / ".git"
-    source_hook = repo_root / "scripts" / "git-hooks" / "pre-push"
+    source_hook = repo_root / "scripts" / "git-hooks" / hook_name
 
     if not source_hook.exists():
-        click.echo(f"Error: Hook source not found at {source_hook}", err=True)
-        click.echo("This command requires scripts/git-hooks/pre-push to exist in the current repo.")
-        _exit(1)
+        click.echo(f"Skipping {hook_name}: template not found at {source_hook}", err=True)
+        return
 
     hooks_dir = git_dir / "hooks"
     hooks_dir.mkdir(exist_ok=True)
-    dest_hook = hooks_dir / "pre-push"
+    dest_hook = hooks_dir / hook_name
 
     if dest_hook.exists() and not force:
         try:
             with open(source_hook, "r") as src, open(dest_hook, "r") as dst:
                 if src.read() == dst.read():
-                    click.echo("Pre-push hook is already up to date.")
+                    click.echo(f"{hook_name}: already up to date.")
                     return
         except Exception:
             pass
-        click.echo(f"Pre-push hook already exists at {dest_hook}")
-        click.echo("Use --force to overwrite.")
-        _exit(1)
+        click.echo(f"{hook_name}: already exists at {dest_hook}. Use --force to overwrite.")
+        return
 
     try:
         shutil.copy2(source_hook, dest_hook)
         st = os.stat(dest_hook)
         os.chmod(dest_hook, st.st_mode | stat.S_IEXEC)
-
-        with open(dest_hook, "r") as f:
-            content = f.read()
-            if "--exclude-types" not in content:
-                click.echo(
-                    "ERROR: Installed hook does not appear to contain"
-                    " --exclude-types configuration.",
-                    err=True,
-                )
-                click.echo("Please verify scripts/git-hooks/pre-push is up to date.")
-                _exit(1)
-
-        click.echo(f"Successfully installed pre-push hook to {dest_hook}")
-        click.echo("This hook runs 'hefesto analyze' with security gate defaults.")
-
+        click.echo(f"{hook_name}: installed to {dest_hook}")
     except Exception as e:
-        click.echo(f"Error installing hook: {e}", err=True)
+        click.echo(f"Error installing {hook_name}: {e}", err=True)
         _exit(1)
 
 
