@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Allow bypass: SKIP_HEFESTO_HOOKS=1 git commit
+if [[ "${SKIP_HEFESTO_HOOKS:-0}" == "1" ]]; then
+  echo "[hefesto] SKIP_HEFESTO_HOOKS=1 set; skipping pre-commit checks."
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+# Prefer local venv if present
+if [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+else
+  PY="python"
+fi
+
+cd "$ROOT"
+
+# Hefesto analysis (if available)
+if command -v hefesto >/dev/null 2>&1; then
+  echo "[hefesto] Running code analysis..."
+  hefesto analyze . --severity HIGH \
+    --exclude tests/ --exclude docs/ --exclude build/ \
+    --exclude dist/ --exclude .git/ --exclude htmlcov/ || {
+    echo "[hefesto] Found CRITICAL/HIGH issues."
+    exit 1
+  }
+else
+  echo "[hefesto] 'hefesto' not in PATH. Skipping analysis."
+  echo "[hefesto] Install with: pip install -e '.[dev]'"
+fi
+
+echo "[hefesto] Pre-commit OK."
