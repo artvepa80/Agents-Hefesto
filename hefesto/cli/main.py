@@ -107,8 +107,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         hefesto serve --reload  # Development mode
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. "
-        "Install from the private distribution.",
+        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
         err=True,
     )
     _exit(1)
@@ -226,8 +225,7 @@ def _echo_analysis_config(paths_list, severity, exclude, quiet):
 def info():
     """Show Hefesto configuration and license info."""
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. "
-        "Install from the private distribution.",
+        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
         err=True,
     )
     _exit(1)
@@ -283,8 +281,7 @@ def activate(license_key: str):
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. "
-        "Install from the private distribution.",
+        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
         err=True,
     )
     _exit(1)
@@ -298,8 +295,7 @@ def deactivate():
     This will remove your license key and revert to free tier.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. "
-        "Install from the private distribution.",
+        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
         err=True,
     )
     _exit(1)
@@ -311,8 +307,7 @@ def status():
     Show current license status and tier information.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. "
-        "Install from the private distribution.",
+        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
         err=True,
     )
     _exit(1)
