@@ -81,9 +81,7 @@ class TestInstallHooks:
             (repo_root / "scripts" / "git-hooks").mkdir(parents=True)
 
             # Only create pre-push, not pre-commit
-            (repo_root / "scripts" / "git-hooks" / "pre-push").write_text(
-                "#!/bin/bash\necho ok\n"
-            )
+            (repo_root / "scripts" / "git-hooks" / "pre-push").write_text("#!/bin/bash\necho ok\n")
 
             result = subprocess.run(
                 [sys.executable, "-m", "hefesto.cli.main", "install-hooks"],
