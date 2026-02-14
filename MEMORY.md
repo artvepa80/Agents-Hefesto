@@ -4,7 +4,7 @@
 
 ---
 
-## PENDING: PyPI Release v4.8.5
+## PENDING: PyPI Release v4.8.7
 
 **STATUS: BLOCKED - Needs user action**
 
@@ -16,7 +16,7 @@
 3. Verify the primary email (check inbox for verification link)
 4. Once verified, re-push the tag to trigger the release workflow:
    ```bash
-   git push origin :refs/tags/v4.8.5 && git push origin v4.8.5
+   git push origin :refs/tags/v4.8.7 && git push origin v4.8.7
    ```
    The hardened workflow will now:
    - Publish to PyPI (with continue-on-error)
@@ -40,11 +40,11 @@
 
 | Location | Version | Status |
 |----------|---------|--------|
-| VM (installed) | 4.8.5 | OMEGA Guardian, editable install |
-| GitHub main | 4.8.5 | pyproject.toml at commit 5e517f1 |
-| Tag v4.8.5 | 4.8.5 | Annotated tag at 94de09b |
-| GitHub Release | v4.8.5 | Created as Latest |
-| OneDrive (local) | 4.8.5 | Synced to origin/main |
+| VM (installed) | 4.8.7 | OMEGA Guardian, editable install |
+| GitHub main | 4.8.7 | pyproject.toml (after PR merge) |
+| Tag v4.8.7 | 4.8.7 | To be created after PR merge |
+| GitHub Release | v4.8.6 | Latest (v4.8.7 pending) |
+| OneDrive (local) | 4.8.7 | Synced to origin/main |
 | PyPI | 4.5.5 | BLOCKED (email verification) |
 
 ---
@@ -60,8 +60,8 @@ git checkout main
 git reset --hard origin/main
 git clean -fd
 # Verify:
-grep "^version" pyproject.toml   # should show 4.8.5
-git describe --tags --always      # should show v4.8.5 or ahead
+grep "^version" pyproject.toml   # should show 4.8.7
+git describe --tags --always      # should show v4.8.7 or ahead
 ```
 
 ---
@@ -80,13 +80,13 @@ git describe --tags --always      # should show v4.8.5 or ahead
 ---
 
 ## Active Blockers
-- **Marketplace**: Smoke-test now deterministic after PR #5 merge (v4.8.6).
+- **Marketplace**: Smoke-test deterministic since PR #5. Version alignment verified at v4.8.7.
 - **PyPI Publishing**: BLOCKED due to pending email verification for `OmegaAI`.
-  - Action: Use Docker-based GitHub Action (Marketplace Ready v4.8.5).
+  - Action: Use Docker-based GitHub Action (Marketplace Ready v4.8.7).
   - Resync: See checklist below when email verified.
 
 ## Marketplace Status
-- **State**: Ready for manual publish (v4.8.5).
+- **State**: Ready for manual publish (v4.8.7, pending tag + release).
 - **Contract**: CLI Exit Code 2 = Issues Found.
 - **Inputs**: `fail_on`, `min_severity` (case-insensitive in Action).
 
