@@ -28,9 +28,13 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Verify release tag
+      - name: Guard (public repo boundary)
         run: |
           python -m pip install --upgrade pip
+          python scripts/guard_public_repo.py
+
+      - name: Verify release tag
+        run: |
           python -m pip install "packaging>=23.0" "tomli>=2.0.1"
           python scripts/verify_release_tag.py --tag "${GITHUB_REF_NAME}" --project-root "${GITHUB_WORKSPACE}"
 

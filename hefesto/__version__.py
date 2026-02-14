@@ -18,5 +18,3 @@ def get_version() -> str:
 
 
 __version__ = get_version()
-
-__api_version__ = "v1"
