@@ -4,18 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.8.7"
-description = "AI-Powered Code Quality Guardian with Gemini integration"
+version = "4.9.0"
+description = "AI-Powered Code Quality Guardian - Static Analysis & Security Scanning"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "Dual License (MIT + Commercial)"}
+license = {text = "MIT"}
 authors = [
     {name = "Narapa LLC", email = "sales@narapallc.com"}
 ]
 maintainers = [
     {name = "Narapa LLC", email = "sales@narapallc.com"}
 ]
-keywords = ["ai", "code-quality", "refactoring", "security", "gemini", "llm", "devtools"]
+keywords = ["ai", "code-quality", "refactoring", "security", "static-analysis", "devtools"]
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,14 +32,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi>=0.104.0,<1.0.0",
-    "uvicorn[standard]>=0.24.0,<1.0.0",
     "pydantic>=2.5.0,<3.0.0",
     "click>=8.0.0,<9.0.0",
-    "google-cloud-bigquery>=3.10.0,<4.0.0",
-    "google-generativeai>=0.3.0",
-    "cryptography>=46.0.5",
-    "httpx>=0.25.0,<1.0.0",
     "python-dateutil>=2.8.2,<3.0.0",
     "radon>=6.0.1,<7.0.0",
     "bandit>=1.7.5,<2.0.0",
@@ -55,14 +49,6 @@ ci = [
     "packaging>=23.0,<25.0",
     "tomli>=2.0.1,<3.0.0 ; python_version < '3.11'",
 ]
-omega = [
-    "sentence-transformers>=2.2.2,<3.0.0",
-    "torch>=2.0.1,<3.0.0",
-    "numpy>=1.24.0,<2.0.0",
-    "google-cloud-bigquery>=3.10.0,<4.0.0",
-    "google-cloud-pubsub>=2.18.0,<3.0.0",
-    "pyyaml>=6.0,<7.0",
-]
 dev = [
     "pytest>=7.4.0,<8.0.0",
     "pytest-cov>=4.1.0,<5.0.0",
@@ -75,15 +61,6 @@ dev = [
     "tomli>=2.0.1,<3.0.0 ; python_version < '3.11'",
     "types-PyYAML>=6.0,<7.0",
 ]
-all = [
-    "sentence-transformers>=2.2.2,<3.0.0",
-    "torch>=2.0.1,<3.0.0",
-    "numpy>=1.24.0,<2.0.0",
-    "google-cloud-bigquery>=3.10.0,<4.0.0",
-    "google-cloud-pubsub>=2.18.0,<3.0.0",
-    "pyyaml>=6.0,<7.0",
-    "tree-sitter>=0.20.0,<1.0.0",
-]
 [project.scripts]
 hefesto = "hefesto.cli.main:cli"
 
@@ -92,7 +69,18 @@ Homepage = "https://github.com/artvepa80/Agents-Hefesto"
 Documentation = "https://github.com/artvepa80/Agents-Hefesto#readme"
 Repository = "https://github.com/artvepa80/Agents-Hefesto"
 Issues = "https://github.com/artvepa80/Agents-Hefesto/issues"
-"Pro License" = "https://buy.stripe.com/hefesto-pro"
+
+[tool.setuptools.packages.find]
+include = ["hefesto*"]
+exclude = [
+    "hefesto.api*",
+    "hefesto.llm*",
+    "hefesto.licensing*",
+    "hefesto.omega*",
+    "hefesto.aegis*",
+    "tests*",
+    "tests_pro*",
+]
 
 [tool.black]
 line-length = 100
@@ -125,8 +113,6 @@ addopts = "-v --tb=short --cov=hefesto --cov-report=html --cov-report=term"
 # Custom markers for different test categories
 markers = [
     "unit: Unit tests that don't require external services",
-    "requires_gcp: Tests that require Google Cloud Platform (BigQuery) credentials",
-    "requires_stripe: Tests that require Stripe API configuration",
     "integration: Integration tests that may require external services",
     "slow: Tests that take significant time to run",
 ]

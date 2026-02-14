@@ -5,6 +5,17 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.9.0] - 2026-02-14 — Public/Private Boundary Enforcement
+### Changed
+- **Boundary**: Public repo now ships Community Edition only (FREE tier).
+- **Removed**: Paid modules (`hefesto/{api,llm,licensing,omega}`), paid infra, paid tests/scripts.
+- **Rewritten**: `__init__.py`, `settings.py`, `cli/main.py`, `analyzer_engine.py` as free-only.
+- **Stubbed**: Paid CLI commands (serve, info, activate, deactivate, status) exit 1 with PRO message.
+- **Hardened**: `pyproject.toml` (free deps, packages.find exclude), `MANIFEST.in` (prune directives).
+- **Added**: `scripts/guard_public_repo.py` — CI boundary guard (bans dirs, files, identifiers).
+- **CI**: Guard step added to `ci.yml` and `release.yml`; `omega` removed from linting targets.
+- **Version**: Bumped to 4.9.0 (boundary enforcement = minor bump).
+
 ## [4.8.7] - 2026-02-14 — Release Closeout
 ### Changed
 - **Docs**: MEMORY.md updated to reflect v4.8.6 reality (was stale at v4.8.5).

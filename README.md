@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.8.7
+hefesto --version  # Should show: 4.9.0
 
 # 3. Analyze
 cd your-project
@@ -50,7 +50,7 @@ steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
     id: hefesto
-    uses: artvepa80/Agents-Hefesto@v4.8.7
+    uses: artvepa80/Agents-Hefesto@v4.9.0
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -459,6 +459,13 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.9.0 (2026-02-14)
+- **Boundary**: Public/private repo split — community edition only in public repo.
+- **Removed**: Paid modules (api, llm, licensing, omega), paid infra, paid tests.
+- **Hardened**: Packaging (packages.find exclude, MANIFEST.in prune, CI guard).
+- **Added**: `scripts/guard_public_repo.py` — CI boundary enforcement.
+- **Stubbed**: Paid CLI commands (serve, info, activate, deactivate, status).
 
 ### v4.8.7 (2026-02-14)
 - **Docs**: Version alignment across MEMORY.md, README, CHANGELOG.

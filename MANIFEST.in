@@ -6,12 +6,10 @@ include CONTRIBUTING.md
 
 # Include requirements
 include requirements.txt
-include requirements-pro.txt
 include requirements-dev.txt
 
 # Include configuration files
 include pyproject.toml
-include setup.py
 
 # Exclude unnecessary files
 exclude .gitignore
@@ -21,8 +19,17 @@ recursive-exclude docs *
 recursive-exclude .github *
 recursive-exclude scripts *
 
-# Include package data
+# Include package data (free modules only)
 recursive-include hefesto *.py
 recursive-include hefesto *.yaml
 recursive-include hefesto *.json
 
+# Defense-in-depth: prune paid modules (should not exist in public tree)
+prune hefesto/api
+prune hefesto/llm
+prune hefesto/licensing
+prune hefesto/omega
+prune hefesto/aegis
+prune tests_pro
+prune omega
+prune iris
