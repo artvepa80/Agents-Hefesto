@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.8.6
+hefesto --version  # Should show: 4.8.7
 
 # 3. Analyze
 cd your-project
@@ -50,7 +50,7 @@ steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
     id: hefesto
-    uses: artvepa80/Agents-Hefesto@v4.8.6
+    uses: artvepa80/Agents-Hefesto@v4.8.7
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -459,6 +459,15 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ---
 
 ## Changelog
+
+### v4.8.7 (2026-02-14)
+- **Docs**: Version alignment across MEMORY.md, README, CHANGELOG.
+- **Release**: Clean auditable closeout tag after PR #5 merge cycle.
+
+### v4.8.6 (2026-02-13)
+- **Security**: Force-tracked `critical_secret.py` fixture for CI runners.
+- **CI**: All 8 checks green (3.10/3.11/3.12 + parity + smoke + deploy).
+- **Dogfooding**: 0 CRITICAL issues verified before release.
 
 ### v4.8.5 (2026-02-13)
 - **GitHub Action**: Market-ready Docker-based action (bypassing PyPI).

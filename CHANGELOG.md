@@ -5,6 +5,12 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.8.7] - 2026-02-14 — Release Closeout
+### Changed
+- **Docs**: MEMORY.md updated to reflect v4.8.6 reality (was stale at v4.8.5).
+- **Docs**: README inline changelog now includes v4.8.6 and v4.8.7 entries.
+- **Release**: Clean auditable tag after PR #5 merge + README parity fix.
+
 ## [4.8.6] - 2026-02-13 — Deterministic Smoke Tests
 ### Fixed
 - **Security**: Action fixture `critical_secret.py` now force-tracked in git (bypasses `.gitignore` `*secret*` pattern) so CI runners detect it correctly.
