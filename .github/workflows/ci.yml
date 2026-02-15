@@ -87,3 +87,43 @@ jobs:
           flags: unittests
           name: codecov-${{ matrix.python-version }}
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  wheel-leak-check:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Assert no PRO paths in wheel
+        run: |
+          python -c "
+          import zipfile, glob, sys
+          whl = glob.glob('dist/*.whl')[0]
+          z = zipfile.ZipFile(whl)
+          suspects = [n for n in z.namelist() if any(x in n for x in ('/omega/','/aegis/','/iris/','/licensing/','/llm/','/api/'))]
+          if suspects:
+              print('LEAK DETECTED:', suspects[:20])
+              sys.exit(1)
+          print('WHEEL CLEAN — 0 suspect PRO paths')
+          "
+
+      - name: Smoke test wheel imports
+        run: |
+          pip install dist/*.whl --force-reinstall
+          python -c "
+          import hefesto
+          import hefesto.cli.main
+          import hefesto.core
+          import hefesto.analyzers
+          print('OSS_WHEEL_OK')
+          "
