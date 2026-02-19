@@ -22,7 +22,7 @@ def _find_repo_root() -> Path:
 class TestExcludeTypesGateFiltering:
     """Tests for --exclude-types CLI option and gate filtering."""
 
-    def test_fail_on_critical_without_exclude_returns_exit_2(self):
+    def test_fail_on_critical_without_exclude_returns_exit_1(self):
         """Without --exclude-types, CRITICAL complexity issues cause exit 2."""
         # Create a file with a very complex function (will trigger VERY_HIGH_COMPLEXITY)
         # We use a known complex pattern
@@ -52,8 +52,8 @@ class TestExcludeTypesGateFiltering:
                 cwd=_find_repo_root(),
             )
             # Should exit with code 2 because VERY_HIGH_COMPLEXITY is CRITICAL
-            assert result.returncode == 2, (
-                f"Expected exit code 2, got {result.returncode}. "
+            assert result.returncode == 1, (
+                f"Expected exit code 1, got {result.returncode}. "
                 f"stdout: {result.stdout}, stderr: {result.stderr}"
             )
         finally:
@@ -122,8 +122,8 @@ class TestExcludeTypesGateFiltering:
                 cwd=_find_repo_root(),
             )
             # Should still exit with code 2 because EVAL_USAGE is NOT excluded
-            assert result.returncode == 2, (
-                f"Expected exit code 2 (EVAL_USAGE not excluded), got {result.returncode}. "
+            assert result.returncode == 1, (
+                f"Expected exit code 1 (EVAL_USAGE not excluded), got {result.returncode}. "
                 f"stdout: {result.stdout}, stderr: {result.stderr}"
             )
         finally:

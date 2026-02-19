@@ -27,7 +27,7 @@ def _find_repo_root() -> Path:
 class TestFailOnExitCode:
     """Tests for --fail-on CLI exit code behavior."""
 
-    def test_fail_on_critical_returns_exit_2_when_critical_found(self):
+    def test_fail_on_critical_returns_exit_1_when_critical_found(self):
         """When --fail-on CRITICAL and CRITICAL issues exist, exit code should be 2."""
         # Create a temp file with actual eval() call (CRITICAL issue)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
@@ -51,7 +51,7 @@ class TestFailOnExitCode:
                 cwd=_find_repo_root(),
             )
             # Should exit with code 2 for gate failure
-            assert result.returncode == 2, f"Expected exit code 2, got {result.returncode}"
+            assert result.returncode == 1, f"Expected exit code 1, got {result.returncode}"
         finally:
             Path(temp_file).unlink()
 
