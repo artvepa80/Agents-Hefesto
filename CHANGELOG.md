@@ -5,6 +5,14 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.9.2] - 2026-02-19 — Exit Code Semantics + CLI Hardening
+### Changed
+- **Exit codes**: `--fail-on` gate failure now exits 1 (was 2). Without `--fail-on`, always exits 0.
+- **JSON output**: `--output json` sends all banners/diagnostics to stderr, stdout is pure JSON.
+- **Default excludes**: `.venv/`, `node_modules/`, `__pycache__/`, `.git/`, etc. excluded by default.
+- **SQLi sink detection**: SQL injection findings downgraded to MEDIUM when no `.execute()` sink in scope.
+- **CI**: Smoke test aligned to exit code 1; black/mypy/flake8 clean.
+
 ## [4.9.0] - 2026-02-14 — Public/Private Boundary Enforcement
 ### Changed
 - **Boundary**: Public repo now ships Community Edition only (FREE tier).

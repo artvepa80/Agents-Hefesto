@@ -533,6 +533,28 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ---
 
+
+## CLI Reference (v4.9.2)
+
+### JSON Output
+```bash
+hefesto analyze . --output json          # stdout = pure JSON, banners → stderr
+hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
+```
+
+### Exit Codes
+| Code | Meaning |
+|------|---------|
+| `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
+| `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+
+### Gate Examples
+```bash
+hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
+hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
+hefesto analyze .                        # always exit 0 (report only)
+```
+
 ## License
 
 MIT License for core functionality. PRO and OMEGA features are licensed separately.
