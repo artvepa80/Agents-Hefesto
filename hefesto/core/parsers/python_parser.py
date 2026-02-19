@@ -13,7 +13,10 @@ class PythonParser(CodeParser):
         """Parse Python code using ast module."""
         try:
             tree = ast.parse(code, filename=file_path)
-            root = self._convert_ast_to_generic(tree)
+            # Pre-compute lines once for O(1) text extraction per node
+            # (MiniMax Option B: avoids O(n) split per node)
+            lines = code.split("\n")
+            root = self._convert_ast_to_generic(tree, lines)
             return GenericAST(root, "python", code)
         except SyntaxError as e:
             root = GenericNode(
@@ -32,7 +35,39 @@ class PythonParser(CodeParser):
     def supports_language(self, language: str) -> bool:
         return language == "python"
 
-    def _convert_ast_to_generic(self, node: ast.AST) -> GenericNode:
+    def _extract_node_text(self, node: ast.AST, lines: list) -> str:
+        """Extract source text for an AST node using pre-computed lines.
+
+        Uses lineno/end_lineno (1-based) and col_offset/end_col_offset (0-based)
+        to slice the original source. Returns empty string for nodes without
+        position info (e.g. Module root).
+
+        Design: DeepSeek (architecture) + MiniMax (pre-computed lines optimization).
+        """
+        lineno = getattr(node, "lineno", None)
+        end_lineno = getattr(node, "end_lineno", None)
+        if lineno is None or end_lineno is None:
+            return ""
+
+        col_offset = getattr(node, "col_offset", 0)
+        end_col_offset = getattr(node, "end_col_offset", 0)
+
+        start_idx = lineno - 1
+        end_idx = end_lineno - 1
+
+        if start_idx < 0 or end_idx >= len(lines):
+            return ""
+
+        if start_idx == end_idx:
+            return lines[start_idx][col_offset:end_col_offset]
+
+        parts = [lines[start_idx][col_offset:]]
+        if end_idx > start_idx + 1:
+            parts.extend(lines[start_idx + 1:end_idx])
+        parts.append(lines[end_idx][:end_col_offset])
+        return "\n".join(parts)
+
+    def _convert_ast_to_generic(self, node: ast.AST, lines: list) -> GenericNode:
         """Convert Python AST to GenericNode."""
         node_type = self._map_node_type(node)
         name = getattr(node, "name", None)
@@ -41,7 +76,7 @@ class PythonParser(CodeParser):
 
         children = []
         for child in ast.iter_child_nodes(node):
-            children.append(self._convert_ast_to_generic(child))
+            children.append(self._convert_ast_to_generic(child, lines))
 
         return GenericNode(
             type=node_type,
@@ -50,7 +85,7 @@ class PythonParser(CodeParser):
             line_end=line_end,
             column_start=getattr(node, "col_offset", 0),
             column_end=getattr(node, "end_col_offset", 0),
-            text="",
+            text=self._extract_node_text(node, lines),
             children=children,
             metadata={"python_node_type": type(node).__name__},
         )
