@@ -655,30 +655,27 @@ def _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mo
         for issue in gate_issues:
             issue_idx = severity_order.index(issue.severity.value)
             if issue_idx >= fail_on_idx:
-                exit_code = 2
+                exit_code = 1
                 break
 
-        if exit_code == 2 and not quiet:
+        if exit_code == 1 and not quiet:
             click.echo(
-                f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)",
+                f"\nGate failure: {fail_on.upper()} or higher issues found (exit 1)",
                 err=use_stderr,
             )
         elif not quiet:
             if excluded_types:
                 click.echo(
-                    f"\nExit code: 0 (no {fail_on.upper()}+ issues"
+                    f"\nGate passed: no {fail_on.upper()}+ issues"
                     f" after excluding {len(excluded_types)} type(s))",
                     err=use_stderr,
                 )
             else:
                 click.echo(
-                    f"\nExit code: 0 (no {fail_on.upper()}+ issues)",
+                    f"\nGate passed: no {fail_on.upper()}+ issues",
                     err=use_stderr,
                 )
-    else:
-        # Default: exit 1 only for CRITICAL
-        if combined_report.summary.critical_issues > 0:
-            exit_code = 1
+    # Without --fail-on: always exit 0 (findings reported in output, not via exit code)
 
     return exit_code
 
