@@ -572,13 +572,16 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
 def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
     """Run ML-powered semantic duplication analysis (OMEGA/PRO only)."""
     import os
+
     tier = os.environ.get("HEFESTO_TIER", "")
     if tier not in ("professional", "omega"):
         return
     try:
         from hefesto.analyzers.semantic_duplication import find_semantic_duplicates
+
         if not quiet and not json_mode:
             import click
+
             click.echo("Running ML semantic analysis...", err=json_mode)
         ml_issues, stats = find_semantic_duplicates(all_file_results, source_cache)
         if ml_issues:
@@ -589,16 +592,20 @@ def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
                     fr.issues.append(issue)
             if not quiet and not json_mode:
                 import click
+
                 click.echo(
                     "   ML: {} functions, {} duplicates ({:.0f}ms)".format(
                         stats["functions"], stats["pairs"], stats["duration_ms"]
-                    ), err=json_mode
+                    ),
+                    err=json_mode,
                 )
         elif not quiet and not json_mode:
             import click
+
             click.echo("   ML: No semantic duplicates found", err=json_mode)
     except Exception as e:
         import logging
+
         logging.getLogger(__name__).debug("ML analysis skipped: %s", e)
 
 

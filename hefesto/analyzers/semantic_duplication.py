@@ -38,6 +38,7 @@ def _get_model():
         return None
     try:
         from hefesto_pro import get_semantic_analyzer
+
         sa = get_semantic_analyzer()
         return sa.model if sa.model is not None else None
     except (ImportError, Exception) as e:
@@ -77,6 +78,7 @@ def find_semantic_duplicates(
     texts = [f["text"] for f in functions]
     try:
         import numpy as np
+
         embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
     except Exception as e:
         logger.error("Batch encoding failed: %s", e)
@@ -105,10 +107,7 @@ def find_semantic_duplicates(
             if fa["file"] == fb["file"] and fa["name"] == fb["name"]:
                 continue
 
-            pair_key = tuple(sorted([
-                (fa["file"], fa["name"]),
-                (fb["file"], fb["name"])
-            ]))
+            pair_key = tuple(sorted([(fa["file"], fa["name"]), (fb["file"], fb["name"])]))
             if pair_key in seen_pairs:
                 continue
             seen_pairs.add(pair_key)
@@ -122,31 +121,32 @@ def find_semantic_duplicates(
 
             other_file = os.path.basename(fb["file"])
             msg = (
-                "Function '{}' is semantically similar to "
-                "'{}' in {}:{} (similarity: {:.0%})"
+                "Function '{}' is semantically similar to " "'{}' in {}:{} (similarity: {:.0%})"
             ).format(fa["name"], fb["name"], other_file, fb["line"], sim)
 
-            issues.append(AnalysisIssue(
-                file_path=fa["file"],
-                line=fa["line"],
-                column=0,
-                issue_type=AnalysisIssueType.DUPLICATE_CODE,
-                severity=severity,
-                message=msg,
-                function_name=fa["name"],
-                suggestion=(
-                    "Consider extracting shared logic into a common helper "
-                    "function to reduce duplication."
-                ),
-                engine="ml:semantic_duplication",
-                confidence=sim,
-                metadata={
-                    "similar_to": fb["name"],
-                    "similar_file": fb["file"],
-                    "similar_line": fb["line"],
-                    "similarity": round(sim, 4),
-                },
-            ))
+            issues.append(
+                AnalysisIssue(
+                    file_path=fa["file"],
+                    line=fa["line"],
+                    column=0,
+                    issue_type=AnalysisIssueType.DUPLICATE_CODE,
+                    severity=severity,
+                    message=msg,
+                    function_name=fa["name"],
+                    suggestion=(
+                        "Consider extracting shared logic into a common helper "
+                        "function to reduce duplication."
+                    ),
+                    engine="ml:semantic_duplication",
+                    confidence=sim,
+                    metadata={
+                        "similar_to": fb["name"],
+                        "similar_file": fb["file"],
+                        "similar_line": fb["line"],
+                        "similarity": round(sim, 4),
+                    },
+                )
+            )
 
     issues.sort(key=lambda x: -(x.confidence or 0))
     stats["pairs"] = len(issues)
@@ -154,7 +154,9 @@ def find_semantic_duplicates(
 
     logger.info(
         "ML duplication: %d functions, %d duplicates found in %.1fms",
-        stats["functions"], stats["pairs"], stats["duration_ms"]
+        stats["functions"],
+        stats["pairs"],
+        stats["duration_ms"],
     )
     return issues, stats
 
@@ -176,12 +178,19 @@ def _extract_functions(
 
         try:
             from pathlib import Path
+
             lang = LanguageDetector.detect(Path(fp), code)
         except Exception:
             continue
 
-        if lang in (Language.UNKNOWN, Language.YAML, Language.SHELL,
-                    Language.DOCKERFILE, Language.TERRAFORM, Language.SQL):
+        if lang in (
+            Language.UNKNOWN,
+            Language.YAML,
+            Language.SHELL,
+            Language.DOCKERFILE,
+            Language.TERRAFORM,
+            Language.SQL,
+        ):
             continue
 
         try:
@@ -197,15 +206,17 @@ def _extract_functions(
             if line_end - line_start < MIN_FUNCTION_LINES:
                 continue
             # Extract function body from source using line numbers
-            text = "\n".join(code_lines[line_start - 1:line_end])
+            text = "\n".join(code_lines[line_start - 1 : line_end])
             if not text.strip():
                 continue
-            functions.append({
-                "file": fp,
-                "name": func.name,
-                "line": line_start,
-                "text": text,
-                "language": lang.value,
-            })
+            functions.append(
+                {
+                    "file": fp,
+                    "name": func.name,
+                    "line": line_start,
+                    "text": text,
+                    "language": lang.value,
+                }
+            )
 
     return functions

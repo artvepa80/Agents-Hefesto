@@ -64,7 +64,7 @@ class PythonParser(CodeParser):
 
         parts: list[str] = [lines[start_idx][col_offset:]]
         if end_idx > start_idx + 1:
-            parts.extend(lines[start_idx + 1:end_idx])
+            parts.extend(lines[start_idx + 1 : end_idx])
         parts.append(lines[end_idx][:end_col_offset])
         return "\n".join(parts)
 
