@@ -55,7 +55,7 @@ def find_semantic_duplicates(
     Returns:
         Tuple of (issues list, stats dict)
     """
-    stats = {"functions": 0, "pairs": 0, "duration_ms": 0}
+    stats: dict = {"functions": 0, "pairs": 0, "duration_ms": 0.0}
     t0 = time.time()
 
     model = _get_model()

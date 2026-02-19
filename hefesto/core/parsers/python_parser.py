@@ -1,6 +1,7 @@
 """Python parser using built-in ast module."""
 
 import ast
+from typing import List
 
 from hefesto.core.ast.generic_ast import GenericAST, GenericNode, NodeType
 from hefesto.core.parsers.base_parser import CodeParser
@@ -35,7 +36,7 @@ class PythonParser(CodeParser):
     def supports_language(self, language: str) -> bool:
         return language == "python"
 
-    def _extract_node_text(self, node: ast.AST, lines: list) -> str:
+    def _extract_node_text(self, node: ast.AST, lines: List[str]) -> str:
         """Extract source text for an AST node using pre-computed lines.
 
         Uses lineno/end_lineno (1-based) and col_offset/end_col_offset (0-based)
@@ -49,8 +50,8 @@ class PythonParser(CodeParser):
         if lineno is None or end_lineno is None:
             return ""
 
-        col_offset = getattr(node, "col_offset", 0)
-        end_col_offset = getattr(node, "end_col_offset", 0)
+        col_offset: int = getattr(node, "col_offset", 0)
+        end_col_offset: int = getattr(node, "end_col_offset", 0)
 
         start_idx = lineno - 1
         end_idx = end_lineno - 1
@@ -59,15 +60,15 @@ class PythonParser(CodeParser):
             return ""
 
         if start_idx == end_idx:
-            return lines[start_idx][col_offset:end_col_offset]
+            return str(lines[start_idx][col_offset:end_col_offset])
 
-        parts = [lines[start_idx][col_offset:]]
+        parts: list[str] = [lines[start_idx][col_offset:]]
         if end_idx > start_idx + 1:
             parts.extend(lines[start_idx + 1:end_idx])
         parts.append(lines[end_idx][:end_col_offset])
         return "\n".join(parts)
 
-    def _convert_ast_to_generic(self, node: ast.AST, lines: list) -> GenericNode:
+    def _convert_ast_to_generic(self, node: ast.AST, lines: List[str]) -> GenericNode:
         """Convert Python AST to GenericNode."""
         node_type = self._map_node_type(node)
         name = getattr(node, "name", None)
