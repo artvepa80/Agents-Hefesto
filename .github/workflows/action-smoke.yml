@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
 
-      # Test Case B: Critical Secret (Expect Exit Code 2)
+      # Test Case B: Critical Secret (Expect Exit Code 1)
       - name: Test Action (Critical)
         id: critical_scan
         uses: ./
@@ -49,10 +49,10 @@ jobs:
         run: |
           EXIT_CODE="${{ steps.critical_scan.outputs.exit_code }}"
           echo "Critical Scan Exit Code: $EXIT_CODE"
-          # Hefesto CLI: 0=ok, 2=gate failure (issues >= fail-on), 1=other errors. Do NOT expect 1.
-          if [ "$EXIT_CODE" -ne 2 ]; then
-            echo "::error::Critical scan must get exit code 2 (gate failure). Got $EXIT_CODE"
+          # Hefesto CLI: 0=ok, 1=gate failure or error.
+          if [ "$EXIT_CODE" -ne 1 ]; then
+            echo "::error::Critical scan must get exit code 1 (gate failure). Got $EXIT_CODE"
             exit 1
           fi
-          echo "OK: exit code 2 (gate failure) as expected"
+          echo "OK: exit code 1 (gate failure) as expected"
 

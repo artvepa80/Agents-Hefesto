@@ -128,9 +128,7 @@ class SecurityAnalyzer:
                     # Determine severity based on sink proximity
                     has_sink = self._scope_has_sink(line_num, scope_sinks, file_has_sink)
                     severity = (
-                        AnalysisIssueSeverity.HIGH
-                        if has_sink
-                        else AnalysisIssueSeverity.MEDIUM
+                        AnalysisIssueSeverity.HIGH if has_sink else AnalysisIssueSeverity.MEDIUM
                     )
 
                     issues.append(
