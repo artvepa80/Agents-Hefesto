@@ -182,14 +182,17 @@ def analyze(
         hefesto analyze . --fail-on HIGH  # CI gate
         hefesto analyze . --quiet  # Summary only
     """
+    # When --output json, all non-JSON text goes to stderr so stdout is pure JSON.
+    json_mode = output == "json"
+
     paths_list = list(paths)
-    _echo_analysis_config(paths_list, severity, exclude, quiet)
+    _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode)
 
     # Parse exclude patterns
     exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
 
     try:
-        engine = _setup_analyzer_engine(severity, quiet)
+        engine = _setup_analyzer_engine(severity, quiet, json_mode)
         if not engine:
             _exit(1)
 
@@ -203,7 +206,7 @@ def analyze(
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
 
-        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet)
+        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
         _exit(exit_code)
 
     except Exception as e:
@@ -211,14 +214,15 @@ def analyze(
         _exit(1)
 
 
-def _echo_analysis_config(paths_list, severity, exclude, quiet):
+def _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode=False):
+    use_stderr = json_mode
     if not quiet:
-        click.echo(f"Analyzing: {', '.join(paths_list)}")
-        click.echo(f"Minimum severity: {severity.upper()}")
+        click.echo(f"Analyzing: {', '.join(paths_list)}", err=use_stderr)
+        click.echo(f"Minimum severity: {severity.upper()}", err=use_stderr)
 
     exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
     if exclude_patterns and not quiet:
-        click.echo(f"Excluding: {', '.join(exclude_patterns)}")
+        click.echo(f"Excluding: {', '.join(exclude_patterns)}", err=use_stderr)
 
 
 @cli.command()
@@ -515,7 +519,7 @@ def _install_hook(repo_root, hook_name, force):
         _exit(1)
 
 
-def _setup_analyzer_engine(severity, quiet):
+def _setup_analyzer_engine(severity, quiet, json_mode=False):
     from hefesto.analyzers import (
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
@@ -524,13 +528,16 @@ def _setup_analyzer_engine(severity, quiet):
     )
     from hefesto.core.analyzer_engine import AnalyzerEngine
 
-    if not quiet:
+    # When json_mode, suppress verbose output so stdout stays clean
+    verbose = not quiet and not json_mode
+
+    if verbose:
         import click
 
         click.echo("")
 
     try:
-        engine = AnalyzerEngine(severity_threshold=severity, verbose=not quiet)
+        engine = AnalyzerEngine(severity_threshold=severity, verbose=verbose)
 
         # Register all analyzers
         engine.register_analyzer(ComplexityAnalyzer())
@@ -591,11 +598,16 @@ def _print_report(combined_report, output, save_html, quiet, max_issues):
 
     from hefesto.reports import HTMLReporter, JSONReporter, TextReporter
 
+    json_mode = output == "json"
+
     # Apply max_issues limit if specified (affects display only)
     display_issues = combined_report.get_all_issues()
     if max_issues and len(display_issues) > max_issues:
         if not quiet:
-            click.echo(f"(Showing first {max_issues} of {len(display_issues)} issues)")
+            click.echo(
+                f"(Showing first {max_issues} of {len(display_issues)} issues)",
+                err=json_mode,
+            )
 
     # Generate output
     if output == "text":
@@ -618,9 +630,10 @@ def _print_report(combined_report, output, save_html, quiet, max_issues):
             click.echo(result)
 
 
-def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
+def _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode=False):
     import click
 
+    use_stderr = json_mode
     exit_code = 0
 
     if fail_on:
@@ -646,15 +659,22 @@ def _determine_exit_code(combined_report, fail_on, exclude_types, quiet):
                 break
 
         if exit_code == 2 and not quiet:
-            click.echo(f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)")
+            click.echo(
+                f"\nExit code: 2 (gate failure: {fail_on.upper()} or higher issues found)",
+                err=use_stderr,
+            )
         elif not quiet:
             if excluded_types:
                 click.echo(
                     f"\nExit code: 0 (no {fail_on.upper()}+ issues"
-                    f" after excluding {len(excluded_types)} type(s))"
+                    f" after excluding {len(excluded_types)} type(s))",
+                    err=use_stderr,
                 )
             else:
-                click.echo(f"\nExit code: 0 (no {fail_on.upper()}+ issues)")
+                click.echo(
+                    f"\nExit code: 0 (no {fail_on.upper()}+ issues)",
+                    err=use_stderr,
+                )
     else:
         # Default: exit 1 only for CRITICAL
         if combined_report.summary.critical_issues > 0:
