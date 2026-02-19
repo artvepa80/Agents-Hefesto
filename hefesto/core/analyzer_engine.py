@@ -27,6 +27,23 @@ from hefesto.core.language_detector import Language, LanguageDetector
 from hefesto.core.languages.registry import get_registry
 from hefesto.core.parsers.parser_factory import ParserFactory
 
+# Directories excluded by default to avoid noise from vendored/generated code.
+# Users can add more via --exclude; these are always applied unless --no-default-excludes.
+DEFAULT_EXCLUDES = [
+    ".venv/",
+    "venv/",
+    ".tox/",
+    "node_modules/",
+    ".git/",
+    "__pycache__/",
+    "dist/",
+    "build/",
+    ".mypy_cache/",
+    ".pytest_cache/",
+    ".eggs/",
+    ".egg-info/",
+]
+
 
 class AnalyzerEngine:
     """Main analysis engine that orchestrates all analyzers."""
@@ -113,10 +130,12 @@ class AnalyzerEngine:
 
     def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
         """Find all supported files in the given path."""
+        # Merge default excludes with user-provided patterns
+        all_excludes = list(DEFAULT_EXCLUDES) + list(exclude_patterns)
 
         def excluded(p: Path) -> bool:
             sp = str(p)
-            return any(pattern in sp for pattern in exclude_patterns)
+            return any(pattern in sp for pattern in all_excludes)
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():
@@ -312,4 +331,4 @@ class AnalyzerEngine:
         )
 
 
-__all__ = ["AnalyzerEngine"]
+__all__ = ["AnalyzerEngine", "DEFAULT_EXCLUDES"]
