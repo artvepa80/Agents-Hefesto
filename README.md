@@ -34,7 +34,7 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 pip install hefesto-ai
 
 # 2. Verify
-hefesto --version  # Should show: 4.9.0
+hefesto --version  # Should show: 4.9.2
 
 # 3. Analyze
 cd your-project
@@ -50,7 +50,7 @@ steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
     id: hefesto
-    uses: artvepa80/Agents-Hefesto@v4.9.0
+    uses: artvepa80/Agents-Hefesto@v4.9.2
     with:
       target: '.'
       fail_on: 'CRITICAL'
