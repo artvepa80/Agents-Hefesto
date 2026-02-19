@@ -26,12 +26,12 @@ def _run_sqli_check(code: str, file_path: str = "app.py"):
 
 class TestSinkDetected:
     def test_execute_in_same_function(self):
-        code = '''\
+        code = """\
 def get_user(name):
     query = "SELECT * FROM users WHERE name = '" + name + "'"
     cursor.execute(query)
     return cursor.fetchone()
-'''
+"""
         issues = _run_sqli_check(code)
         assert len(issues) >= 1
         high_issues = [i for i in issues if i.severity == AnalysisIssueSeverity.HIGH]
@@ -39,21 +39,21 @@ def get_user(name):
         assert high_issues[0].metadata.get("sink_detected") is True
 
     def test_executemany_sink(self):
-        code = '''\
+        code = """\
 def bulk_insert(rows):
     q = "INSERT INTO items (name) VALUES (%s)" % rows[0]
     conn.executemany(q, rows)
-'''
+"""
         issues = _run_sqli_check(code)
         high = [i for i in issues if i.severity == AnalysisIssueSeverity.HIGH]
         assert len(high) >= 1, "executemany should count as a sink"
 
     def test_raw_query_sink(self):
-        code = '''\
+        code = """\
 def raw_lookup(uid):
     sql = "SELECT * FROM accounts WHERE id = %s" % uid
     return Model.objects.raw(sql)
-'''
+"""
         issues = _run_sqli_check(code)
         high = [i for i in issues if i.severity == AnalysisIssueSeverity.HIGH]
         assert len(high) >= 1, ".raw() should count as a sink"
@@ -66,26 +66,26 @@ def raw_lookup(uid):
 
 class TestNoSink:
     def test_string_building_for_logging(self):
-        code = '''\
+        code = """\
 def build_debug_msg(table):
     msg = "SELECT count(*) FROM " + table
     logger.info(msg)
     return msg
-'''
+"""
         issues = _run_sqli_check(code)
         assert len(issues) >= 1
         # All issues should be MEDIUM (no sink)
         for issue in issues:
-            assert issue.severity == AnalysisIssueSeverity.MEDIUM, (
-                f"Expected MEDIUM without sink, got {issue.severity}"
-            )
+            assert (
+                issue.severity == AnalysisIssueSeverity.MEDIUM
+            ), f"Expected MEDIUM without sink, got {issue.severity}"
             assert issue.metadata.get("sink_detected") is False
 
     def test_config_string_with_percent(self):
-        code = '''\
+        code = """\
 # Database configuration
 QUERY_TEMPLATE = "SELECT * FROM %s WHERE active = 1"
-'''
+"""
         issues = _run_sqli_check(code)
         # The comment line should be skipped, but the QUERY_TEMPLATE line
         # has SQL keyword + %, so it flags — but as MEDIUM (no sink in file)
@@ -93,10 +93,10 @@ QUERY_TEMPLATE = "SELECT * FROM %s WHERE active = 1"
             assert issue.severity == AnalysisIssueSeverity.MEDIUM
 
     def test_module_level_no_sink(self):
-        code = '''\
+        code = """\
 SQL = "DELETE FROM sessions WHERE expired + interval"
 print(SQL)
-'''
+"""
         issues = _run_sqli_check(code)
         for issue in issues:
             assert issue.severity == AnalysisIssueSeverity.MEDIUM
@@ -109,18 +109,18 @@ print(SQL)
 
 class TestCommentSkip:
     def test_python_comment_skipped(self):
-        code = '''\
+        code = """\
 # SELECT * FROM users WHERE id = %s
 x = 1
-'''
+"""
         issues = _run_sqli_check(code)
         assert len(issues) == 0, "Comment lines should not trigger SQLi detection"
 
     def test_js_comment_skipped(self):
-        code = '''\
+        code = """\
 // DELETE FROM table WHERE id = ${id}
 const x = 1;
-'''
+"""
         issues = _run_sqli_check(code, "app.js")
         assert len(issues) == 0, "JS comment lines should not trigger SQLi detection"
 
@@ -133,12 +133,12 @@ const x = 1;
 class TestFileLevelFallback:
     def test_module_level_with_execute_elsewhere(self):
         """Module-level SQL concat in a file that has execute() somewhere → HIGH."""
-        code = '''\
+        code = """\
 QUERY = "SELECT * FROM users WHERE name = '" + username + "'"
 
 def run():
     cursor.execute(QUERY)
-'''
+"""
         issues = _run_sqli_check(code)
         # The QUERY line is at module level; file has execute() → HIGH
         high = [i for i in issues if i.severity == AnalysisIssueSeverity.HIGH]

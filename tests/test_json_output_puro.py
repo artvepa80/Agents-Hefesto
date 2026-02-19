@@ -57,9 +57,9 @@ def test_json_output_banners_on_stderr(tmp_path):
     )
 
     # stderr should contain the "Analyzing:" banner (unless --quiet suppresses it)
-    assert "Analyzing:" in result.stderr or result.stderr == "", (
-        "Expected 'Analyzing:' banner on stderr or empty stderr (quiet)"
-    )
+    assert (
+        "Analyzing:" in result.stderr or result.stderr == ""
+    ), "Expected 'Analyzing:' banner on stderr or empty stderr (quiet)"
 
     # stdout must NOT contain "Analyzing:" text
     assert "Analyzing:" not in result.stdout, "Banner text leaked to stdout in json mode"
@@ -72,8 +72,14 @@ def test_json_output_quiet_flag(tmp_path):
 
     result = subprocess.run(
         [
-            sys.executable, "-m", "hefesto.cli.main", "analyze",
-            str(sample), "--output", "json", "--quiet",
+            sys.executable,
+            "-m",
+            "hefesto.cli.main",
+            "analyze",
+            str(sample),
+            "--output",
+            "json",
+            "--quiet",
         ],
         capture_output=True,
         text=True,
