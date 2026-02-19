@@ -196,9 +196,11 @@ def analyze(
         if not engine:
             _exit(1)
 
-        all_file_results, total_loc, total_duration = _run_analysis_loop(
+        all_file_results, total_loc, total_duration, source_cache = _run_analysis_loop(
             engine, paths_list, exclude_patterns
         )
+
+        _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
 
         combined_report = _generate_report(
             all_file_results, total_loc, total_duration, output, save_html
@@ -563,7 +565,41 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
         total_loc += report.summary.total_loc
         total_duration += report.summary.duration_seconds
 
-    return all_file_results, total_loc, total_duration
+    source_cache = getattr(engine, "source_cache", {})
+    return all_file_results, total_loc, total_duration, source_cache
+
+
+def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
+    """Run ML-powered semantic duplication analysis (OMEGA/PRO only)."""
+    import os
+    tier = os.environ.get("HEFESTO_TIER", "")
+    if tier not in ("professional", "omega"):
+        return
+    try:
+        from hefesto.analyzers.semantic_duplication import find_semantic_duplicates
+        if not quiet and not json_mode:
+            import click
+            click.echo("Running ML semantic analysis...", err=json_mode)
+        ml_issues, stats = find_semantic_duplicates(all_file_results, source_cache)
+        if ml_issues:
+            file_map = {fr.file_path: fr for fr in all_file_results}
+            for issue in ml_issues:
+                fr = file_map.get(issue.file_path)
+                if fr:
+                    fr.issues.append(issue)
+            if not quiet and not json_mode:
+                import click
+                click.echo(
+                    "   ML: {} functions, {} duplicates ({:.0f}ms)".format(
+                        stats["functions"], stats["pairs"], stats["duration_ms"]
+                    ), err=json_mode
+                )
+        elif not quiet and not json_mode:
+            import click
+            click.echo("   ML: No semantic duplicates found", err=json_mode)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug("ML analysis skipped: %s", e)
 
 
 def _generate_report(all_file_results, total_loc, total_duration, output, save_html):

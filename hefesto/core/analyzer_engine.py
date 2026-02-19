@@ -64,6 +64,7 @@ class AnalyzerEngine:
         self.analyzers: List[Any] = []
         self.verbose = verbose
         self._registry = get_registry()
+        self.source_cache: dict = {}  # ML Enhancement: cache source for semantic analysis
 
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
@@ -173,6 +174,9 @@ class AnalyzerEngine:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 code = f.read()
+
+            # Cache source for ML semantic analysis (Phase 1)
+            self.source_cache[str(file_path)] = code
 
             # Detect language
             language = LanguageDetector.detect(file_path, code)
