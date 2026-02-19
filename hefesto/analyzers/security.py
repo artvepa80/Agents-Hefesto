@@ -13,7 +13,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import re
-from typing import List
+from typing import List, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -150,14 +150,14 @@ class SecurityAnalyzer:
         return issues
 
     @staticmethod
-    def _build_scope_sink_map(lines: List[str]) -> List[tuple]:
+    def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
         """Return a list of (start_line, end_line, has_sink) for function scopes.
 
         Uses a simple indentation heuristic: a ``def `` or ``async def `` at
         column N starts a scope that extends until the next line at the same
         or lesser indentation (or EOF).
         """
-        scopes: List[tuple] = []
+        scopes: List[Tuple[int, int, bool]] = []
         n = len(lines)
         i = 0
         while i < n:
@@ -186,7 +186,7 @@ class SecurityAnalyzer:
     @staticmethod
     def _scope_has_sink(
         line_num: int,
-        scope_sinks: List[tuple],
+        scope_sinks: List[Tuple[int, int, bool]],
         file_has_sink: bool,
     ) -> bool:
         """Check whether *line_num* is in a scope that contains an execute sink."""
