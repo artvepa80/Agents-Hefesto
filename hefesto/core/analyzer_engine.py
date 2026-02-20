@@ -52,6 +52,8 @@ class AnalyzerEngine:
         self,
         severity_threshold: str = "MEDIUM",
         verbose: bool = False,
+        scope_config: Any = None,
+        enrich_config: Any = None,
     ):
         """
         Initialize analyzer engine.
@@ -59,12 +61,35 @@ class AnalyzerEngine:
         Args:
             severity_threshold: Minimum severity level to report (LOW/MEDIUM/HIGH/CRITICAL)
             verbose: Print detailed pipeline steps (default: False)
+            scope_config: Optional ScopeGatingConfig (PRO feature, None = no gating)
+            enrich_config: Optional EnrichmentConfig (PRO feature, None = no enrichment)
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
         self.analyzers: List[Any] = []
         self.verbose = verbose
         self._registry = get_registry()
         self.source_cache: dict = {}  # ML Enhancement: cache source for semantic analysis
+        self._scope_config = scope_config
+        self._enrich_config = enrich_config
+        self._enrich_orchestrator: Any = None
+        self._scope_skipped: list = []
+        self._multilang_skip_report: Any = None
+        self._tsjs_parser: Any = None
+
+        # Initialize enrichment orchestrator if config provided
+        if enrich_config is not None:
+            from hefesto.pro_optional import HAS_ENRICHMENT, EnrichmentOrchestrator
+
+            if HAS_ENRICHMENT and EnrichmentOrchestrator is not None:
+                self._enrich_orchestrator = EnrichmentOrchestrator([])
+
+        # Initialize multilang parser + skip report if available
+        from hefesto.pro_optional import HAS_MULTILANG, SkipReport, TsJsParser
+
+        if HAS_MULTILANG and TsJsParser is not None:
+            self._tsjs_parser = TsJsParser()
+        if HAS_MULTILANG and SkipReport is not None:
+            self._multilang_skip_report = SkipReport()
 
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
@@ -94,8 +119,18 @@ class AnalyzerEngine:
         path_obj = Path(path)
         source_files = self._find_files(path_obj, exclude_patterns or [])
 
+        # Scope gating (PRO EPIC 1): filter before reading file contents
+        scope_skipped_here = []
+        if self._scope_config is not None:
+            from hefesto.pro_optional import filter_paths
+
+            source_files, scope_skipped_here = filter_paths(source_files, self._scope_config)
+            self._scope_skipped.extend(scope_skipped_here)
+
         if self.verbose:
             print(f"📁 Found {len(source_files)} file(s)")
+            if scope_skipped_here:
+                print(f"   ({len(scope_skipped_here)} skipped by scope gating)")
             print()
 
         # STEP 1: Run static analyzers
@@ -111,6 +146,10 @@ class AnalyzerEngine:
                 file_results.append(file_result)
                 all_issues.extend(file_result.issues)
 
+        # Enrichment (PRO EPIC 3): per-finding metadata attachment
+        if self._enrich_orchestrator is not None and self._enrich_config is not None:
+            self._enrich_findings(file_results)
+
         if self.verbose:
             print(f"   Found {len(all_issues)} potential issue(s)")
             print()
@@ -119,7 +158,7 @@ class AnalyzerEngine:
         duration = time.time() - start_time
         summary = self._create_summary(file_results, duration)
 
-        # Create report with metadata
+        # Create report (meta is assembled by CLI from engine state)
         report = AnalysisReport(summary=summary, file_results=file_results)
 
         if self.verbose:
@@ -268,6 +307,9 @@ class AnalyzerEngine:
 
             # LOC already calculated above
 
+            # Multilang symbol extraction (PRO EPIC 2): TS/JS metadata
+            file_meta = self._extract_multilang_symbols(file_path, code, language)
+
             # Run all analyzers
             all_issues = []
             for analyzer in self.analyzers:
@@ -279,13 +321,16 @@ class AnalyzerEngine:
 
             duration_ms = (time.time() - start_time) * 1000
 
-            return FileAnalysisResult(
+            result = FileAnalysisResult(
                 file_path=str(file_path),
                 issues=filtered_issues,
                 lines_of_code=loc,
                 analysis_duration_ms=duration_ms,
                 language=language.value,
             )
+            if file_meta:
+                result.metadata = file_meta
+            return result
 
         except Exception:
             # Skip files that can't be read or analyzed
@@ -333,6 +378,86 @@ class AnalyzerEngine:
             total_loc=total_loc,
             duration_seconds=duration,
         )
+
+    # ------------------------------------------------------------------
+    # PRO feature helpers
+    # ------------------------------------------------------------------
+
+    _TSJS_EXTENSIONS = frozenset([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"])
+
+    def _extract_multilang_symbols(self, file_path: Path, code: str, language: "Language") -> dict:
+        """Extract TS/JS symbols via PRO multilang parser (EPIC 2).
+
+        Returns symbol dict to attach as file metadata, or empty dict.
+        Does NOT re-read the file — uses ``code`` already in memory.
+        """
+        if self._tsjs_parser is None:
+            return {}
+
+        suffix = file_path.suffix.lower()
+        if suffix not in self._TSJS_EXTENSIONS:
+            return {}
+
+        result = self._tsjs_parser.parse_text(file_path, code)
+
+        if result.skipped:
+            if self._multilang_skip_report is not None:
+                self._multilang_skip_report.add(
+                    file_path, result.skip_reason or "unsupported_language"
+                )
+            return {}
+
+        return {
+            "symbols": {
+                "imports": sorted(result.imports),
+                "functions": sorted(result.functions),
+                "classes": sorted(result.classes),
+                "exports": sorted(result.exports),
+            }
+        }
+
+    def _enrich_findings(self, file_results: "List[FileAnalysisResult]") -> None:
+        """Attach enrichment metadata to each finding (EPIC 3).
+
+        Mutates ``issue.metadata["enrichment"]`` in-place.
+        Orchestrator never raises — errors become status=error in the dict.
+        """
+        from hefesto.pro_optional import EnrichmentInput
+
+        if EnrichmentInput is None:
+            return
+
+        orch = self._enrich_orchestrator
+        config = self._enrich_config
+
+        for file_result in file_results:
+            for issue in file_result.issues:
+                inp = EnrichmentInput(
+                    file_path=issue.file_path,
+                    finding_summary=issue.message,
+                    language=file_result.language,
+                    snippet=issue.code_snippet,
+                )
+                result = orch.run(inp, config)
+                issue.metadata["enrichment"] = result.to_dict()
+
+    def _build_meta(self) -> dict:
+        """Assemble the ``meta`` dict for the report from PRO features."""
+        meta: dict = {}
+
+        # Scope gating summary (EPIC 1)
+        if self._scope_config is not None and self._scope_skipped:
+            from hefesto.pro_optional import build_scope_summary
+
+            meta["scope"] = build_scope_summary(self._scope_skipped)
+
+        # Multilang skip report (EPIC 2)
+        if self._multilang_skip_report is not None:
+            skip_dict = self._multilang_skip_report.to_dict()
+            if skip_dict.get("total_skipped", 0) > 0:
+                meta["multilang"] = {"skipped": skip_dict}
+
+        return meta
 
 
 __all__ = ["AnalyzerEngine", "DEFAULT_EXCLUDES"]
