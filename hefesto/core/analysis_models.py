@@ -205,6 +205,7 @@ class FileAnalysisResult:
     analysis_duration_ms: float
     language: Optional[str] = None
     provider_results: List[ProviderResult] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -218,6 +219,8 @@ class FileAnalysisResult:
             result["language"] = self.language
         if self.provider_results:
             result["providers"] = [pr.to_dict() for pr in self.provider_results]
+        if self.metadata:
+            result["file_meta"] = self.metadata
         return result
 
 
@@ -264,6 +267,8 @@ class AnalysisReport:
     ml_enabled: bool = False
     phase_0_enabled: bool = True
     phase_1_enabled: bool = False
+    # Optional metadata populated by PRO features (scope gating, multilang, etc.)
+    meta: Dict[str, Any] = field(default_factory=dict)
 
     def get_all_issues(self) -> List[AnalysisIssue]:
         """Get all issues across all files."""
@@ -282,11 +287,14 @@ class AnalysisReport:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "summary": self.summary.to_dict(),
             "files": [file_result.to_dict() for file_result in self.file_results],
             "timestamp": self.timestamp.isoformat(),
         }
+        if self.meta:
+            result["meta"] = self.meta
+        return result
 
 
 __all__ = [

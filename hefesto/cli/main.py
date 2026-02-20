@@ -158,6 +158,25 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         " (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)"
     ),
 )
+# -- Scope gating flags (PRO EPIC 1) --
+@click.option("--include-third-party", is_flag=True, help="Include third-party files in analysis")
+@click.option("--include-generated", is_flag=True, help="Include generated files in analysis")
+@click.option("--include-fixtures", is_flag=True, help="Include test fixture files in analysis")
+@click.option("--scope-allow", multiple=True, help="Extra path patterns to include (repeatable)")
+@click.option("--scope-deny", multiple=True, help="Extra path patterns to exclude (repeatable)")
+# -- Enrichment flags (PRO EPIC 3) --
+@click.option(
+    "--enrich",
+    type=click.Choice(["off", "local", "remote"], case_sensitive=False),
+    default="off",
+    help="Enrichment mode: off (default), local, or remote (requires PRO)",
+)
+@click.option("--enrich-provider", multiple=True, help="Enrichment provider allowlist (repeatable)")
+@click.option(
+    "--enrich-timeout", type=int, default=30, help="Enrichment timeout in seconds (default: 30)"
+)
+@click.option("--enrich-cache-ttl", type=int, default=300, help="Enrichment cache TTL in seconds")
+@click.option("--enrich-cache-max", type=int, default=500, help="Enrichment cache max entries")
 def analyze(
     paths: Tuple[str, ...],
     severity: str,
@@ -168,6 +187,16 @@ def analyze(
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
+    include_third_party: bool,
+    include_generated: bool,
+    include_fixtures: bool,
+    scope_allow: Tuple[str, ...],
+    scope_deny: Tuple[str, ...],
+    enrich: str,
+    enrich_provider: Tuple[str, ...],
+    enrich_timeout: int,
+    enrich_cache_ttl: int,
+    enrich_cache_max: int,
 ):
     """
     Analyze code files or directories.
@@ -191,8 +220,26 @@ def analyze(
     # Parse exclude patterns
     exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
 
+    # Build scope gating config (PRO EPIC 1)
+    scope_config = _build_scope_config(
+        include_third_party,
+        include_generated,
+        include_fixtures,
+        scope_allow,
+        scope_deny,
+    )
+
+    # Build enrichment config (PRO EPIC 3)
+    enrich_config = _build_enrich_config(
+        enrich,
+        enrich_provider,
+        enrich_timeout,
+        enrich_cache_ttl,
+        enrich_cache_max,
+    )
+
     try:
-        engine = _setup_analyzer_engine(severity, quiet, json_mode)
+        engine = _setup_analyzer_engine(severity, quiet, json_mode, scope_config, enrich_config)
         if not engine:
             _exit(1)
 
@@ -203,7 +250,12 @@ def analyze(
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
 
         combined_report = _generate_report(
-            all_file_results, total_loc, total_duration, output, save_html
+            all_file_results,
+            total_loc,
+            total_duration,
+            output,
+            save_html,
+            meta=engine._build_meta() if hasattr(engine, "_build_meta") else {},
         )
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
@@ -521,7 +573,7 @@ def _install_hook(repo_root, hook_name, force):
         _exit(1)
 
 
-def _setup_analyzer_engine(severity, quiet, json_mode=False):
+def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, enrich_config=None):
     from hefesto.analyzers import (
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
@@ -539,7 +591,12 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False):
         click.echo("")
 
     try:
-        engine = AnalyzerEngine(severity_threshold=severity, verbose=verbose)
+        engine = AnalyzerEngine(
+            severity_threshold=severity,
+            verbose=verbose,
+            scope_config=scope_config,
+            enrich_config=enrich_config,
+        )
 
         # Register all analyzers
         engine.register_analyzer(ComplexityAnalyzer())
@@ -609,7 +666,7 @@ def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
         logging.getLogger(__name__).debug("ML analysis skipped: %s", e)
 
 
-def _generate_report(all_file_results, total_loc, total_duration, output, save_html):
+def _generate_report(all_file_results, total_loc, total_duration, output, save_html, meta=None):
     from hefesto.core.analysis_models import AnalysisReport, AnalysisSummary
 
     # Get all issues from combined file results
@@ -632,6 +689,7 @@ def _generate_report(all_file_results, total_loc, total_duration, output, save_h
     combined_report = AnalysisReport(
         summary=combined_summary,
         file_results=all_file_results,
+        meta=meta or {},
     )
     return combined_report
 
@@ -781,6 +839,52 @@ def drift(template_file, region, stack_name, tags, fail_on):
             break
 
     sys.exit(exit_code)
+
+
+def _build_scope_config(
+    include_third_party, include_generated, include_fixtures, scope_allow, scope_deny
+):
+    """Build ScopeGatingConfig from CLI flags, or None if PRO unavailable."""
+    from hefesto.pro_optional import HAS_SCOPE_GATING, ScopeGatingConfig
+
+    if not HAS_SCOPE_GATING:
+        return None
+
+    return ScopeGatingConfig(
+        include_third_party=include_third_party,
+        include_generated=include_generated,
+        include_fixtures=include_fixtures,
+        extra_allow=list(scope_allow),
+        extra_deny=list(scope_deny),
+    )
+
+
+def _build_enrich_config(
+    enrich, enrich_provider, enrich_timeout, enrich_cache_ttl, enrich_cache_max
+):
+    """Build EnrichmentConfig from CLI flags, or None if off/unavailable."""
+    if enrich == "off":
+        return None
+
+    from hefesto.pro_optional import HAS_ENRICHMENT, EnrichmentConfig
+
+    if not HAS_ENRICHMENT or EnrichmentConfig is None:
+        click.echo("Warning: --enrich requires Hefesto PRO; enrichment will be skipped.", err=True)
+        return None
+
+    if not enrich_provider:
+        click.echo(
+            "Warning: enrichment enabled but no providers configured; will be skipped.", err=True
+        )
+
+    return EnrichmentConfig(
+        enabled=True,
+        local_only=(enrich == "local"),
+        timeout_seconds=float(enrich_timeout),
+        cache_ttl_seconds=enrich_cache_ttl,
+        cache_max_size=enrich_cache_max,
+        providers=list(enrich_provider),
+    )
 
 
 if __name__ == "__main__":
