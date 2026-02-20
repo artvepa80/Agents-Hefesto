@@ -53,8 +53,8 @@ dev = [
     "pytest>=7.4.0,<8.0.0",
     "pytest-cov>=4.1.0,<5.0.0",
     "pytest-asyncio>=0.21.0,<1.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
+    "black==26.1.0",
+    "isort==6.1.0",
     "flake8>=6.1.0",
     "mypy>=1.7.0",
     "packaging>=23.0,<25.0",
@@ -85,6 +85,7 @@ exclude = [
 [tool.black]
 line-length = 100
 target-version = ['py310', 'py311', 'py312']
+required-version = "26.1.0"
 include = '\.pyi?$'
 
 [tool.isort]
