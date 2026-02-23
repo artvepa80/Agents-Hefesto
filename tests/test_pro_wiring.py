@@ -68,6 +68,22 @@ class TestProOptionalFallbacks:
         assert EnrichmentInput is None
         assert EnrichmentOrchestrator is None
 
+    def test_api_hardening_flag_false(self):
+        from hefesto.pro_optional import HAS_API_HARDENING
+
+        assert HAS_API_HARDENING is False
+
+    def test_apply_hardening_noop(self):
+        from hefesto.pro_optional import apply_hardening
+
+        # Should not raise, even with a mock app
+        apply_hardening(object())
+
+    def test_hardening_settings_is_none(self):
+        from hefesto.pro_optional import HardeningSettings
+
+        assert HardeningSettings is None
+
 
 # ---------------------------------------------------------------------------
 # B) CLI flags don't crash without PRO
@@ -285,6 +301,11 @@ def _inject_fake_pro(monkeypatch):
     enr.EnrichmentInput = _FakeEnrichmentInput
     enr.EnrichmentOrchestrator = _FakeEnrichmentOrchestrator
 
+    # Wire api_hardening (no-op stubs to match pro_optional expectations)
+    ah = types.ModuleType("hefesto_pro.api_hardening")
+    ah.HardeningSettings = type("HardeningSettings", (), {"__init__": lambda self: None})
+    ah.apply_hardening = lambda app, **kw: None
+
     modules = {
         "hefesto_pro": pro,
         "hefesto_pro.scope_gating": sg,
@@ -294,6 +315,7 @@ def _inject_fake_pro(monkeypatch):
         "hefesto_pro.multilang.parser": ml_parser,
         "hefesto_pro.multilang.skip_report": ml_skip,
         "hefesto_pro.enrichment": enr,
+        "hefesto_pro.api_hardening": ah,
     }
 
     for name, mod in modules.items():
@@ -450,3 +472,49 @@ class TestEngineMultiPathAccumulation:
             assert len(engine._scope_skipped) >= 2
         finally:
             _cleanup_pro_optional(monkeypatch)
+
+
+# ---------------------------------------------------------------------------
+# D) Simulated PRO API Hardening wiring
+# ---------------------------------------------------------------------------
+
+
+class TestApiHardeningWiring:
+    """Test api_hardening wiring with simulated PRO modules."""
+
+    def setup_method(self):
+        """Reload pro_optional to clear any stale state from simulated PRO tests."""
+        import hefesto.pro_optional
+
+        importlib.reload(hefesto.pro_optional)
+
+    def test_serve_without_pro_shows_error(self):
+        """hefesto serve should show PRO-required message without PRO installed."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["serve"])
+        assert result.exit_code != 0
+        assert "PRO/OMEGA" in result.output or "PRO/OMEGA" in (result.stderr or "")
+
+    def test_apply_hardening_fallback_is_noop(self):
+        """apply_hardening fallback should be a no-op that doesn't crash."""
+        from hefesto.pro_optional import apply_hardening
+
+        class FakeApp:
+            pass
+
+        # Should not raise
+        apply_hardening(FakeApp())
+
+    def test_has_api_hardening_false_without_pro(self):
+        from hefesto.pro_optional import HAS_API_HARDENING
+
+        assert HAS_API_HARDENING is False
+
+    def test_server_module_creates_app(self):
+        """server.py create_app should return a FastAPI instance."""
+        from hefesto.server import create_app
+
+        app = create_app()
+        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        assert "/health" in route_paths
+        assert "/analyze" in route_paths

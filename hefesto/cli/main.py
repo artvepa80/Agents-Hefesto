@@ -106,11 +106,44 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         hefesto serve --port 9000
         hefesto serve --reload  # Development mode
     """
-    click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
-        err=True,
+    from hefesto.pro_optional import HAS_API_HARDENING
+
+    if not HAS_API_HARDENING:
+        click.echo(
+            "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+            err=True,
+        )
+        _exit(1)
+
+    try:
+        from hefesto.server import create_app
+    except ImportError as e:
+        click.echo(f"Server dependencies missing: {e}", err=True)
+        click.echo("Install with: pip install hefesto-ai[server]", err=True)
+        _exit(1)
+
+    from hefesto.pro_optional import HardeningSettings, apply_hardening
+
+    settings = HardeningSettings()
+    resolved_host = host or settings.bind_host
+    resolved_port = port or 8080
+
+    app = create_app()
+    apply_hardening(app, settings=settings)
+
+    click.echo(f"Starting Hefesto API server on {resolved_host}:{resolved_port}")
+    if HAS_API_HARDENING:
+        click.echo("  Hardening: ACTIVE (CORS, auth, rate-limit, request-id)")
+
+    import uvicorn
+
+    uvicorn.run(
+        app,
+        host=resolved_host,
+        port=resolved_port,
+        reload=reload,
+        log_level="info",
     )
-    _exit(1)
 
 
 @cli.command()
