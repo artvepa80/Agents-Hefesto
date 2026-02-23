@@ -72,3 +72,23 @@ except ModuleNotFoundError:
     EnrichmentConfig = None  # type: ignore[assignment, misc]
     EnrichmentInput = None  # type: ignore[assignment, misc]
     EnrichmentOrchestrator = None  # type: ignore[assignment, misc]
+
+
+# ---------------------------------------------------------------------------
+# API Hardening (Patch C)
+# ---------------------------------------------------------------------------
+
+try:
+    from hefesto_pro.api_hardening import (  # type: ignore[import-untyped]
+        HardeningSettings,
+        apply_hardening,
+    )
+
+    HAS_API_HARDENING = True
+except ModuleNotFoundError:
+    HAS_API_HARDENING = False
+    HardeningSettings = None  # type: ignore[assignment, misc]
+
+    def apply_hardening(app: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+        """No-op fallback: server runs without hardening."""
+        pass
