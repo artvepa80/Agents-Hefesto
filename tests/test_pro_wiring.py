@@ -510,6 +510,10 @@ class TestApiHardeningWiring:
 
         assert HAS_API_HARDENING is False
 
+    @pytest.mark.skipif(
+        not importlib.util.find_spec("fastapi"),
+        reason="fastapi not installed (server extra)",
+    )
     def test_server_module_creates_app(self):
         """server.py create_app should return a FastAPI instance."""
         from hefesto.server import create_app
