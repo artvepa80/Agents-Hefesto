@@ -65,5 +65,7 @@ Allow: /
 # AI-specific resources
 # LLM product description: /llms.txt
 # Agent metadata: /.well-known/agent.json
+# Changelog API: /api/changelog.json
+# FAQ API: /api/faq.json
 
 Sitemap: https://hefestoai.narapallc.com/sitemap.xml
