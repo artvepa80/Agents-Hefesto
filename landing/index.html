@@ -1,483 +1,1263 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- SEO Meta Tags -->
-  <title>Hefesto - AI Code Quality Agent for Startups | Ship 2x Faster</title>
-  <meta name="description" content="ML-powered code quality analysis. Catch bugs before production with semantic analysis, AI recommendations, and security scanning. 14-day free trial.">
-  <meta name="keywords" content="code quality, AI code analysis, ML semantic analysis, static analysis, security scanning, startup tools">
-  
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://hefesto.narapallc.com">
-  <meta property="og:title" content="Hefesto - AI Code Quality Agent">
-  <meta property="og:description" content="Ship 2x faster with ML-powered code quality. 14-day free trial.">
-  <meta property="og:image" content="https://hefesto.narapallc.com/assets/og-image.png">
-  
-  <!-- Twitter -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://hefesto.narapallc.com">
-  <meta property="twitter:title" content="Hefesto - AI Code Quality Agent">
-  <meta property="twitter:description" content="Ship 2x faster with ML-powered code quality. 14-day free trial.">
-  <meta property="twitter:image" content="https://hefesto.narapallc.com/assets/og-image.png">
-  
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
-  
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Bing Webmaster Verification -->
-  <meta name="msvalidate.01" content="669B83D3C39377A77030B7695BF12DB1" />
+  <!-- SEO Primary -->
+  <title>HefestoAI — AI Code Quality Guardian | Stop Bad Code Before Production</title>
+  <meta name="description" content="HefestoAI detects semantic drift, security vulnerabilities, and architectural decay in AI-generated code before it reaches production. Pre-commit hooks. Zero false positives. 17 languages.">
+  <meta name="keywords" content="AI code quality, semantic drift detection, code review AI, pre-commit hooks, AI-generated code validation, code quality tool, Python code analysis">
+  <link rel="canonical" href="https://hefestoai.narapallc.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://hefestoai.narapallc.com/">
+  <meta property="og:title" content="HefestoAI — Stop Bad AI Code Before Production">
+  <meta property="og:description" content="The architectural guardian that detects semantic drift in AI-generated code. 17 languages. Pre-commit hooks. Zero false positives.">
+  <meta property="og:image" content="https://hefestoai.narapallc.com/og-image.png">
+  <meta property="og:site_name" content="HefestoAI">
+
+  <!-- Twitter/X Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@HefestoAI">
+  <meta name="twitter:creator" content="@HefestoAI">
+  <meta name="twitter:title" content="HefestoAI — Stop Bad AI Code Before Production">
+  <meta name="twitter:description" content="Detects semantic drift in AI-generated code before it reaches production. Pre-commit hooks. Zero false positives.">
+  <meta name="twitter:image" content="https://hefestoai.narapallc.com/og-image.png">
+
+  <!-- AEO: Structured Data for AI crawlers -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "HefestoAI",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS, Windows",
+    "description": "HefestoAI is an AI-powered code quality platform that acts as a pre-commit guardian, detecting semantic drift, security vulnerabilities, and architectural decay in AI-generated code before it reaches production repositories.",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "PRO",
+        "price": "8",
+        "priceCurrency": "USD",
+        "billingPeriod": "Monthly"
+      },
+      {
+        "@type": "Offer",
+        "name": "OMEGA",
+        "price": "19",
+        "priceCurrency": "USD",
+        "billingPeriod": "Monthly"
+      }
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "name": "Narapa LLC",
+      "url": "https://narapallc.com"
+    },
+    "url": "https://pypi.org/project/hefesto-ai",
+    "featureList": [
+      "Semantic drift detection",
+      "17 programming languages supported",
+      "Pre-commit hooks integration",
+      "Zero false positives",
+      "Security vulnerability scanning",
+      "Complexity analysis",
+      "AI-generated code validation"
+    ]
+  }
+  </script>
+
+  <!-- FAQ Schema for AEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is semantic drift in AI-generated code?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Semantic drift occurs when AI-generated code passes all syntax checks and tests but subtly breaks business logic. The code looks clean but its behavior diverges from the original intent — for example, charging users daily instead of monthly. Traditional linters and test suites cannot catch this because they validate syntax, not intent."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does HefestoAI work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "HefestoAI installs as a pre-commit hook and analyzes code in under 5 seconds before each commit. It uses a three-layer validation: syntax analysis, semantic analysis (detecting intent drift), and behavioral contract validation. It supports 17 programming languages with zero false positives."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What programming languages does HefestoAI support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "HefestoAI supports 17 programming languages including Python, JavaScript, TypeScript, Go, Rust, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, R, SQL, and Shell scripts."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I install HefestoAI?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Install HefestoAI with: pip install hefesto-ai. Then run: hefesto install-hooks to set up pre-commit hooks automatically. Requires Python 3.10+."
+        }
+      }
+    ]
+  }
+  </script>
 
   <!-- Microsoft Clarity -->
-  <script>
+  <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
         y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "vm5io2kbxz");
+    })(window, document, "clarity", "script", "vlwpqkzx1l");
   </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+    :root {
+      --forge: #FF6B1A;
+      --forge-dim: #CC4A00;
+      --forge-glow: rgba(255, 107, 26, 0.15);
+      --ember: #FFB347;
+      --coal: #0A0A0A;
+      --carbon: #111111;
+      --graphite: #1A1A1A;
+      --steel: #2A2A2A;
+      --ash: #444444;
+      --smoke: #888888;
+      --mist: #CCCCCC;
+      --white: #F5F5F5;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--coal);
+      color: var(--white);
+      font-family: var(--font-mono);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(ellipse at center, rgba(255,107,26,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,107,26,0.1);
+    }
+
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--white);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo span { color: var(--forge); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--smoke);
+      text-decoration: none;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--forge); }
+
+    .lang-switcher {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .lang-btn {
+      background: none;
+      border: 1px solid var(--steel);
+      color: var(--smoke);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .lang-btn:hover, .lang-btn.active {
+      border-color: var(--forge);
+      color: var(--forge);
+    }
+
+    .nav-cta {
+      background: var(--forge);
+      color: var(--coal) !important;
+      padding: 0.5rem 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      transition: background 0.2s !important;
+    }
+
+    .nav-cta:hover { background: var(--ember) !important; color: var(--coal) !important; }
+
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 8rem 2rem 4rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-content {
+      max-width: 720px;
+      animation: fadeUp 0.8s ease forwards;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,107,26,0.1);
+      border: 1px solid rgba(255,107,26,0.3);
+      color: var(--forge);
+      font-size: 0.72rem;
+      padding: 0.4rem 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    .hero-badge::before {
+      content: '\25CF';
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+      color: var(--white);
+    }
+
+    h1 .accent { color: var(--forge); }
+
+    .hero-sub {
+      font-size: 1rem;
+      color: var(--smoke);
+      line-height: 1.8;
+      margin-bottom: 2.5rem;
+      max-width: 560px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--forge);
+      color: var(--coal);
+      padding: 0.85rem 1.75rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.1);
+      transform: translateX(-100%);
+      transition: transform 0.3s;
+    }
+
+    .btn-primary:hover::after { transform: translateX(0); }
+    .btn-primary:hover { background: var(--ember); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: transparent;
+      color: var(--mist);
+      padding: 0.85rem 1.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+      border: 1px solid var(--steel);
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .btn-secondary:hover { border-color: var(--forge); color: var(--forge); }
+
+    .install-cmd {
+      margin-top: 2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--graphite);
+      border: 1px solid var(--steel);
+      padding: 0.75rem 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--mist);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .install-cmd:hover { border-color: var(--forge); }
+    .install-cmd .cmd { color: var(--forge); }
+    .install-cmd .copy-icon { color: var(--ash); font-size: 0.7rem; transition: color 0.2s; }
+    .install-cmd:hover .copy-icon { color: var(--forge); }
+
+    .stats-strip {
+      background: var(--graphite);
+      border-top: 1px solid var(--steel);
+      border-bottom: 1px solid var(--steel);
+      padding: 2rem;
+    }
+
+    .stats-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--forge);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: var(--smoke);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.25rem;
+    }
+
+    section { position: relative; z-index: 1; }
+
+    .section-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 6rem 2rem;
+    }
+
+    .section-tag {
+      font-size: 0.72rem;
+      color: var(--forge);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+
+    .problem { background: var(--carbon); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+      margin-top: 3rem;
+    }
+
+    .code-block {
+      background: var(--graphite);
+      border: 1px solid var(--steel);
+      border-left: 3px solid var(--forge);
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      line-height: 1.9;
+      overflow-x: auto;
+    }
+
+    .code-block .comment { color: var(--ash); }
+    .code-block .keyword { color: var(--forge); }
+    .code-block .string { color: var(--ember); }
+    .code-block .error { color: #FF4444; }
+    .code-block .success { color: #44FF88; }
+
+    .problem-text p {
+      color: var(--smoke);
+      line-height: 1.9;
+      margin-bottom: 1.5rem;
+    }
+
+    .problem-text strong { color: var(--white); }
+
+    .how { background: var(--coal); }
+
+    .three-layers {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .layer-card {
+      background: var(--graphite);
+      border: 1px solid var(--steel);
+      padding: 2rem;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+
+    .layer-card:hover { border-color: var(--forge); }
+
+    .layer-num {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 800;
+      color: rgba(255,107,26,0.15);
+      position: absolute;
+      top: 1rem;
+      right: 1.25rem;
+      line-height: 1;
+    }
+
+    .layer-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--white);
+    }
+
+    .layer-desc { font-size: 0.8rem; color: var(--smoke); line-height: 1.8; }
+
+    .layer-tag {
+      display: inline-block;
+      margin-top: 1rem;
+      font-size: 0.68rem;
+      color: var(--forge);
+      border: 1px solid rgba(255,107,26,0.3);
+      padding: 0.2rem 0.5rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .pricing { background: var(--carbon); }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .price-card {
+      background: var(--graphite);
+      border: 1px solid var(--steel);
+      padding: 2.5rem;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .price-card.featured {
+      border-color: var(--forge);
+      background: linear-gradient(135deg, var(--graphite) 0%, rgba(255,107,26,0.05) 100%);
+    }
+
+    .price-card:hover { transform: translateY(-4px); }
+
+    .price-badge {
+      position: absolute;
+      top: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--forge);
+      color: var(--coal);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .price-tier {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--smoke);
+      margin-bottom: 1rem;
+    }
+
+    .price-amount {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .price-amount sup { font-size: 1.25rem; vertical-align: super; font-weight: 400; }
+
+    .price-period { font-size: 0.75rem; color: var(--smoke); margin-top: 0.25rem; margin-bottom: 1.5rem; }
+    .price-original { font-size: 0.75rem; color: var(--ash); text-decoration: line-through; }
+    .price-discount { font-size: 0.75rem; color: var(--forge); font-weight: 700; }
+
+    .price-features { list-style: none; margin: 1.5rem 0 2rem; }
+
+    .price-features li {
+      font-size: 0.8rem;
+      color: var(--smoke);
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+
+    .price-features li::before { content: '\25B8'; color: var(--forge); flex-shrink: 0; }
+
+    .btn-plan {
+      display: block;
+      text-align: center;
+      padding: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+
+    .btn-plan-primary { background: var(--forge); color: var(--coal); }
+    .btn-plan-primary:hover { background: var(--ember); }
+    .btn-plan-secondary { border: 1px solid var(--steel); color: var(--mist); }
+    .btn-plan-secondary:hover { border-color: var(--forge); color: var(--forge); }
+
+    .founding-note { text-align: center; margin-top: 2rem; font-size: 0.78rem; color: var(--ash); }
+    .founding-note strong { color: var(--forge); }
+
+    .about { background: var(--coal); }
+
+    .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 3rem; }
+
+    .team-card {
+      background: var(--graphite);
+      border: 1px solid var(--steel);
+      padding: 2rem;
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    .team-avatar {
+      width: 56px;
+      height: 56px;
+      background: var(--steel);
+      border: 2px solid var(--forge);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--forge);
+      flex-shrink: 0;
+    }
+
+    .team-name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+    .team-role { font-size: 0.72rem; color: var(--forge); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .team-bio { font-size: 0.8rem; color: var(--smoke); line-height: 1.8; }
+
+    footer {
+      background: var(--graphite);
+      border-top: 1px solid var(--steel);
+      padding: 3rem 2rem;
+    }
+
+    .footer-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-brand { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .footer-brand span { color: var(--forge); }
+    .footer-tagline { font-size: 0.75rem; color: var(--ash); max-width: 240px; line-height: 1.6; }
+
+    .footer-links h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--smoke); margin-bottom: 1rem; }
+    .footer-links ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-links a { font-size: 0.8rem; color: var(--ash); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--forge); }
+
+    .footer-bottom {
+      max-width: 1200px;
+      margin: 2rem auto 0;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--steel);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy { font-size: 0.72rem; color: var(--ash); }
+    .footer-copy a { color: var(--smoke); text-decoration: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 768px) {
+      .problem-grid, .team-grid { grid-template-columns: 1fr; }
+      .three-layers, .pricing-grid { grid-template-columns: 1fr; }
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { display: none; }
+      .hero { padding-top: 6rem; }
+    }
+
+    .copy-feedback {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--forge);
+      color: var(--coal);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .copy-feedback.show { opacity: 1; transform: translateY(0); }
+  </style>
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="container">
-      <div class="header-content">
-        <div class="logo">
-          <span class="logo-icon">🔥</span>
-          <span class="logo-text">Hefesto</span>
-        </div>
-        <nav class="nav">
-          <a href="#features" class="nav-link">Features</a>
-          <a href="#pricing" class="nav-link">Pricing</a>
-          <a href="#faq" class="nav-link">FAQ</a>
-          <a href="https://github.com/artvepa80/Agents-Hefesto" target="_blank" class="nav-link">GitHub</a>
-          <a href="https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04" class="btn btn-primary btn-nav">Start Free Trial</a>
-        </nav>
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-    </div>
-  </header>
+<script>
+const I18N = {
+  en: {
+    nav_features: "Features",
+    nav_pricing: "Pricing",
+    nav_docs: "Docs",
+    nav_about: "About",
+    nav_install: "Install Free",
+    hero_badge: "v4.9.3 — Production Ready",
+    hero_h1_1: "Stop bad",
+    hero_h1_2: "AI code",
+    hero_h1_3: "before production.",
+    hero_sub: "HefestoAI is the architectural guardian your CI/CD is missing. It catches semantic drift, security vulnerabilities, and structural decay in AI-generated code — before any of it reaches your repositories.",
+    hero_cta1: "Install Now",
+    hero_cta2: "View Pricing",
+    install_label: "$ pip install hefesto-ai",
+    install_copy: "Copy",
+    stat1_num: "17",
+    stat1_label: "Languages Supported",
+    stat2_num: "<5s",
+    stat2_label: "Validation Speed",
+    stat3_num: "0",
+    stat3_label: "False Positives",
+    stat4_num: "100%",
+    stat4_label: "Pre-Commit Compatible",
+    problem_tag: "The Problem",
+    problem_h2: "Your CI/CD approves code it doesn't understand.",
+    problem_p1: "Linters validate <strong>syntax</strong>. Test suites validate <strong>implementations</strong>. Neither validates <strong>intent</strong>.",
+    problem_p2: "AI-generated code looks clean. It compiles. It passes tests. But it quietly breaks business logic — charging users daily instead of monthly, inverting permission checks, corrupting data at scale.",
+    problem_p3: "That's semantic drift. And <strong>traditional tools can't catch it</strong>.",
+    how_tag: "How It Works",
+    how_h2: "Three-layer validation. Under 5 seconds.",
+    layer1_title: "Syntax Analysis",
+    layer1_desc: "Full static analysis across 17 languages. Complexity scoring, code smell detection, and dependency checks.",
+    layer1_tag: "Layer 1",
+    layer2_title: "Semantic Drift Detection",
+    layer2_desc: "ML-powered behavioral contracts verify that function intent matches implementation. Catches regressions your tests don't see.",
+    layer2_tag: "Layer 2",
+    layer3_title: "Security Scanning",
+    layer3_desc: "Hardened vulnerability detection tuned for AI-generated patterns. No false positives — only real threats.",
+    layer3_tag: "Layer 3",
+    pricing_tag: "Pricing",
+    pricing_h2: "Start free. Scale when ready.",
+    plan1_tier: "Free",
+    plan1_price: "0",
+    plan1_period: "forever",
+    plan1_features: ["Up to 3 repos", "Syntax analysis", "Pre-commit hooks", "Community support"],
+    plan1_cta: "pip install hefesto-ai",
+    plan2_badge: "Most Popular",
+    plan2_tier: "PRO",
+    plan2_price: "8",
+    plan2_original: "$14",
+    plan2_discount: "Founding Member — 40% OFF",
+    plan2_period: "/month",
+    plan2_features: ["Unlimited repos", "Semantic drift detection", "Security scanning", "Priority support", "17 languages"],
+    plan2_cta: "Get PRO",
+    plan3_tier: "OMEGA",
+    plan3_price: "19",
+    plan3_original: "$32",
+    plan3_discount: "Founding Member — 40% OFF",
+    plan3_period: "/month",
+    plan3_features: ["Everything in PRO", "Multi-agent pipeline", "Team analytics", "Custom rules", "API access", "SLA support"],
+    plan3_cta: "Get OMEGA",
+    founding_note: "\u26a1 <strong>25 Founding Member spots left</strong> — 40% off, locked forever.",
+    about_tag: "The Team",
+    about_h2: "Built by engineers who ship.",
+    arturo_role: "Co-Founder & CTO",
+    arturo_bio: "Builder of multi-agent AI systems. Architect of the OMEGA ecosystem. Former Miami-based engineer who believes developer tools should be ruthlessly practical.",
+    rina_role: "Co-Founder & Operations",
+    rina_bio: "AI DevOps strategist. Built the HefestoAI go-to-market from zero. Author of the Three-Layer Validation framework for AI-generated code quality.",
+    footer_tagline: "The architectural guardian for AI-generated code. Built by Narapa LLC.",
+    footer_product: "Product",
+    footer_company: "Company",
+    footer_links_product: [["PyPI", "https://pypi.org/project/hefesto-ai"], ["GitHub", "https://github.com/artvepa80/Agents-Hefesto"], ["Docs", "#docs"], ["Changelog", "#changelog"]],
+    footer_links_company: [["About", "#about"], ["Twitter/X", "https://x.com/HefestoAI"], ["LinkedIn", "https://linkedin.com"], ["Contact", "mailto:contact@narapallc.com"]],
+    footer_copy: "\u00a9 2026 Narapa LLC. All rights reserved.",
+  },
+  es: {
+    nav_features: "Funciones",
+    nav_pricing: "Precios",
+    nav_docs: "Docs",
+    nav_about: "Nosotros",
+    nav_install: "Instalar Gratis",
+    hero_badge: "v4.9.3 — Listo para Producci\u00f3n",
+    hero_h1_1: "Det\u00e9n el c\u00f3digo",
+    hero_h1_2: "de IA deficiente",
+    hero_h1_3: "antes de producci\u00f3n.",
+    hero_sub: "HefestoAI es el guardi\u00e1n arquitect\u00f3nico que le falta a tu CI/CD. Detecta deriva sem\u00e1ntica, vulnerabilidades de seguridad y deterioro estructural en c\u00f3digo generado por IA — antes de que llegue a tus repositorios.",
+    hero_cta1: "Instalar Ahora",
+    hero_cta2: "Ver Precios",
+    install_label: "$ pip install hefesto-ai",
+    install_copy: "Copiar",
+    stat1_num: "17",
+    stat1_label: "Lenguajes Soportados",
+    stat2_num: "<5s",
+    stat2_label: "Velocidad de Validaci\u00f3n",
+    stat3_num: "0",
+    stat3_label: "Falsos Positivos",
+    stat4_num: "100%",
+    stat4_label: "Compatible Pre-Commit",
+    problem_tag: "El Problema",
+    problem_h2: "Tu CI/CD aprueba c\u00f3digo que no entiende.",
+    problem_p1: "Los linters validan <strong>sintaxis</strong>. Los tests validan <strong>implementaciones</strong>. Ninguno valida la <strong>intenci\u00f3n</strong>.",
+    problem_p2: "El c\u00f3digo generado por IA se ve limpio. Compila. Pasa los tests. Pero silenciosamente rompe la l\u00f3gica de negocio — cobrando a usuarios diariamente en lugar de mensualmente, invirtiendo permisos, corrompiendo datos a escala.",
+    problem_p3: "Eso es deriva sem\u00e1ntica. Y <strong>las herramientas tradicionales no pueden detectarla</strong>.",
+    how_tag: "C\u00f3mo Funciona",
+    how_h2: "Validaci\u00f3n en tres capas. En menos de 5 segundos.",
+    layer1_title: "An\u00e1lisis de Sintaxis",
+    layer1_desc: "An\u00e1lisis est\u00e1tico completo en 17 lenguajes. Puntuaci\u00f3n de complejidad, detecci\u00f3n de code smells y verificaci\u00f3n de dependencias.",
+    layer1_tag: "Capa 1",
+    layer2_title: "Detecci\u00f3n de Deriva Sem\u00e1ntica",
+    layer2_desc: "Contratos de comportamiento con ML verifican que la intenci\u00f3n de las funciones coincida con la implementaci\u00f3n. Detecta regresiones que tus tests no ven.",
+    layer2_tag: "Capa 2",
+    layer3_title: "Escaneo de Seguridad",
+    layer3_desc: "Detecci\u00f3n de vulnerabilidades ajustada para patrones generados por IA. Sin falsos positivos — solo amenazas reales.",
+    layer3_tag: "Capa 3",
+    pricing_tag: "Precios",
+    pricing_h2: "Empieza gratis. Escala cuando est\u00e9s listo.",
+    plan1_tier: "Gratis",
+    plan1_price: "0",
+    plan1_period: "para siempre",
+    plan1_features: ["Hasta 3 repositorios", "An\u00e1lisis de sintaxis", "Hooks pre-commit", "Soporte comunitario"],
+    plan1_cta: "pip install hefesto-ai",
+    plan2_badge: "M\u00e1s Popular",
+    plan2_tier: "PRO",
+    plan2_price: "8",
+    plan2_original: "$14",
+    plan2_discount: "Miembro Fundador — 40% OFF",
+    plan2_period: "/mes",
+    plan2_features: ["Repositorios ilimitados", "Detecci\u00f3n de deriva sem\u00e1ntica", "Escaneo de seguridad", "Soporte prioritario", "17 lenguajes"],
+    plan2_cta: "Obtener PRO",
+    plan3_tier: "OMEGA",
+    plan3_price: "19",
+    plan3_original: "$32",
+    plan3_discount: "Miembro Fundador — 40% OFF",
+    plan3_period: "/mes",
+    plan3_features: ["Todo en PRO", "Pipeline multi-agente", "Analytics de equipo", "Reglas personalizadas", "Acceso API", "Soporte SLA"],
+    plan3_cta: "Obtener OMEGA",
+    founding_note: "\u26a1 <strong>25 spots de Miembro Fundador disponibles</strong> — 40% de descuento, bloqueado para siempre.",
+    about_tag: "El Equipo",
+    about_h2: "Construido por ingenieros que hacen deploy.",
+    arturo_role: "Co-Fundador & CTO",
+    arturo_bio: "Constructor de sistemas multi-agente de IA. Arquitecto del ecosistema OMEGA. Ingeniero basado en Miami que cree que las herramientas para desarrolladores deben ser brutalmente pr\u00e1cticas.",
+    rina_role: "Co-Fundadora & Operaciones",
+    rina_bio: "Estratega de AI DevOps. Construy\u00f3 el go-to-market de HefestoAI desde cero. Autora del framework de Validaci\u00f3n en Tres Capas para calidad de c\u00f3digo generado por IA.",
+    footer_tagline: "El guardi\u00e1n arquitect\u00f3nico para c\u00f3digo generado por IA. Construido por Narapa LLC.",
+    footer_product: "Producto",
+    footer_company: "Empresa",
+    footer_links_product: [["PyPI", "https://pypi.org/project/hefesto-ai"], ["GitHub", "https://github.com/artvepa80/Agents-Hefesto"], ["Docs", "#docs"], ["Changelog", "#changelog"]],
+    footer_links_company: [["Nosotros", "#about"], ["Twitter/X", "https://x.com/HefestoAI"], ["LinkedIn", "https://linkedin.com"], ["Contacto", "mailto:contact@narapallc.com"]],
+    footer_copy: "\u00a9 2026 Narapa LLC. Todos los derechos reservados.",
+  },
+  ja: {
+    nav_features: "\u6a5f\u80fd", nav_pricing: "\u6599\u91d1", nav_docs: "\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8", nav_about: "\u4f1a\u793e\u6982\u8981", nav_install: "\u7121\u6599\u3067\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb",
+    hero_badge: "v4.9.3 — \u672c\u756a\u74b0\u5883\u5bfe\u5fdc", hero_h1_1: "AI\u30b3\u30fc\u30c9\u306e\u554f\u984c\u3092", hero_h1_2: "\u672c\u756a\u74b0\u5883\u306b", hero_h1_3: "\u5230\u9054\u3055\u305b\u306a\u3044\u3002",
+    hero_sub: "HefestoAI\u306fCI/CD\u306b\u6b20\u3051\u3066\u3044\u308b\u30a2\u30fc\u30ad\u30c6\u30af\u30c1\u30e3\u30ac\u30fc\u30c7\u30a3\u30a2\u30f3\u3067\u3059\u3002AI\u304c\u751f\u6210\u3057\u305f\u30b3\u30fc\u30c9\u306e\u30bb\u30de\u30f3\u30c6\u30a3\u30c3\u30af\u30c9\u30ea\u30d5\u30c8\u3001\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u8106\u5f31\u6027\u3001\u69cb\u9020\u7684\u52a3\u5316\u3092\u30ea\u30dd\u30b8\u30c8\u30ea\u306b\u5230\u9054\u3059\u308b\u524d\u306b\u691c\u51fa\u3057\u307e\u3059\u3002",
+    hero_cta1: "\u4eca\u3059\u3050\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb", hero_cta2: "\u6599\u91d1\u3092\u898b\u308b",
+    install_label: "$ pip install hefesto-ai", install_copy: "\u30b3\u30d4\u30fc",
+    stat1_num: "17", stat1_label: "\u5bfe\u5fdc\u8a00\u8a9e\u6570", stat2_num: "<5\u79d2", stat2_label: "\u691c\u8a3c\u901f\u5ea6", stat3_num: "0", stat3_label: "\u8aa4\u691c\u77e5", stat4_num: "100%", stat4_label: "\u30d7\u30ea\u30b3\u30df\u30c3\u30c8\u5bfe\u5fdc",
+    problem_tag: "\u554f\u984c", problem_h2: "CI/CD\u306f\u7406\u89e3\u3067\u304d\u306a\u3044\u30b3\u30fc\u30c9\u3092\u627f\u8a8d\u3057\u3066\u3044\u308b\u3002",
+    problem_p1: "\u30ea\u30f3\u30bf\u30fc\u306f<strong>\u69cb\u6587</strong>\u3092\u691c\u8a3c\u3057\u307e\u3059\u3002\u30c6\u30b9\u30c8\u30b9\u30a4\u30fc\u30c8\u306f<strong>\u5b9f\u88c5</strong>\u3092\u691c\u8a3c\u3057\u307e\u3059\u3002\u3069\u3061\u3089\u3082<strong>\u610f\u56f3</strong>\u3092\u691c\u8a3c\u3057\u307e\u305b\u3093\u3002",
+    problem_p2: "AI\u304c\u751f\u6210\u3057\u305f\u30b3\u30fc\u30c9\u306f\u304d\u308c\u3044\u306b\u898b\u3048\u307e\u3059\u3002\u30b3\u30f3\u30d1\u30a4\u30eb\u3055\u308c\u307e\u3059\u3002\u30c6\u30b9\u30c8\u306b\u5408\u683c\u3057\u307e\u3059\u3002\u3057\u304b\u3057\u9759\u304b\u306b\u30d3\u30b8\u30cd\u30b9\u30ed\u30b8\u30c3\u30af\u3092\u58ca\u3057\u307e\u3059\u3002",
+    problem_p3: "\u3053\u308c\u304c\u30bb\u30de\u30f3\u30c6\u30a3\u30c3\u30af\u30c9\u30ea\u30d5\u30c8\u3067\u3059\u3002<strong>\u5f93\u6765\u306e\u30c4\u30fc\u30eb\u3067\u306f\u691c\u51fa\u3067\u304d\u307e\u305b\u3093</strong>\u3002",
+    how_tag: "\u4ed5\u7d44\u307f", how_h2: "3\u5c64\u691c\u8a3c\u30025\u79d2\u672a\u6e80\u3002",
+    layer1_title: "\u69cb\u6587\u89e3\u6790", layer1_desc: "17\u8a00\u8a9e\u306b\u308f\u305f\u308b\u5b8c\u5168\u306a\u9759\u7684\u89e3\u6790\u3002", layer1_tag: "\u7b2c1\u5c64",
+    layer2_title: "\u30bb\u30de\u30f3\u30c6\u30a3\u30c3\u30af\u30c9\u30ea\u30d5\u30c8\u691c\u51fa", layer2_desc: "ML\u99c6\u52d5\u306e\u632f\u308b\u821e\u3044\u30b3\u30f3\u30c8\u30e9\u30af\u30c8\u304c\u95a2\u6570\u306e\u610f\u56f3\u3068\u5b9f\u88c5\u306e\u4e00\u81f4\u3092\u691c\u8a3c\u3002", layer2_tag: "\u7b2c2\u5c64",
+    layer3_title: "\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u30b9\u30ad\u30e3\u30f3", layer3_desc: "AI\u304c\u751f\u6210\u3059\u308b\u30d1\u30bf\u30fc\u30f3\u306b\u8abf\u6574\u3055\u308c\u305f\u8106\u5f31\u6027\u691c\u51fa\u3002\u8aa4\u691c\u77e5\u30bc\u30ed\u3002", layer3_tag: "\u7b2c3\u5c64",
+    pricing_tag: "\u6599\u91d1", pricing_h2: "\u7121\u6599\u304b\u3089\u59cb\u3081\u3066\u3001\u6e96\u5099\u304c\u3067\u304d\u305f\u3089\u30b9\u30b1\u30fc\u30eb\u3002",
+    plan1_tier: "\u7121\u6599", plan1_price: "0", plan1_period: "\u6c38\u4e45\u7121\u6599", plan1_features: ["\u6700\u59273\u30ea\u30dd\u30b8\u30c8\u30ea", "\u69cb\u6587\u89e3\u6790", "\u30d7\u30ea\u30b3\u30df\u30c3\u30c8\u30d5\u30c3\u30af", "\u30b3\u30df\u30e5\u30cb\u30c6\u30a3\u30b5\u30dd\u30fc\u30c8"], plan1_cta: "pip install hefesto-ai",
+    plan2_badge: "\u6700\u3082\u4eba\u6c17", plan2_tier: "PRO", plan2_price: "8", plan2_original: "$14", plan2_discount: "\u5275\u8a2d\u30e1\u30f3\u30d0\u30fc — 40% OFF", plan2_period: "/\u6708",
+    plan2_features: ["\u7121\u5236\u9650\u30ea\u30dd\u30b8\u30c8\u30ea", "\u30bb\u30de\u30f3\u30c6\u30a3\u30c3\u30af\u30c9\u30ea\u30d5\u30c8\u691c\u51fa", "\u30bb\u30ad\u30e5\u30ea\u30c6\u30a3\u30b9\u30ad\u30e3\u30f3", "\u512a\u5148\u30b5\u30dd\u30fc\u30c8", "17\u8a00\u8a9e"], plan2_cta: "PRO\u3092\u53d6\u5f97",
+    plan3_tier: "OMEGA", plan3_price: "19", plan3_original: "$32", plan3_discount: "\u5275\u8a2d\u30e1\u30f3\u30d0\u30fc — 40% OFF", plan3_period: "/\u6708",
+    plan3_features: ["PRO\u306e\u3059\u3079\u3066", "\u30de\u30eb\u30c1\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u30d1\u30a4\u30d7\u30e9\u30a4\u30f3", "\u30c1\u30fc\u30e0\u5206\u6790", "\u30ab\u30b9\u30bf\u30e0\u30eb\u30fc\u30eb", "API\u30a2\u30af\u30bb\u30b9", "SLA\u30b5\u30dd\u30fc\u30c8"], plan3_cta: "OMEGA\u3092\u53d6\u5f97",
+    founding_note: "\u26a1 <strong>\u5275\u8a2d\u30e1\u30f3\u30d0\u30fc\u679a\u6b8b\u308a25\u5e2d</strong> — \u6c38\u4e4540%\u5272\u5f15\u3002",
+    about_tag: "\u30c1\u30fc\u30e0", about_h2: "\u5b9f\u969b\u306b\u30c7\u30d7\u30ed\u30a4\u3059\u308b\u30a8\u30f3\u30b8\u30cb\u30a2\u304c\u69cb\u7bc9\u3002",
+    arturo_role: "\u5171\u540c\u5275\u696d\u8005 & CTO", arturo_bio: "\u30de\u30eb\u30c1\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8AI\u30b7\u30b9\u30c6\u30e0\u306e\u69cb\u7bc9\u8005\u3002OMEGA\u30a8\u30b3\u30b7\u30b9\u30c6\u30e0\u306e\u30a2\u30fc\u30ad\u30c6\u30af\u30c8\u3002",
+    rina_role: "\u5171\u540c\u5275\u696d\u8005 & \u30aa\u30da\u30ec\u30fc\u30b7\u30e7\u30f3", rina_bio: "AI DevOps\u30b9\u30c8\u30e9\u30c6\u30b8\u30b9\u30c8\u3002HefestoAI\u306eGTM\u3092\u30bc\u30ed\u304b\u3089\u69cb\u7bc9\u3002",
+    footer_tagline: "AI\u304c\u751f\u6210\u3059\u308b\u30b3\u30fc\u30c9\u306e\u30a2\u30fc\u30ad\u30c6\u30af\u30c1\u30e3\u30ac\u30fc\u30c7\u30a3\u30a2\u30f3\u3002Narapa LLC\u88fd\u3002",
+    footer_product: "\u88fd\u54c1", footer_company: "\u4f1a\u793e",
+    footer_links_product: [["PyPI", "https://pypi.org/project/hefesto-ai"], ["GitHub", "https://github.com/artvepa80/Agents-Hefesto"], ["Docs", "#docs"], ["\u5909\u66f4\u30ed\u30b0", "#changelog"]],
+    footer_links_company: [["\u4f1a\u793e\u6982\u8981", "#about"], ["Twitter/X", "https://x.com/HefestoAI"], ["LinkedIn", "https://linkedin.com"], ["\u304a\u554f\u3044\u5408\u308f\u305b", "mailto:contact@narapallc.com"]],
+    footer_copy: "\u00a9 2026 Narapa LLC. All rights reserved.",
+  },
+  ko: {
+    nav_features: "\uae30\ub2a5", nav_pricing: "\uac00\uaca9", nav_docs: "\ubb38\uc11c", nav_about: "\uc18c\uac1c", nav_install: "\ubb34\ub8cc \uc124\uce58",
+    hero_badge: "v4.9.3 — \ud504\ub85c\ub355\uc158 \uc900\ube44 \uc644\ub8cc", hero_h1_1: "\ub098\uc05c AI \ucf54\ub4dc\uac00", hero_h1_2: "\ud504\ub85c\ub355\uc158\uc5d0", hero_h1_3: "\ub3c4\ub2ec\ud558\uae30 \uc804\uc5d0 \ucc28\ub2e8.",
+    hero_sub: "HefestoAI\ub294 CI/CD\uc5d0 \ubd80\uc871\ud55c \uc544\ud0a4\ud14d\ucc98 \uac00\ub514\uc5b8\uc785\ub2c8\ub2e4. AI\uac00 \uc0dd\uc131\ud55c \ucf54\ub4dc\uc5d0\uc11c \uc2dc\ub9e8\ud2f1 \ub4dc\ub9ac\ud504\ud2b8, \ubcf4\uc548 \ucde8\uc57d\uc810, \uad6c\uc870\uc801 \uc800\ud558\ub97c \uc800\uc7a5\uc18c\uc5d0 \ub3c4\ub2ec\ud558\uae30 \uc804\uc5d0 \ud0d0\uc9c0\ud569\ub2c8\ub2e4.",
+    hero_cta1: "\uc9c0\uae08 \uc124\uce58", hero_cta2: "\uac00\uaca9 \ubcf4\uae30",
+    install_label: "$ pip install hefesto-ai", install_copy: "\ubcf5\uc0ac",
+    stat1_num: "17", stat1_label: "\uc9c0\uc6d0 \uc5b8\uc5b4", stat2_num: "<5\ucd08", stat2_label: "\uac80\uc99d \uc18d\ub3c4", stat3_num: "0", stat3_label: "\uc624\ud0d0\ub960", stat4_num: "100%", stat4_label: "\ud504\ub9ac\ucee4\ubc0b \ud638\ud658",
+    problem_tag: "\ubb38\uc81c", problem_h2: "CI/CD\ub294 \uc774\ud574\ud558\uc9c0 \ubabb\ud558\ub294 \ucf54\ub4dc\ub97c \uc2b9\uc778\ud55c\ub2e4.",
+    problem_p1: "\ub9b0\ud130\ub294 <strong>\uad6c\ubb38</strong>\uc744 \uac80\uc99d\ud569\ub2c8\ub2e4. \ud14c\uc2a4\ud2b8 \uc2a4\uc704\ud2b8\ub294 <strong>\uad6c\ud604</strong>\uc744 \uac80\uc99d\ud569\ub2c8\ub2e4. \uc5b4\ub290 \uac83\ub3c4 <strong>\uc758\ub3c4</strong>\ub97c \uac80\uc99d\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
+    problem_p2: "AI\uac00 \uc0dd\uc131\ud55c \ucf54\ub4dc\ub294 \uae54\ub054\ud574 \ubcf4\uc785\ub2c8\ub2e4. \ucef4\ud30c\uc77c\ub429\ub2c8\ub2e4. \ud14c\uc2a4\ud2b8\ub97c \ud1b5\uacfc\ud569\ub2c8\ub2e4. \ud558\uc9c0\ub9cc \uc870\uc6a9\ud788 \ube44\uc988\ub2c8\uc2a4 \ub85c\uc9c1\uc744 \ub9dd\uac00\ub728\ub9bd\ub2c8\ub2e4.",
+    problem_p3: "\uc774\uac83\uc774 \uc2dc\ub9e8\ud2f1 \ub4dc\ub9ac\ud504\ud2b8\uc785\ub2c8\ub2e4. <strong>\uae30\uc874 \ub3c4\uad6c\ub85c\ub294 \ud0d0\uc9c0\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4</strong>.",
+    how_tag: "\uc791\ub3d9 \ubc29\uc2dd", how_h2: "3\ub2e8\uacc4 \uac80\uc99d. 5\ucd08 \ubbf8\ub9cc.",
+    layer1_title: "\uad6c\ubb38 \ubd84\uc11d", layer1_desc: "17\uac1c \uc5b8\uc5b4\uc5d0 \uac78\uce5c \uc644\uc804\ud55c \uc815\uc801 \ubd84\uc11d.", layer1_tag: "\ub808\uc774\uc5b4 1",
+    layer2_title: "\uc2dc\ub9e8\ud2f1 \ub4dc\ub9ac\ud504\ud2b8 \ud0d0\uc9c0", layer2_desc: "ML \uae30\ubc18 \ud589\ub3d9 \uacc4\uc57d\uc774 \ud568\uc218 \uc758\ub3c4\uc640 \uad6c\ud604\uc758 \uc77c\uce58\ub97c \uac80\uc99d.", layer2_tag: "\ub808\uc774\uc5b4 2",
+    layer3_title: "\ubcf4\uc548 \uc2a4\uce94", layer3_desc: "AI\uac00 \uc0dd\uc131\ud558\ub294 \ud328\ud134\uc5d0 \ub9de\ucda4 \ucde8\uc57d\uc810 \ud0d0\uc9c0. \uc624\ud0d0 \uc5c6\uc74c.", layer3_tag: "\ub808\uc774\uc5b4 3",
+    pricing_tag: "\uac00\uaca9", pricing_h2: "\ubb34\ub8cc\ub85c \uc2dc\uc791. \uc900\ube44\ub418\uba74 \ud655\uc7a5.",
+    plan1_tier: "\ubb34\ub8cc", plan1_price: "0", plan1_period: "\uc601\uad6c \ubb34\ub8cc", plan1_features: ["\ucd5c\ub300 3\uac1c \uc800\uc7a5\uc18c", "\uad6c\ubb38 \ubd84\uc11d", "\ud504\ub9ac\ucee4\ubc0b \ud6c5", "\ucee4\ubba4\ub2c8\ud2f0 \uc9c0\uc6d0"], plan1_cta: "pip install hefesto-ai",
+    plan2_badge: "\uac00\uc7a5 \uc778\uae30", plan2_tier: "PRO", plan2_price: "8", plan2_original: "$14", plan2_discount: "\ucc3d\ub9bd \uba64\ubc84 — 40% OFF", plan2_period: "/\uc6d4",
+    plan2_features: ["\ubb34\uc81c\ud55c \uc800\uc7a5\uc18c", "\uc2dc\ub9e8\ud2f1 \ub4dc\ub9ac\ud504\ud2b8 \ud0d0\uc9c0", "\ubcf4\uc548 \uc2a4\uce94", "\uc6b0\uc120 \uc9c0\uc6d0", "17\uac1c \uc5b8\uc5b4"], plan2_cta: "PRO \uad6c\ub9e4",
+    plan3_tier: "OMEGA", plan3_price: "19", plan3_original: "$32", plan3_discount: "\ucc3d\ub9bd \uba64\ubc84 — 40% OFF", plan3_period: "/\uc6d4",
+    plan3_features: ["PRO\uc758 \ubaa8\ub4e0 \uac83", "\uba40\ud2f0\uc5d0\uc774\uc804\ud2b8 \ud30c\uc774\ud504\ub77c\uc778", "\ud300 \ubd84\uc11d", "\ucee4\uc2a4\ud140 \uaddc\uce59", "API \uc561\uc138\uc2a4", "SLA \uc9c0\uc6d0"], plan3_cta: "OMEGA \uad6c\ub9e4",
+    founding_note: "\u26a1 <strong>\ucc3d\ub9bd \uba64\ubc84 25\uc790\ub9ac \ub0a8\uc74c</strong> — \uc601\uad6c 40% \ud560\uc778.",
+    about_tag: "\ud300", about_h2: "\uc2e4\uc81c\ub85c \ubc30\ud3ec\ud558\ub294 \uc5d4\uc9c0\ub2c8\uc5b4\uac00 \ub9cc\ub4e0\ub2e4.",
+    arturo_role: "\uacf5\ub3d9 \ucc3d\uc5c5\uc790 & CTO", arturo_bio: "\uba40\ud2f0\uc5d0\uc774\uc804\ud2b8 AI \uc2dc\uc2a4\ud15c \ube4c\ub354. OMEGA \uc5d0\ucf54\uc2dc\uc2a4\ud15c \uc544\ud0a4\ud14d\ud2b8.",
+    rina_role: "\uacf5\ub3d9 \ucc3d\uc5c5\uc790 & \uc6b4\uc601", rina_bio: "AI DevOps \uc804\ub7b5\uac00. HefestoAI \uc2dc\uc7a5 \uc9c4\ucd9c \uc804\ub7b5\uc744 \uc81c\ub85c\uc5d0\uc11c \uad6c\ucd95.",
+    footer_tagline: "AI\uac00 \uc0dd\uc131\ud558\ub294 \ucf54\ub4dc\ub97c \uc704\ud55c \uc544\ud0a4\ud14d\ucc98 \uac00\ub514\uc5b8. Narapa LLC \uc81c\uc791.",
+    footer_product: "\uc81c\ud488", footer_company: "\ud68c\uc0ac",
+    footer_links_product: [["PyPI", "https://pypi.org/project/hefesto-ai"], ["GitHub", "https://github.com/artvepa80/Agents-Hefesto"], ["\ubb38\uc11c", "#docs"], ["\ubcc0\uacbd \ub85c\uadf8", "#changelog"]],
+    footer_links_company: [["\uc18c\uac1c", "#about"], ["Twitter/X", "https://x.com/HefestoAI"], ["LinkedIn", "https://linkedin.com"], ["\ubb38\uc758", "mailto:contact@narapallc.com"]],
+    footer_copy: "\u00a9 2026 Narapa LLC. All rights reserved.",
+  }
+};
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="container">
-      <!-- Founding Member Banner -->
-      <div class="founding-banner">
-        <span class="founding-icon">🚀</span>
-        <strong>FOUNDING MEMBER PROGRAM</strong>
-        <span class="founding-price">$59/month locked forever</span>
-        <span class="founding-spots">Limited to first 25 teams</span>
+const STRIPE_LINKS = {
+  pro: "https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b",
+  omega: "https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c"
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  const t = I18N[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.innerHTML = t[key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+  });
+  ['plan1', 'plan2', 'plan3'].forEach(plan => {
+    const ul = document.getElementById(plan + '_features');
+    if (ul && t[plan + '_features']) ul.innerHTML = t[plan + '_features'].map(f => '<li>' + f + '</li>').join('');
+  });
+  ['product', 'company'].forEach(section => {
+    const ul = document.getElementById('footer_' + section + '_links');
+    if (ul && t['footer_links_' + section]) ul.innerHTML = t['footer_links_' + section].map(function(item) { return '<li><a href="' + item[1] + '">' + item[0] + '</a></li>'; }).join('');
+  });
+}
+
+async function detectLanguageByIP() {
+  try {
+    const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    const country = data.country_code;
+    const map = { PE:'es',MX:'es',CO:'es',AR:'es',CL:'es',ES:'es',VE:'es',EC:'es',BO:'es',PY:'es',UY:'es',CR:'es',JP:'ja',KR:'ko' };
+    return map[country] || 'en';
+  } catch { return 'en'; }
+}
+
+function copyInstall() {
+  navigator.clipboard.writeText('pip install hefesto-ai').then(() => {
+    const fb = document.getElementById('copyFeedback');
+    fb.textContent = I18N[currentLang].install_copy + '!';
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 2000);
+  });
+}
+</script>
+
+<nav>
+  <a href="/" class="nav-logo">Hefesto<span>AI</span></a>
+  <ul class="nav-links">
+    <li><a href="#how" data-i18n="nav_features">Features</a></li>
+    <li><a href="#pricing" data-i18n="nav_pricing">Pricing</a></li>
+    <li><a href="#docs" data-i18n="nav_docs">Docs</a></li>
+    <li><a href="#about" data-i18n="nav_about">About</a></li>
+    <li>
+      <div class="lang-switcher">
+        <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">JA</button>
+        <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">KO</button>
       </div>
-      
-      <!-- Hero Content -->
-      <h1 class="hero-title">
-        Ship <span class="gradient-text">2x faster</span> with<br>
-        AI-powered code quality
+    </li>
+    <li><a href="https://pypi.org/project/hefesto-ai" class="nav-cta" data-i18n="nav_install">Install Free</a></li>
+  </ul>
+</nav>
+
+<section>
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge" data-i18n="hero_badge">v4.9.3 — Production Ready</div>
+      <h1>
+        <span data-i18n="hero_h1_1">Stop bad</span>
+        <br><span class="accent" data-i18n="hero_h1_2">AI code</span>
+        <br><span data-i18n="hero_h1_3">before production.</span>
       </h1>
-      
-      <p class="hero-subtitle">
-        ML semantic analysis catches bugs before production.<br>
-        Built for startups. Loved by developers.
-      </p>
-      
-      <!-- Hero CTAs -->
-      <div class="hero-ctas">
-        <a href="https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40" 
-           class="btn btn-primary btn-large btn-founding">
-          <span class="btn-icon">🚀</span>
-          Claim Founding Member Spot
-          <span class="btn-subtext">$59/month forever • First 25 teams only</span>
-        </a>
-        
-        <a href="https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04" 
-           class="btn btn-secondary btn-large">
-          Start 14-Day Free Trial
-          <span class="btn-subtext">No credit card required</span>
-        </a>
+      <p class="hero-sub" data-i18n="hero_sub">HefestoAI is the architectural guardian your CI/CD is missing. It catches semantic drift, security vulnerabilities, and structural decay in AI-generated code — before any of it reaches your repositories.</p>
+      <div class="hero-actions">
+        <a href="https://pypi.org/project/hefesto-ai" class="btn-primary" data-i18n="hero_cta1">Install Now</a>
+        <a href="#pricing" class="btn-secondary" data-i18n="hero_cta2">View Pricing</a>
       </div>
-      
-      <!-- Stats -->
-      <div class="hero-stats">
-        <div class="stat">
-          <div class="stat-number">10x</div>
-          <div class="stat-label">Faster debugging</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">$180K</div>
-          <div class="stat-label">Avg. savings/year</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">85%</div>
-          <div class="stat-label">Duplicate detection</div>
-        </div>
-      </div>
-      
-      <!-- Quick Install -->
-      <div class="quick-install">
-        <div class="install-code">
-          <code>pip install hefesto-ai</code>
-          <button class="copy-btn" data-copy="pip install hefesto-ai">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
-        </div>
-        <p class="install-note">Free tier • No signup required</p>
+      <div class="install-cmd" onclick="copyInstall()">
+        <span class="cmd" data-i18n="install_label">$ pip install hefesto-ai</span>
+        <span class="copy-icon" data-i18n="install_copy">Copy</span>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Features Section -->
-  <section id="features" class="features">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">Everything you need to ship faster</h2>
-        <p class="section-subtitle">Professional-grade code quality without the enterprise price tag</p>
+<div class="stats-strip">
+  <div class="stats-inner">
+    <div class="stat-item fade-in">
+      <div class="stat-num" data-i18n="stat1_num">17</div>
+      <div class="stat-label" data-i18n="stat1_label">Languages Supported</div>
+    </div>
+    <div class="stat-item fade-in">
+      <div class="stat-num" data-i18n="stat2_num">&lt;5s</div>
+      <div class="stat-label" data-i18n="stat2_label">Validation Speed</div>
+    </div>
+    <div class="stat-item fade-in">
+      <div class="stat-num" data-i18n="stat3_num">0</div>
+      <div class="stat-label" data-i18n="stat3_label">False Positives</div>
+    </div>
+    <div class="stat-item fade-in">
+      <div class="stat-num" data-i18n="stat4_num">100%</div>
+      <div class="stat-label" data-i18n="stat4_label">Pre-Commit Compatible</div>
+    </div>
+  </div>
+</div>
+
+<section class="problem" id="features">
+  <div class="section-inner">
+    <p class="section-tag" data-i18n="problem_tag">The Problem</p>
+    <h2 data-i18n="problem_h2">Your CI/CD approves code it doesn't understand.</h2>
+    <div class="problem-grid">
+      <div class="problem-text fade-in">
+        <p data-i18n="problem_p1">Linters validate <strong>syntax</strong>. Test suites validate <strong>implementations</strong>. Neither validates <strong>intent</strong>.</p>
+        <p data-i18n="problem_p2">AI-generated code looks clean. It compiles. It passes tests. But it quietly breaks business logic — charging users daily instead of monthly, inverting permission checks, corrupting data at scale.</p>
+        <p data-i18n="problem_p3">That's semantic drift. And <strong>traditional tools can't catch it</strong>.</p>
       </div>
-      
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🧠</div>
-          <h3 class="feature-title">ML Semantic Analysis</h3>
-          <p class="feature-description">
-            Understand code beyond syntax. 384-dimensional embeddings detect similar code 
-            even with different variable names. Catch duplicate logic instantly.
-          </p>
-        </div>
-        
-        <div class="feature-card">
-          <div class="feature-icon">🤖</div>
-          <h3 class="feature-title">AI Code Recommendations</h3>
-          <p class="feature-description">
-            Auto-fix issues instantly. Optimized for AI coding agents like Claude Code 
-            and GitHub Copilot. Get context-aware suggestions in milliseconds.
-          </p>
-        </div>
-        
-        <div class="feature-card">
-          <div class="feature-icon">🔐</div>
-          <h3 class="feature-title">Security Scanning</h3>
-          <p class="feature-description">
-            Catch vulnerabilities before they reach production. Automated triage 
-            prioritizes critical issues. OWASP Top 10 coverage included.
-          </p>
-        </div>
-        
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3 class="feature-title">Real-time Analytics</h3>
-          <p class="feature-description">
-            Track code quality metrics across your team. See trends, identify bottlenecks, 
-            and make data-driven decisions about technical debt.
-          </p>
-        </div>
-        
-        <div class="feature-card">
-          <div class="feature-icon">🔄</div>
-          <h3 class="feature-title">CI/CD Integration</h3>
-          <p class="feature-description">
-            Automatic feedback from deployments. Learn from production incidents. 
-            Continuous improvement loop powered by real data.
-          </p>
-        </div>
-        
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3 class="feature-title">Pre-commit Blocking</h3>
-          <p class="feature-description">
-            Stop bad code before it enters your repo. Save hours in code review. 
-            Maintain consistent quality standards automatically.
-          </p>
+      <div class="fade-in">
+        <div class="code-block">
+<span class="comment"># What you committed:</span>
+<span class="success">def charge_user(user, plan):</span>
+    amount = plan.monthly_rate
+    <span class="keyword">return</span> stripe.charge(user, amount)
+
+<span class="comment"># What AI silently wrote:</span>
+<span class="error">def charge_user(user, plan):</span>
+    <span class="comment"># "optimized" billing cycle</span>
+    amount = plan.monthly_rate / 30
+    <span class="keyword">return</span> stripe.charge(user, amount)
+
+<span class="comment"># Your tests: PASS</span>
+<span class="comment"># Your linter: CLEAN</span>
+<span class="comment"># Your users: CHARGED DAILY</span>
+<span class="comment"># HefestoAI: BLOCKED</span>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Pricing Section -->
-  <section id="pricing" class="pricing">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">Simple, transparent pricing</h2>
-        <p class="section-subtitle">Start free. Upgrade when ready. Cancel anytime.</p>
+<section class="how" id="how">
+  <div class="section-inner">
+    <p class="section-tag" data-i18n="how_tag">How It Works</p>
+    <h2 data-i18n="how_h2">Three-layer validation. Under 5 seconds.</h2>
+    <div class="three-layers">
+      <div class="layer-card fade-in">
+        <div class="layer-num">01</div>
+        <div class="layer-title" data-i18n="layer1_title">Syntax Analysis</div>
+        <div class="layer-desc" data-i18n="layer1_desc">Full static analysis across 17 languages. Complexity scoring, code smell detection, and dependency checks.</div>
+        <div class="layer-tag" data-i18n="layer1_tag">Layer 1</div>
       </div>
-      
-      <div class="pricing-cards">
-        <!-- Free Tier -->
-        <div class="pricing-card">
-          <div class="pricing-card-header">
-            <h3 class="pricing-tier-name">Free</h3>
-            <div class="pricing-amount">
-              <span class="price">$0</span>
-              <span class="period">/forever</span>
-            </div>
-          </div>
-          
-          <ul class="pricing-features">
-            <li>✓ 1 private repository</li>
-            <li>✓ 50,000 LOC/month</li>
-            <li>✓ 10 analysis runs/month</li>
-            <li>✓ Basic code quality checks</li>
-            <li>✓ PR analysis</li>
-            <li>✓ IDE integration</li>
-            <li>✓ Community support</li>
-          </ul>
-          
-          <a href="https://github.com/artvepa80/Agents-Hefesto" 
-             target="_blank"
-             class="btn btn-outline">
-            Get Started Free
-          </a>
-        </div>
-        
-        <!-- Professional Tier -->
-        <div class="pricing-card pricing-card-featured">
-          <div class="pricing-badge">⭐ MOST POPULAR</div>
-          
-          <div class="pricing-card-header">
-            <h3 class="pricing-tier-name">Professional</h3>
-            
-            <div class="pricing-amount">
-              <span class="price-strike">$99</span>
-              <span class="price">$59</span>
-              <span class="period">/month</span>
-            </div>
-            <p class="pricing-note">Founding Member price - locks in forever</p>
-          </div>
-          
-          <ul class="pricing-features">
-            <li><strong>✓ Up to 10 users</strong> (flat rate)</li>
-            <li>✓ 25 private repositories</li>
-            <li>✓ 500,000 LOC/month</li>
-            <li>✓ Unlimited analysis runs</li>
-            <li><strong>✓ ML semantic analysis</strong></li>
-            <li><strong>✓ AI-powered recommendations</strong></li>
-            <li>✓ Security vulnerability scanning</li>
-            <li>✓ Automated issue triage</li>
-            <li>✓ GitHub, GitLab, Jira, Slack integrations</li>
-            <li>✓ Priority email support (4-8 hours)</li>
-            <li>✓ Usage analytics dashboard</li>
-          </ul>
-          
-          <a href="https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40" 
-             class="btn btn-primary btn-founding">
-            🚀 Claim Founding Spot
-          </a>
-          
-          <a href="https://buy.stripe.com/7sY00i0Zkaxbgmq4HseAg04" 
-             class="btn btn-outline btn-trial">
-            Or start 14-day free trial
-          </a>
-          
-          <p class="pricing-cta-note">No credit card required</p>
-        </div>
-        
-        <!-- Annual Tier -->
-        <div class="pricing-card">
-          <div class="pricing-badge pricing-badge-save">Save $198/year</div>
-          
-          <div class="pricing-card-header">
-            <h3 class="pricing-tier-name">Professional Annual</h3>
-            
-            <div class="pricing-amount">
-              <span class="price">$990</span>
-              <span class="period">/year</span>
-            </div>
-            <p class="pricing-note">$82.50/month • 2 months free</p>
-          </div>
-          
-          <ul class="pricing-features">
-            <li>✓ Everything in Professional</li>
-            <li>✓ Lock in your price</li>
-            <li>✓ Save $198 per year</li>
-            <li>✓ Simplified billing</li>
-            <li>✓ Priority feature access</li>
-          </ul>
-          
-          <a href="https://buy.stripe.com/9B69AS5fAfRv9Y2ei2eAg03" 
-             class="btn btn-outline">
-            Get Annual Plan
-          </a>
+      <div class="layer-card fade-in">
+        <div class="layer-num">02</div>
+        <div class="layer-title" data-i18n="layer2_title">Semantic Drift Detection</div>
+        <div class="layer-desc" data-i18n="layer2_desc">ML-powered behavioral contracts verify that function intent matches implementation. Catches regressions your tests don't see.</div>
+        <div class="layer-tag" data-i18n="layer2_tag">Layer 2</div>
+      </div>
+      <div class="layer-card fade-in">
+        <div class="layer-num">03</div>
+        <div class="layer-title" data-i18n="layer3_title">Security Scanning</div>
+        <div class="layer-desc" data-i18n="layer3_desc">Hardened vulnerability detection tuned for AI-generated patterns. No false positives — only real threats.</div>
+        <div class="layer-tag" data-i18n="layer3_tag">Layer 3</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing" id="pricing">
+  <div class="section-inner">
+    <p class="section-tag" data-i18n="pricing_tag">Pricing</p>
+    <h2 data-i18n="pricing_h2">Start free. Scale when ready.</h2>
+    <div class="pricing-grid">
+      <div class="price-card fade-in">
+        <div class="price-tier" data-i18n="plan1_tier">Free</div>
+        <div class="price-amount"><sup>$</sup><span data-i18n="plan1_price">0</span></div>
+        <div class="price-period" data-i18n="plan1_period">forever</div>
+        <ul class="price-features" id="plan1_features">
+          <li>Up to 3 repos</li><li>Syntax analysis</li><li>Pre-commit hooks</li><li>Community support</li>
+        </ul>
+        <a href="https://pypi.org/project/hefesto-ai" class="btn-plan btn-plan-secondary" data-i18n="plan1_cta">pip install hefesto-ai</a>
+      </div>
+      <div class="price-card featured fade-in">
+        <div class="price-badge" data-i18n="plan2_badge">Most Popular</div>
+        <div class="price-tier" data-i18n="plan2_tier">PRO</div>
+        <div class="price-amount"><sup>$</sup><span data-i18n="plan2_price">8</span></div>
+        <div class="price-period" data-i18n="plan2_period">/month</div>
+        <div class="price-original" data-i18n="plan2_original">$14</div>
+        <div class="price-discount" data-i18n="plan2_discount">Founding Member — 40% OFF</div>
+        <ul class="price-features" id="plan2_features">
+          <li>Unlimited repos</li><li>Semantic drift detection</li><li>Security scanning</li><li>Priority support</li><li>17 languages</li>
+        </ul>
+        <stripe-buy-button
+          buy-button-id="buy_btn_1SSNJjCKQFEi4zJF16Es1c7s"
+          publishable-key="pk_live_51RvKRJCKQFEi4zJFfbPhjLARB0CI9omqEgRJVBqFKJZPYBcOC0ooY62tSrz72lU6iuBLFxhAfRpoxCC5O3uWfKcx004qaZKC31"
+        ></stripe-buy-button>
+        <a href="https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b" class="btn-plan btn-plan-primary" data-i18n="plan2_cta" id="btn_pro" style="display:none">Get PRO</a>
+      </div>
+      <div class="price-card fade-in">
+        <div class="price-tier" data-i18n="plan3_tier">OMEGA</div>
+        <div class="price-amount"><sup>$</sup><span data-i18n="plan3_price">19</span></div>
+        <div class="price-period" data-i18n="plan3_period">/month</div>
+        <div class="price-original" data-i18n="plan3_original">$32</div>
+        <div class="price-discount" data-i18n="plan3_discount">Founding Member — 40% OFF</div>
+        <ul class="price-features" id="plan3_features">
+          <li>Everything in PRO</li><li>Multi-agent pipeline</li><li>Team analytics</li><li>Custom rules</li><li>API access</li><li>SLA support</li>
+        </ul>
+        <stripe-buy-button
+          buy-button-id="buy_btn_1T3zqVCKQFEi4zJFrNB0J9dB"
+          publishable-key="pk_live_51RvKRJCKQFEi4zJFfbPhjLARB0CI9omqEgRJVBqFKJZPYBcOC0ooY62tSrz72lU6iuBLFxhAfRpoxCC5O3uWfKcx004qaZKC31"
+        ></stripe-buy-button>
+        <a href="https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c" class="btn-plan btn-plan-secondary" data-i18n="plan3_cta" id="btn_omega" style="display:none">Get OMEGA</a>
+      </div>
+    </div>
+    <p class="founding-note" data-i18n="founding_note">&lt;strong&gt;25 Founding Member spots left&lt;/strong&gt; — 40% off, locked forever.</p>
+  </div>
+</section>
+
+<section class="about" id="about">
+  <div class="section-inner">
+    <p class="section-tag" data-i18n="about_tag">The Team</p>
+    <h2 data-i18n="about_h2">Built by engineers who ship.</h2>
+    <div class="team-grid">
+      <div class="team-card fade-in">
+        <div class="team-avatar">AV</div>
+        <div>
+          <div class="team-name">Arturo Velasquez</div>
+          <div class="team-role" data-i18n="arturo_role">Co-Founder &amp; CTO</div>
+          <div class="team-bio" data-i18n="arturo_bio">Builder of multi-agent AI systems. Architect of the OMEGA ecosystem. Former Miami-based engineer who believes developer tools should be ruthlessly practical.</div>
         </div>
       </div>
-      
-      <!-- Add-ons -->
-      <div class="addons">
-        <p class="addons-title">Need more? Add expansion packs:</p>
-        <div class="addon-options">
-          <span class="addon">+25 repositories: $29/month</span>
-          <span class="addon">+250K LOC: $19/month</span>
+      <div class="team-card fade-in">
+        <div class="team-avatar">RV</div>
+        <div>
+          <div class="team-name">Rina Natalia Vinelli</div>
+          <div class="team-role" data-i18n="rina_role">Co-Founder &amp; Operations</div>
+          <div class="team-bio" data-i18n="rina_bio">AI DevOps strategist. Built the HefestoAI go-to-market from zero. Author of the Three-Layer Validation framework for AI-generated code quality.</div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- How It Works -->
-  <section class="how-it-works">
-    <div class="container">
-      <h2 class="section-title">Get started in minutes</h2>
-      
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3 class="step-title">Sign Up</h3>
-          <p class="step-description">14-day free trial<br>No credit card required</p>
-        </div>
-        
-        <div class="step-arrow">→</div>
-        
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3 class="step-title">Install</h3>
-          <p class="step-description"><code>pip install hefesto-ai</code></p>
-        </div>
-        
-        <div class="step-arrow">→</div>
-        
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3 class="step-title">Activate</h3>
-          <p class="step-description"><code>hefesto activate YOUR-KEY</code></p>
-        </div>
-        
-        <div class="step-arrow">→</div>
-        
-        <div class="step">
-          <div class="step-number">4</div>
-          <h3 class="step-title">Ship Faster</h3>
-          <p class="step-description">Catch bugs before<br>production</p>
-        </div>
-      </div>
+<div id="docs" style="height:1px"></div>
+<div id="changelog" style="height:1px"></div>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Hefesto<span>AI</span></div>
+      <p class="footer-tagline" data-i18n="footer_tagline">The architectural guardian for AI-generated code. Built by Narapa LLC.</p>
     </div>
-  </section>
-
-  <!-- FAQ -->
-  <section id="faq" class="faq">
-    <div class="container">
-      <h2 class="section-title">Frequently Asked Questions</h2>
-      
-      <div class="faq-grid">
-        <div class="faq-item">
-          <h3 class="faq-question">Is the free tier really free forever?</h3>
-          <p class="faq-answer">
-            Yes! The free tier includes 1 repository, 50K LOC/month, and basic code quality checks. 
-            No credit card required. No time limit.
-          </p>
-        </div>
-        
-        <div class="faq-item">
-          <h3 class="faq-question">What happens after my 14-day trial?</h3>
-          <p class="faq-answer">
-            Your trial converts to a paid Professional subscription at $99/month 
-            (or $59/month if you're a Founding Member). Cancel anytime during the trial with no charges.
-          </p>
-        </div>
-        
-        <div class="faq-item">
-          <h3 class="faq-question">Is the Founding Member price really locked forever?</h3>
-          <p class="faq-answer">
-            Absolutely! The first 25 teams pay $59/month forever, even when we raise prices for new customers. 
-            This is our way of thanking early adopters.
-          </p>
-        </div>
-        
-        <div class="faq-item">
-          <h3 class="faq-question">Can I switch from monthly to annual?</h3>
-          <p class="faq-answer">
-            Yes! Contact support@narapallc.com and we'll help you upgrade with a prorated credit.
-          </p>
-        </div>
-        
-        <div class="faq-item">
-          <h3 class="faq-question">What if I exceed my limits?</h3>
-          <p class="faq-answer">
-            We'll notify you with a 7-day grace period. You can add expansion packs 
-            ($29 for +25 repos or $19 for +250K LOC) or contact us for custom limits.
-          </p>
-        </div>
-        
-        <div class="faq-item">
-          <h3 class="faq-question">Do I pay for infrastructure costs?</h3>
-          <p class="faq-answer">
-            You use your own BigQuery project and Gemini API key. 
-            Typical costs are $5-20/month for small teams - you pay Google directly for compute.
-          </p>
-        </div>
-      </div>
+    <div class="footer-links">
+      <h4 data-i18n="footer_product">Product</h4>
+      <ul id="footer_product_links">
+        <li><a href="https://pypi.org/project/hefesto-ai">PyPI</a></li>
+        <li><a href="https://github.com/artvepa80/Agents-Hefesto">GitHub</a></li>
+        <li><a href="#docs">Docs</a></li>
+        <li><a href="#changelog">Changelog</a></li>
+      </ul>
     </div>
-  </section>
-
-  <!-- Final CTA -->
-  <section class="cta-final">
-    <div class="container">
-      <h2 class="cta-title">Ready to ship 2x faster?</h2>
-      <p class="cta-subtitle">Join the first 25 teams and lock in $59/month forever</p>
-      
-      <a href="https://buy.stripe.com/dRm28q7nIcFjfimfm6eAg05?prefilled_promo_code=Founding40" 
-         class="btn btn-primary btn-large btn-founding">
-        <span class="btn-icon">🚀</span>
-        Claim Your Founding Member Spot
-      </a>
-      
-      <p class="cta-note">14-day free trial • No credit card required • Cancel anytime</p>
+    <div class="footer-links">
+      <h4 data-i18n="footer_company">Company</h4>
+      <ul id="footer_company_links">
+        <li><a href="#about">About</a></li>
+        <li><a href="https://x.com/HefestoAI">Twitter/X</a></li>
+        <li><a href="https://linkedin.com">LinkedIn</a></li>
+        <li><a href="mailto:contact@narapallc.com">Contact</a></li>
+      </ul>
     </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-section">
-          <h4 class="footer-title">
-            <span class="logo-icon">🔥</span>
-            Hefesto
-          </h4>
-          <p class="footer-description">
-            AI-powered code quality<br>for modern teams
-          </p>
-        </div>
-        
-        <div class="footer-section">
-          <h4 class="footer-title">Product</h4>
-          <a href="#features" class="footer-link">Features</a>
-          <a href="#pricing" class="footer-link">Pricing</a>
-          <a href="https://github.com/artvepa80/Agents-Hefesto" target="_blank" class="footer-link">Documentation</a>
-          <a href="https://github.com/artvepa80/Agents-Hefesto" target="_blank" class="footer-link">GitHub</a>
-        </div>
-        
-        <div class="footer-section">
-          <h4 class="footer-title">Company</h4>
-          <a href="mailto:support@narapallc.com" class="footer-link">Contact</a>
-          <a href="mailto:support@narapallc.com" class="footer-link">Support</a>
-        </div>
-      </div>
-      
-      <div class="footer-bottom">
-        <p class="footer-copyright">© 2025 Narapa LLC. All rights reserved.</p>
-      </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy" data-i18n="footer_copy">&copy; 2026 Narapa LLC. All rights reserved.</p>
+    <div class="lang-switcher">
+      <button class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">JA</button>
+      <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">KO</button>
     </div>
-  </footer>
+  </div>
+</footer>
 
-  <!-- Scripts -->
-  <script src="js/main.js"></script>
-  <!-- Vercel Web Analytics -->
-  <script defer src="/_vercel/insights/script.js"></script>
-  <!-- Vercel Speed Insights -->
-  <script defer src="/_vercel/speed-insights/script.js"></script>
+<div class="copy-feedback" id="copyFeedback">Copied!</div>
+
+<!--
+  LLM CONTEXT: HefestoAI is an AI code quality validation tool available at pypi.org/project/hefesto-ai
+  Primary use case: detecting semantic drift in AI-generated code before production
+  Supported languages: Python, JavaScript, TypeScript, Go, Rust, Java, C, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, R, SQL, Shell
+  Pricing: Free tier, PRO $8/month, OMEGA $19/month
+  Installation: pip install hefesto-ai
+  Company: Narapa LLC, Miami, FL
+  Founders: Arturo Velasquez (CTO), Rina Natalia Vinelli (Operations)
+  Twitter: @HefestoAI
+  API: https://hefestoai.narapallc.com/api/openapi.json
+  FAQ: https://hefestoai.narapallc.com/api/faq.json
+  Changelog: https://hefestoai.narapallc.com/api/changelog.json
+  MCP: https://hefestoai.narapallc.com/api/mcp-protocol
+  LLMs.txt: https://hefestoai.narapallc.com/llms.txt
+-->
+
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+document.getElementById('btn_pro').href = STRIPE_LINKS.pro;
+document.getElementById('btn_omega').href = STRIPE_LINKS.omega;
+window.addEventListener('DOMContentLoaded', async () => { const lang = await detectLanguageByIP(); setLang(lang); });
+</script>
+<script async src="https://js.stripe.com/v3/buy-button.js"></script>
 </body>
 </html>
-
