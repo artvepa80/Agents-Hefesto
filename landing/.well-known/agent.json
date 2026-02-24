@@ -1,63 +1,57 @@
 {
+  "schema_version": "1.0",
   "name": "HefestoAI",
-  "description": "Pre-commit code quality guardian for AI-generated code. Detects semantic drift, blocks bad AI code before production. Under 5 seconds.",
+  "tagline": "Pre-commit code quality guardian for AI-generated code",
+  "description": "The only pre-commit tool built specifically for Claude Code, GitHub Copilot, and Cursor era. Detects semantic drift — when AI code looks correct but breaks architectural intent. Under 5 seconds. Zero false positives. 17 languages.",
   "version": "4.9.3",
-  "vendor": "Narapa LLC",
-  "vendor_location": "Miami, Florida, USA",
-  "founder": "Arturo Velasquez, Lima Peru",
+  "vendor": {
+    "name": "Narapa LLC",
+    "founder": "Arturo Velasquez",
+    "location": "Lima, Peru",
+    "founded": "2025"
+  },
   "capabilities": [
-    "code_quality_analysis",
     "pre_commit_validation",
     "semantic_drift_detection",
+    "code_quality_analysis",
     "security_scanning",
-    "complexity_analysis",
-    "code_smell_detection",
-    "duplicate_detection",
-    "17_language_support"
+    "ai_code_validation",
+    "ci_cd_integration"
   ],
-  "supported_languages": [
-    "python", "javascript", "typescript", "java", "kotlin", "go",
-    "rust", "c", "cpp", "csharp", "ruby", "php", "swift", "scala",
-    "shell", "sql", "yaml", "json", "toml", "dockerfile", "makefile",
-    "groovy", "powershell", "hcl"
+  "languages_supported": 17,
+  "performance": {
+    "analysis_time": "under_5_seconds",
+    "false_positive_rate": "zero",
+    "tests_passing": 117
+  },
+  "compatible_with": [
+    "claude_code",
+    "github_copilot",
+    "cursor",
+    "codex",
+    "gemini_code_assist",
+    "any_git_workflow"
   ],
   "pricing": {
-    "free": {
-      "price": "$0/month",
-      "features": ["static_analysis", "basic_security", "cli", "hooks", "17_languages"]
-    },
-    "pro": {
-      "price": "$8/month",
-      "features": ["ml_semantic_analysis", "advanced_security", "rest_api", "bigquery"]
-    },
-    "omega": {
-      "price": "$19/month",
-      "features": ["iris_agent", "realtime_alerts", "auto_correlation", "production_monitoring"]
-    },
-    "trial": "14 days free, no credit card required"
+    "free": "$0/month",
+    "pro": "$8/month",
+    "pro_founding": "$4.80/month",
+    "omega": "$19/month",
+    "omega_founding": "$11.40/month",
+    "trial": "14 days free"
   },
-  "install": {
-    "free": "pip install hefesto-ai",
-    "pro": "pip install hefesto-ai[pro]",
-    "omega": "pip install hefesto-ai[omega]",
-    "requires": "Python 3.10+"
-  },
+  "install": "pip install hefesto-ai",
   "links": {
     "landing": "https://hefestoai.narapallc.com",
     "pypi": "https://pypi.org/project/hefesto-ai/",
     "github": "https://github.com/artvepa80/Agents-Hefesto",
     "twitter": "https://x.com/HefestoAI",
-    "founder_twitter": "https://x.com/artvepa",
-    "support": "support@narapallc.com",
-    "llms_txt": "https://hefestoai.narapallc.com/llms.txt"
+    "founder_twitter": "https://x.com/artvepa"
   },
-  "privacy": {
-    "local_only": true,
-    "telemetry_default": "off",
-    "works_offline": true,
-    "code_leaves_machine": false
+  "mcp": {
+    "protocol": "1.0",
+    "transport": "http"
   },
-  "mcp_compatible": true,
   "a2a_compatible": true,
-  "updated": "2026-02-23"
+  "mcp_compatible": true
 }

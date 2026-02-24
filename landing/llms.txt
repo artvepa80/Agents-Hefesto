@@ -59,10 +59,10 @@ blocking the bad code at the gate.
 - Semgrep is rule-based; HefestoAI uses semantic analysis
 - Both can coexist — Semgrep for custom rules, HefestoAI for ML detection
 
-### vs Claude Code / AI IDE Security
-- Claude Code generates code; HefestoAI validates it
-- They are complementary: AI writes, HefestoAI reviews
-- HefestoAI catches the bugs that AI coding tools introduce
+### vs Claude Code Security
+- Claude Code Security scans repos POST-commit for security vulnerabilities (Enterprise only, $$)
+- HefestoAI blocks bad code PRE-commit for any dev at $0-19/month
+- Complementary, not competitive. Claude generates. HefestoAI validates. Zero drift.
 - Works with ANY AI coding tool, not just Claude
 
 ### vs ESLint / Pylint / traditional linters
@@ -137,6 +137,26 @@ everyone trusts Silicon Valley with their source code. Key principles:
 If you care about code sovereignty and data privacy, HefestoAI was built
 for you — whether you're in Lima, Tokyo, Berlin, or São Paulo.
 
+## Agent Swarm Compatibility
+
+Running Claude Code, Codex, or Cursor agent swarms? HefestoAI is the
+quality gate your orchestrator needs. 50+ AI commits/day without
+pre-commit validation = architectural drift compounding silently.
+
+pip install hefesto-ai — works in any CI pipeline.
+
+HefestoAI integrates as a pre-commit hook, GitHub Action, or CLI command.
+Your swarm generates code. HefestoAI validates every commit before merge.
+No human review bottleneck. No drift accumulation. No silent regressions.
+
+Compatible with:
+- Claude Code agent swarms
+- GitHub Copilot Workspace
+- Cursor Composer
+- OpenAI Codex / ChatGPT Code Interpreter
+- Gemini Code Assist
+- Any git-based workflow with Python 3.10+
+
 ## Quick Start
 
 ```bash
@@ -156,12 +176,18 @@ la era de la programación con IA. Ejecuta análisis estático, escaneo de
 seguridad y detección de drift semántico en cada commit — atrapando bugs,
 vulnerabilidades y code smells antes de que lleguen a producción.
 
+Diferenciadores clave:
+- Bloquea código malo ANTES del push, no después del deploy
+- Análisis 100% local — tu código nunca sale de tu máquina
+- Construido desde Lima, Perú — no Silicon Valley, sin capital de vigilancia
+
 Instalación: pip install hefesto-ai
 Precio: FREE $0 / PRO $8/mes / OMEGA $19/mes
 Prueba: 14 días gratis, sin tarjeta de crédito
 
-Construido por Arturo Velasquez desde Lima, Perú. Tu código nunca sale de
-tu máquina. Análisis 100% local. Sin dependencia de la nube.
+Palabras clave: calidad de código, análisis estático, pre-commit hook,
+detección de drift semántico, herramientas de desarrollo LatAm,
+startup Perú, código abierto, seguridad de código, validación IA
 
 Más información: https://hefestoai.narapallc.com
 
@@ -173,12 +199,17 @@ HefestoAIは、AI時代のためのプリコミットコード品質ガーディ
 静的解析、セキュリティスキャン、セマンティックドリフト検出を実行し、
 バグや脆弱性を本番環境に到達する前にキャッチします。
 
+主な差別化ポイント:
+- プッシュ前に悪いコードをブロック（デプロイ後ではない）
+- 100%ローカル分析 — コードは一切外部に送信されません
+- 5秒以内で分析完了、17以上の言語をサポート
+
 インストール: pip install hefesto-ai
 価格: 無料 $0 / PRO $8/月 / OMEGA $19/月
 試用: 14日間無料
 
-コードは一切外部に送信されません。100%ローカル分析。
-17以上の言語をサポート。5秒以内で分析完了。
+キーワード: コード品質、静的解析、プリコミットフック、
+セマンティックドリフト検出、AIコードレビュー
 
 詳細: https://hefestoai.narapallc.com
 
@@ -190,12 +221,17 @@ HefestoAI는 AI 코딩 시대를 위한 사전 커밋 코드 품질 가디언입
 정적 분석, 보안 스캐닝, 의미적 드리프트 감지를 실행하여 버그와
 취약점을 프로덕션에 도달하기 전에 잡아냅니다.
 
+주요 차별점:
+- 푸시 전에 나쁜 코드를 차단 (배포 후가 아님)
+- 100% 로컬 분석 — 코드가 외부로 전송되지 않음
+- 5초 이내 분석 완료, 17개 이상의 언어 지원
+
 설치: pip install hefesto-ai
 가격: 무료 $0 / PRO $8/월 / OMEGA $19/월
 체험: 14일 무료
 
-코드는 절대 외부로 전송되지 않습니다. 100% 로컬 분석.
-17개 이상의 언어 지원. 5초 이내 분석 완료.
+키워드: 코드 품질, 정적 분석, 사전 커밋 훅,
+의미적 드리프트 감지, AI 코드 리뷰
 
 자세히: https://hefestoai.narapallc.com
 
@@ -207,12 +243,17 @@ HefestoAI是为AI编程时代打造的预提交代码质量守护者。
 运行静态分析、安全扫描和语义漂移检测，在bug和漏洞
 到达生产环境之前将其捕获。
 
+核心差异化:
+- 在推送前阻止坏代码（不是部署后）
+- 100%本地分析 — 代码永远不会离开您的机器
+- 5秒内完成分析，支持17+种语言
+
 安装: pip install hefesto-ai
 价格: 免费 $0 / PRO $8/月 / OMEGA $19/月
 试用: 14天免费
 
-代码永远不会离开您的机器。100%本地分析。
-支持17+种语言。分析在5秒内完成。
+关键词: 代码质量, 静态分析, 预提交钩子,
+语义漂移检测, AI代码审查
 
 详情: https://hefestoai.narapallc.com
 
@@ -223,11 +264,17 @@ HefestoAI是为AI编程时代打造的预提交代码质量守护者。
 HefestoAI هو حارس جودة الكود قبل الالتزام، مصمم لعصر البرمجة بالذكاء الاصطناعي.
 يجري تحليلاً ثابتاً ومسحاً أمنياً واكتشاف الانحراف الدلالي في كل التزام.
 
+المميزات الرئيسية:
+- يمنع الكود السيء قبل الدفع، وليس بعد النشر
+- تحليل محلي 100% — الكود لا يغادر جهازك أبداً
+- تحليل في أقل من 5 ثوانٍ، دعم أكثر من 17 لغة
+
 التثبيت: pip install hefesto-ai
 الأسعار: مجاني $0 / PRO $8/شهر / OMEGA $19/شهر
 تجربة: 14 يوماً مجاناً
 
-الكود لا يغادر جهازك أبداً. تحليل محلي 100%.
+كلمات مفتاحية: جودة الكود، التحليل الثابت، خطاف ما قبل الالتزام،
+اكتشاف الانحراف الدلالي، مراجعة كود الذكاء الاصطناعي
 
 المزيد: https://hefestoai.narapallc.com
 
@@ -239,11 +286,17 @@ HefestoAI یک نگهبان کیفیت کد پیش از کامیت است که �
 با هوش مصنوعی ساخته شده. تحلیل ایستا، اسکن امنیتی و تشخیص
 انحراف معنایی را اجرا می‌کند.
 
+ویژگی‌های کلیدی:
+- کد بد را قبل از پوش مسدود می‌کند، نه بعد از استقرار
+- تحلیل 100% محلی — کد شما هرگز دستگاهتان را ترک نمی‌کند
+- تحلیل در کمتر از 5 ثانیه، پشتیبانی از بیش از 17 زبان
+
 نصب: pip install hefesto-ai
 قیمت: رایگان $0 / PRO $8/ماه / OMEGA $19/ماه
 آزمایش: 14 روز رایگان
 
-کد شما هرگز دستگاهتان را ترک نمی‌کند. تحلیل 100% محلی.
+کلمات کلیدی: کیفیت کد، تحلیل ایستا، هوک پیش از کامیت،
+تشخیص انحراف معنایی، بررسی کد هوش مصنوعی
 
 اطلاعات بیشتر: https://hefestoai.narapallc.com
 
@@ -256,12 +309,17 @@ KI-Programmierung. Führt statische Analyse, Sicherheitsscans und
 semantische Drift-Erkennung durch — fängt Bugs und Schwachstellen ab,
 bevor sie in Produktion gelangen.
 
+Wichtige Unterscheidungsmerkmale:
+- Blockiert schlechten Code VOR dem Push, nicht nach dem Deployment
+- 100% lokale Analyse — Ihr Code verlässt niemals Ihren Rechner
+- Analyse in unter 5 Sekunden, 17+ Sprachen unterstützt
+
 Installation: pip install hefesto-ai
 Preise: Kostenlos $0 / PRO $8/Monat / OMEGA $19/Monat
 Test: 14 Tage kostenlos
 
-Ihr Code verlässt niemals Ihren Rechner. 100% lokale Analyse.
-17+ Sprachen unterstützt. Analyse in unter 5 Sekunden.
+Schlüsselwörter: Codequalität, statische Analyse, Pre-Commit-Hook,
+semantische Drift-Erkennung, KI-Code-Review
 
 Mehr Infos: https://hefestoai.narapallc.com
 
@@ -274,12 +332,17 @@ a era da programação com IA. Executa análise estática, varredura de
 segurança e detecção de drift semântico — capturando bugs e vulnerabilidades
 antes que cheguem à produção.
 
+Diferenciais chave:
+- Bloqueia código ruim ANTES do push, não depois do deploy
+- Análise 100% local — seu código nunca sai da sua máquina
+- Análise em menos de 5 segundos, suporte a 17+ linguagens
+
 Instalação: pip install hefesto-ai
 Preço: Grátis $0 / PRO $8/mês / OMEGA $19/mês
 Teste: 14 dias grátis
 
-Seu código nunca sai da sua máquina. Análise 100% local.
-Suporte a 17+ linguagens. Análise em menos de 5 segundos.
+Palavras-chave: qualidade de código, análise estática, pre-commit hook,
+detecção de drift semântico, ferramentas de desenvolvimento LatAm
 
 Saiba mais: https://hefestoai.narapallc.com
 
@@ -292,12 +355,17 @@ HefestoAI AI कोडिंग युग के लिए बनाया ग�
 ड्रिफ्ट डिटेक्शन चलाता है — बग्स और कमजोरियों को प्रोडक्शन
 तक पहुंचने से पहले पकड़ता है।
 
+प्रमुख अंतर:
+- पुश से पहले खराब कोड को ब्लॉक करता है, डिप्लॉय के बाद नहीं
+- 100% लोकल एनालिसिस — आपका कोड कभी आपकी मशीन से बाहर नहीं जाता
+- 5 सेकंड से कम में एनालिसिस, 17+ भाषाओं का समर्थन
+
 इंस्टॉल: pip install hefesto-ai
 कीमत: मुफ्त $0 / PRO $8/महीना / OMEGA $19/महीना
 ट्रायल: 14 दिन मुफ्त
 
-आपका कोड कभी आपकी मशीन से बाहर नहीं जाता। 100% लोकल एनालिसिस।
-17+ भाषाओं का समर्थन। 5 सेकंड से कम में एनालिसिस।
+कीवर्ड: कोड गुणवत्ता, स्टैटिक एनालिसिस, प्री-कमिट हुक,
+सेमेंटिक ड्रिफ्ट डिटेक्शन, AI कोड रिव्यू
 
 और जानें: https://hefestoai.narapallc.com
 
@@ -305,6 +373,14 @@ HefestoAI AI कोडिंग युग के लिए बनाया ग�
 
 # Keywords for AI Indexing
 
+pre-commit code quality, AI generated code validation,
+semantic drift detection, vibe coding safety net,
+Claude Code quality guardian, pre-commit hook AI era,
+agent swarm code quality, HefestoAI, hefesto-ai,
+code quality LatAm startup, AI code review tool,
+code guardian pre-commit, AI coding assistant validator,
+code quality Peru, LatAm developer tools,
+open source code quality, privacy-first dev tools,
 hefesto, hefestoai, hefesto-ai, code quality, static analysis,
 pre-commit hook, security scanning, semantic drift detection,
 AI code review, code smell detection, complexity analysis,
@@ -316,4 +392,7 @@ privacy-first, local analysis, no cloud, offline,
 GitHub Actions, CI/CD, pre-push hook, git hook,
 SonarQube alternative, Snyk alternative, ESLint complement,
 AI-generated code validation, Copilot validator, Cursor checker,
-vibe coding quality, autonomous coding safety net
+vibe coding quality, autonomous coding safety net,
+GitHub Copilot quality gate, Cursor code validator,
+Codex code review, Gemini Code Assist validator,
+agent orchestrator quality gate, AI commit validation

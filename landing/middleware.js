@@ -12,6 +12,10 @@ const AI_BOTS = {
   Applebot: "apple",
   Brave: "brave",
   ia_archiver: "internet_archive",
+  Qwen: "qwen",
+  KimiBot: "kimi",
+  YouBot: "you",
+  kagibot: "kagi",
 };
 
 export default function middleware(request) {

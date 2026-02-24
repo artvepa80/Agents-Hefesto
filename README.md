@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Languages](https://img.shields.io/badge/languages-21-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
+> **Keywords:** pre-commit code quality, AI generated code validation, semantic drift detection, Claude Code validator, GitHub Copilot quality gate, vibe coding safety net, code quality tool, developer tools LatAm, Peru startup, hefesto-ai, HefestoAI, open source code guardian
+
 **Multi-language AI code analysis for 7 programming languages + 10 DevOps/config formats + 4 Cloud formats.**
 
 Hefesto validates your code before production using AI-powered static analysis and ML enhancement. It caught 3 critical bugs in its own v4.0.1 release through self-validation.
