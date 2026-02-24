@@ -8,8 +8,8 @@
 
 | Location | Version | Branch | HEAD |
 |----------|---------|--------|------|
-| Mac | 4.9.3 | main | `7562512` |
-| GitHub main | 4.9.3 | main | `7562512` |
+| Mac | 4.9.3 | main | `abd6976` |
+| GitHub main | 4.9.3 | main | `abd6976` |
 | PyPI | 4.9.3 | — | BLOCKED (email verification pending) |
 
 ---
@@ -25,6 +25,10 @@
 - **Plan docs created**: `DISCOVERABILITY_PLAN.md` (execution plan), `PROMPT_DISCOVERABILITY.md` (reusable Socratic prompt)
 - **Security**: Added `.mcpregistry_*` to `.gitignore` (credential tokens from MCP Registry login)
 - **Commit**: `7562512`, pushed to main
+- **Bugfix**: Removed overly broad "how to" keyword from install entry in ask.js (was stealing MCP queries). Commit `abd6976`.
+- **Vercel deploy**: Deployed to correct project (`vercel`, not `hefesto-landing`). All endpoints verified live.
+- **Social media copy**: Corrected posts ready (X hacker, X founder, LinkedIn enterprise). No fragile claims.
+- **STATUS: COMPLETE** — all 7 phases done, endpoints live, CI green.
 
 ### Key corrections applied (from ChatGPT advisory review)
 1. "Zero false positives" → "Designed for low false positives" (all files)
