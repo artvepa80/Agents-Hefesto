@@ -1,0 +1,55 @@
+# HefestoAI — AI Discoverability Robots.txt
+# https://hefestoai.narapallc.com
+# Policy: ALLOW all AI crawlers and search engines
+
+# AI Crawlers — explicitly welcomed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# Search Engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Brave
+Allow: /
+
+# Archival
+User-agent: ia_archiver
+Allow: /
+
+# Default: allow all
+User-agent: *
+Allow: /
+
+# AI-specific resources
+# LLM product description: /llms.txt
+# Agent metadata: /.well-known/agent.json
+
+Sitemap: https://hefestoai.narapallc.com/sitemap.xml

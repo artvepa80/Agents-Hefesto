@@ -1,0 +1,63 @@
+{
+  "name": "HefestoAI",
+  "description": "Pre-commit code quality guardian for AI-generated code. Detects semantic drift, blocks bad AI code before production. Under 5 seconds.",
+  "version": "4.9.3",
+  "vendor": "Narapa LLC",
+  "vendor_location": "Miami, Florida, USA",
+  "founder": "Arturo Velasquez, Lima Peru",
+  "capabilities": [
+    "code_quality_analysis",
+    "pre_commit_validation",
+    "semantic_drift_detection",
+    "security_scanning",
+    "complexity_analysis",
+    "code_smell_detection",
+    "duplicate_detection",
+    "17_language_support"
+  ],
+  "supported_languages": [
+    "python", "javascript", "typescript", "java", "kotlin", "go",
+    "rust", "c", "cpp", "csharp", "ruby", "php", "swift", "scala",
+    "shell", "sql", "yaml", "json", "toml", "dockerfile", "makefile",
+    "groovy", "powershell", "hcl"
+  ],
+  "pricing": {
+    "free": {
+      "price": "$0/month",
+      "features": ["static_analysis", "basic_security", "cli", "hooks", "17_languages"]
+    },
+    "pro": {
+      "price": "$8/month",
+      "features": ["ml_semantic_analysis", "advanced_security", "rest_api", "bigquery"]
+    },
+    "omega": {
+      "price": "$19/month",
+      "features": ["iris_agent", "realtime_alerts", "auto_correlation", "production_monitoring"]
+    },
+    "trial": "14 days free, no credit card required"
+  },
+  "install": {
+    "free": "pip install hefesto-ai",
+    "pro": "pip install hefesto-ai[pro]",
+    "omega": "pip install hefesto-ai[omega]",
+    "requires": "Python 3.10+"
+  },
+  "links": {
+    "landing": "https://hefestoai.narapallc.com",
+    "pypi": "https://pypi.org/project/hefesto-ai/",
+    "github": "https://github.com/artvepa80/Agents-Hefesto",
+    "twitter": "https://x.com/HefestoAI",
+    "founder_twitter": "https://x.com/artvepa",
+    "support": "support@narapallc.com",
+    "llms_txt": "https://hefestoai.narapallc.com/llms.txt"
+  },
+  "privacy": {
+    "local_only": true,
+    "telemetry_default": "off",
+    "works_offline": true,
+    "code_leaves_machine": false
+  },
+  "mcp_compatible": true,
+  "a2a_compatible": true,
+  "updated": "2026-02-23"
+}
