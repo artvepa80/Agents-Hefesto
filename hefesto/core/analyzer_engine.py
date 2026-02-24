@@ -78,6 +78,7 @@ class AnalyzerEngine:
         self._scope_skipped: list = []
         self._multilang_skip_report: Any = None
         self._tsjs_parser: Any = None
+        self._all_file_results: list = []  # EPIC 4: accumulated for _build_meta
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -160,6 +161,9 @@ class AnalyzerEngine:
         # Calculate final statistics
         duration = time.time() - start_time
         summary = self._create_summary(file_results, duration)
+
+        # Accumulate for _build_meta (EPIC 4)
+        self._all_file_results.extend(file_results)
 
         # Create report (meta is assembled by CLI from engine state)
         report = AnalysisReport(summary=summary, file_results=file_results)
@@ -459,6 +463,24 @@ class AnalyzerEngine:
             skip_dict = self._multilang_skip_report.to_dict()
             if skip_dict.get("total_skipped", 0) > 0:
                 meta["multilang"] = {"skipped": skip_dict}
+
+        # Reliability pack summary (EPIC 4)
+        reliability_issues = [
+            issue
+            for fr in self._all_file_results
+            for issue in fr.issues
+            if issue.engine == "internal:resource_safety_v1"
+        ]
+        if reliability_issues:
+            by_rule: dict = {}
+            for issue in reliability_issues:
+                rid = issue.rule_id or "unknown"
+                by_rule[rid] = by_rule.get(rid, 0) + 1
+            meta["reliability_pack_summary"] = {
+                "pack": "resource_safety_v1",
+                "total": len(reliability_issues),
+                "by_rule": by_rule,
+            }
 
         return meta
 

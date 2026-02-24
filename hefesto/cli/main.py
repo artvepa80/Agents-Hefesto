@@ -197,6 +197,12 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 @click.option("--include-fixtures", is_flag=True, help="Include test fixture files in analysis")
 @click.option("--scope-allow", multiple=True, help="Extra path patterns to include (repeatable)")
 @click.option("--scope-deny", multiple=True, help="Extra path patterns to exclude (repeatable)")
+# -- Reliability drift flags (EPIC 4) --
+@click.option(
+    "--enable-memory-budget-gate",
+    is_flag=True,
+    help="Enable opt-in memory budget gate (EPIC 4). Threshold via HEFESTO_MEMORY_BUDGET_THRESHOLD_KB",
+)
 # -- Enrichment flags (PRO EPIC 3) --
 @click.option(
     "--enrich",
@@ -220,6 +226,7 @@ def analyze(
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
+    enable_memory_budget_gate: bool,
     include_third_party: bool,
     include_generated: bool,
     include_fixtures: bool,
@@ -276,11 +283,27 @@ def analyze(
         if not engine:
             _exit(1)
 
-        all_file_results, total_loc, total_duration, source_cache = _run_analysis_loop(
-            engine, paths_list, exclude_patterns
-        )
+        # Memory budget gate (EPIC 4, opt-in)
+        budget_result = None
+        if enable_memory_budget_gate:
+            from hefesto.core.memory_budget_gate import MemoryBudgetGate
+
+            gate = MemoryBudgetGate()
+            (all_file_results, total_loc, total_duration, source_cache), budget_result = (
+                gate.measure(lambda: _run_analysis_loop(engine, paths_list, exclude_patterns))
+            )
+            if not quiet and not json_mode:
+                click.echo(f"  Memory gate: {budget_result.message}", err=json_mode)
+        else:
+            all_file_results, total_loc, total_duration, source_cache = _run_analysis_loop(
+                engine, paths_list, exclude_patterns
+            )
 
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
+
+        meta = engine._build_meta() if hasattr(engine, "_build_meta") else {}
+        if budget_result is not None:
+            meta["dynamic_budget_results"] = budget_result.to_dict()
 
         combined_report = _generate_report(
             all_file_results,
@@ -288,7 +311,7 @@ def analyze(
             total_duration,
             output,
             save_html,
-            meta=engine._build_meta() if hasattr(engine, "_build_meta") else {},
+            meta=meta,
         )
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
@@ -636,6 +659,12 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
         engine.register_analyzer(CodeSmellAnalyzer())
         engine.register_analyzer(SecurityAnalyzer())
         engine.register_analyzer(BestPracticesAnalyzer())
+
+        # EPIC 4: Resource Safety Pack v1
+        from hefesto.security.packs.resource_safety_v1 import ResourceSafetyAnalyzer
+
+        engine.register_analyzer(ResourceSafetyAnalyzer())
+
         return engine
     except Exception as e:
         import click
