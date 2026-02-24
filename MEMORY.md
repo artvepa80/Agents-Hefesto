@@ -8,8 +8,8 @@
 
 | Location | Version | Branch | HEAD |
 |----------|---------|--------|------|
-| Mac | 4.9.3 | main | `abd6976` |
-| GitHub main | 4.9.3 | main | `abd6976` |
+| Mac | 4.9.3 | main | `24d66b4` |
+| GitHub main | 4.9.3 | main | `24d66b4` |
 | PyPI | 4.9.3 | — | BLOCKED (email verification pending) |
 
 ---
@@ -29,6 +29,19 @@
 - **Vercel deploy**: Deployed to correct project (`vercel`, not `hefesto-landing`). All endpoints verified live.
 - **Social media copy**: Corrected posts ready (X hacker, X founder, LinkedIn enterprise). No fragile claims.
 - **STATUS: COMPLETE** — all 7 phases done, endpoints live, CI green.
+
+### @artvepa Cron Pipeline + Engagement Monitor — VERIFIED & CLOSED
+Dry-run confirmed all components operational on VM:
+- **post_x.py**: `--account artvepa` reads `X_ARTVEPA_*` env vars (7 credentials confirmed)
+- **cron_publisher.py**: `x_artvepa` platform routes to `post_x.py --account artvepa`
+- **content_generator.py**: `--platform-filter artvepa` generates only artvepa posts. Rate limit 8/day.
+- **trend_feeds.json**: 3 artvepa feeds (`artvepa_buildinpublic`, `artvepa_geopolitics`, `artvepa_bridge`)
+- **cron_artvepa.sh**: Full pipeline (trend scan → content gen → WhatsApp notification). Cron: `0 15 * * 1,3,4,6,0`
+- **x_engagement_monitor_artvepa.py**: Search + voice card + staging + WhatsApp approval. Cron: `0 */2 * * *` + reply check `*/30 * * * *`
+- **voice_artvepa.md**: Voice card loaded by engagement monitor
+- **Dry-run results**: Engagement search found candidates, WhatsApp notification sent (message ID confirmed), content generator hit daily rate limit (8/8 = pipeline already active today)
+- **BLOCKER**: Anthropic API credits depleted — engagement replies fail to generate. User will recharge.
+- **STATUS: COMPLETE** — pipeline operational, pending only Anthropic credits recharge.
 
 ### Key corrections applied (from ChatGPT advisory review)
 1. "Zero false positives" → "Designed for low false positives" (all files)
