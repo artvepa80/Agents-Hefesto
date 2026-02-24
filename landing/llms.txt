@@ -145,6 +145,8 @@ Dockerfile, Makefile, Groovy (Jenkins), PowerShell, HCL (Terraform)
 - REST discovery: https://hefestoai.narapallc.com/api/mcp
 - OpenAPI: https://hefestoai.narapallc.com/api/openapi.json
 - Natural language: https://hefestoai.narapallc.com/api/ask
+- Changelog: https://hefestoai.narapallc.com/api/changelog.json
+- FAQ: https://hefestoai.narapallc.com/api/faq.json
 - Agent descriptor: https://hefestoai.narapallc.com/.well-known/agent.json
 
 To query HefestoAI as an AI agent:
