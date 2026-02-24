@@ -15,6 +15,43 @@
 
 ---
 
+## Session 2026-02-24 (Monday) — late night
+
+### AI Discoverability Stack → Pro-Private (IP Protection)
+
+**CRITICAL: All AI discoverability infrastructure is proprietary IP. Work ONLY in Pro-Private.**
+
+Migrated full landing page + AI crawlers/bots/agents stack from `Agents-Hefesto/landing/` (public OSS) to `Agents-Hefesto-Pro-Private/landing-page/` (private).
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Dark/orange landing (v4.9.3, Stripe Buy Buttons, i18n EN/ES/JA/KO) |
+| `api/ask.js` | Natural language Q&A (11 topics) |
+| `api/mcp.js` | MCP capability discovery |
+| `api/mcp-protocol.js` | JSON-RPC 2.0 MCP server (4 tools) |
+| `api/openapi.json.js` | OpenAPI 3.0 spec |
+| `api/changelog.json.js` | Product changelog |
+| `api/faq.json.js` | 13 FAQ entries |
+| `.well-known/agent.json` | A2A agent descriptor |
+| `llms.txt` | 10 languages, 30 intent queries |
+| `robots.txt` | AI crawler allow rules |
+| `sitemap.xml` | 3 URLs |
+| `middleware.js` | Bot detection (17 patterns) |
+| `vercel.json` | Headers, CORS, redirects, security |
+
+**Vercel**: Reconnected to `Agents-Hefesto-Pro-Private`, Root Directory = `landing-page`. All 11 endpoints verified 200 at `hefestoai.narapallc.com`.
+
+**Public repo cleanup**: Deleted `landing/` directory from `Agents-Hefesto` (OSS). No AI discoverability files in public repo.
+
+**Commits (Pro-Private):**
+| Commit | What |
+|--------|------|
+| `e01360e` | feat: add full AI discoverability stack (12 files) |
+| `ec98b54` | feat: update index.html to v4.9.3 |
+| `541c628` | fix: trigger redeploy with correct root directory |
+
+---
+
 ## Session 2026-02-24 (Monday) — continued (evening)
 
 ### Patch C + EPICs 1-3 Golden Validation & EPIC 2 Runtime Fix
@@ -263,7 +300,7 @@ Dry-run confirmed all components operational on VM:
 | **GitHub PRO** | Active | `artvepa80/Agents-Hefesto-Pro-Private` |
 | **PyPI** | BLOCKED | v4.5.5 — email verification pending for OmegaAI account |
 | **ClawHub Skill** | Published | `@artvepa80/hefestoai-auditor@1.2.0` (not a GitHub repo) |
-| **Landing Page** | Live | `hefestoai.narapallc.com` via Vercel, DNS Squarespace |
+| **Landing Page** | Live | `hefestoai.narapallc.com` via Vercel → **Pro-Private** repo (`landing-page/`). IP protected. |
 | **HERMES @artvepa** | Live | VM cron: content pipeline + engagement monitor + WhatsApp approval |
 | **MCP Registry** | Active | `io.github.artvepa80/hefestoai` on registry.modelcontextprotocol.io |
 | **Smithery** | Active | `artvepa80/hefestoai` on smithery.ai |
