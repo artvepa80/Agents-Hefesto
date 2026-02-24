@@ -1,7 +1,6 @@
 # Fixture: clean file — no resource safety issues
 from functools import lru_cache
 
-
 # Module-level constant (not mutable — no issue)
 MAX_RETRIES = 3
 DEFAULT_TIMEOUT = 30

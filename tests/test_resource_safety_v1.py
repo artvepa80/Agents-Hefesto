@@ -82,14 +82,10 @@ def test_r5_thread_in_request_detected():
 
 def test_clean_no_issues():
     issues = _run("clean_no_issues.py")
-    reliability_issues = [
-        i
-        for i in issues
-        if i.issue_type.value.startswith("RELIABILITY_")
-    ]
-    assert len(reliability_issues) == 0, (
-        f"Clean fixture should produce 0 reliability issues, got {len(reliability_issues)}"
-    )
+    reliability_issues = [i for i in issues if i.issue_type.value.startswith("RELIABILITY_")]
+    assert (
+        len(reliability_issues) == 0
+    ), f"Clean fixture should produce 0 reliability issues, got {len(reliability_issues)}"
 
 
 # ── Non-Python file skipped ───────────────────────────────────────────
