@@ -8,9 +8,59 @@
 
 | Location | Version | Branch | HEAD |
 |----------|---------|--------|------|
-| Mac | 4.9.3 | main | `24d66b4` |
-| GitHub main | 4.9.3 | main | `24d66b4` |
+| Mac | 4.9.3 | main | `a8343f8` |
+| GitHub main | 4.9.3 | main | `a8343f8` |
+| VM | 4.9.3 | main | `a8343f8` |
 | PyPI | 4.9.3 | — | BLOCKED (email verification pending) |
+
+---
+
+## Session 2026-02-24 (Monday) — continued (evening)
+
+### Patch C + EPICs 1-3 Golden Validation & EPIC 2 Runtime Fix
+
+**Golden validation on VM** (with PRO installed, Python 3.11.2):
+
+| Feature | Result | Evidence |
+|---------|--------|----------|
+| **Patch C** (serve hardening) | 6/6 PASS | `/analyze` returns JSON, CORS/auth/rate-limit active |
+| **EPIC 1** (scope gating) | 4/4 PASS | `--scope-deny third_party_lib` → `files_analyzed: 1`, `meta.scope` in JSON |
+| **EPIC 3** (enrichment) | 2/2 PASS | `--enrich local` → `metadata.enrichment.status="skipped"`, `error.code="local_only"` |
+| **EPIC 2** (JS/TS parsing) | PASS after fix | `files_analyzed: 2`, `file_meta.symbols` with imports/functions/classes |
+
+**Bugs found & fixed during golden validation:**
+- **PR #16**: `server.py:94` used `i.title` but `AnalysisIssue` has `i.message` → fixed, merged
+- **PR #17**: `cli/main.py:890` passed `extra_allow`/`extra_deny` but PRO expects `allow_patterns`/`deny_patterns` → fixed, merged
+
+**STOP 8 — EPIC 2 runtime backend (PR #18, merged):**
+- **Root cause**: `tree-sitter-languages 1.10.2` incompatible with modern `tree-sitter` API. `TreeSitterParser.__init__()` crashed with `TypeError`, silently swallowed by broad `except Exception: return None` in `analyzer_engine.py:304`.
+- **Fix**: Cascading import in `treesitter_parser.py`: `tree-sitter-language-pack` → `tree-sitter-languages` → manual build
+- Added `[multilang]` optional dependency in `pyproject.toml`
+- Added `logger.debug()` to parse failures (was completely silent)
+- Updated `requirements.txt` to replace pinned broken deps
+- Documented `[multilang]` extra in README + `docs/PRO_OPTIONAL_FEATURES.md`
+- **Evidence**: `EPIC2_SYMBOLS_OK` — JS file in JSON with `file_meta.symbols` (imports, functions, classes)
+
+**Issue #14 — test isolation leak (root-cause fix, commit `37a18ea`):**
+- **Root cause**: `_cleanup_pro_optional()` reloaded `hefesto.pro_optional` while `monkeypatch` still had fake PRO modules in `sys.modules`. Reload picked up fakes → `HAS_*=True` leaked into `test_enrichment_off_by_default` → CLI produced empty output → `JSONDecodeError`.
+- **Fix**: Use `monkeypatch.delitem(sys.modules, key)` to remove `hefesto_pro.*` entries before reloading.
+- `a8343f8`: Black formatting applied → CI green on all 3 Python versions (3.10, 3.11, 3.12).
+- 21/21 tests pass in full suite (no more skip workaround).
+
+**CI note**: Click 8.3.1 (resolved in CI) removed `mix_stderr` parameter from `CliRunner` (removed in Click 8.2.0). Use `result.output` (already stdout-only in Click 8.2+).
+
+**Commits on main (this session):**
+
+| Commit | PR | What |
+|--------|-----|------|
+| `c852617` | #15 | docs: PRO_OPTIONAL_FEATURES.md + README snippet |
+| `d1aff84` | #16 | fix: server.py `i.title` → `i.message` |
+| `c1f1b07` | #17 | fix: scope gating kwargs `allow_patterns`/`deny_patterns` |
+| `0824e59` | #18 | fix: tree-sitter-language-pack migration |
+| `8b81a8d` | — | docs: `[multilang]` extra in README + PRO docs |
+| `3330e0f` | — | fix: logger after imports (E402) |
+| `37a18ea` | — | fix: root-cause test isolation leak (#14) |
+| `a8343f8` | — | style: Black formatting |
 
 ---
 
@@ -100,7 +150,7 @@ Dry-run confirmed all components operational on VM:
 - **PRO repo**: PR #33 merged, tag v3.9.0 pushed (Phase 2b: HERMES + @artvepa + landing page)
 - **HERMES @artvepa pipeline**: fully operational on VM (content pipeline + engagement monitor + WhatsApp approval)
 - **VM synced**: rebased to match origin/main at `a0bd79c`
-- **Issue #14 opened**: flaky `TestSimulatedProScopeGating` test isolation (bug, low priority)
+- **Issue #14 opened**: flaky test isolation (bug, low priority) — **FIXED** in evening session (`37a18ea`)
 
 ### PRO repo session
 - CHANGELOG.md merge conflict resolved
@@ -121,28 +171,31 @@ Dry-run confirmed all components operational on VM:
 | EPIC 3 | Safe Enrichment (PRO) | PR #17 (PRO) | merged |
 | **STOP 7** | **OSS wiring for PRO EPICs** | **PR #13 (OSS)** | `25816c8` |
 | Pinning | black==26.1.0, isort==6.1.0 | direct to main | `e926fd9` |
+| Golden Validation | Patch C + EPIC 1-3 evidence on VM | PRs #15-#17 (OSS) | `c852617`..`c1f1b07` |
+| **STOP 8** | **EPIC 2 runtime (tree-sitter-language-pack)** | **PR #18 (OSS)** | `0824e59` |
+| Issue #14 fix | Test isolation leak root-cause | direct to main | `37a18ea` |
 
 ### STOP 7 deliverables (OSS repo)
 - `hefesto/pro_optional.py` (NEW) — optional import bridge with ModuleNotFoundError fallbacks
 - `hefesto/cli/main.py` (MOD) — 10 Click flags (scope + enrichment), config builders
 - `hefesto/core/analyzer_engine.py` (MOD) — scope gating, multilang, enrichment, `_build_meta()`
 - `hefesto/core/analysis_models.py` (MOD) — `meta` on Report, `metadata` on FileResult
-- `tests/test_pro_wiring.py` (NEW) — 14 tests (fallbacks, CLI flags, monkeypatched PRO, accumulation)
+- `tests/test_pro_wiring.py` (NEW) — 21 tests (fallbacks, CLI flags, monkeypatched PRO, accumulation, enrichment, hardening)
 
 ---
 
 ## Next STOPs (pending, choose one)
 
-1. **STOP 8 — Fix 7 pre-existing test failures**
-   - Files: `test_patch_d_gate_and_eval.py` (4 fails), `test_patch_e_exclude_types.py` (3 fails)
-   - Goal: CI green total (0 failures)
-
-2. **STOP 8b — Tooling guardrails**
+1. **STOP 9 — Tooling guardrails**
    - `make lint` / `make fmt` / `make test` or scripts
    - Optional pre-push hook
 
-3. **STOP 9 — Patch C (API hardening)**
-   - CORS/docs/auth/rate-limit/path sandbox/cache caps
+2. **STOP 10 — Enrichment with real provider**
+   - Golden test with a configured enrichment provider (not just `status="skipped"`)
+
+3. **STOP 11 — PyPI publish**
+   - BLOCKED on email verification for OmegaAI account
+   - Once unblocked: re-push tag v4.9.3 or bump to v4.9.4
 
 ---
 
@@ -160,9 +213,10 @@ Dry-run confirmed all components operational on VM:
 
 | EPIC | OSS Wiring | PRO Implementation | Validation |
 |------|-----------|-------------------|------------|
-| EPIC 1 — Scope Gating | Done (STOP 7) | Done (PR #15) | Needs golden tests on real repos |
-| EPIC 2 — Multi-Language | Done (STOP 7) | Done (PR #16) | Needs IRIS/AEGIS schema confirm |
-| EPIC 3 — Enrichment | Done (STOP 7) | Done (PR #17) | Needs deterministic enforcement |
+| EPIC 1 — Scope Gating | Done (STOP 7) | Done (PR #15 PRO) | **CLOSED** — golden evidence on VM |
+| EPIC 2 — Multi-Language | Done (STOP 7 + PR #18) | Done (PR #16 PRO) | **CLOSED** — `EPIC2_SYMBOLS_OK` on VM |
+| EPIC 3 — Enrichment | Done (STOP 7) | Done (PR #17 PRO) | **CLOSED** — golden evidence on VM |
+| Patch C — API Hardening | Done (STOP 7) | Done (PR #14 PRO) | **CLOSED** — 6/6 golden on VM |
 
 ---
 
