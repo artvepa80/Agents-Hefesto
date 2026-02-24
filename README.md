@@ -201,6 +201,13 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 14-day free trial, no credit card required.
 
+### Hefesto PRO Optional Features
+
+Hefesto OSS works standalone. If Hefesto PRO is installed, OSS can optionally enable:
+Patch C API hardening for `hefesto serve`, scope gating (first-party by default), TS/JS
+symbol discovery, and safe deterministic enrichment (schema-first, masked, bounded).
+See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
+
 ---
 
 ## Installation
