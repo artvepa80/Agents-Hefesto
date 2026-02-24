@@ -8,25 +8,58 @@
 
 | Location | Version | Branch | HEAD |
 |----------|---------|--------|------|
-| Mac | 4.9.3 | main | `a0bd79c` |
-| VM | 4.9.3 | main | `a0bd79c` |
-| GitHub main | 4.9.3 | main | `a0bd79c` |
-| PyPI | 4.9.3 | — | Published (Release workflow green) |
+| Mac | 4.9.3 | main | `7e7ccf0` |
+| GitHub main | 4.9.3 | main | `7e7ccf0` |
+| PyPI | 4.9.3 | — | BLOCKED (email verification pending) |
 
 ---
 
-## Session 2026-02-23 (Monday)
+## Session 2026-02-23 (Monday) — continued
 
-### Completed
+### HefestoAI Discoverability Sprint
+- **llms.txt**: Multilingual product description (10 languages), competitor differentiation, agent swarm section
+- **robots.txt**: Explicitly allows all AI crawlers (GPTBot, ClaudeBot, PerplexityBot, etc.)
+- **.well-known/agent.json**: A2A/MCP agent metadata with endpoints, pricing, capabilities
+- **middleware.js**: Bot detection for 17 User-Agents (NOTE: inactive with @vercel/static — TD-001)
+- **sitemap.xml**: 3 URLs (landing, llms.txt, agent.json)
+- **vercel.json**: Content-Type headers for all discoverability files, X-Robots-Tag: all
+- **README.md**: Added LLM keywords block after badges
+
+### Vercel Fix: All static files were serving index.html
+- **Root cause**: `builds: [{ src: "index.html", use: "@vercel/static" }]` only deployed index.html
+- **Fix**: Removed `builds` and `routes` sections — Vercel auto-serves all static files
+- **Also fixed**: Vercel project Root Directory was `landing-page` (stale), corrected to `landing`
+- All discoverability files now serving with correct Content-Type
+
+### Analytics & SEO
+- **Vercel Web Analytics**: Added `/_vercel/insights/script.js` to index.html
+- **Vercel Speed Insights**: Added `/_vercel/speed-insights/script.js` to index.html
+- **Microsoft Clarity**: Added tracking script (project `vm5io2kbxz`), confirmed receiving data
+- **Bing Webmaster Tools**: Verified via meta tag `msvalidate.01`
+- **Google Search Console**: Verified, sitemap indexed, serving correct XML
+- **Brave Search**: URL submitted, crawling organically via robots.txt
+
+### MCP & AI Agent Endpoints (live)
+- **`/api/mcp`**: REST discoverability endpoint (GET capabilities, POST queries)
+- **`/api/ask`**: Natural language Q&A endpoint (7 knowledge base topics, multilingual keywords)
+- **`/api/openapi.json`**: OpenAPI 3.0 spec for LangChain/AutoGPT discovery
+- **`/api/mcp-protocol`**: Real JSON-RPC 2.0 MCP handler (initialize, tools/list, tools/call with 4 tools: pricing, install, compare, analyze)
+
+### MCP Registry Registrations
+- **Official MCP Registry** (registry.modelcontextprotocol.io): `io.github.artvepa80/hefestoai` — status: active, published 2026-02-24T02:32:06Z
+- **Smithery** (smithery.ai/servers/artvepa80/hefestoai): Published, MCP URL: `https://hefestoai--artvepa80.run.tools`
+
+### Documentation
+- **TECHNICAL_DEBT.md**: Created with 6 entries (TD-001 to TD-006), dependency graph, priority order
+
+### Earlier in session
 - **OSS api_hardening wiring**: `hefesto/server.py` (NEW FastAPI app), `pro_optional.py` (HAS_API_HARDENING + apply_hardening fallback), `cli/main.py` (serve command functional), `tests/test_pro_wiring.py` (+7 tests)
 - **server.py delegates to CLI helpers**: `_setup_analyzer_engine` / `_run_analysis_loop` — no duplication
 - **Version bump**: 4.9.2 → 4.9.3, CHANGELOG + README + pyproject.toml updated
 - **Tag v4.9.3**: pushed, Release (PyPI) workflow green, CI green (3.10, 3.11, 3.12)
 - **Fix flaky test**: `test_server_module_creates_app` failed in CI because `fastapi` not in base deps. Fixed with `pytest.mark.skipif`
 - **PRO repo**: PR #33 merged, tag v3.9.0 pushed (Phase 2b: HERMES + @artvepa + landing page)
-- **Landing page**: `vercel.json` moved to `landing-page/`, deployed on Vercel, DNS via Squarespace → `hefestoai.narapallc.com`
 - **HERMES @artvepa pipeline**: fully operational on VM (content pipeline + engagement monitor + WhatsApp approval)
-- **README-artvepa-X.md**: deployed to VM at `~/hefesto_tools/hermes/`
 - **VM synced**: rebased to match origin/main at `a0bd79c`
 - **Issue #14 opened**: flaky `TestSimulatedProScopeGating` test isolation (bug, low priority)
 
@@ -139,6 +172,12 @@
 | **ClawHub Skill** | Published | `@artvepa80/hefestoai-auditor@1.2.0` (not a GitHub repo) |
 | **Landing Page** | Live | `hefestoai.narapallc.com` via Vercel, DNS Squarespace |
 | **HERMES @artvepa** | Live | VM cron: content pipeline + engagement monitor + WhatsApp approval |
+| **MCP Registry** | Active | `io.github.artvepa80/hefestoai` on registry.modelcontextprotocol.io |
+| **Smithery** | Active | `artvepa80/hefestoai` on smithery.ai |
+| **Bing Webmaster** | Verified | `hefestoai.narapallc.com` |
+| **Google Search Console** | Verified | Sitemap indexed |
+| **Microsoft Clarity** | Active | Project `vm5io2kbxz` |
+| **Vercel Analytics** | Active | Web Analytics + Speed Insights |
 
 ---
 
