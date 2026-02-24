@@ -90,6 +90,19 @@
       ]
     },
     {
+      "source": "/api/mcp",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
       "source": "/sitemap.xml",
       "headers": [
         {

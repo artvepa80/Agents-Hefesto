@@ -52,6 +52,8 @@
     "protocol": "1.0",
     "transport": "http"
   },
+  "mcp_endpoint": "https://hefestoai.narapallc.com/api/mcp",
+  "a2a_endpoint": "https://hefestoai.narapallc.com/api/mcp",
   "a2a_compatible": true,
   "mcp_compatible": true
 }
