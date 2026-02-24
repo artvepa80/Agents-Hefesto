@@ -216,6 +216,9 @@ See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
 # FREE tier
 pip install hefesto-ai
 
+# TS/JS parsing + symbol metadata (optional)
+pip install "hefesto-ai[multilang]"
+
 # PRO tier
 pip install hefesto-ai[pro]
 export HEFESTO_LICENSE_KEY="your-key"

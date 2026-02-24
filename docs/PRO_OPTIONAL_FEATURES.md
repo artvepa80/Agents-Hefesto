@@ -106,6 +106,17 @@ When enabled via PRO, OSS can attach lightweight TS/JS symbol metadata to file r
 - Imports, functions, classes, exports (bounded, deterministic)
 - Skip reason reporting (e.g. `binary`, `too_large`, `decode_error`, `unsupported_language`)
 
+### Runtime requirement
+
+TS/JS parsing requires a pre-built grammar pack. Install with the `multilang` extra:
+
+```bash
+pip install "hefesto-ai[multilang]"
+```
+
+This pulls in `tree-sitter-language-pack` (165+ languages, pre-built wheels).
+Without it, JS/TS files are found by `_find_files` but silently skipped at parse time.
+
 ### Output
 - Per file: `file_result.file_meta.symbols = { imports, functions, classes, exports }`
 - Report meta: `report.meta.multilang.skipped = { ... }` (only when non-empty)
