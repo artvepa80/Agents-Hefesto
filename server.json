@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.artvepa80/hefestoai",
+  "title": "HefestoAI",
+  "description": "Pre-commit code quality guardian. Detects semantic drift in AI-generated code.",
+  "version": "4.9.3",
+  "repository": {
+    "url": "https://github.com/artvepa80/Agents-Hefesto",
+    "source": "github"
+  },
+  "websiteUrl": "https://hefestoai.narapallc.com",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://hefestoai.narapallc.com/api/mcp-protocol"
+    }
+  ]
+}
