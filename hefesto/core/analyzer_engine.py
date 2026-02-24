@@ -17,8 +17,6 @@ import time
 from pathlib import Path
 from typing import Any, List, Optional
 
-logger = logging.getLogger(__name__)
-
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -29,6 +27,8 @@ from hefesto.core.analysis_models import (
 from hefesto.core.language_detector import Language, LanguageDetector
 from hefesto.core.languages.registry import get_registry
 from hefesto.core.parsers.parser_factory import ParserFactory
+
+logger = logging.getLogger(__name__)
 
 # Directories excluded by default to avoid noise from vendored/generated code.
 # Users can add more via --exclude; these are always applied unless --no-default-excludes.
