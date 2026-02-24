@@ -23,6 +23,8 @@ Hefesto analyzes code using AI and catches issues that traditional linters miss:
 | **DevOps/Config (10)** | Dockerfile, Jenkins/Groovy, JSON, Makefile, PowerShell, Shell, SQL, Terraform, TOML, YAML |
 | **AI Analysis** | Google Gemini for semantic code understanding |
 | **Security Scanning** | SQL injection, hardcoded secrets, command injection |
+| **Reliability Drift** | Unbounded globals, unbounded caches, session leaks, handler duplication, threads in request paths |
+| **Memory Budget Gate** | Opt-in RSS delta gate for CI (`--enable-memory-budget-gate`) |
 | **Code Smells** | Long functions, deep nesting, high complexity |
 | **Pre-Push Hooks** | Automatic validation before every git push |
 | **REST API** | 8 endpoints for CI/CD integration |

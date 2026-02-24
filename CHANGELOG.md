@@ -5,6 +5,20 @@ All notable changes to Hefesto will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — Reliability Drift Gates (EPIC 4)
+- **Resource Safety Pack v1** (`hefesto.security.packs.resource_safety_v1`): 5 static rules for Python reliability drift detection.
+  - R1: Unbounded module-level globals mutated in functions
+  - R2: `@lru_cache(maxsize=None)` unbounded caches
+  - R3: `Session()`/`connect()` without context manager or `.close()`
+  - R4: `addHandler()` inside functions (logging handler duplication)
+  - R5: `threading.Thread()` started inside request-path functions
+- **Memory Budget Gate** (`--enable-memory-budget-gate`): Opt-in RSS delta measurement around analysis runs. Threshold via `HEFESTO_MEMORY_BUDGET_THRESHOLD_KB` (default: 50 MB).
+- **Report metadata**: `reliability_pack_summary` and `dynamic_budget_results` fields in analysis output.
+- **IRIS ingest mount**: `hefesto serve` auto-mounts `/v1/ingest/hefesto-run` when IRIS is installed.
+- 14 new tests (8 pack rules + 6 budget gate).
+
 ## [4.9.3] - 2026-02-23 — OSS pro_optional Wiring + Dev Tooling
 ### Changed
 - **Dev tooling**: Pinned `black==26.1.0` and `isort==6.1.0` in `requirements-dev.txt` to match CI.
