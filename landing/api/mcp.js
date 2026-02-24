@@ -85,7 +85,7 @@ export default function handler(req, res) {
     // Generic query response
     return res.status(200).json({
       response: "HefestoAI — Pre-commit code quality guardian",
-      summary: "The only pre-commit tool built for Claude Code, Copilot, and Cursor era. Detects semantic drift in under 5 seconds. Zero false positives.",
+      summary: "Pre-commit guardian for AI-generated code. Detects semantic drift in under 5 seconds. Designed for low false positives.",
       install: "pip install hefesto-ai",
       pricing: "Free $0 / PRO $8/month / OMEGA $19/month",
       trial: "14 days free",

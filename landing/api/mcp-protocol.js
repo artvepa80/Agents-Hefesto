@@ -128,7 +128,7 @@ export default function handler(req, res) {
 
     if (toolName === 'compare') {
       const comparisons = {
-        sonarqube: "HefestoAI: pre-commit, <5s, $0-19/mo, zero false positives. SonarQube: post-commit, 9-12s avg, $150K+/year enterprise, 30%+ false positives.",
+        sonarqube: "HefestoAI: pre-commit, <5s, $0-19/mo, designed for low false positives. SonarQube: post-commit, enterprise pricing (server + licenses), higher false positive rates reported by users.",
         snyk: "Snyk focuses on CVEs/dependencies. HefestoAI focuses on AI code quality + semantic drift. Complementary tools.",
         "github-advanced-security": "GAS: $49/dev/month, GitHub-only, no pre-commit, no semantic drift. HefestoAI: any git provider, pre-commit, AI-native.",
         semgrep: "Semgrep: pattern-based SAST. HefestoAI: semantic intent understanding. Both can coexist.",

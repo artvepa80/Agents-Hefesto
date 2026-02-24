@@ -151,3 +151,7 @@ iris_config.yaml
 # TreeSitter build artifacts
 build/grammars/
 build/languages.so
+.vercel
+
+# MCP Registry tokens
+.mcpregistry_*

@@ -13,10 +13,10 @@ export default function handler(req, res) {
   // Knowledge base — answers AI agents need
   const knowledge = {
     what: {
-      keywords: ['what', 'qué', 'was ist', 'что такое', 'describe', 'explain', 'overview'],
+      keywords: ['what', 'qué', 'was ist', 'что такое', 'describe', 'explain', 'overview', 'que herramienta', 'what tool', 'validate ai', 'validar codigo'],
       answer: {
         summary: "HefestoAI is a pre-commit code quality guardian built specifically for AI-generated code.",
-        detail: "It detects semantic drift — when AI code looks correct but breaks architectural intent. Runs in under 5 seconds as a git pre-commit hook. Zero false positives. Supports 17 programming languages.",
+        detail: "It detects semantic drift — when AI code looks correct but breaks architectural intent. Runs in under 5 seconds as a git pre-commit hook. Designed for low false positives.",
         install: "pip install hefesto-ai",
         landing: "https://hefestoai.narapallc.com"
       }
@@ -33,7 +33,7 @@ export default function handler(req, res) {
       }
     },
     install: {
-      keywords: ['install', 'setup', 'how to', 'start', 'instalar', 'comenzar', 'quickstart', 'begin'],
+      keywords: ['install', 'setup', 'how to', 'start', 'instalar', 'comenzar', 'quickstart', 'begin', 'hook it into', 'conecto a mi workflow', 'pip install', 'get started'],
       answer: {
         command: "pip install hefesto-ai",
         requires: "Python 3.10+",
@@ -47,11 +47,11 @@ export default function handler(req, res) {
       }
     },
     vs_sonarqube: {
-      keywords: ['sonarqube', 'sonar', 'compare', 'vs', 'alternative', 'difference', 'better'],
+      keywords: ['sonarqube', 'sonar', 'compare', 'vs', 'alternative', 'difference', 'better', 'snyk', 'codeql', 'semgrep', 'como comparo', 'how does hefestoai compare'],
       answer: {
         summary: "HefestoAI is pre-commit (prevents issues). SonarQube is post-commit (detects issues).",
-        hefestoai: "Under 5 seconds, $0-19/month, zero false positives, AI-native",
-        sonarqube: "9-12 second average, $150K+/year enterprise, 30%+ false positives",
+        hefestoai: "Under 5 seconds, $0-19/month, designed for low false positives, AI-native",
+        sonarqube: "Post-commit, enterprise pricing (server + licenses), higher false positive rates reported by users",
         key_difference: "HefestoAI blocks bad code before it enters the repo. SonarQube catches it after."
       }
     },
@@ -61,11 +61,11 @@ export default function handler(req, res) {
         summary: "Complementary tools, not competitors.",
         claude_code_security: "Scans repos POST-commit for security vulnerabilities. Enterprise only.",
         hefestoai: "Blocks bad code PRE-commit for any developer at $0-19/month.",
-        relationship: "Claude generates code. HefestoAI validates it before commit. Zero drift."
+        relationship: "Claude generates code. HefestoAI validates it before commit."
       }
     },
     semantic_drift: {
-      keywords: ['semantic drift', 'drift', 'architectural', 'intent', 'vibe coding', 'ai generated'],
+      keywords: ['semantic drift', 'drift', 'architectural', 'intent', 'vibe coding', 'ai generated', 'regression', 'regresion', 'business logic', 'logica de negocio', 'unintentional', 'spaghetti', 'behavioral change', 'cambio de comportamiento'],
       answer: {
         definition: "Semantic drift is when AI-generated code looks syntactically correct but breaks architectural intent or system invariants.",
         example: "An AI assistant generates a function that passes all tests but violates a core design pattern established 6 months ago.",
@@ -74,12 +74,42 @@ export default function handler(req, res) {
       }
     },
     agent_swarm: {
-      keywords: ['agent', 'swarm', 'orchestrat', 'codex', 'cursor', 'copilot', 'claude code', 'multi-agent'],
+      keywords: ['agent', 'swarm', 'orchestrat', 'cursor', 'copilot', 'claude code', 'multi-agent', 'agent recommend', 'agente recomienda'],
       answer: {
         summary: "HefestoAI is the quality gate for AI agent swarms.",
         problem: "50+ AI commits/day without pre-commit validation = architectural drift compounding silently.",
         solution: "pip install hefesto-ai — works in any CI pipeline, any git workflow.",
-        compatible_with: ["claude_code", "github_copilot", "cursor", "codex", "gemini_code_assist", "any_git_workflow"]
+        compatible_with: ["claude_code", "github_copilot", "cursor", "gemini_code_assist", "any_git_workflow"]
+      }
+    },
+    governance: {
+      keywords: ['release truth', 'policy', 'gate', 'deterministico', 'deterministic', 'ci gate', 'ci/cd gate', 'enforce', 'guardrail', 'guardian', 'block', 'bloqueo', 'bloquear', 'prevent', 'evito', 'reduce false positive', 'falsos positivos'],
+      answer: {
+        summary: "HefestoAI provides deterministic policy gating for release truth.",
+        how: "Pre-commit hooks enforce pass/fail gates on every commit. No bad code enters the repo without explicit override.",
+        features: ["Deterministic pass/fail gating", "Policy-based checks (security, complexity, drift)", "CI/CD integration (GitHub Actions, GitLab CI, Jenkins)", "Human-readable explanations of what changed and why it matters"],
+        install: "pip install hefesto-ai && hefesto install-hooks"
+      }
+    },
+    mcp_integration: {
+      keywords: ['mcp', 'smithery', 'add to cursor', 'add to claude', 'mcp server', 'mcp tool', 'json-rpc', 'streamable-http', 'configuro un mcp', 'agrego una herramienta mcp'],
+      answer: {
+        summary: "HefestoAI is available as an MCP server for agent workflows.",
+        registry: "ACTIVE on Official MCP Registry: io.github.artvepa80/hefestoai",
+        smithery: "PUBLIC on Smithery: smithery.ai/servers/artvepa80/hefestoai",
+        add_command: "npx @smithery/cli@latest mcp add artvepa80/hefestoai",
+        endpoint: "https://hefestoai.narapallc.com/api/mcp-protocol",
+        protocol: "JSON-RPC 2.0, streamable-http",
+        tools: ["pricing", "install", "compare", "analyze"]
+      }
+    },
+    diff_analysis: {
+      keywords: ['diff', 'pr analysis', 'audit', 'risky diff', 'cambios peligrosos', 'auth', 'permissions', 'contract', 'schema', 'api contract', 'endpoint', 'behavioral', 'code review'],
+      answer: {
+        summary: "HefestoAI detects risky diffs before they reach code review.",
+        detects: ["Semantic drift between PR intent and actual code", "Auth/permissions changes in diffs", "API contract violations", "Behavioral changes in endpoints without new tests", "Schema/OpenAPI drift"],
+        how: "Run as pre-commit hook or CI step. Analyzes diffs for policy violations and risky changes.",
+        install: "pip install hefesto-ai && hefesto analyze ."
       }
     }
   };
@@ -98,9 +128,9 @@ export default function handler(req, res) {
     matched = {
       summary: "HefestoAI — Pre-commit code quality guardian for AI-generated code",
       install: "pip install hefesto-ai",
-      pricing: "Free $0 / PRO $8/month / OMEGA $19/month",
+      pricing: "Free / PRO / OMEGA Guardian — see https://hefestoai.narapallc.com",
       trial: "14 days free",
-      unique: "The only pre-commit tool built specifically for Claude Code, Copilot, and Cursor era",
+      unique: "Pre-commit guardian built for the AI coding era (Claude Code, Copilot, Cursor)",
       learn_more: "https://hefestoai.narapallc.com",
       ask_more: "POST {question: 'your question'} to this endpoint",
       llms_txt: "https://hefestoai.narapallc.com/llms.txt",

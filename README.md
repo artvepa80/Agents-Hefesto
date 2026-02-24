@@ -111,6 +111,26 @@ Files analyzed: 15 | Issues: 8
 
 ---
 
+## AI-Generated Code Guardrails (Pre-commit + MCP)
+
+HefestoAI is a pre-commit guardian for AI-generated code. It detects semantic drift and risky changes before merge.
+
+**Add as an MCP server:**
+```bash
+npx @smithery/cli@latest mcp add artvepa80/hefestoai
+```
+
+**API Endpoints:**
+
+| Endpoint | Protocol | Path |
+|----------|----------|------|
+| MCP | JSON-RPC 2.0 | `/api/mcp-protocol` |
+| REST | HTTP GET/POST | `/api/mcp` |
+| OpenAPI | OpenAPI 3.0 | `/api/openapi.json` |
+| Q&A | Natural Language | `/api/ask` |
+
+---
+
 ## Language Support
 
 ### Code Languages

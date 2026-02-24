@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "name": "HefestoAI",
   "tagline": "Pre-commit code quality guardian for AI-generated code",
-  "description": "The only pre-commit tool built specifically for Claude Code, GitHub Copilot, and Cursor era. Detects semantic drift — when AI code looks correct but breaks architectural intent. Under 5 seconds. Zero false positives. 17 languages.",
+  "description": "Pre-commit guardian for AI-generated code. Detects semantic drift — when AI code looks correct but breaks architectural intent. Designed for low false positives.",
   "version": "4.9.3",
   "vendor": {
     "name": "Narapa LLC",
@@ -21,14 +21,14 @@
   "languages_supported": 17,
   "performance": {
     "analysis_time": "under_5_seconds",
-    "false_positive_rate": "zero",
+    "false_positive_rate": "low_by_design",
     "tests_passing": 117
   },
   "compatible_with": [
     "claude_code",
     "github_copilot",
     "cursor",
-    "codex",
+    "openai_codex",
     "gemini_code_assist",
     "any_git_workflow"
   ],
