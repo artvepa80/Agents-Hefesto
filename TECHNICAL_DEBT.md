@@ -131,3 +131,7 @@ TD-001 (bot middleware) — independent
 4. **TD-006** — needed by TD-005
 5. **TD-004** — low priority, workaround exists
 6. **TD-001** — cosmetic, no revenue impact
+
+## Notes
+
+- **Brave Search:** No Webmaster Tools verification needed. `robots.txt` with `User-agent: Brave / Allow: /` is sufficient — Brave crawls organically through its own independent index.
