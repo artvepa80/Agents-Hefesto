@@ -29,5 +29,5 @@ mypy>=1.0.0
 isort>=5.12.0
 
 # Multi-language parsing
-tree-sitter==0.21.3
-tree-sitter-languages==1.10.2
+tree-sitter>=0.20.0,<1.0.0
+tree-sitter-language-pack>=0.7.0
