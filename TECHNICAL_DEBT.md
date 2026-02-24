@@ -106,7 +106,7 @@ No Gmail API credentials exist. API is not enabled in GCP. No code exists for se
 
 **Why it exists:** Email is sent manually today. Gmail API setup was deferred until the full licensing automation pipeline was needed.
 
-**Fix:** Enable Gmail API in GCP console, create OAuth credentials for `sales@narapallc.com`, store refresh token in Secret Manager. Requires GCP billing (TD-003) to be active first.
+**Fix:** Enable Gmail API in GCP console, create OAuth credentials for the sales mailbox, store refresh token in Secret Manager. Requires GCP billing (TD-003) to be active first.
 
 ---
 
