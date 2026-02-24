@@ -329,6 +329,13 @@ def _inject_fake_pro(monkeypatch):
 
 def _cleanup_pro_optional(monkeypatch):
     """Reload pro_optional to restore real (no-PRO) state."""
+    # Remove fake PRO modules BEFORE reloading; monkeypatch hasn't
+    # restored sys.modules yet, so the reload would see fakes and
+    # set HAS_*=True, leaking into subsequent tests.
+    for key in list(sys.modules):
+        if key.startswith("hefesto_pro"):
+            monkeypatch.delitem(sys.modules, key, raising=False)
+
     import hefesto.pro_optional
 
     importlib.reload(hefesto.pro_optional)
@@ -427,8 +434,9 @@ class TestSimulatedProEnrichment:
             ["analyze", str(sample), "--output", "json", "--quiet", "--severity", "LOW"],
         )
         assert result.exit_code in (0, 1), f"Unexpected: {result.exit_code}"
-        if not result.output.strip():
-            pytest.skip("CLI produced no JSON (test isolation issue #14)")
+        assert result.output.strip(), (
+            f"CLI produced no JSON (exit={result.exit_code}, exc={result.exception})"
+        )
         report = json.loads(result.output)
         for file_entry in report.get("files", []):
             for issue in file_entry.get("issues", []):
