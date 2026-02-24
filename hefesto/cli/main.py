@@ -887,8 +887,8 @@ def _build_scope_config(
         include_third_party=include_third_party,
         include_generated=include_generated,
         include_fixtures=include_fixtures,
-        extra_allow=list(scope_allow),
-        extra_deny=list(scope_deny),
+        allow_patterns=list(scope_allow),
+        deny_patterns=list(scope_deny),
     )
 
 
