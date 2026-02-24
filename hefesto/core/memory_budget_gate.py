@@ -112,15 +112,9 @@ class MemoryBudgetGate:
 
         passed = delta <= self.threshold_kb
         if passed:
-            message = (
-                f"Memory budget OK: delta {delta} KB "
-                f"<= threshold {self.threshold_kb} KB"
-            )
+            message = f"Memory budget OK: delta {delta} KB <= threshold {self.threshold_kb} KB"
         else:
-            message = (
-                f"Memory budget EXCEEDED: delta {delta} KB "
-                f"> threshold {self.threshold_kb} KB"
-            )
+            message = f"Memory budget EXCEEDED: delta {delta} KB > threshold {self.threshold_kb} KB"
 
         budget_result = MemoryBudgetResult(
             rss_before_kb=before,

@@ -131,6 +131,9 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     app = create_app()
     apply_hardening(app, settings=settings)
 
+    # Mount IRIS ingest endpoints if available (PRO + IRIS installed)
+    _mount_iris_ingest(app)
+
     click.echo(f"Starting Hefesto API server on {resolved_host}:{resolved_port}")
     if HAS_API_HARDENING:
         click.echo("  Hardening: ACTIVE (CORS, auth, rate-limit, request-id)")
@@ -201,7 +204,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 @click.option(
     "--enable-memory-budget-gate",
     is_flag=True,
-    help="Enable opt-in memory budget gate (EPIC 4). Threshold via HEFESTO_MEMORY_BUDGET_THRESHOLD_KB",
+    help="Enable opt-in memory budget gate (EPIC 4). Threshold via env var.",
 )
 # -- Enrichment flags (PRO EPIC 3) --
 @click.option(
@@ -627,6 +630,37 @@ def _install_hook(repo_root, hook_name, force):
     except Exception as e:
         click.echo(f"Error installing {hook_name}: {e}", err=True)
         _exit(1)
+
+
+def _mount_iris_ingest(app):
+    """Mount IRIS Learning Risk Engine ingest endpoints if iris is installed.
+
+    Uses the same optional-import pattern as other PRO features.
+    Store selection: BigQueryStore when IRIS_BQ_PROJECT is set, else InMemoryStore.
+    """
+    try:
+        import os
+
+        from iris.core.ingest import create_ingest_router
+
+        if os.environ.get("IRIS_BQ_PROJECT"):
+            from iris.core.ingest import BigQueryStore
+
+            store = BigQueryStore(
+                project_id=os.environ["IRIS_BQ_PROJECT"],
+                dataset=os.environ.get("IRIS_BQ_DATASET", "omega_audit"),
+            )
+        else:
+            from iris.core.ingest import InMemoryStore
+
+            store = InMemoryStore()
+
+        router = create_ingest_router(store)
+        if router is not None:
+            app.include_router(router)
+            click.echo("  IRIS: ingest endpoints mounted (/v1/ingest/)")
+    except ImportError:
+        pass  # IRIS not installed — skip silently
 
 
 def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, enrich_config=None):
