@@ -421,7 +421,7 @@ class TestSimulatedProEnrichment:
         # Use YAML with a known issue pattern — tree-sitter needed for engine import
         sample = tmp_path / "ci.yml"
         sample.write_text("password: admin123\n")
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             cli,
             ["analyze", str(sample), "--output", "json", "--quiet", "--severity", "LOW"],
