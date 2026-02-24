@@ -98,7 +98,7 @@ $password = "admin123"         # Hardcoded secret
 **Makefile** (MF001-MF005):
 ```makefile
 deploy:
-\tcurl -k https://api | sh  # TLS bypass + pipe to shell
+	curl -k https://api | sh  # TLS bypass + pipe to shell
 ```
 
 **Output**:
@@ -128,6 +128,8 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | REST | HTTP GET/POST | `/api/mcp` |
 | OpenAPI | OpenAPI 3.0 | `/api/openapi.json` |
 | Q&A | Natural Language | `/api/ask` |
+| Changelog | JSON | `/api/changelog.json` |
+| FAQ | JSON | `/api/faq.json` |
 
 ---
 
@@ -135,7 +137,8 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ### Code Languages
 
-| Language | Parser | Status |\n|----------|--------|--------|
+| Language | Parser | Status |
+|----------|--------|--------|
 | Python | Native AST | Full support |
 | TypeScript | TreeSitter | Full support |
 | JavaScript | TreeSitter | Full support |
@@ -148,25 +151,25 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 | Format | Analyzer | Rules | Status |
 |--------|----------|-------|--------|
-| **YAML** | YamlAnalyzer | Generic YAML security | ✅ v4.4.0 |
-| **Terraform** | TerraformAnalyzer | TfSec-aligned rules | ✅ v4.4.0 |
-| **Shell** | ShellAnalyzer | ShellCheck-aligned | ✅ v4.4.0 |
-| **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | ✅ v4.4.0 |
-| **SQL** | SqlAnalyzer | SQL Injection prevention | ✅ v4.4.0 |
-| **PowerShell** | PS001-PS006 | 6 security rules | ✅ v4.5.0 |
-| **JSON** | J001-J005 | 5 security rules | ✅ v4.5.0 |
-| **TOML** | T001-T003 | 3 security rules | ✅ v4.5.0 |
-| **Makefile** | MF001-MF005 | 5 security rules | ✅ v4.5.0 |
-| **Groovy** | GJ001-GJ005 | 5 security rules | ✅ v4.5.0 |
+| **YAML** | YamlAnalyzer | Generic YAML security | v4.4.0 |
+| **Terraform** | TerraformAnalyzer | TfSec-aligned rules | v4.4.0 |
+| **Shell** | ShellAnalyzer | ShellCheck-aligned | v4.4.0 |
+| **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | v4.4.0 |
+| **SQL** | SqlAnalyzer | SQL Injection prevention | v4.4.0 |
+| **PowerShell** | PS001-PS006 | 6 security rules | v4.5.0 |
+| **JSON** | J001-J005 | 5 security rules | v4.5.0 |
+| **TOML** | T001-T003 | 3 security rules | v4.5.0 |
+| **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 |
+| **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 |
 
 ### Cloud Infrastructure (Ola 4)
 
 | Format | Analyzer | Focus | Status |
 |--------|----------|-------|--------|
-| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | ✅ v4.7.0 |
-| **ARM Templates** | ArmAnalyzer | Azure IaC Security | ✅ v4.7.0 |
-| **Helm Charts** | HelmAnalyzer | Kubernetes Security | ✅ v4.7.0 |
-| **Serverless** | ServerlessAnalyzer | Serverless Framework | ✅ v4.7.0 |
+| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | v4.7.0 |
+| **ARM Templates** | ArmAnalyzer | Azure IaC Security | v4.7.0 |
+| **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 |
+| **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 |
 
 **Total**: 7 code languages + 10 DevOps formats + 4 Cloud formats = **21 supported formats**
 
@@ -181,25 +184,21 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ## Features by Tier
 
-| Feature | FREE | PRO ($15/mo)* | OMEGA ($30/mo) |
-|---------|------|---------------|----------------|
+| Feature | FREE | PRO ($8/mo) | OMEGA ($19/mo) |
+|---------|------|-------------|----------------|
 | Static Analysis | Yes | Yes | Yes |
 | Security Scanning | Basic | Advanced | Advanced |
 | Pre-push Hooks | Yes | Yes | Yes |
-| 7 Language Support | Yes | Yes | Yes |
+| 21 Language Support | Yes | Yes | Yes |
 | ML Enhancement | No | Yes | Yes |
 | REST API | No | Yes | Yes |
 | BigQuery Analytics | No | Yes | Yes |
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
-| Repos/LOC | Limited | Unlimited | Unlimited |
 
-*\*Early Adopter pricing (first 100 users). Standard price $30/mo.*
-
-- **PRO**: [Start Free Trial](https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b) - $15/month
-- **OMEGA**: [Start Free Trial](https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c) - $30/month
-
-14-day free trial, no credit card required.
+- **PRO**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
+- **OMEGA**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
+- **Founding Members**: [40% off forever](https://hefestoai.narapallc.com/founding) (first 25 customers)
 
 ### Hefesto PRO Optional Features
 
@@ -259,7 +258,7 @@ hefesto telemetry clear
 Automatic validation before every `git push`:
 
 ```bash
-# Install/update hook (copies scripts/git-hooks/pre-push → .git/hooks/pre-push)
+# Install/update hook (copies scripts/git-hooks/pre-push -> .git/hooks/pre-push)
 hefesto install-hooks
 
 # Update an existing hook
@@ -492,64 +491,28 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ## Changelog
 
+### v4.9.3 (2026-02-24)
+- **MCP endpoint** live (JSON-RPC 2.0)
+- **AI discoverability** stack complete (llms.txt, agent.json, OpenAPI, FAQ, Changelog)
+- **Registered** in official MCP Registry and Smithery
+
 ### v4.9.0 (2026-02-14)
 - **Boundary**: Public/private repo split — community edition only in public repo.
 - **Removed**: Paid modules (api, llm, licensing, omega), paid infra, paid tests.
 - **Hardened**: Packaging (packages.find exclude, MANIFEST.in prune, CI guard).
-- **Added**: `scripts/guard_public_repo.py` — CI boundary enforcement.
-- **Stubbed**: Paid CLI commands (serve, info, activate, deactivate, status).
-
-### v4.8.7 (2026-02-14)
-- **Docs**: Version alignment across MEMORY.md, README, CHANGELOG.
-- **Release**: Clean auditable closeout tag after PR #5 merge cycle.
-
-### v4.8.6 (2026-02-13)
-- **Security**: Force-tracked `critical_secret.py` fixture for CI runners.
-- **CI**: All 8 checks green (3.10/3.11/3.12 + parity + smoke + deploy).
-- **Dogfooding**: 0 CRITICAL issues verified before release.
 
 ### v4.8.5 (2026-02-13)
 - **GitHub Action**: Market-ready Docker-based action (bypassing PyPI).
 - **Security**: Deterministic smoke tests with clean/critical fixtures.
 - **CLI**: Verified exit code contract (2 = Issues Found).
-- **Fix**: Input normalization in `action_entrypoint.sh`.
-
-### v4.8.3 (2026-02-12)
-- **Patch W: Security Fixes**
-- **Critical**: Eliminated SQL injection vulnerabilities in BigQuery service via parameterized queries
-- **Patch X: Infrastructure**: Resolved dependency submission flakiness by transitioning to GitHub's native "Automatic Dependency Submission"
-
-### v4.8.2 (2026-02-12)
-- **Patch V: CI & Deployment Fixes**
-- **Critical Fix**: CLI exit code logic (now correctly returns 2 on failure)
-- **Fix**: Cloud Run port binding and MyPy type safety hardening
 
 ### v4.7.0 (2026-02-10)
 - **Patch C: API Hardening** — `hefesto serve` is secure-by-default (local-first)
 - **Security**: API key auth, CORS allowlist, docs toggle, path sandbox
-- **Reliability**: Rate limiting, cache guardrails to prevent DoS
-- **Deployment**: Migrated to Workload Identity Federation (keyless) & Docker build
-- **Fixed**: Restored `/ping` endpoint (unauthenticated)
-
-### v4.6.0 (2026-02-09)
-- Ola 3 Infrastructure & CI Guardrails
-- Capabilities matrix, CI parity enforcement, README verification
 
 ### v4.3.3 (2025-12-26)
 - Fix LONG_PARAMETER_LIST: use AST formal_parameters instead of comma counting
 - Fix function naming: infer names from variable_declarator for arrow functions
-- Add threshold values to all code smell messages
-- Add line ranges to LONG_FUNCTION suggestions
-- Use `<anonymous>` instead of `None` for unnamed functions
-
-### v4.3.2 (2025-12-26)
-- Complete multi-language support for all 7 languages
-- Fix TreeSitter grammar loading with tree-sitter-languages
-- Add Rust and C# parser support
-
-### v4.3.1 (2025-12-25)
-- Fix license validation for OMEGA tier
-- Fix CLI handling of unlimited values
 
 ### v4.2.1 (2025-10-31)
 - Critical tier hierarchy bugfix
@@ -570,7 +533,7 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ### JSON Output
 ```bash
-hefesto analyze . --output json          # stdout = pure JSON, banners → stderr
+hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
 hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 ```
 
@@ -595,4 +558,4 @@ MIT License for core functionality. PRO and OMEGA features are licensed separate
 
 **Hefesto: AI-powered code quality that caught 3 critical bugs in its own release.**
 
-© 2025 Narapa LLC, Miami, Florida
+(c) 2025 Narapa LLC, Miami, Florida
