@@ -52,6 +52,11 @@
     "protocol": "1.0",
     "transport": "http"
   },
+  "endpoints": {
+    "mcp": "https://hefestoai.narapallc.com/api/mcp",
+    "ask": "https://hefestoai.narapallc.com/api/ask",
+    "openapi": "https://hefestoai.narapallc.com/api/openapi.json"
+  },
   "mcp_endpoint": "https://hefestoai.narapallc.com/api/mcp",
   "a2a_endpoint": "https://hefestoai.narapallc.com/api/mcp",
   "a2a_compatible": true,

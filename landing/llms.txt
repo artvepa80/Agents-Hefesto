@@ -396,3 +396,16 @@ vibe coding quality, autonomous coding safety net,
 GitHub Copilot quality gate, Cursor code validator,
 Codex code review, Gemini Code Assist validator,
 agent orchestrator quality gate, AI commit validation
+
+---
+
+## AI Agent Endpoints
+
+MCP endpoint: https://hefestoai.narapallc.com/api/mcp
+Ask endpoint: https://hefestoai.narapallc.com/api/ask
+OpenAPI spec: https://hefestoai.narapallc.com/api/openapi.json
+Agent JSON: https://hefestoai.narapallc.com/.well-known/agent.json
+
+To query HefestoAI as an AI agent:
+POST https://hefestoai.narapallc.com/api/ask
+{"question": "what does hefestoai do?"}
