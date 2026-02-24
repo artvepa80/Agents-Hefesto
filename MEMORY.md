@@ -1,6 +1,6 @@
 # MEMORY - HefestoAI Project Status
 
-> Last updated: 2026-02-23
+> Last updated: 2026-02-24
 
 ---
 
@@ -8,9 +8,31 @@
 
 | Location | Version | Branch | HEAD |
 |----------|---------|--------|------|
-| Mac | 4.9.3 | main | `7e7ccf0` |
-| GitHub main | 4.9.3 | main | `7e7ccf0` |
+| Mac | 4.9.3 | main | `7562512` |
+| GitHub main | 4.9.3 | main | `7562512` |
 | PyPI | 4.9.3 | — | BLOCKED (email verification pending) |
+
+---
+
+## Session 2026-02-24 (Monday)
+
+### AI Discovery Pack Sprint
+- **Phase 1 — Copy corrections**: Removed "zero false positives", absolute comparatives, unverifiable claims from `agent.json`, `mcp.js`, `mcp-protocol.js`, `ask.js`, `llms.txt`
+- **Phase 2 — llms.txt restructure**: AI Discovery Pack format with Primary Intent, Verifiable Facts, 30 intent queries (EN+ES), CTA, endpoints. Kept all multilingual sections.
+- **Phase 3 — docs/ai-discovery.md**: New high semantic density page for crawlers/agents (workflows, semantic drift definition, integrations)
+- **Phase 4 — README.md**: Added MCP/guardrails block with Smithery install command and endpoint table
+- **Phase 5 — /api/ask.js enhanced**: 10 knowledge topics (was 7), added governance, mcp_integration, diff_analysis. Expanded keywords across all entries.
+- **Plan docs created**: `DISCOVERABILITY_PLAN.md` (execution plan), `PROMPT_DISCOVERABILITY.md` (reusable Socratic prompt)
+- **Security**: Added `.mcpregistry_*` to `.gitignore` (credential tokens from MCP Registry login)
+- **Commit**: `7562512`, pushed to main
+
+### Key corrections applied (from ChatGPT advisory review)
+1. "Zero false positives" → "Designed for low false positives" (all files)
+2. "The only pre-commit tool" → "Pre-commit guardian built for AI coding era"
+3. "100% local analysis" → "local-first workflow" (since remote endpoints exist)
+4. Pricing in llms.txt → link to website (not hardcoded prices)
+5. Removed "Codex" from primary compatible_with lists
+6. Company info → minimal "Narapa LLC (website)" instead of biography
 
 ---
 
