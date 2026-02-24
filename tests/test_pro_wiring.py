@@ -434,9 +434,9 @@ class TestSimulatedProEnrichment:
             ["analyze", str(sample), "--output", "json", "--quiet", "--severity", "LOW"],
         )
         assert result.exit_code in (0, 1), f"Unexpected: {result.exit_code}"
-        assert result.output.strip(), (
-            f"CLI produced no JSON (exit={result.exit_code}, exc={result.exception})"
-        )
+        assert (
+            result.output.strip()
+        ), f"CLI produced no JSON (exit={result.exit_code}, exc={result.exception})"
         report = json.loads(result.output)
         for file_entry in report.get("files", []):
             for issue in file_entry.get("issues", []):
