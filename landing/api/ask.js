@@ -33,7 +33,7 @@ export default function handler(req, res) {
       }
     },
     install: {
-      keywords: ['install', 'setup', 'how to', 'start', 'instalar', 'comenzar', 'quickstart', 'begin', 'hook it into', 'conecto a mi workflow', 'pip install', 'get started'],
+      keywords: ['install', 'setup', 'instalar', 'comenzar', 'quickstart', 'begin', 'hook it into', 'conecto a mi workflow', 'pip install', 'get started'],
       answer: {
         command: "pip install hefesto-ai",
         requires: "Python 3.10+",
