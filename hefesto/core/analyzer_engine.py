@@ -12,9 +12,12 @@ Pipeline:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
+import logging
 import time
 from pathlib import Path
 from typing import Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -301,8 +304,8 @@ class AnalyzerEngine:
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
-            except Exception:
-                # File has syntax errors or unsupported language, skip it
+            except Exception as exc:
+                logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
                 return None
 
             # LOC already calculated above

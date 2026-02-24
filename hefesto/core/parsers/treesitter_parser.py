@@ -1,22 +1,32 @@
 """Universal parser using TreeSitter."""
 
+import logging
 from pathlib import Path
 from typing import Optional
-
-from tree_sitter import Parser
 
 from hefesto.core.ast.generic_ast import GenericAST, GenericNode, NodeType
 from hefesto.core.parsers.base_parser import CodeParser
 
-# Try to use tree-sitter-languages for pre-built grammars
+logger = logging.getLogger(__name__)
+
+# Try pre-built grammar packs (preferred → legacy → manual build)
+USE_PREBUILT = False
+get_ts_parser = None
+
 try:
-    from tree_sitter_languages import get_parser as get_ts_parser
+    from tree_sitter_language_pack import get_parser as get_ts_parser  # type: ignore[no-redef]
 
     USE_PREBUILT = True
 except ImportError:
-    from tree_sitter import Language
+    try:
+        from tree_sitter_languages import get_parser as get_ts_parser  # type: ignore[no-redef]
 
-    USE_PREBUILT = False
+        USE_PREBUILT = True
+    except ImportError:
+        pass
+
+if not USE_PREBUILT:
+    from tree_sitter import Language, Parser
 
 
 class TreeSitterParser(CodeParser):
@@ -36,11 +46,9 @@ class TreeSitterParser(CodeParser):
         self.language = language
 
         if USE_PREBUILT:
-            # Use tree-sitter-languages pre-built grammars
             ts_lang = self.LANG_MAP.get(language, language)
-            self.parser = get_ts_parser(ts_lang)
+            self.parser = get_ts_parser(ts_lang)  # type: ignore[misc]
         else:
-            # Fallback to custom-built grammars
             self.parser = Parser()
             build_path = Path(__file__).parent.parent.parent.parent / "build" / "languages.so"
 

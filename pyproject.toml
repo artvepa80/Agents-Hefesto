@@ -44,6 +44,9 @@ dependencies = [
     "tree-sitter>=0.20.0,<1.0.0",
 ]
 [project.optional-dependencies]
+multilang = [
+    "tree-sitter-language-pack>=0.7.0",
+]
 ci = [
     "pyyaml>=6.0,<7.0",
     "packaging>=23.0,<25.0",
