@@ -127,8 +127,8 @@ Dry-run confirmed all components operational on VM:
 - **x_engagement_monitor_artvepa.py**: Search + voice card + staging + WhatsApp approval. Cron: `0 */2 * * *` + reply check `*/30 * * * *`
 - **voice_artvepa.md**: Voice card loaded by engagement monitor
 - **Dry-run results**: Engagement search found candidates, WhatsApp notification sent (message ID confirmed), content generator hit daily rate limit (8/8 = pipeline already active today)
-- **BLOCKER**: Anthropic API credits depleted — engagement replies fail to generate. User will recharge.
-- **STATUS: COMPLETE** — pipeline operational, pending only Anthropic credits recharge.
+- **Anthropic API credits**: Recharged (2026-02-24).
+- **STATUS: COMPLETE** — pipeline fully operational, no blockers.
 
 ### Key corrections applied (from ChatGPT advisory review)
 1. "Zero false positives" → "Designed for low false positives" (all files)
