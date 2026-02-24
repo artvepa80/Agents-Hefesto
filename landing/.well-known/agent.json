@@ -49,16 +49,18 @@
     "founder_twitter": "https://x.com/artvepa"
   },
   "mcp": {
-    "protocol": "1.0",
-    "transport": "http"
+    "protocol": "2024-11-05",
+    "transport": "streamable-http",
+    "endpoint": "https://hefestoai.narapallc.com/api/mcp-protocol"
   },
   "endpoints": {
-    "mcp": "https://hefestoai.narapallc.com/api/mcp",
+    "mcp_protocol": "https://hefestoai.narapallc.com/api/mcp-protocol",
+    "mcp_discovery": "https://hefestoai.narapallc.com/api/mcp",
     "ask": "https://hefestoai.narapallc.com/api/ask",
     "openapi": "https://hefestoai.narapallc.com/api/openapi.json"
   },
-  "mcp_endpoint": "https://hefestoai.narapallc.com/api/mcp",
-  "a2a_endpoint": "https://hefestoai.narapallc.com/api/mcp",
+  "mcp_endpoint": "https://hefestoai.narapallc.com/api/mcp-protocol",
+  "a2a_endpoint": "https://hefestoai.narapallc.com/api/mcp-protocol",
   "a2a_compatible": true,
   "mcp_compatible": true
 }
