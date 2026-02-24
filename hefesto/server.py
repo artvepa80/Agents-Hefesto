@@ -91,7 +91,7 @@ def create_app() -> FastAPI:
                     "file_path": str(fr.file_path),
                     "issues": [
                         {
-                            "title": i.title,
+                            "message": i.message,
                             "severity": i.severity.value,
                             "issue_type": i.issue_type.value,
                             "line": i.line,
