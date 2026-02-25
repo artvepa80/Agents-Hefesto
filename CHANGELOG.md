@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — IRIS Telemetry Aggregates Contract v1
+- **AGGREGATES_CONTRACT.md** (`docs/telemetry/`): Public v1 spec for IRIS telemetry input — row schema (JSONL), unit conventions (ratios, ms, MB/min), required vs optional metrics, validation checklist.
+- **validate_aggregates_jsonl.py** (`scripts/`): Stdlib-only validator for JSONL files against the contract. Exit 0 = valid, 1 = errors.
+- **Telemetry docs** (`docs/telemetry/README.md`): Architecture overview and enterprise collector reference.
+
 ### Added — Reliability Drift Gates (EPIC 4)
 - **Resource Safety Pack v1** (`hefesto.security.packs.resource_safety_v1`): 5 static rules for Python reliability drift detection.
   - R1: Unbounded module-level globals mutated in functions
