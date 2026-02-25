@@ -13,6 +13,19 @@ deterministic — same inputs always produce the same label.
 - **[validate_aggregates_jsonl.py](../../scripts/validate_aggregates_jsonl.py)** —
   Stdlib-only validator to check your JSONL before feeding it to IRIS.
 
+- **[examples/aggregates.sample.jsonl](examples/aggregates.sample.jsonl)** —
+  Sample file with 4 rows covering GREEN, YELLOW, and RED scenarios.
+
+## Quick Validation
+
+```bash
+# Validate your file before feeding it to IRIS
+python scripts/validate_aggregates_jsonl.py your_aggregates.jsonl
+
+# Try with the included sample
+python scripts/validate_aggregates_jsonl.py docs/telemetry/examples/aggregates.sample.jsonl
+```
+
 ## Architecture
 
 ```
