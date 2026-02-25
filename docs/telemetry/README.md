@@ -35,4 +35,4 @@ stdlib only — no cloud lock-in.
 
 Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration
 runbooks are available in the PRO distribution (`hefesto-pro` package).
-Contact sales@narapallc.com for details.
+See [PyPI](https://pypi.org/project/hefesto-pro/) for details.
