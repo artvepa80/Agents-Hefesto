@@ -168,7 +168,7 @@ WHEN STRIPE PAYMENT ARRIVES:
 6. Log in tracking spreadsheet
 ```
 
-**Note:** Old pricing ($59/$99) deprecated. Update fulfillment scripts accordingly.
+**Note:** Current pricing: PRO $8/mo, OMEGA $19/mo. Old pricing ($59/$99) fully deprecated.
 
 **Time per customer:** ~2 minutes (fully automated key + URL + email)
 
