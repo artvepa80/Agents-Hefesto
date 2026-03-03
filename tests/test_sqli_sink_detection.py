@@ -2,7 +2,7 @@
 
 Verifies:
 1. SQL concat WITH execute sink → HIGH
-2. SQL concat WITHOUT execute sink → MEDIUM (downgraded)
+2. SQL concat WITHOUT execute sink → skipped (no finding)
 3. Comment lines with SQL keywords are skipped
 4. Existing secret detection is unaffected (regression guard)
 """
@@ -60,7 +60,7 @@ def raw_lookup(uid):
 
 
 # ---------------------------------------------------------------------------
-# 2. SQL concat WITHOUT execute sink → MEDIUM
+# 2. SQL concat WITHOUT execute sink → skipped (no finding)
 # ---------------------------------------------------------------------------
 
 
@@ -73,13 +73,7 @@ def build_debug_msg(table):
     return msg
 """
         issues = _run_sqli_check(code)
-        assert len(issues) >= 1
-        # All issues should be MEDIUM (no sink)
-        for issue in issues:
-            assert (
-                issue.severity == AnalysisIssueSeverity.MEDIUM
-            ), f"Expected MEDIUM without sink, got {issue.severity}"
-            assert issue.metadata.get("sink_detected") is False
+        assert len(issues) == 0, "No sink in scope → no finding"
 
     def test_config_string_with_percent(self):
         code = """\
@@ -87,10 +81,7 @@ def build_debug_msg(table):
 QUERY_TEMPLATE = "SELECT * FROM %s WHERE active = 1"
 """
         issues = _run_sqli_check(code)
-        # The comment line should be skipped, but the QUERY_TEMPLATE line
-        # has SQL keyword + %, so it flags — but as MEDIUM (no sink in file)
-        for issue in issues:
-            assert issue.severity == AnalysisIssueSeverity.MEDIUM
+        assert len(issues) == 0, "No sink in file → no finding"
 
     def test_module_level_no_sink(self):
         code = """\
@@ -98,8 +89,7 @@ SQL = "DELETE FROM sessions WHERE expired + interval"
 print(SQL)
 """
         issues = _run_sqli_check(code)
-        for issue in issues:
-            assert issue.severity == AnalysisIssueSeverity.MEDIUM
+        assert len(issues) == 0, "No sink in file → no finding"
 
 
 # ---------------------------------------------------------------------------
@@ -126,13 +116,13 @@ const x = 1;
 
 
 # ---------------------------------------------------------------------------
-# 4. File-level sink fallback for module-level code
+# 4. Module-level SQL concat (no scope sink → skipped)
 # ---------------------------------------------------------------------------
 
 
-class TestFileLevelFallback:
+class TestModuleLevel:
     def test_module_level_with_execute_elsewhere(self):
-        """Module-level SQL concat in a file that has execute() somewhere → HIGH."""
+        """Module-level SQL concat — not inside a function with a sink → skipped."""
         code = """\
 QUERY = "SELECT * FROM users WHERE name = '" + username + "'"
 
@@ -140,9 +130,19 @@ def run():
     cursor.execute(QUERY)
 """
         issues = _run_sqli_check(code)
-        # The QUERY line is at module level; file has execute() → HIGH
+        # QUERY line is at module level, not inside a function with a sink → no finding
+        assert len(issues) == 0, "Module-level code without scope sink → no finding"
+
+    def test_inside_function_with_execute(self):
+        """SQL concat inside a function that calls execute → HIGH."""
+        code = """\
+def run(username):
+    query = "SELECT * FROM users WHERE name = '" + username + "'"
+    cursor.execute(query)
+"""
+        issues = _run_sqli_check(code)
         high = [i for i in issues if i.severity == AnalysisIssueSeverity.HIGH]
-        assert len(high) >= 1
+        assert len(high) >= 1, "Inside function with execute() → HIGH"
 
 
 # ---------------------------------------------------------------------------

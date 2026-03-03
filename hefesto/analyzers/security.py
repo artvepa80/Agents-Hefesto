@@ -28,6 +28,32 @@ _SQL_EXECUTE_SINKS = re.compile(
     re.IGNORECASE,
 )
 
+# SQL keyword inside a string literal (single/double/triple quotes, f-strings).
+_SQL_KW_IN_STRING = re.compile(
+    r"""(?:f?(?:"{1,3}|'{1,3}))"""
+    r"""[^"']*\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b""",
+    re.IGNORECASE,
+)
+
+
+def _sql_keyword_in_string(line: str) -> bool:
+    """Return True if a SQL keyword appears inside a string literal on this line."""
+    return bool(_SQL_KW_IN_STRING.search(line))
+
+
+def _has_dynamic_concatenation(line: str) -> bool:
+    """Return True if the line uses dynamic string building (f-string, %, +, format)."""
+    if 'f"' in line or "f'" in line:
+        return True
+    if "%" in line and ("%s" in line or "%d" in line or "%(" in line):
+        return True
+    if ".format(" in line:
+        return True
+    # String concat: any quote followed by + (with optional whitespace), or + followed by quote
+    if "+" in line and ('"' in line or "'" in line):
+        return True
+    return False
+
 
 class SecurityAnalyzer:
     """Analyzes code for security vulnerabilities."""
@@ -98,54 +124,56 @@ class SecurityAnalyzer:
     ) -> List[AnalysisIssue]:
         """Detect potential SQL injection vulnerabilities.
 
-        Uses sink-awareness: a SQL keyword + string concatenation is HIGH only
-        when the enclosing scope also contains an execute-type sink
-        (.execute(), .executemany(), etc.).  Without a sink the finding is
-        downgraded to MEDIUM — the string is likely built for logging or
-        display, not for database execution.
+        Only flags lines where a SQL keyword appears inside a string literal
+        AND the string uses dynamic concatenation (f-string, %, +, format).
+        Requires a DB execute sink in the enclosing scope — lines without a
+        nearby sink are skipped entirely to avoid false positives on logging,
+        display, or comment text.
         """
         issues = []
         lines = code.split("\n")
 
         # Pre-compute: does this file contain any SQL execute sink at all?
         file_has_sink = bool(_SQL_EXECUTE_SINKS.search(code))
+        if not file_has_sink:
+            return issues
 
         # Build a map of function-scope boundaries (line ranges) for sink lookup.
-        # For non-Python or flat scripts we fall back to file-level check.
         scope_sinks = self._build_scope_sink_map(lines)
 
-        sql_keywords = ["SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE"]
         for line_num, line in enumerate(lines, start=1):
-            line_upper = line.upper()
             stripped = line.lstrip()
 
-            # Skip comments and docstrings to reduce noise
+            # Skip comments
             if stripped.startswith("#") or stripped.startswith("//"):
                 continue
 
-            if any(keyword in line_upper for keyword in sql_keywords):
-                if "+" in line or "%" in line or "${" in line or "`" in line:
-                    # Determine severity based on sink proximity
-                    has_sink = self._scope_has_sink(line_num, scope_sinks, file_has_sink)
-                    severity = (
-                        AnalysisIssueSeverity.HIGH if has_sink else AnalysisIssueSeverity.MEDIUM
-                    )
+            if not _sql_keyword_in_string(line):
+                continue
 
-                    issues.append(
-                        AnalysisIssue(
-                            file_path=file_path,
-                            line=line_num,
-                            column=0,
-                            issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
-                            severity=severity,
-                            message="Potential SQL injection via string concatenation",
-                            suggestion="Use parameterized queries with placeholders",
-                            metadata={
-                                "pattern": "sql_concatenation",
-                                "sink_detected": has_sink,
-                            },
-                        )
-                    )
+            if not _has_dynamic_concatenation(line):
+                continue
+
+            # Require a DB execute sink in the enclosing scope (no file-level fallback)
+            has_sink = self._scope_has_sink(line_num, scope_sinks, False)
+            if not has_sink:
+                continue
+
+            issues.append(
+                AnalysisIssue(
+                    file_path=file_path,
+                    line=line_num,
+                    column=0,
+                    issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
+                    severity=AnalysisIssueSeverity.HIGH,
+                    message="Potential SQL injection via string concatenation",
+                    suggestion="Use parameterized queries with placeholders",
+                    metadata={
+                        "pattern": "sql_concatenation",
+                        "sink_detected": True,
+                    },
+                )
+            )
 
         return issues
 
