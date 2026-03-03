@@ -130,7 +130,7 @@ class SecurityAnalyzer:
         nearby sink are skipped entirely to avoid false positives on logging,
         display, or comment text.
         """
-        issues = []
+        issues: List[AnalysisIssue] = []
         lines = code.split("\n")
 
         # Pre-compute: does this file contain any SQL execute sink at all?
