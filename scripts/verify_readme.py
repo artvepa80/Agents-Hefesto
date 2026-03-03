@@ -20,22 +20,22 @@ def get_devops_analyzers():
 
 
 def extract_readme_analyzers(readme_path):
-    """Extract DevOps analyzers mentioned in README."""
+    """Extract DevOps analyzers mentioned in README Language Support table."""
     content = Path(readme_path).read_text()
 
-    # Find the DevOps/Config line in the feature table
-    match = re.search(r"\| \*\*DevOps/Config \((\d+)\)\*\* \| ([^|]+) \|", content)
-
-    if not match:
+    # Match rows with "rules" or "aligned" (DevOps section) but not Cloud (which uses "Security")
+    devops_section = re.search(
+        r"### DevOps & Configuration(.*?)### Cloud Infrastructure", content, re.DOTALL
+    )
+    if not devops_section:
         return None, []
 
-    count = int(match.group(1))
-    formats_text = match.group(2).strip()
+    devops_rows = re.findall(r"\| \*\*(\w+)\*\* \|", devops_section.group(1))
 
-    # Parse the formats
-    formats = [f.strip() for f in formats_text.split(",")]
+    if not devops_rows:
+        return None, []
 
-    return count, formats
+    return len(devops_rows), devops_rows
 
 
 def get_cloud_analyzers():
@@ -83,11 +83,13 @@ def main():
     else:
         print(f"   ✅ MATCH")
 
-    # Check Code Languages count
+    # Check Code Languages count (count rows in Code Languages table)
     print(f"\n2. Code Languages")
-    code_lang_match = re.search(r"\| \*\*Code Languages \((\d+)\)\*\*", readme_content)
-    if code_lang_match:
-        readme_lang_count = int(code_lang_match.group(1))
+    code_lang_rows = re.findall(
+        r"\| (?:Python|TypeScript|JavaScript|Java|Go|Rust|C#) \|", readme_content
+    )
+    if code_lang_rows:
+        readme_lang_count = len(code_lang_rows)
         expected_lang_count = code_count
         print(f"   README claims: {readme_lang_count}")
         print(f"   Expected: {expected_lang_count}")
@@ -103,9 +105,11 @@ def main():
         errors.append("Code Languages count not found in README")
         print(f"   ❌ NOT FOUND")
 
-    # Check Quick Start version
-    print(f"\n3. Quick Start Version")
-    version_match = re.search(r"hefesto --version\s+#\s+Should show:\s+(\S+)", readme_content)
+    # Check version in GitHub Action reference or CLI Reference heading
+    print(f"\n3. README Version")
+    version_match = re.search(
+        r"(?:Agents-Hefesto@v|CLI Reference \(v)(\d+\.\d+\.\d+)", readme_content
+    )
     if version_match:
         readme_version = version_match.group(1)
         print(f"   README version: {readme_version}")
@@ -117,7 +121,7 @@ def main():
         else:
             print(f"   ✅ MATCH")
     else:
-        errors.append("Version not found in Quick Start")
+        errors.append("Version not found in README")
         print(f"   ❌ NOT FOUND")
 
     # Check badge count (should be 21 = 7 + 10 + 4)
