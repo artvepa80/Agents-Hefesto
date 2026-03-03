@@ -119,6 +119,12 @@ class AnalyzerEngine:
             print("=" * 50)
             print()
 
+        # Canonicalize to resolve symlinks and '..' segments (CWE-22 defense-in-depth).
+        # The HTTP boundary (server.py) enforces the CWD jail; here we just normalize.
+        import os
+
+        path = os.path.realpath(path)
+
         # Find supported files
         path_obj = Path(path)
         source_files = self._find_files(path_obj, exclude_patterns or [])

@@ -62,10 +62,19 @@ def create_app() -> FastAPI:
         # Long-term: move to hefesto/core/analysis_runner.py
         from hefesto.cli.main import _run_analysis_loop, _setup_analyzer_engine
 
-        # Validate paths exist
+        # Path traversal guard (CWE-22 / CodeQL py/path-injection)
+        cwd = os.path.realpath(os.getcwd())
+        safe_paths: List[str] = []
         for p in request.paths:
-            if not os.path.exists(p):
+            real = os.path.realpath(p)
+            if not real.startswith(cwd + os.sep) and real != cwd:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Path outside working directory: {p}",
+                )
+            if not os.path.exists(real):
                 raise HTTPException(status_code=404, detail=f"Path not found: {p}")
+            safe_paths.append(real)
 
         exclude_patterns = []
         if request.exclude:
@@ -77,7 +86,7 @@ def create_app() -> FastAPI:
 
         t0 = time.monotonic()
         all_file_results, total_loc, total_duration, source_cache = _run_analysis_loop(
-            engine, list(request.paths), exclude_patterns
+            engine, safe_paths, exclude_patterns
         )
         duration = time.monotonic() - t0
 
