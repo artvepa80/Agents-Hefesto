@@ -119,14 +119,8 @@ class AnalyzerEngine:
             print("=" * 50)
             print()
 
-        # Canonicalize to resolve symlinks and '..' segments (CWE-22 defense-in-depth).
-        # The HTTP boundary (server.py) enforces the CWD jail; here we just normalize.
-        import os
-
-        path = os.path.realpath(path)
-
-        # Find supported files
-        path_obj = Path(path)
+        # Find supported files — resolve to canonical absolute path.
+        path_obj = Path(path).resolve()
         source_files = self._find_files(path_obj, exclude_patterns or [])
 
         # Scope gating (PRO EPIC 1): filter before reading file contents
@@ -222,6 +216,7 @@ class AnalyzerEngine:
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
         start_time = time.time()
+        file_path = file_path.resolve()
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:

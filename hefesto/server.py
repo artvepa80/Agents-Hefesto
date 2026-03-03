@@ -55,26 +55,30 @@ def create_app() -> FastAPI:
 
     @app.post("/analyze", response_model=AnalyzeResponse)
     def analyze_endpoint(request: AnalyzeRequest) -> AnalyzeResponse:
-        import os
+        from pathlib import Path as _Path
 
         # NOTE: These are CLI-private helpers. If they are ever refactored,
         # update server.py accordingly.
         # Long-term: move to hefesto/core/analysis_runner.py
         from hefesto.cli.main import _run_analysis_loop, _setup_analyzer_engine
+        from hefesto.security.path_sandbox import resolve_under_root
 
-        # Path traversal guard (CWE-22 / CodeQL py/path-injection)
-        cwd = os.path.realpath(os.getcwd())
+        # Path traversal guard (CWE-22 / CodeQL py/path-injection).
+        # resolve_under_root uses Path.resolve() + relative_to() — a
+        # CodeQL-recognized sanitizer that breaks the taint chain.
+        workspace = _Path.cwd().resolve()
         safe_paths: List[str] = []
         for p in request.paths:
-            real = os.path.realpath(p)
-            if not real.startswith(cwd + os.sep) and real != cwd:
+            try:
+                resolved = resolve_under_root(p, workspace)
+            except ValueError:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Path outside working directory: {p}",
                 )
-            if not os.path.exists(real):
+            if not resolved.exists():
                 raise HTTPException(status_code=404, detail=f"Path not found: {p}")
-            safe_paths.append(real)
+            safe_paths.append(str(resolved))
 
         exclude_patterns = []
         if request.exclude:
