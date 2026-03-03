@@ -7,22 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — IRIS Telemetry Aggregates Contract v1
-- **AGGREGATES_CONTRACT.md** (`docs/telemetry/`): Public v1 spec for IRIS telemetry input — row schema (JSONL), unit conventions (ratios, ms, MB/min), required vs optional metrics, validation checklist.
-- **validate_aggregates_jsonl.py** (`scripts/`): Stdlib-only validator for JSONL files against the contract. Exit 0 = valid, 1 = errors.
-- **Telemetry docs** (`docs/telemetry/README.md`): Architecture overview and enterprise collector reference.
+## [4.9.4] - 2026-03-03 — Context-Aware SQLi Detection + README Overhaul
 
-### Added — Reliability Drift Gates (EPIC 4)
-- **Resource Safety Pack v1** (`hefesto.security.packs.resource_safety_v1`): 5 static rules for Python reliability drift detection.
-  - R1: Unbounded module-level globals mutated in functions
-  - R2: `@lru_cache(maxsize=None)` unbounded caches
-  - R3: `Session()`/`connect()` without context manager or `.close()`
-  - R4: `addHandler()` inside functions (logging handler duplication)
-  - R5: `threading.Thread()` started inside request-path functions
-- **Memory Budget Gate** (`--enable-memory-budget-gate`): Opt-in RSS delta measurement around analysis runs. Threshold via `HEFESTO_MEMORY_BUDGET_THRESHOLD_KB` (default: 50 MB).
-- **Report metadata**: `reliability_pack_summary` and `dynamic_budget_results` fields in analysis output.
-- **IRIS ingest mount**: `hefesto serve` auto-mounts `/v1/ingest/hefesto-run` when IRIS is installed.
-- 14 new tests (8 pack rules + 6 budget gate).
+### Fixed
+- **SQL injection false positives**: Rewrote `SQL_INJECTION_RISK` detector to require 3 conditions — SQL keyword in string literal + dynamic concatenation + DB execute sink in enclosing scope. Flask false positives: 43 → 0.
+- **mypy --strict compliance**: Added type annotation for empty `issues` list in `_check_sql_injection`.
+
+### Added
+- **IRIS Telemetry Aggregates Contract v1**: Public spec, JSONL validator, architecture docs.
+- **Reliability Drift Gates (EPIC 4)**: Resource Safety Pack v1 (5 rules), Memory Budget Gate, IRIS ingest mount, 14 new tests.
+- **Demo GIF**: 3-frame animated demo showing HARDCODED_SECRET, EVAL_USAGE, HIGH_COMPLEXITY, SQL_INJECTION_RISK findings.
+
+### Changed
+- **README**: Restructured for cold traffic conversion — GIF hero, 30-second Quick Start, merged "What Hefesto Catches" table, compact GitHub Action example.
 
 ## [4.9.3] - 2026-02-23 — OSS pro_optional Wiring + Dev Tooling
 ### Changed
