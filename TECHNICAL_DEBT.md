@@ -1,6 +1,6 @@
 # Technical Debt Registry
 
-> Last updated: 2026-02-23
+> Last updated: 2026-03-10
 
 ---
 
@@ -16,47 +16,6 @@
 **Why it exists:** Landing page was built as plain HTML/CSS/JS, not a framework project. Middleware requires Next.js or another Vercel-supported framework.
 
 **Fix:** Convert landing page to a Next.js project or use Vercel Serverless Functions as an alternative for bot logging.
-
----
-
-## TD-002: License validator is format-only
-
-- **Impact:** High
-- **Effort:** Medium
-- **Added:** 2026-02-23
-- **Status:** Open
-- **Blocked by:** TD-003
-
-`hefesto_pro/licensing/license_validator.py` validates the `HFST-XXXX-XXXX-XXXX-XXXX-XXXX` format but performs NO database lookup. Any string matching the format is treated as a valid PRO license. Two hardcoded OMEGA keys exist in a set for internal use.
-
-Line 64-66 of `license_validator.py`:
-```python
-# TODO: Validate with backend API when available
-# For now, if format is valid, assume professional
-return "professional"
-```
-
-**Why it exists:** Built before any backend infrastructure was ready. Designed to be replaced by DB-backed validation once GCP billing is active.
-
-**Fix:** Add Datastore lookup in `get_tier_for_key()` — query license collection by key hash, check expiry and tier. Requires TD-003 resolved first.
-
----
-
-## TD-003: GCP billing suspended
-
-- **Impact:** High
-- **Effort:** Low (~1 hour)
-- **Added:** 2026-02-23
-- **Status:** Open — requires manual action
-- **Blocks:** TD-002, TD-005, TD-006
-
-Billing account `NarapaLLC` (01D045-1C8487-713A3A) has `"open": false`. All paid GCP APIs return `BILLING_DISABLED`: Secret Manager, Datastore, Cloud Run, Cloud Functions.
-
-Project `bustling-wharf-478016-p9` shows `billingEnabled: true` but the underlying billing account is closed/suspended.
-
-**Why it exists:** Likely expired payment method or unpaid balance.
-
-**Fix:** Go to https://console.cloud.google.com/billing/01D045-1C8487-713A3A — update payment method or pay outstanding balance.
 
 ---
 
@@ -76,62 +35,23 @@ Project `bustling-wharf-478016-p9` shows `billingEnabled: true` but the underlyi
 
 ---
 
-## TD-005: Licensing fulfillment is 100% manual
+## TD-007: Content generator semantic dedup gap
 
-- **Impact:** High
+- **Impact:** Low
 - **Effort:** Medium
-- **Added:** 2026-02-23
+- **Added:** 2026-03-10
 - **Status:** Open
-- **Blocked by:** TD-003
 
-`scripts/fulfill_order.py` is a CLI script that generates a license key, creates an S3 presigned URL, and outputs an email template. There is no Stripe webhook handler — no automated flow from payment to key delivery.
+SequenceMatcher catches text-similar duplicates but not same-topic-different-words posts (e.g., 3 posts about mutable default arguments). Need topic-level dedup, not just text similarity.
 
-Current flow: Stripe payment → Arturo manually runs `fulfill_order.py` → manually sends email.
+**Why it exists:** Initial dedup was built for exact/near-exact match detection. Semantic similarity requires embeddings or topic extraction, which was deferred.
 
-**Why it exists:** Built as MVP before any customers existed. Webhook automation was deferred.
-
-**Fix:** Create Stripe webhook endpoint (Vercel Serverless Function or Cloud Run), listen for `checkout.session.completed`, auto-generate key, store in Datastore, send email via Gmail API. Requires TD-003 and TD-006 resolved first.
+**Fix:** Add topic-level dedup using either keyword extraction (TF-IDF) or lightweight embeddings to detect when recent posts cover the same concept despite different wording.
 
 ---
-
-## TD-006: Gmail API not configured
-
-- **Impact:** Medium
-- **Effort:** Low (~30 min)
-- **Added:** 2026-02-23
-- **Status:** Open
-- **Blocked by:** TD-003
-
-No Gmail API credentials exist. API is not enabled in GCP. No code exists for sending license delivery emails programmatically.
-
-**Why it exists:** Email is sent manually today. Gmail API setup was deferred until the full licensing automation pipeline was needed.
-
-**Fix:** Enable Gmail API in GCP console, create OAuth credentials for the sales mailbox, store refresh token in Secret Manager. Requires GCP billing (TD-003) to be active first.
-
----
-
-## Dependency Graph
-
-```
-TD-003 (GCP billing)
-  ├── TD-002 (license DB lookup)
-  ├── TD-005 (automated fulfillment)
-  │     └── TD-006 (Gmail API)
-  └── TD-006 (Gmail API)
-
-TD-004 (test isolation) — independent
-TD-001 (bot middleware) — independent
-```
 
 ## Priority Order
 
-1. **TD-003** — unblocks everything, ~1 hour manual action
-2. **TD-002** — security gap, revenue risk
-3. **TD-005** — blocks scale
-4. **TD-006** — needed by TD-005
-5. **TD-004** — low priority, workaround exists
-6. **TD-001** — cosmetic, no revenue impact
-
-## Notes
-
-- **Brave Search:** No Webmaster Tools verification needed. `robots.txt` with `User-agent: Brave / Allow: /` is sufficient — Brave crawls organically through its own independent index.
+1. **TD-004** — test reliability, workaround exists
+2. **TD-007** — content quality, prevents topic repetition
+3. **TD-001** — cosmetic, no revenue impact
