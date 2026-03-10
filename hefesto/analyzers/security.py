@@ -1,13 +1,14 @@
 """
 Security Vulnerability Analyzer
 
-Detects 6 types of security issues:
+Detects 7 types of security issues:
 1. Hardcoded secrets (API keys, passwords)
 2. SQL injection risks (string concatenation in queries)
-3. eval() usage (dangerous code execution)
-4. pickle usage (unsafe deserialization)
-5. assert in production code
-6. bare except clauses (Exception swallowing)
+3. Command injection (os.system/subprocess with dynamic strings)
+4. eval() usage (dangerous code execution)
+5. pickle usage (unsafe deserialization)
+6. assert in production code
+7. bare except clauses (Exception swallowing)
 
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
@@ -27,6 +28,13 @@ _SQL_EXECUTE_SINKS = re.compile(
     r"\.\s*(?:execute|executemany|executescript|run|raw|mogrify)\s*\(",
     re.IGNORECASE,
 )
+
+# Command execution sinks (os.system, os.popen, subprocess with shell).
+_CMD_INJECTION_SINKS = re.compile(
+    r"\b(?:os\.system|os\.popen|subprocess\.call|subprocess\.Popen|subprocess\.run)\s*\("
+)
+
+_CMD_SHELL_TRUE = re.compile(r"\bshell\s*=\s*True\b")
 
 # SQL keyword inside a string literal (single/double/triple quotes, f-strings).
 _SQL_KW_IN_STRING = re.compile(
@@ -76,6 +84,7 @@ class SecurityAnalyzer:
 
         issues.extend(self._check_hardcoded_secrets(tree, file_path, code))
         issues.extend(self._check_sql_injection(tree, file_path, code))
+        issues.extend(self._check_command_injection(tree, file_path, code))
         issues.extend(self._check_eval_usage(tree, file_path, code))
 
         if tree.language == "python":
@@ -223,6 +232,57 @@ class SecurityAnalyzer:
                 return has_sink
         # Line is at module level → fall back to file-level check
         return file_has_sink
+
+    def _check_command_injection(
+        self, tree: GenericAST, file_path: str, code: str
+    ) -> List[AnalysisIssue]:
+        """Detect command injection via os.system/subprocess with dynamic strings.
+
+        3-condition pattern (same as SQL injection):
+        1. Line contains a command execution sink
+        2. Line uses dynamic string concatenation
+        3. For subprocess.*, requires shell=True (list form is safe)
+
+        Known limitation: does not detect cross-line indirection where the
+        string is built on one line and passed to the sink on another.
+        Same limitation as SQL_INJECTION_RISK — acceptable for Phase 1.
+        """
+        issues: List[AnalysisIssue] = []
+        lines = code.split("\n")
+
+        for line_num, line in enumerate(lines, start=1):
+            stripped = line.lstrip()
+            if stripped.startswith("#") or stripped.startswith("//"):
+                continue
+
+            sink_match = _CMD_INJECTION_SINKS.search(line)
+            if not sink_match:
+                continue
+
+            if not _has_dynamic_concatenation(line):
+                continue
+
+            # subprocess.call/Popen/run require shell=True to be dangerous
+            sink_name = sink_match.group(0)
+            if "subprocess." in sink_name:
+                if not _CMD_SHELL_TRUE.search(line):
+                    continue
+
+            issues.append(
+                AnalysisIssue(
+                    file_path=file_path,
+                    line=line_num,
+                    column=0,
+                    issue_type=AnalysisIssueType.COMMAND_INJECTION,
+                    severity=AnalysisIssueSeverity.HIGH,
+                    message="Potential command injection via string concatenation",
+                    suggestion="Use subprocess with list arguments (no shell):\n"
+                    "subprocess.run(['command', arg], check=True)",
+                    metadata={"pattern": "command_concatenation"},
+                )
+            )
+
+        return issues
 
     def _check_eval_usage(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Detect dangerous eval() usage.
