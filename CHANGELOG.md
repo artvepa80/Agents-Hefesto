@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.9.6] - 2026-03-10 — COMMAND_INJECTION Detection
+
+### Added
+- **COMMAND_INJECTION detection**: Flags `os.system()`, `os.popen()`, and `subprocess.call/Popen/run(shell=True)` with dynamic string concatenation (f-strings, %, +, .format). Same 3-condition pattern as SQL_INJECTION_RISK. Severity: HIGH.
+
 ## [4.9.5] - 2026-03-09 — Security Fixes + Dependency Cleanup
 
 ### Fixed
