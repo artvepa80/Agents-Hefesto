@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.9.5] - 2026-03-09 — Security Fixes + Dependency Cleanup
+
+### Fixed
+- **CodeQL path traversal (10 alerts)**: Added `resolve_under_root` + `Path.resolve()` for CodeQL-recognized sanitization across all file-handling code paths.
+- **GitHub Actions workflow permissions**: Hardened workflow permissions to resolve CodeQL security alerts.
+
+### Changed
+- **Dependency cleanup**: Core `pip install hefesto-ai` now installs only 7 packages (click, pydantic, tree-sitter, radon, mccabe, colorama, jinja2). Moved linters, server, cloud, ML, and dev tools to optional extras: `[server]`, `[cloud]`, `[lint]`, `[dev]`, `[ml]`, `[all]`.
+- **Package description**: Updated to "Pre-commit security & complexity analysis in 0.01s".
+
 ## [4.9.4] - 2026-03-03 — Context-Aware SQLi Detection + README Overhaul
 
 ### Fixed

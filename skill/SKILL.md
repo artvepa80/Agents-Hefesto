@@ -3,7 +3,7 @@
 HefestoAI is a pre-commit code quality guardian that detects semantic drift,
 security vulnerabilities, and reliability anti-patterns in AI-generated code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.9.4 | License: MIT
+Package: `hefesto-ai` (PyPI) | Version: 4.9.5 | License: MIT
 Requires: Python >= 3.10
 
 ## When to Load These Docs
