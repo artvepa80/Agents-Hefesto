@@ -322,15 +322,17 @@ def analyze(
         # Anonymous usage ping (opt-in via HEFESTO_TELEMETRY=1)
         from hefesto.telemetry.client import _ping_remote
 
-        _ping_remote({
-            "event": "analyze",
-            "v": __version__,
-            "os": sys.platform,
-            "py": f"{sys.version_info.major}.{sys.version_info.minor}",
-            "files": combined_report.summary.files_analyzed,
-            "duration_ms": int(combined_report.summary.duration_seconds * 1000),
-            "issues": combined_report.summary.total_issues,
-        })
+        _ping_remote(
+            {
+                "event": "analyze",
+                "v": __version__,
+                "os": sys.platform,
+                "py": f"{sys.version_info.major}.{sys.version_info.minor}",
+                "files": combined_report.summary.files_analyzed,
+                "duration_ms": int(combined_report.summary.duration_seconds * 1000),
+                "issues": combined_report.summary.total_issues,
+            }
+        )
 
         exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
         _exit(exit_code)
