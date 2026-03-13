@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import time
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +14,7 @@ DEFAULT_PATH = Path.home() / ".hefesto" / "telemetry.jsonl"
 DEFAULT_MAX_BYTES = 1048576  # 1MB
 DEFAULT_MAX_FILES = 3
 SCHEMA_VERSION = 1
+TELEMETRY_ENDPOINT = "https://hefestoai.narapallc.com/api/telemetry"
 
 
 def _env_truthy(v: Optional[str]) -> bool:
@@ -237,3 +239,20 @@ class TelemetryClient:
                         pass
         except Exception:
             pass
+
+
+def _ping_remote(payload: dict) -> None:
+    """Fire-and-forget anonymous ping. Never blocks CLI."""
+    if not _env_truthy(os.getenv("HEFESTO_TELEMETRY")):
+        return
+    try:
+        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        req = urllib.request.Request(
+            TELEMETRY_ENDPOINT,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=1)
+    except Exception:
+        pass

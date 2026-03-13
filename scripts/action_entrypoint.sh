@@ -48,11 +48,23 @@ if [ -n "$FORMAT" ]; then
     CMD+=("--output" "$FORMAT")
 fi
 
-# Execute
-"${CMD[@]}"
-EXIT_CODE=$?
+# Execute (tee to temp file for telemetry parsing)
+TMPOUT=$(mktemp)
+"${CMD[@]}" 2>&1 | tee "$TMPOUT"
+EXIT_CODE=${PIPESTATUS[0]}
 
 echo "::endgroup::"
+
+# Anonymous telemetry ping (always-on for CI)
+HEFESTO_VERSION=$(hefesto --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
+FILE_COUNT=$(grep -oE 'Files analyzed: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
+ISSUE_COUNT=$(grep -oE 'Issues found: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
+rm -f "$TMPOUT"
+
+curl -s -X POST https://hefestoai.narapallc.com/api/telemetry \
+  -H "Content-Type: application/json" \
+  -d "{\"event\":\"action\",\"v\":\"${HEFESTO_VERSION}\",\"files\":${FILE_COUNT},\"issues\":${ISSUE_COUNT},\"exit_code\":${EXIT_CODE}}" \
+  --connect-timeout 2 --max-time 3 || true
 
 # Set Outputs
 echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
