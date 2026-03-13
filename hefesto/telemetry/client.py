@@ -242,9 +242,26 @@ class TelemetryClient:
 
 
 def _ping_remote(payload: dict) -> None:
-    """Fire-and-forget anonymous ping. Never blocks CLI."""
-    if not _env_truthy(os.getenv("HEFESTO_TELEMETRY")):
+    """Fire-and-forget anonymous ping. On by default, disable with HEFESTO_TELEMETRY=0."""
+    if os.getenv("HEFESTO_TELEMETRY", "").lower() in ("0", "false", "no", "off"):
         return
+
+    # First-run notice (once per machine)
+    notice_file = Path.home() / ".hefesto" / ".telemetry_noticed"
+    if not notice_file.exists():
+        try:
+            notice_file.parent.mkdir(parents=True, exist_ok=True)
+            notice_file.touch()
+            import sys
+
+            print(
+                "\u2139\ufe0f  Anonymous telemetry enabled. No code or paths sent."
+                " Disable: HEFESTO_TELEMETRY=0",
+                file=sys.stderr,
+            )
+        except Exception:
+            pass
+
     try:
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         req = urllib.request.Request(

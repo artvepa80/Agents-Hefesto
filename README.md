@@ -58,7 +58,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.9.7
+    uses: artvepa80/Agents-Hefesto@v4.9.8
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -166,7 +166,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.9.7)
+## CLI Reference (v4.9.8)
 
 ```bash
 # Analyze code
@@ -458,6 +458,14 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ## Changelog
 
+### v4.9.8 (2026-03-13)
+- **Telemetry**: Anonymous usage pings enabled by default (opt-out via `HEFESTO_TELEMETRY=0`)
+- First-run notice printed once to stderr
+- No code, paths, or PII collected
+
+### v4.9.7 (2026-03-13)
+- **Telemetry**: Anonymous usage ping endpoint (CLI opt-in + GitHub Action always-on)
+
 ### v4.9.3 (2026-02-24)
 - **MCP endpoint** live (JSON-RPC 2.0)
 - **AI discoverability** stack complete (llms.txt, agent.json, OpenAPI, FAQ, Changelog)
@@ -484,6 +492,20 @@ We used Hefesto to validate itself before publishing v4.0.1:
 ### v4.2.1 (2025-10-31)
 - Critical tier hierarchy bugfix
 - OMEGA Guardian release
+
+---
+
+## Telemetry
+
+HefestoAI collects anonymous usage data by default to help improve the tool.
+
+**What's sent:** event type, version, OS, Python version, file count, duration, issue count.
+**What's NOT sent:** code, file paths, file contents, project names, or any PII.
+
+Disable with:
+```bash
+export HEFESTO_TELEMETRY=0
+```
 
 ---
 
