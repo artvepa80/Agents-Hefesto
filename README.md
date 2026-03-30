@@ -4,12 +4,14 @@
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered pre-commit guardian. Catches security flaws, code smells, and complexity issues in 0.01s across 21 formats.
+The pre-commit guardian that validates **AI-generated code** before it ships. Catches security flaws, code smells, and complexity issues in 0.01s across 21 formats — the quality gate that Copilot, Cursor, and Claude Code don't have built-in.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
+[![Downloads](https://pepy.tech/badge/hefesto-ai/month)](https://pepy.tech/project/hefesto-ai)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Languages](https://img.shields.io/badge/languages-21-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
+[![Tests](https://img.shields.io/badge/tests-346-brightgreen.svg)](https://github.com/artvepa80/Agents-Hefesto/tree/main/tests)
 
 ---
 
@@ -79,6 +81,23 @@ steps:
 | Output | Description |
 |--------|-------------|
 | `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
+
+---
+
+## Why Hefesto? The Differentiator
+
+**Semgrep catches known patterns. Bandit covers Python. Neither was built for AI-generated code.**
+
+Hefesto is the only pre-commit tool purpose-built for the AI coding era:
+
+| Tool | Semantic drift detection | MCP server | Claude Code skill | Multi-language IaC |
+|------|:---:|:---:|:---:|:---:|
+| **Hefesto** | ✅ | ✅ | ✅ | ✅ |
+| Bandit | ❌ | ❌ | ❌ | ❌ |
+| Semgrep | ❌ | ❌ | ❌ | Partial |
+| SonarQube | ❌ | ❌ | ❌ | ✅ |
+
+When Copilot, Cursor, or Claude Code generate a batch of changes, Hefesto is the gate that checks security, complexity, and drift before merge — in 0.01s, pre-commit, locally.
 
 ---
 
