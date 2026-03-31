@@ -2,6 +2,7 @@
 """Build TreeSitter language grammars for all supported languages."""
 
 import os
+import subprocess
 from pathlib import Path
 
 from tree_sitter import Language
@@ -28,7 +29,7 @@ print("Cloning grammar repositories...")
 os.chdir(grammars_dir)
 for name, url in repos:
     if not Path(name).exists():
-        os.system(f"git clone --depth 1 {url}")
+        subprocess.run(["git", "clone", "--depth", "1", url], check=True)
         print(f"✅ Cloned {name}")
     else:
         print(f"⏭️  {name} already exists")
