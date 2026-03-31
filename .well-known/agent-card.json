@@ -1,0 +1,43 @@
+{
+  "name": "HefestoAI",
+  "description": "AI-powered code quality guardian. Pre-merge governance for AI-generated code: semantic drift detection, security scanning, and complexity analysis across 21 formats.",
+  "url": "https://hefestoai.narapallc.com",
+  "version": "4.9.8",
+  "provider": {
+    "organization": "Narapa LLC",
+    "url": "https://narapallc.com"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "skills": [
+    {
+      "id": "analyze",
+      "name": "Code Analysis",
+      "description": "Analyze code files or directories for security vulnerabilities, complexity issues, semantic drift, and code smells. Supports Python, TypeScript, JavaScript, Java, Go, Rust, C#, plus 14 DevOps and Cloud IaC formats.",
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["application/json", "text/plain", "text/html"]
+    },
+    {
+      "id": "security-scan",
+      "name": "Security Scanning",
+      "description": "Detect HARDCODED_SECRET, SQL_INJECTION, COMMAND_INJECTION, PATH_TRAVERSAL, UNSAFE_DESERIALIZATION and other security vulnerabilities.",
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "semantic-drift",
+      "name": "Semantic Drift Detection",
+      "description": "Detect when AI-generated code deviates from intended behavior. Validates that code does what the prompt asked for.",
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"]
+    }
+  ],
+  "authentication": {
+    "schemes": ["apiKey"],
+    "credentials": "Set HEFESTO_API_KEY environment variable or X-API-Key header"
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["application/json"]
+}
