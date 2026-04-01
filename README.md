@@ -70,7 +70,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.9.8
+    uses: artvepa80/Agents-Hefesto@v4.9.9
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -178,7 +178,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.9.8)
+## CLI Reference (v4.9.9)
 
 ```bash
 # Analyze code
@@ -486,7 +486,7 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ## Changelog
 
-### v4.9.8 (2026-03-13)
+### v4.9.9 (2026-03-13)
 - **Telemetry**: Anonymous usage pings enabled by default (opt-out via `HEFESTO_TELEMETRY=0`)
 - First-run notice printed once to stderr
 - No code, paths, or PII collected
