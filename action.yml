@@ -1,5 +1,5 @@
 name: 'Hefesto Code Guardian'
-description: 'AI-powered static analysis and security scanner for AI-generated code. Catches semantic drift, SQL injection, hardcoded secrets, and complexity issues across 21 formats in under 5 seconds. Pre-commit compatible.'
+description: 'AI-powered static analysis for AI-generated code. Catches security flaws and semantic drift in 21 formats.'
 author: 'Narapa LLC'
 branding:
   icon: 'shield'
