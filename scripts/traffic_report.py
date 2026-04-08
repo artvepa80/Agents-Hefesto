@@ -36,6 +36,9 @@ def _api_get(path: str, token: str) -> Any:
         body = exc.read().decode(errors="replace")
         print(f"[ERROR] GitHub API {path} → HTTP {exc.code}: {body}", file=sys.stderr)
         sys.exit(1)
+    except urllib.error.URLError as exc:
+        print(f"[ERROR] GitHub API {path} → network error: {exc.reason}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _fmt_number(n: int) -> str:
@@ -77,7 +80,8 @@ def build_report(owner: str, repo: str, token: str) -> str:
             "|------|-------|-----------------|",
         ]
         for day in daily_views:
-            ts = day.get("timestamp", "")[:10]
+            raw_ts = day.get("timestamp", "")
+            ts = raw_ts[:10] if len(raw_ts) >= 10 else (raw_ts or "—")
             lines.append(
                 f"| {ts} | {_fmt_number(day.get('count', 0))} "
                 f"| {_fmt_number(day.get('uniques', 0))} |"
@@ -104,7 +108,8 @@ def build_report(owner: str, repo: str, token: str) -> str:
             "|------|--------|----------------|",
         ]
         for day in daily_clones:
-            ts = day.get("timestamp", "")[:10]
+            raw_ts = day.get("timestamp", "")
+            ts = raw_ts[:10] if len(raw_ts) >= 10 else (raw_ts or "—")
             lines.append(
                 f"| {ts} | {_fmt_number(day.get('count', 0))} "
                 f"| {_fmt_number(day.get('uniques', 0))} |"
