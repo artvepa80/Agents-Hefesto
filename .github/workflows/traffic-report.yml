@@ -1,0 +1,97 @@
+name: Traffic Report
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      post_issue:
+        description: "Create/update a GitHub Issue with the report?"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  traffic-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate traffic report
+        id: report
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN || github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          python scripts/traffic_report.py \
+            --owner "$OWNER" \
+            --repo "$REPO" \
+            --token "$GH_TOKEN" \
+            --output /tmp/traffic_report.md
+
+          # Store multi-line output safely
+          {
+            echo "body<<EOF_TRAFFIC_BODY"
+            cat /tmp/traffic_report.md
+            echo "EOF_TRAFFIC_BODY"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Print report to summary
+        run: |
+          cat /tmp/traffic_report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update traffic-report issue
+        if: ${{ github.event_name == 'schedule' || inputs.post_issue == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_BODY: ${{ steps.report.outputs.body }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          LABEL="traffic-report"
+
+          # Ensure the label exists
+          gh label create "$LABEL" \
+            --description "Automated weekly traffic report" \
+            --color "0075ca" \
+            --repo "$OWNER/$REPO" \
+            2>/dev/null || true
+
+          # Check for an existing open issue with this label
+          EXISTING=$(gh issue list \
+            --label "$LABEL" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number // empty' \
+            --repo "$OWNER/$REPO")
+
+          TITLE="📊 Weekly Traffic Report — $(date -u +'%Y-%m-%d')"
+
+          if [ -n "$EXISTING" ]; then
+            # Close the old one and open a fresh one so history is preserved
+            gh issue close "$EXISTING" \
+              --comment "Superseded by a new weekly report." \
+              --repo "$OWNER/$REPO"
+          fi
+
+          gh issue create \
+            --title "$TITLE" \
+            --body-file /tmp/traffic_report.md \
+            --label "$LABEL" \
+            --repo "$OWNER/$REPO"
