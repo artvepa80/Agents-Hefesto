@@ -32,12 +32,10 @@ jobs:
           python-version: "3.11"
 
       - name: Generate traffic report
-        id: report
         env:
-          # TRAFFIC_TOKEN: optional Fine-Grained PAT with "Administration" (read)
-          # permission, or a classic PAT with the "repo" scope.
-          # Falls back to the built-in github.token, which has traffic read
-          # access for Actions runs on the same repository.
+          # Falls back to github.token (has traffic read access for same-repo runs).
+          # If that fails, set a TRAFFIC_TOKEN secret: Fine-Grained PAT with
+          # "Administration: read", or a classic PAT with "repo" scope.
           GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN || github.token }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
@@ -48,22 +46,13 @@ jobs:
             --token "$GH_TOKEN" \
             --output /tmp/traffic_report.md
 
-          # Store multi-line output safely
-          {
-            echo "body<<EOF_TRAFFIC_BODY"
-            cat /tmp/traffic_report.md
-            echo "EOF_TRAFFIC_BODY"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Print report to summary
-        run: |
-          cat /tmp/traffic_report.md >> "$GITHUB_STEP_SUMMARY"
+        run: cat /tmp/traffic_report.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create or update traffic-report issue
         if: ${{ github.event_name == 'schedule' || inputs.post_issue == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          REPORT_BODY: ${{ steps.report.outputs.body }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
         run: |
@@ -76,7 +65,7 @@ jobs:
             --repo "$OWNER/$REPO" \
             2>/dev/null || true
 
-          # Check for an existing open issue with this label
+          # Close any existing open issue so history is preserved
           EXISTING=$(gh issue list \
             --label "$LABEL" \
             --state open \
@@ -85,17 +74,14 @@ jobs:
             --jq '.[0].number // empty' \
             --repo "$OWNER/$REPO")
 
-          TITLE="📊 Weekly Traffic Report — $(date -u +'%Y-%m-%d')"
-
           if [ -n "$EXISTING" ]; then
-            # Close the old one and open a fresh one so history is preserved
             gh issue close "$EXISTING" \
               --comment "Superseded by a new weekly report." \
               --repo "$OWNER/$REPO"
           fi
 
           gh issue create \
-            --title "$TITLE" \
+            --title "📊 Weekly Traffic Report — $(date -u +'%Y-%m-%d')" \
             --body-file /tmp/traffic_report.md \
             --label "$LABEL" \
             --repo "$OWNER/$REPO"

@@ -15,7 +15,7 @@ import json
 import sys
 import urllib.request
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 
 def _api_get(path: str, token: str) -> Any:
@@ -57,15 +57,15 @@ def build_report(owner: str, repo: str, token: str) -> str:
 
     lines = [
         f"## 📊 Traffic Report — `{full_repo}`",
-        f"",
+        "",
         f"> Generated: {now}  ",
-        f"> Data covers the last 14 days (GitHub API limit).",
-        f"",
+        "> Data covers the last 14 days (GitHub API limit).",
+        "",
         "---",
         "",
         "### 👁️ Page Views",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Total views (14 days) | {_fmt_number(views.get('count', 0))} |",
         f"| Unique visitors (14 days) | {_fmt_number(views.get('uniques', 0))} |",
         "",
@@ -92,8 +92,8 @@ def build_report(owner: str, repo: str, token: str) -> str:
         "---",
         "",
         "### 📥 Git Clones",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Total clones (14 days) | {_fmt_number(clones.get('count', 0))} |",
         f"| Unique cloners (14 days) | {_fmt_number(clones.get('uniques', 0))} |",
         "",
