@@ -1,0 +1,96 @@
+# Deduped Hefesto PR review — production workflow.
+#
+# Drop this file at .github/workflows/hefesto-pr-review.yml in your
+# repo for idempotent reviews. This pipeline:
+#   1. Generates findings as JSON via `hefesto pr-review` (no posting).
+#   2. Lists existing PR comments posted by previous runs and extracts
+#      their dedup_key markers.
+#   3. Filters the new findings to only those whose dedup_key has NOT
+#      already been seen, so reruns never create duplicate comments.
+#   4. Posts the remaining new findings via `gh api`.
+#
+# The dedup_key is a sha256 over file + line + issue_type + normalized
+# message, computed by Hefesto. Old comments carry an HTML marker:
+#
+#   <!-- hefesto-pr-review: dedup_key=sha256:<hex> -->
+#
+# which this workflow parses to build the exclusion set.
+
+name: Hefesto PR Review (Deduped)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  hefesto-pr-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hefesto
+        run: pip install --quiet hefesto-ai
+
+      - name: Generate findings JSON
+        env:
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          hefesto pr-review > findings.json
+          cat findings.json
+
+      - name: Collect existing dedup keys from PR comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" \
+            --paginate \
+            | jq -r '
+                [.[] | .body
+                  | capture("dedup_key=(?<k>sha256:[a-f0-9]+)"; "g").k]
+              ' > existing_keys.json
+          cat existing_keys.json
+
+      - name: Filter out already-posted findings
+        run: |
+          jq --slurpfile existing existing_keys.json '
+            .findings
+            | map(select(.in_hunk == true))
+            | map(select(.dedup_key as $k | $existing[0] | index($k) | not))
+          ' findings.json > new_findings.json
+          echo "New findings to post: $(jq length new_findings.json)"
+
+      - name: Post new comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          commit_id="$HEAD_SHA"
+          jq -c '.[]' new_findings.json | while IFS= read -r finding; do
+            body=$(jq -r '
+              "<!-- hefesto-pr-review: dedup_key=\(.dedup_key) -->\n" +
+              "**[\(.severity)] \(.type)**\n\n\(.message)" +
+              (if .suggestion then "\n\n> \(.suggestion)" else "" end)
+            ' <<< "$finding")
+            path=$(jq -r '.file' <<< "$finding")
+            line=$(jq -r '.line' <<< "$finding")
+            gh api \
+              --method POST \
+              "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" \
+              -f body="$body" \
+              -f commit_id="$commit_id" \
+              -f path="$path" \
+              -F line="$line" \
+              -f side=RIGHT \
+              || echo "warning: post failed for $path:$line"
+          done

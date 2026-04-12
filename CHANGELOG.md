@@ -7,6 +7,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Phase 2 — OSS PR review**: new `hefesto pr-review` command plus a
+  `hefesto/pr_review/` package providing diff-scoped analysis with
+  deterministic dedup keys.
+  - `AnalyzerEngine.analyze_files(paths, project_root=None)`: new entry
+    point that runs file analyzers on an explicit path list (no glob
+    discovery) and still runs project analyzers once against the
+    project root so cross-file findings remain available for filtering.
+  - `hefesto/pr_review/diff.py`: stdlib-only unified-diff parser with
+    `FileDiff` / `Hunk` dataclasses. Handles adds, deletes, renames,
+    binary markers, no-newline markers, and hunks with implicit counts.
+  - `hefesto/pr_review/dedup.py`: `compute_dedup_key(finding, *,
+    relative_path)` returning `sha256:<hex>` over
+    `relative_path|line|type|normalized_message`. Normalisation strips
+    absolute paths, numeric drift, and whitespace so reruns across
+    checkout directories or minor metric shifts produce the same key.
+  - `hefesto/pr_review/orchestrator.py`: `run_pr_review(root, base,
+    head, strict)` wires `git diff` → diff parser → `analyze_files` →
+    hunk filter → JSON. Default surfaces only findings whose line
+    falls inside a changed hunk; `--strict` additionally surfaces
+    file-level context findings. Project analyzer findings are kept
+    only when anchored to a file in the diff.
+  - `hefesto/pr_review/post.py`: `--post` convenience mode that shells
+    out to `gh api` once per in-hunk finding. Intentionally
+    non-idempotent — reruns create duplicate comments. Each comment
+    body embeds a
+    `<!-- hefesto-pr-review: dedup_key=sha256:<hex> -->` marker so
+    downstream pipelines can deduplicate.
+  - `hefesto pr-review` CLI with `--base`, `--head`, `--strict`,
+    `--post`, `--repo`, `--pr`, `--project-root`. Default emits JSON
+    to stdout; `--post` delegates posting to `gh`. No network code
+    in the Python core.
+  - Two GitHub Actions workflow templates under
+    `examples/github-actions/`:
+    `hefesto-pr-review-simple.yml` (convenience mode, not idempotent)
+    and `hefesto-pr-review-deduped.yml` (production mode that
+    extracts dedup markers from existing comments via `gh api`+`jq`
+    and filters new findings before posting). `examples/github-actions/README.md`
+    documents which template to pick and how dedup works.
+  - 33 new tests: engine scoped analysis (6), diff parser (10),
+    dedup keys (8), orchestrator canary (5), CLI smoke (4). Total
+    suite 423 passed, 0 regressions from STEP 3 (390 → 423, +33).
+
+### Fixed
+- **Phase 1c — SecurityAnalyzer precision cleanup**: three false-positive
+  classes eliminated with before/after fixture evidence.
+  - **SQL_INJECTION_RISK** (`hefesto/analyzers/security.py`): the
+    `_has_dynamic_concatenation` heuristic treated DB-API placeholders
+    (`%s`, `%d`, `%(name)s`) as Python `%` interpolation, flagging every
+    parameterized psycopg2 / Django `.raw()` / cursor call as potential
+    injection. Replaced with a regex that distinguishes a real Python
+    `%` operator (`"..." % expr`) from an in-string placeholder by
+    requiring a closing quote followed by `%` followed by an
+    expression, with a negative lookahead for printf format-spec
+    characters that are followed by end-of-spec (non-word / EOL).
+    Fixture corpus: `tests/fixtures/sqli_safe_patterns/` — 4 safe
+    fixtures (psycopg2, sqlite3, SQLAlchemy `text()`, Django raw) + 1
+    true-positive fixture with 3 real injection patterns. BEFORE:
+    4 FPs / 3 TPs (43% FP rate). AFTER: 0 FPs / 3 TPs (100%
+    precision). 11 legacy SQLi tests plus 6 new precision tests all
+    pass.
+  - **ASSERT_IN_PRODUCTION**: the legacy detector walked the
+    GenericAST and did a substring search for `"assert "` on every
+    node, which matched module-root / class / function containers
+    whose descendant text happened to include that substring — 31 FPs
+    on the Hefesto repo itself (where `ast.parse` reports 0 real
+    `ast.Assert` statements in non-test files). Rewritten to use
+    Python's `ast.walk` + `isinstance(node, ast.Assert)`, matching the
+    pattern already used for `eval`/`exec`. 7 new precision tests.
+  - **BARE_EXCEPT**: the legacy detector used ``NodeType.CATCH`` +
+    regex on ``node.text`` and empirically emitted zero findings on
+    real bare-except Python code — dead code in the pipeline.
+    Rewritten to walk ``ast.ExceptHandler`` nodes with
+    ``node.type is None``. 6 new tests covering bare, typed, tuple,
+    ``Exception``-typed, multi-handler, and docstring-mention cases.
+  - **PICKLE_USAGE**: the legacy detector matched any import whose
+    text contained the substring `"pickle"`, flagging
+    `from unpickler_utils import safe_load`, `from hefesto_pro import
+    PickleHandler`, and `import pickling_config` as unsafe pickle
+    imports. Rewritten to use `ast.Import` / `ast.ImportFrom` with
+    exact module-name comparison against `{pickle, cPickle}`. 7 new
+    precision tests covering substring imports, docstring mentions,
+    and real `import pickle` recall preservation.
+
+### Changed
+- **Phase 1b — ci_parity unification**: findings from
+  `hefesto/validators/ci_parity.py` now surface in `hefesto analyze` via
+  the new `CiParityAnalyzer` adapter under
+  `hefesto/analyzers/operational_truth/`. The legacy `check-ci-parity`
+  CLI command and `CIParityChecker` class remain unchanged (single
+  source of truth for detection); the analyzer maps `ParityIssue`
+  categories to the unified `AnalysisIssue` model:
+  - Python Version → `CI_CONFIG_DRIFT` / `OT-CI-001` / MEDIUM →
+    targets `.github/workflows/*.yml`
+  - Tool Installation → `CI_CONFIG_DRIFT` / `OT-CI-002` / LOW (demoted
+    from legacy HIGH — it describes the developer's machine, not the
+    repo, so inflating the severity would breach BP-7 for users who
+    legitimately run Hefesto without every CI tool installed locally)
+  - Flake8 Config → `CI_CONFIG_DRIFT` / `OT-CI-003` / HIGH → targets
+    `.flake8` / `setup.cfg` / `pyproject.toml` in that priority order
+  - New `AnalysisIssueType.CI_CONFIG_DRIFT` value.
+  - 5 new tests in `tests/test_ci_parity_analyzer.py` pin the adapter
+    mapping; the 20 legacy tests in `tests/validators/test_ci_parity.py`
+    continue to pin detection semantics unchanged.
+  - `hefesto.validators.test_contradictions` is out of scope for Phase
+    1b — it is a test-AST analyzer, a different semantic domain than CI
+    config drift, and is tracked as separate future work.
+
+### Added
+- **Phase 1a — Operational Truth Analyzers**: four project-level analyzers
+  integrated into `hefesto analyze` via the new `register_project_analyzer`
+  hook on `AnalyzerEngine`.
+  - `ImportsVsDepsAnalyzer` (`OT-IMPORTS-001`): detects Python imports not
+    declared in `pyproject.toml` / `requirements*.txt`. Skips imports under
+    `try/except ImportError`, bare `except`, structurally-pure try bodies,
+    and `if TYPE_CHECKING:` guards. Accepts `google-*` namespaces without
+    hard-coded mappings.
+  - `DocsVsEntrypointsAnalyzer` (`OT-DOCS-001`): detects `[project.scripts]`
+    entries missing from README.
+  - `PackagingParityAnalyzer` (`OT-PKG-001/002`): detects version drift
+    between `pyproject.toml`, `CHANGELOG.md`, and README. Patterns are
+    derived from `[project].name` and `[project.urls]` so the analyzer is
+    repo-agnostic.
+  - `InstallArtifactParityAnalyzer` (`OT-INSTALL-001/002`): detects
+    `action.yml` inputs never consumed in `scripts/action_entrypoint.sh`
+    and `Dockerfile.action` `COPY` sources that do not exist in the repo.
+  - New `AnalysisIssueType` values: `UNDECLARED_DEPENDENCY`,
+    `DOCS_ENTRYPOINT_DRIFT`, `PACKAGING_VERSION_DRIFT`, `INSTALL_ARTIFACT_DRIFT`.
+  - Synthetic `FileAnalysisResult` entries created for project-level
+    findings are excluded from the `files_analyzed` summary count.
+  - 18 new tests in `tests/test_operational_truth.py` (unit + canary +
+    reporter smoke + optional-import guard regressions).
+
 ## [4.9.6] - 2026-03-10 — COMMAND_INJECTION Detection
 
 ### Added

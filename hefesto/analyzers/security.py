@@ -21,7 +21,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
-from hefesto.core.ast.generic_ast import GenericAST, NodeType
+from hefesto.core.ast.generic_ast import GenericAST
 
 # Sinks that indicate SQL strings are actually executed (not just built/logged).
 _SQL_EXECUTE_SINKS = re.compile(
@@ -43,6 +43,22 @@ _SQL_KW_IN_STRING = re.compile(
     re.IGNORECASE,
 )
 
+# Python ``%`` string-formatting operator: a closing quote followed by ``%``
+# followed by an expression (variable, tuple, dict) — NOT a printf-style
+# format specifier that is still part of the string literal.
+#
+# The key heuristic: a printf format-spec character is only a spec when
+# *followed by a non-word character or end-of-line* (``%s`` → end of spec).
+# If the character continues into an identifier (``% rows``, ``% uid``),
+# it is the Python ``%`` operator with a variable argument.
+#
+# This distinguishes ``"..." % value`` (real Python interpolation — a
+# genuine SQLi risk when concatenated into SQL) from
+# ``cur.execute("SELECT WHERE id = %s", (x,))`` (a DB-API placeholder
+# that lives entirely inside the string literal and is substituted
+# server-side by the driver, not by Python). Phase 1c SQL_INJECTION FP fix.
+_PY_PERCENT_OPERATOR = re.compile(r"""["']\s*%\s*(?!\s*[sdiouxXeEfFgGcrp%](?:\W|$))\S""")
+
 
 def _sql_keyword_in_string(line: str) -> bool:
     """Return True if a SQL keyword appears inside a string literal on this line."""
@@ -50,14 +66,28 @@ def _sql_keyword_in_string(line: str) -> bool:
 
 
 def _has_dynamic_concatenation(line: str) -> bool:
-    """Return True if the line uses dynamic string building (f-string, %, +, format)."""
+    """Return True if the line uses dynamic string building.
+
+    The four signals of dynamic construction are:
+    - f-string (``f"..."`` / ``f'...'``)
+    - Python ``%`` operator after a closing quote (*not* DB-API placeholders
+      like ``%s`` / ``%(name)s`` / ``%d`` which live inside the string and
+      are substituted by the driver, not by Python)
+    - ``.format(`` method call
+    - explicit ``+`` concatenation near a quote
+
+    DB-API-style placeholders are intentionally excluded from the ``%``
+    signal because they describe a *parameterized* query — the opposite of
+    a string-injection risk. This was the production false positive that
+    motivated the Phase 1c precision cleanup.
+    """
     if 'f"' in line or "f'" in line:
         return True
-    if "%" in line and ("%s" in line or "%d" in line or "%(" in line):
+    if _PY_PERCENT_OPERATOR.search(line):
         return True
     if ".format(" in line:
         return True
-    # String concat: any quote followed by + (with optional whitespace), or + followed by quote
+    # String concat: any quote combined with + near the quote
     if "+" in line and ('"' in line or "'" in line):
         return True
     return False
@@ -88,9 +118,9 @@ class SecurityAnalyzer:
         issues.extend(self._check_eval_usage(tree, file_path, code))
 
         if tree.language == "python":
-            issues.extend(self._check_pickle_usage(tree, file_path))
-            issues.extend(self._check_assert_usage(tree, file_path))
-            issues.extend(self._check_bare_except(tree, file_path))
+            issues.extend(self._check_pickle_usage(tree, file_path, code))
+            issues.extend(self._check_assert_usage(tree, file_path, code))
+            issues.extend(self._check_bare_except(tree, file_path, code))
 
         return issues
 
@@ -349,46 +379,99 @@ class SecurityAnalyzer:
 
         return issues
 
-    def _check_pickle_usage(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect unsafe pickle usage."""
-        issues = []
+    def _check_pickle_usage(
+        self, tree: GenericAST, file_path: str, code: str = ""
+    ) -> List[AnalysisIssue]:
+        """Detect unsafe pickle module imports.
 
-        for node in tree.walk():
-            if node.type == NodeType.IMPORT:
-                if "pickle" in node.text:
-                    issues.append(
-                        AnalysisIssue(
-                            file_path=file_path,
-                            line=node.line_start,
-                            column=node.column_start,
-                            issue_type=AnalysisIssueType.PICKLE_USAGE,
-                            severity=AnalysisIssueSeverity.HIGH,
-                            message="Unsafe pickle module usage",
-                            suggestion="Use safer alternatives:\n"
-                            "- json module for simple data\n"
-                            "- msgpack for binary data\n"
-                            "- protobuf for structured data\n"
-                            "Only use pickle with trusted data sources",
-                            metadata={"module": "pickle"},
-                        )
-                    )
+        Uses Python's ``ast`` module to match the exact module name ``pickle``
+        (or ``cPickle``). The legacy detector walked the GenericAST with
+        ``"pickle" in node.text`` as a substring, which caused false
+        positives on any import whose module name *contained* the substring
+        ``pickle`` — e.g. ``from unpickler_utils import safe_load`` or
+        ``from hefesto_pro import PickleHandler``. Phase 1c FP fix.
+        """
+        issues: List[AnalysisIssue] = []
+
+        if tree.language != "python" or not code:
+            return issues
+
+        import ast as python_ast
+
+        try:
+            py_tree = python_ast.parse(code)
+        except SyntaxError:
+            return issues
+
+        def _report(line: int, col: int) -> None:
+            issues.append(
+                AnalysisIssue(
+                    file_path=file_path,
+                    line=line,
+                    column=col,
+                    issue_type=AnalysisIssueType.PICKLE_USAGE,
+                    severity=AnalysisIssueSeverity.HIGH,
+                    message="Unsafe pickle module usage",
+                    suggestion="Use safer alternatives:\n"
+                    "- json module for simple data\n"
+                    "- msgpack for binary data\n"
+                    "- protobuf for structured data\n"
+                    "Only use pickle with trusted data sources",
+                    metadata={"module": "pickle"},
+                )
+            )
+
+        for node in python_ast.walk(py_tree):
+            if isinstance(node, python_ast.Import):
+                for alias in node.names:
+                    if alias.name in ("pickle", "cPickle"):
+                        _report(node.lineno, node.col_offset)
+                        break
+            elif isinstance(node, python_ast.ImportFrom):
+                if node.module in ("pickle", "cPickle"):
+                    _report(node.lineno, node.col_offset)
 
         return issues
 
-    def _check_assert_usage(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect assert statements in production code."""
+    def _check_assert_usage(
+        self, tree: GenericAST, file_path: str, code: str = ""
+    ) -> List[AnalysisIssue]:
+        """Detect assert statements in production code.
+
+        Python files are analyzed via the built-in ``ast`` module so that
+        only real ``ast.Assert`` statements are flagged — docstrings,
+        comments, and string literals that merely *mention* the word
+        ``assert`` no longer produce findings. This closes a high-volume
+        false-positive class observed via dogfooding on the Hefesto repo
+        itself (31 findings on ``hefesto/`` before the fix; 0 real
+        assert statements in the offending files).
+
+        Non-Python files are left untouched by this detector — ``assert``
+        is a Python-specific keyword and other languages already have
+        dedicated analyzers for their own contracts.
+        """
         issues: List[AnalysisIssue] = []
 
         if "test" in file_path.lower():
             return issues
 
-        for node in tree.walk():
-            if "assert " in node.text.lower() and node.type != NodeType.COMMENT:
+        if tree.language != "python" or not code:
+            return issues
+
+        import ast as python_ast
+
+        try:
+            py_tree = python_ast.parse(code)
+        except SyntaxError:
+            return issues
+
+        for node in python_ast.walk(py_tree):
+            if isinstance(node, python_ast.Assert):
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,
-                        line=node.line_start,
-                        column=node.column_start,
+                        line=node.lineno,
+                        column=node.col_offset,
                         issue_type=AnalysisIssueType.ASSERT_IN_PRODUCTION,
                         severity=AnalysisIssueSeverity.MEDIUM,
                         message="Assert statement in production code",
@@ -401,29 +484,49 @@ class SecurityAnalyzer:
 
         return issues
 
-    def _check_bare_except(self, tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-        """Detect bare except clauses that swallow all exceptions."""
-        issues = []
+    def _check_bare_except(
+        self, tree: GenericAST, file_path: str, code: str = ""
+    ) -> List[AnalysisIssue]:
+        """Detect bare ``except:`` clauses that swallow all exceptions.
 
-        for node in tree.walk():
-            if node.type == NodeType.CATCH:
-                if re.search(r"except\s*:", node.text):
-                    issues.append(
-                        AnalysisIssue(
-                            file_path=file_path,
-                            line=node.line_start,
-                            column=node.column_start,
-                            issue_type=AnalysisIssueType.BARE_EXCEPT,
-                            severity=AnalysisIssueSeverity.MEDIUM,
-                            message="Bare except clause catches all exceptions",
-                            suggestion="Catch specific exceptions:\n"
-                            "try:\n"
-                            "    ...\n"
-                            "except (ValueError, TypeError) as e:\n"
-                            "    handle_error(e)",
-                            metadata={"type": "bare_except"},
-                        )
+        Uses ``ast.ExceptHandler`` on Python files to find handlers whose
+        ``type`` is ``None`` (the AST representation of a bare ``except:``).
+        The legacy detector used ``GenericAST.walk`` + a regex on
+        ``node.text`` against ``NodeType.CATCH`` — empirical probing showed
+        it emitted zero findings on real bare-except Python code, so the
+        detector was effectively dead. Matches the same AST approach used
+        by ``_check_eval_usage`` / ``_check_assert_usage`` / ``_check_pickle_usage``.
+        """
+        issues: List[AnalysisIssue] = []
+
+        if tree.language != "python" or not code:
+            return issues
+
+        import ast as python_ast
+
+        try:
+            py_tree = python_ast.parse(code)
+        except SyntaxError:
+            return issues
+
+        for node in python_ast.walk(py_tree):
+            if isinstance(node, python_ast.ExceptHandler) and node.type is None:
+                issues.append(
+                    AnalysisIssue(
+                        file_path=file_path,
+                        line=node.lineno,
+                        column=node.col_offset,
+                        issue_type=AnalysisIssueType.BARE_EXCEPT,
+                        severity=AnalysisIssueSeverity.MEDIUM,
+                        message="Bare except clause catches all exceptions",
+                        suggestion="Catch specific exceptions:\n"
+                        "try:\n"
+                        "    ...\n"
+                        "except (ValueError, TypeError) as e:\n"
+                        "    handle_error(e)",
+                        metadata={"type": "bare_except"},
                     )
+                )
 
         return issues
 

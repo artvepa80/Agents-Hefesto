@@ -15,7 +15,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 import logging
 import time
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -69,6 +69,7 @@ class AnalyzerEngine:
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
         self.analyzers: List[Any] = []
+        self._project_analyzers: List[Any] = []
         self.verbose = verbose
         self._registry = get_registry()
         self.source_cache: dict = {}  # ML Enhancement: cache source for semantic analysis
@@ -98,6 +99,16 @@ class AnalyzerEngine:
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
         self.analyzers.append(analyzer)
+
+    def register_project_analyzer(self, analyzer):
+        """Register a project-level analyzer.
+
+        Project analyzers run once per ``analyze_path`` call with the project
+        root as input. They must expose ``analyze_project(project_root: Path)
+        -> List[AnalysisIssue]``. Findings are folded into file results by
+        their ``file_path`` attribute.
+        """
+        self._project_analyzers.append(analyzer)
 
     def analyze_path(
         self, path: str, exclude_patterns: Optional[List[str]] = None
@@ -150,6 +161,13 @@ class AnalyzerEngine:
                 file_results.append(file_result)
                 all_issues.extend(file_result.issues)
 
+        # Project-level analyzers (Phase 1a — Operational Truth)
+        if self._project_analyzers:
+            project_issues = self._run_project_analyzers(path_obj)
+            if project_issues:
+                self._fold_project_issues(file_results, project_issues)
+                all_issues.extend(project_issues)
+
         # Enrichment (PRO EPIC 3): per-finding metadata attachment
         if self._enrich_orchestrator is not None and self._enrich_config is not None:
             self._enrich_findings(file_results)
@@ -174,6 +192,81 @@ class AnalyzerEngine:
             print()
 
         return report
+
+    def analyze_files(
+        self,
+        paths: List[str],
+        project_root: Optional[str] = None,
+    ) -> AnalysisReport:
+        """Analyze an explicit list of files without filesystem discovery.
+
+        Used by Phase 2 PR review where the set of files to analyze is
+        already known from the diff and ``_find_files`` would be either
+        wasteful (re-globbing the entire repo) or wrong (picking up
+        untouched files).
+
+        Project-level analyzers still run once against ``project_root``
+        so cross-file findings (operational truth, CI parity) remain
+        available — the PR review orchestrator filters them afterwards
+        by ``finding.file_path`` membership in the diff set.
+        """
+        start_time = time.time()
+
+        file_path_objs = [Path(p).resolve() for p in paths]
+        if project_root is not None:
+            root_obj = Path(project_root).resolve()
+        else:
+            # No heuristic fallback to ``file_path_objs[0].parent`` — that
+            # silently mis-roots project analyzers onto a subdirectory
+            # when the caller forgets to pass ``project_root``. Default
+            # to CWD and warn if project analyzers are registered so the
+            # failure mode is loud, not silent.
+            root_obj = Path.cwd()
+            if self._project_analyzers:
+                logger.warning(
+                    "analyze_files() called without project_root while %d "
+                    "project analyzer(s) are registered; using CWD=%s as "
+                    "project root. Pass project_root explicitly to silence "
+                    "this warning.",
+                    len(self._project_analyzers),
+                    root_obj,
+                )
+
+        # Scope gating (PRO EPIC 1) — applied in the same order as analyze_path
+        scope_skipped_here: list = []
+        if self._scope_config is not None:
+            from hefesto.pro_optional import filter_paths
+
+            file_path_objs, scope_skipped_here = filter_paths(file_path_objs, self._scope_config)
+            self._scope_skipped.extend(scope_skipped_here)
+
+        file_results: List[FileAnalysisResult] = []
+        all_issues: List[AnalysisIssue] = []
+
+        for py_file in file_path_objs:
+            if not py_file.exists() or not py_file.is_file():
+                continue
+            file_result = self._analyze_file(py_file)
+            if file_result:
+                file_results.append(file_result)
+                all_issues.extend(file_result.issues)
+
+        # Project-level analyzers (Phase 1a/1b) run once against the project root.
+        if self._project_analyzers:
+            project_issues = self._run_project_analyzers(root_obj)
+            if project_issues:
+                self._fold_project_issues(file_results, project_issues)
+                all_issues.extend(project_issues)
+
+        if self._enrich_orchestrator is not None and self._enrich_config is not None:
+            self._enrich_findings(file_results)
+
+        duration = time.time() - start_time
+        summary = self._create_summary(file_results, duration)
+
+        self._all_file_results.extend(file_results)
+
+        return AnalysisReport(summary=summary, file_results=file_results)
 
     def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
         """Find all supported files in the given path."""
@@ -344,6 +437,51 @@ class AnalyzerEngine:
             # Skip files that can't be read or analyzed
             return None
 
+    def _run_project_analyzers(self, project_root: Path) -> List[AnalysisIssue]:
+        """Run registered project-level analyzers once against the project root.
+
+        Individual analyzer failures are logged and skipped — they must not
+        break file-level analysis.
+        """
+        issues: List[AnalysisIssue] = []
+        for panalyzer in self._project_analyzers:
+            name = type(panalyzer).__name__
+            try:
+                result = panalyzer.analyze_project(project_root) or []
+            except Exception as exc:
+                logger.debug("Project analyzer %s failed: %s", name, exc)
+                continue
+            issues.extend(result)
+        return self._filter_by_severity(issues)
+
+    def _fold_project_issues(
+        self,
+        file_results: List[FileAnalysisResult],
+        project_issues: List[AnalysisIssue],
+    ) -> None:
+        """Attach project-level findings to file results.
+
+        Issues that target an existing FileAnalysisResult are appended there.
+        Issues that target a file not in the regular scan (e.g. README.md,
+        pyproject.toml) get a synthetic FileAnalysisResult.
+        """
+        by_path = {fr.file_path: fr for fr in file_results}
+        synthetic: Dict[str, FileAnalysisResult] = {}
+        for issue in project_issues:
+            target = by_path.get(issue.file_path) or synthetic.get(issue.file_path)
+            if target is None:
+                target = FileAnalysisResult(
+                    file_path=issue.file_path,
+                    issues=[],
+                    lines_of_code=0,
+                    analysis_duration_ms=0.0,
+                    language=None,
+                    metadata={"synthetic": True, "source": "operational_truth"},
+                )
+                synthetic[issue.file_path] = target
+                file_results.append(target)
+            target.issues.append(issue)
+
     def _filter_by_severity(self, issues: List[AnalysisIssue]) -> List[AnalysisIssue]:
         """Filter issues by severity threshold."""
         severity_order = {
@@ -368,6 +506,9 @@ class AnalyzerEngine:
             all_issues.extend(file_result.issues)
             total_loc += file_result.lines_of_code
 
+        # Exclude synthetic project-level results from the files_analyzed count.
+        real_files = sum(1 for fr in file_results if not fr.metadata.get("synthetic"))
+
         # Count by severity
         critical = sum(
             1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.CRITICAL
@@ -377,7 +518,7 @@ class AnalyzerEngine:
         low = sum(1 for issue in all_issues if issue.severity == AnalysisIssueSeverity.LOW)
 
         return AnalysisSummary(
-            files_analyzed=len(file_results),
+            files_analyzed=real_files,
             total_issues=len(all_issues),
             critical_issues=critical,
             high_issues=high,

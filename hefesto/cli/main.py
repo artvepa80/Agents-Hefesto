@@ -506,6 +506,118 @@ def check_test_contradictions(test_directory: str):
         _exit(1)
 
 
+@cli.command(name="pr-review")
+@click.option(
+    "--project-root",
+    type=click.Path(exists=True, file_okay=False),
+    default=".",
+    help="Project root containing the git repo (default: .)",
+)
+@click.option(
+    "--base",
+    default=None,
+    help="Base ref/SHA for the diff (default: auto-detect via merge-base or GITHUB_BASE_REF)",
+)
+@click.option(
+    "--head",
+    default=None,
+    help="Head ref/SHA for the diff (default: auto-detect via HEAD or GITHUB_SHA)",
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Include findings anywhere in touched files, not just in diff hunks",
+)
+@click.option(
+    "--post",
+    is_flag=True,
+    help="Post inline review comments via gh CLI (non-idempotent — use workflow for dedup)",
+)
+@click.option(
+    "--repo",
+    default=None,
+    help="GitHub repo slug (owner/name) when --post is used; auto-detected via gh if omitted",
+)
+@click.option(
+    "--pr",
+    type=int,
+    default=None,
+    help="PR number to post to when --post is used; auto-detected via gh if omitted",
+)
+def pr_review(project_root, base, head, strict, post, repo, pr):
+    """Generate a Hefesto PR review for the current diff.
+
+    Default output is JSON on stdout, suitable for piping into the
+    deduped workflow template under examples/github-actions/. Use
+    ``--post`` to shell out to ``gh`` for a naïve non-idempotent post
+    (convenience mode for small repos; use the workflow template in
+    production so reruns don't duplicate comments).
+
+    Examples:
+        hefesto pr-review                                  # JSON to stdout
+        hefesto pr-review --strict                         # file-level findings too
+        hefesto pr-review --base main --head HEAD          # explicit refs
+        hefesto pr-review --post --pr 42 --repo owner/name # convenience post
+    """
+    import json
+    from pathlib import Path
+
+    from hefesto.pr_review.orchestrator import run_pr_review
+
+    try:
+        result = run_pr_review(
+            Path(project_root),
+            base=base,
+            head=head,
+            strict=strict,
+        )
+    except RuntimeError as exc:
+        click.echo(f"hefesto pr-review: {exc}", err=True)
+        _exit(1)
+        return
+
+    if not post:
+        click.echo(json.dumps(result.to_dict(), indent=2))
+        return
+
+    from hefesto.pr_review.post import detect_repo_and_pr, post_findings
+
+    if repo is None or pr is None:
+        detected_repo, detected_pr = detect_repo_and_pr(cwd=project_root)
+        repo = repo or detected_repo
+        pr = pr or detected_pr
+
+    if not repo or not pr:
+        click.echo(
+            "hefesto pr-review --post: --repo and --pr are required "
+            "(or must be detectable via gh)",
+            err=True,
+        )
+        _exit(1)
+        return
+
+    if not result.head_sha:
+        click.echo(
+            "hefesto pr-review --post: could not resolve head SHA for commit_id",
+            err=True,
+        )
+        _exit(1)
+        return
+
+    counters = post_findings(
+        repo=repo,
+        pr_number=pr,
+        commit_id=result.head_sha,
+        findings=result.findings,
+    )
+    click.echo(
+        f"Posted {counters['posted']} comment(s) "
+        f"({counters['failed']} failed, {counters['skipped_no_hunk']} skipped)"
+    )
+    if counters["failed"] > 0:
+        _exit(1)
+
+
 @cli.command()
 @click.option("--force", is_flag=True, help="Overwrite existing hooks")
 def install_hooks(force: bool):
@@ -713,6 +825,22 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
         from hefesto.security.packs.resource_safety_v1 import ResourceSafetyAnalyzer
 
         engine.register_analyzer(ResourceSafetyAnalyzer())
+
+        # Phase 1a: Operational Truth (project-level analyzers)
+        # Phase 1b: CiParityAnalyzer adapts validators/ci_parity into the pipeline
+        from hefesto.analyzers.operational_truth import (
+            CiParityAnalyzer,
+            DocsVsEntrypointsAnalyzer,
+            ImportsVsDepsAnalyzer,
+            InstallArtifactParityAnalyzer,
+            PackagingParityAnalyzer,
+        )
+
+        engine.register_project_analyzer(ImportsVsDepsAnalyzer())
+        engine.register_project_analyzer(DocsVsEntrypointsAnalyzer())
+        engine.register_project_analyzer(PackagingParityAnalyzer())
+        engine.register_project_analyzer(InstallArtifactParityAnalyzer())
+        engine.register_project_analyzer(CiParityAnalyzer())
 
         return engine
     except Exception as e:

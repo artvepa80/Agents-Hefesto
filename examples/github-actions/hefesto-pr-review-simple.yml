@@ -1,0 +1,45 @@
+# Simple Hefesto PR review — convenience mode.
+#
+# Drop this file at .github/workflows/hefesto-pr-review.yml in your
+# repo to get Hefesto running on every pull request.
+#
+# This workflow uses `hefesto pr-review --post` which is NOT idempotent:
+# every run creates a fresh batch of comments, so repeated pushes will
+# accumulate comments on the same line over time. Fine for small
+# projects and onboarding; for production use see
+# hefesto-pr-review-deduped.yml which deduplicates via dedup_key markers.
+
+name: Hefesto PR Review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  hefesto-pr-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for merge-base
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hefesto
+        run: pip install --quiet hefesto-ai
+
+      - name: Run Hefesto PR review and post comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          hefesto pr-review \
+            --post \
+            --repo "${{ github.repository }}" \
+            --pr "${{ github.event.pull_request.number }}"
