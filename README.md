@@ -4,7 +4,7 @@
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, and complexity issues in 0.01s across 21 formats. **346 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
+AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 21 formats. **430 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -19,6 +19,11 @@ AI-powered code quality guardian built for the age of AI-generated code. Catches
 pip install hefesto-ai
 cd your-project
 hefesto analyze . --fail-on critical
+
+# PR review (new in v4.10.0) — analyze only changed code
+hefesto pr-review
+hefesto pr-review --strict        # include file-level context
+hefesto pr-review --post --pr 42  # post inline comments via gh CLI
 ```
 
 ---
@@ -44,6 +49,10 @@ AI tools like Claude Code, GitHub Copilot, and Cursor generate code at machine s
 | COMMAND_INJECTION | HIGH | Unsafe shell command execution |
 | PATH_TRAVERSAL | HIGH | Unsafe file path handling |
 | UNSAFE_DESERIALIZATION | HIGH | pickle, yaml.unsafe_load |
+| UNDECLARED_DEPENDENCY | MEDIUM | Import used but not in pyproject.toml |
+| PACKAGING_VERSION_DRIFT | MEDIUM | Version mismatch across pyproject/CHANGELOG/README |
+| CI_CONFIG_DRIFT | MEDIUM-HIGH | Local env vs CI configuration mismatch |
+| INSTALL_ARTIFACT_DRIFT | MEDIUM-HIGH | action.yml inputs or Dockerfile COPY out of sync |
 | HIGH_COMPLEXITY | HIGH | Cyclomatic complexity > 10 |
 | DEEP_NESTING | HIGH | Nesting depth > 4 levels |
 | GOD_CLASS | HIGH | Classes > 500 lines |
@@ -70,7 +79,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.9.9
+    uses: artvepa80/Agents-Hefesto@v4.10.0
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -113,6 +122,57 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Q&A | Natural Language | `/api/ask` |
 | Changelog | JSON | `/api/changelog.json` |
 | FAQ | JSON | `/api/faq.json` |
+
+---
+
+## PR Review (v4.10.0)
+
+Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
+
+```bash
+# Generate review as JSON (default — no network, no token needed)
+hefesto pr-review
+
+# Post inline comments via gh CLI (convenience mode)
+hefesto pr-review --post --pr 42 --repo owner/name
+
+# Include file-level context findings (not just changed lines)
+hefesto pr-review --strict
+```
+
+**How it works:**
+1. Parses `git diff` between base and head (auto-detects `origin/main` or `GITHUB_BASE_REF`)
+2. Runs the full analyzer suite on touched files only
+3. Filters findings to changed lines (default) or full files (`--strict`)
+4. Emits JSON with SHA256 dedup keys for each finding
+
+**GitHub Actions workflow templates** are provided under [`examples/github-actions/`](examples/github-actions/):
+
+| Template | Use case | Idempotent? |
+|----------|----------|-------------|
+| `hefesto-pr-review-simple.yml` | Quick onboarding, small repos | No (reruns duplicate) |
+| `hefesto-pr-review-deduped.yml` | Production CI, teams | Yes (jq dedup pipeline) |
+
+See [`examples/github-actions/README.md`](examples/github-actions/README.md) for setup instructions.
+
+---
+
+## Operational Truth Analyzers (v4.10.0)
+
+Project-level checks that detect drift between what your project *declares* and what it *actually does*. These run automatically as part of `hefesto analyze` — no extra commands needed.
+
+| Analyzer | What it catches | Rule ID |
+|----------|----------------|---------|
+| **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
+| **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
+| **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
+
+```bash
+# All operational truth findings appear in standard output
+hefesto analyze . --severity MEDIUM
+```
 
 ---
 
@@ -178,13 +238,19 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.9.9)
+## CLI Reference (v4.10.0)
 
 ```bash
 # Analyze code
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+
+# PR review (v4.10.0)
+hefesto pr-review                              # JSON to stdout
+hefesto pr-review --base main --head HEAD      # explicit refs
+hefesto pr-review --strict                     # file-level findings too
+hefesto pr-review --post --pr 42 --repo o/r    # post via gh CLI
 
 # Check status
 hefesto status
@@ -326,7 +392,7 @@ hefesto serve --host 0.0.0.0 --port 8000
 
 ## CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions — Full Repo Analysis
 
 ```yaml
 name: Hefesto
@@ -343,6 +409,37 @@ jobs:
       - name: Run Analysis
         run: hefesto analyze . --severity HIGH
 ```
+
+### GitHub Actions — PR Review with Inline Comments (v4.10.0)
+
+```yaml
+name: Hefesto PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pip install hefesto-ai
+      - name: Review changed code
+        env:
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: hefesto pr-review --post --pr ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
+```
+
+> For production use with dedup (no duplicate comments on reruns), see the workflow templates in [`examples/github-actions/`](examples/github-actions/).
 
 ### GitLab CI
 
@@ -486,6 +583,13 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ## Changelog
 
+### v4.10.0 (2026-04-12)
+- **PR Review**: New `hefesto pr-review` command — diff-scoped analysis with inline GitHub PR comments and SHA256 dedup keys. Two workflow templates (simple + deduped) in `examples/github-actions/`
+- **Operational Truth Analyzers**: 5 project-level analyzers detect drift between imports/deps, docs/entrypoints, packaging versions, install artifacts, and CI config — all visible via `hefesto analyze`
+- **Security Precision (BP-7)**: SQL_INJECTION FP rate 43%→0% (DB-API placeholders no longer flagged), ASSERT_IN_PRODUCTION 31→0 FPs (AST rewrite), PICKLE/BARE_EXCEPT detectors rewritten with exact matching
+- **CI Parity Unification**: `check-ci-parity` findings now appear in `hefesto analyze` via adapter; legacy CLI preserved
+- 430 tests (was 346), 0 regressions
+
 ### v4.9.9 (2026-03-13)
 - **Telemetry**: Anonymous usage pings enabled by default (opt-out via `HEFESTO_TELEMETRY=0`)
 - First-run notice printed once to stderr
@@ -553,6 +657,6 @@ MIT License for core functionality. PRO and OMEGA features are licensed separate
 
 ---
 
-**Hefesto: The code quality guardian built for the age of AI-generated code. 346 tests. 21 formats. 0.01s.**
+**Hefesto: The code quality guardian built for the age of AI-generated code. 430 tests. 21 formats. 0.01s. Now with PR review.**
 
 (c) 2026 Narapa LLC, Miami, Florida
