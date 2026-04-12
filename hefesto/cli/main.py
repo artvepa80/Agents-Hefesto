@@ -319,8 +319,8 @@ def analyze(
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
 
-        # Anonymous usage ping (opt-in via HEFESTO_TELEMETRY=1)
-        from hefesto.telemetry.client import _ping_remote
+        # Anonymous usage ping — also caches latest_version for upgrade notice
+        from hefesto.telemetry.client import _ping_remote, get_upgrade_notice
 
         _ping_remote(
             {
@@ -333,6 +333,11 @@ def analyze(
                 "issues": combined_report.summary.total_issues,
             }
         )
+
+        # Upgrade notice (after report, before exit)
+        upgrade_msg = get_upgrade_notice(__version__)
+        if upgrade_msg and not quiet:
+            click.echo(upgrade_msg, err=json_mode)
 
         exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
         _exit(exit_code)

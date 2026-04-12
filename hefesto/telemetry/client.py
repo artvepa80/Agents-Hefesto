@@ -241,8 +241,12 @@ class TelemetryClient:
             pass
 
 
+_LATEST_VERSION_CACHE = Path.home() / ".hefesto" / ".latest_version"
+_CACHE_TTL_SECONDS = 86400  # 24h
+
+
 def _ping_remote(payload: dict) -> None:
-    """Fire-and-forget anonymous ping. On by default, disable with HEFESTO_TELEMETRY=0."""
+    """Anonymous ping. Caches ``latest_version`` from server response for upgrade notices."""
     if os.getenv("HEFESTO_TELEMETRY", "").lower() in ("0", "false", "no", "off"):
         return
 
@@ -270,6 +274,58 @@ def _ping_remote(payload: dict) -> None:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        urllib.request.urlopen(req, timeout=1)
+        resp = urllib.request.urlopen(req, timeout=2)
+        body = resp.read().decode("utf-8", errors="ignore")
+        if body:
+            resp_data = json.loads(body)
+            latest = resp_data.get("latest_version")
+            if latest:
+                _cache_latest_version(latest)
     except Exception:
         pass
+
+
+def _cache_latest_version(version: str) -> None:
+    try:
+        _LATEST_VERSION_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        _LATEST_VERSION_CACHE.write_text(
+            json.dumps({"version": version, "ts": time.time()}),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
+def get_upgrade_notice(current_version: str) -> Optional[str]:
+    """Return an upgrade notice string if a newer version is available, else None.
+
+    Reads from the local cache populated by ``_ping_remote``. Returns None
+    if cache is missing, stale (>24h), or current version is up to date.
+    Never raises.
+    """
+    try:
+        if not _LATEST_VERSION_CACHE.exists():
+            return None
+        raw = json.loads(_LATEST_VERSION_CACHE.read_text(encoding="utf-8"))
+        cached_ts = raw.get("ts", 0)
+        if time.time() - cached_ts > _CACHE_TTL_SECONDS:
+            return None
+        latest = raw.get("version", "")
+        if not latest or not _is_newer(latest, current_version):
+            return None
+        return (
+            f"\n\u26a0\ufe0f  Hefesto {latest} available (you have {current_version})."
+            f" Upgrade: pip install --upgrade hefesto-ai"
+        )
+    except Exception:
+        return None
+
+
+def _is_newer(latest: str, current: str) -> bool:
+    """Compare semver-style version strings. Returns True if latest > current."""
+    try:
+        l_parts = [int(x) for x in latest.split(".")]
+        c_parts = [int(x) for x in current.split(".")]
+        return l_parts > c_parts
+    except (ValueError, AttributeError):
+        return False
