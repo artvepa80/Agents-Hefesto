@@ -10,6 +10,7 @@ This package contains various code analyzers for detecting:
 from hefesto.analyzers.best_practices import BestPracticesAnalyzer
 from hefesto.analyzers.code_smells import CodeSmellAnalyzer
 from hefesto.analyzers.complexity import ComplexityAnalyzer
+from hefesto.analyzers.narrow_semantic import NarrowSemanticAnalyzer
 from hefesto.analyzers.security import SecurityAnalyzer
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "CodeSmellAnalyzer",
     "SecurityAnalyzer",
     "BestPracticesAnalyzer",
+    "NarrowSemanticAnalyzer",
 ]

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Phase 4 — Narrow Semantic Analyzer**: two narrow, computable,
+  auditable checks for Python files via `NarrowSemanticAnalyzer`,
+  registered as a file-level analyzer in `hefesto analyze`.
+  - **ATTRIBUTE_NAME_MISMATCH** (`NS-ATTR-001`): detects `self.x`
+    assigned in `__init__` but `self.y` read elsewhere where `y` is
+    a close match to `x` (probable typo / rename miss). Uses
+    `difflib.get_close_matches` with cutoff 0.8. Excludes classes
+    with `__getattr__`, `setattr()`, or `__dict__` access to avoid
+    false positives on dynamic attribute patterns. Severity: MEDIUM.
+  - **SILENT_EXCEPTION_SWALLOW** (`NS-SWALLOW-001`): detects
+    `except Exception` or `except BaseException` handlers whose body
+    is trivially silent (`pass`, `return None`, `return ""`,
+    `return []`, `return {}`, `return 0`, `return False`, `...`).
+    Bare `except:` is excluded — already covered by `BARE_EXCEPT` in
+    SecurityAnalyzer. Severity: MEDIUM.
+  - Check 3 (DERIVED_VALUE_IN_LOGIC) deferred per Socratic audit —
+    no empirical evidence to validate it yet.
+  - 29 new tests: 10 attribute mismatch (typo, correct attrs,
+    dynamic attrs, no init, distant names, annotated assign,
+    severity), 14 silent swallow (Exception pass, BaseException
+    return None, empty list/dict/zero/False/string, bare except
+    dedup, specific exception, logging, reraise, multi-statement,
+    tuple, severity), 3 cross-cutting (non-Python, syntax error,
+    empty), 2 canary (dogfood on security.py + analyzer_engine.py).
+  - Dogfood: 0 ATTRIBUTE_NAME_MISMATCH FPs, 31
+    SILENT_EXCEPTION_SWALLOW true positives on `hefesto/`.
+  - Total suite: 459 passed (was 430), 0 regressions.
+
 ## [4.10.0] - 2026-04-12
 
 ### Added

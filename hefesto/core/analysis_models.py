@@ -128,6 +128,10 @@ class AnalysisIssueType(str, Enum):
     # CI Parity (Phase 1b — converged from hefesto/validators/ci_parity.py)
     CI_CONFIG_DRIFT = "CI_CONFIG_DRIFT"
 
+    # Narrow Semantic (Phase 4)
+    ATTRIBUTE_NAME_MISMATCH = "ATTRIBUTE_NAME_MISMATCH"
+    SILENT_EXCEPTION_SWALLOW = "SILENT_EXCEPTION_SWALLOW"
+
     # Generic/External Provider
     EXTERNAL_FINDING = "EXTERNAL_FINDING"
 

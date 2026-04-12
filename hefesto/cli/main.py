@@ -800,6 +800,7 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
         ComplexityAnalyzer,
+        NarrowSemanticAnalyzer,
         SecurityAnalyzer,
     )
     from hefesto.core.analyzer_engine import AnalyzerEngine
@@ -830,6 +831,9 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
         from hefesto.security.packs.resource_safety_v1 import ResourceSafetyAnalyzer
 
         engine.register_analyzer(ResourceSafetyAnalyzer())
+
+        # Phase 4: Narrow Semantic checks (Python-only)
+        engine.register_analyzer(NarrowSemanticAnalyzer())
 
         # Phase 1a: Operational Truth (project-level analyzers)
         # Phase 1b: CiParityAnalyzer adapts validators/ci_parity into the pipeline
