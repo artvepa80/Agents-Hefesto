@@ -202,9 +202,9 @@ class ImportsVsDepsAnalyzer:
                     line = line.strip()
                     if not line or line.startswith("#") or line.startswith("-"):
                         continue
-                    name = self._spec_name(line)
-                    if name:
-                        declared.add(_normalize(name))
+                    dist_name = self._spec_name(line)
+                    if dist_name:
+                        declared.add(_normalize(dist_name))
             except Exception as exc:
                 logger.debug("requirements parse failed: %s", exc)
         return declared
