@@ -5,5 +5,5 @@
   language: python
   types: [python]
   args: ["--fail-on", "HIGH"]
-  additional_dependencies: ["hefesto-ai>=4.11.0"]
+  additional_dependencies: ["hefesto-ai>=4.11.1"]
   require_serial: true

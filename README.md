@@ -4,7 +4,7 @@
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 21 formats. **474 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
+AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 21 formats. **476 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -20,7 +20,7 @@ pip install hefesto-ai
 cd your-project
 hefesto analyze . --fail-on critical
 
-# PR review (new in v4.11.0) — analyze only changed code
+# PR review (new in v4.11.1) — analyze only changed code
 hefesto pr-review
 hefesto pr-review --strict        # include file-level context
 hefesto pr-review --post --pr 42  # post inline comments via gh CLI
@@ -79,7 +79,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.11.0
+    uses: artvepa80/Agents-Hefesto@v4.11.1
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -125,7 +125,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.11.0)
+## PR Review (v4.11.1)
 
 Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
 
@@ -157,7 +157,7 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 
 ---
 
-## Operational Truth Analyzers (v4.11.0)
+## Operational Truth Analyzers (v4.11.1)
 
 Project-level checks that detect drift between what your project *declares* and what it *actually does*. These run automatically as part of `hefesto analyze` — no extra commands needed.
 
@@ -238,7 +238,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.11.0)
+## CLI Reference (v4.11.1)
 
 ```bash
 # Analyze code
@@ -246,7 +246,7 @@ hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
 
-# PR review (v4.11.0)
+# PR review (v4.11.1)
 hefesto pr-review                              # JSON to stdout
 hefesto pr-review --base main --head HEAD      # explicit refs
 hefesto pr-review --strict                     # file-level findings too
@@ -410,7 +410,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.11.0)
+### GitHub Actions — PR Review with Inline Comments (v4.11.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -447,7 +447,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.11.0
+    rev: v4.11.1
     hooks:
       - id: hefesto-analyze
 ```
@@ -594,7 +594,7 @@ We used Hefesto to validate itself before publishing v4.0.1:
 
 ## Changelog
 
-### v4.11.0 (2026-04-12)
+### v4.11.1 (2026-04-12)
 - **Phase 4 — Narrow Semantic Analyzer**: `ATTRIBUTE_NAME_MISMATCH` (typo detection via difflib) and `SILENT_EXCEPTION_SWALLOW` (broad except with trivially silent body)
 - **Cross-repo schema contract test**: pins 12-key PR review finding dict between OSS and Pro
 - **`code_snippet` in PR review JSON**: field was silently dropped, now included

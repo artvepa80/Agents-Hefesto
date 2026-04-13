@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.11.1] - 2026-04-13
+
+### Fixed
+- **ATTRIBUTE_NAME_MISMATCH property FP**: `@property`, `@x.setter`,
+  and `@x.deleter` methods are now recognized as valid attributes.
+  Eliminates 55 false positives across httpx (27→0) and Rich (28→8,
+  residual 8 are exotic descriptors/bitfields within BP-7 target).
+  2 new precision tests.
+
+### Added
+- **pre-commit hook**: `.pre-commit-hooks.yaml` with `hefesto-analyze`
+  hook for the [pre-commit](https://pre-commit.com) framework.
+- Total suite: 476 passed (was 474), 0 regressions.
+
 ## [4.11.0] - 2026-04-12
 
 ### Added
