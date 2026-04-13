@@ -180,6 +180,8 @@ class SecurityAnalyzer:
         # Build a map of function-scope boundaries (line ranges) for sink lookup.
         scope_sinks = self._build_scope_sink_map(lines)
 
+        flagged_lines: set = set()
+
         for line_num, line in enumerate(lines, start=1):
             stripped = line.lstrip()
 
@@ -198,6 +200,7 @@ class SecurityAnalyzer:
             if not has_sink:
                 continue
 
+            flagged_lines.add(line_num)
             issues.append(
                 AnalysisIssue(
                     file_path=file_path,
@@ -209,6 +212,85 @@ class SecurityAnalyzer:
                     suggestion="Use parameterized queries with placeholders",
                     metadata={
                         "pattern": "sql_concatenation",
+                        "sink_detected": True,
+                    },
+                )
+            )
+
+        # AST-based BinOp(Mod) check for Python: catches single-char
+        # format-spec variables that the regex misses (Phase 1c debt).
+        if tree is not None and tree.language == "python":
+            issues.extend(
+                self._check_sql_percent_binop(file_path, code, scope_sinks, flagged_lines)
+            )
+
+        return issues
+
+    @staticmethod
+    def _check_sql_percent_binop(
+        file_path: str,
+        code: str,
+        scope_sinks: List[Tuple[int, int, bool]],
+        already_flagged: set,
+    ) -> List[AnalysisIssue]:
+        """AST-based detection of ``"SQL ..." % var`` (BinOp with Mod).
+
+        Complements the regex check by catching the single-char false
+        negative class documented in Phase 1c: when the variable name
+        is a single letter that matches a printf format-spec character
+        (``s``, ``d``, ``i``, etc.), the regex classifier treats it as
+        an in-string placeholder and skips the line.
+
+        The AST approach is unambiguous: ``BinOp(op=Mod)`` with a string
+        constant on the left side IS a Python ``%`` interpolation — it
+        cannot be a DB-API placeholder (those are ``Call`` arguments to
+        ``.execute(query, params)``).
+        """
+        import ast as python_ast
+
+        issues: List[AnalysisIssue] = []
+        try:
+            py_tree = python_ast.parse(code)
+        except SyntaxError:
+            return issues
+
+        sql_kw_re = re.compile(
+            r"\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)\b",
+            re.IGNORECASE,
+        )
+
+        for node in python_ast.walk(py_tree):
+            if not isinstance(node, python_ast.BinOp):
+                continue
+            if not isinstance(node.op, python_ast.Mod):
+                continue
+            # Left side must be a string constant containing a SQL keyword
+            left = node.left
+            if not isinstance(left, python_ast.Constant) or not isinstance(left.value, str):
+                continue
+            if not sql_kw_re.search(left.value):
+                continue
+
+            line_num = node.lineno
+            if line_num in already_flagged:
+                continue
+
+            # Require a DB execute sink in the enclosing scope
+            has_sink = SecurityAnalyzer._scope_has_sink(line_num, scope_sinks, False)
+            if not has_sink:
+                continue
+
+            issues.append(
+                AnalysisIssue(
+                    file_path=file_path,
+                    line=line_num,
+                    column=node.col_offset,
+                    issue_type=AnalysisIssueType.SQL_INJECTION_RISK,
+                    severity=AnalysisIssueSeverity.HIGH,
+                    message="Potential SQL injection via string concatenation",
+                    suggestion="Use parameterized queries with placeholders",
+                    metadata={
+                        "pattern": "sql_percent_binop",
                         "sink_detected": True,
                     },
                 )

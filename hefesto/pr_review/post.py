@@ -104,6 +104,17 @@ def _format_comment_body(finding: Dict[str, Any]) -> str:
     if suggestion:
         lines.append("")
         lines.append(f"> {suggestion}")
+
+    # Phase 3.1: render enrichment summary when present (Pro path).
+    # Pure OSS findings have no "enrichment" key — output is identical
+    # to the deterministic-only format.
+    enrichment = finding.get("enrichment")
+    if isinstance(enrichment, dict) and enrichment.get("status") == "ok":
+        summary = enrichment.get("summary")
+        if summary:
+            lines.append("")
+            lines.append(f"**AI insight:** {summary}")
+
     return "\n".join(lines)
 
 

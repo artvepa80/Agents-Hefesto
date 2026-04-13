@@ -259,6 +259,8 @@ class ImportsVsDepsAnalyzer:
         """Process a single AST child, applying all guard rules."""
         if isinstance(child, ast.Try) and self._is_optional_import_try(child):
             return
+        if isinstance(child, ast.With) and self._is_suppress_import_guard(child):
+            return
         if isinstance(child, ast.If) and self._is_type_checking_if(child):
             for else_stmt in child.orelse:
                 yield from self._dispatch_node(else_stmt)
@@ -301,6 +303,30 @@ class ImportsVsDepsAnalyzer:
             return True
         if isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING":
             return True
+        return False
+
+    @staticmethod
+    def _is_suppress_import_guard(node: ast.With) -> bool:
+        """Return True for ``with contextlib.suppress(ImportError):`` guards.
+
+        Matches both ``suppress(ImportError)`` (bare name after
+        ``from contextlib import suppress``) and
+        ``contextlib.suppress(ImportError)`` (attribute form).
+        Also matches ``ModuleNotFoundError``.
+        """
+        for item in node.items:
+            ctx = item.context_expr
+            if not isinstance(ctx, ast.Call):
+                continue
+            func = ctx.func
+            is_suppress = (isinstance(func, ast.Name) and func.id == "suppress") or (
+                isinstance(func, ast.Attribute) and func.attr == "suppress"
+            )
+            if not is_suppress:
+                continue
+            for arg in ctx.args:
+                if isinstance(arg, ast.Name) and arg.id in _OPTIONAL_IMPORT_EXC:
+                    return True
         return False
 
     @staticmethod

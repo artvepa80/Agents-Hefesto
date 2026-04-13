@@ -108,3 +108,93 @@ def test_body_first_line_is_always_the_marker() -> None:
     ):
         body = _format_comment_body(payload)
         assert body.splitlines()[0].startswith("<!-- hefesto-pr-review: dedup_key=")
+
+
+# ---------------------------------------------------------------- Phase 3.1: enrichment rendering
+
+
+def test_body_renders_enrichment_summary_when_present() -> None:
+    body = _format_comment_body(
+        {
+            "dedup_key": "sha256:xyz",
+            "severity": "HIGH",
+            "type": "SQL_INJECTION_RISK",
+            "message": "Potential SQL injection",
+            "suggestion": "Use parameterized queries",
+            "enrichment": {
+                "status": "ok",
+                "summary": "The query builds a WHERE clause from user input.",
+            },
+        }
+    )
+    assert "**AI insight:** The query builds a WHERE clause from user input." in body
+    # Deterministic content is still present
+    assert "**[HIGH] SQL_INJECTION_RISK**" in body
+    assert "> Use parameterized queries" in body
+
+
+def test_body_no_enrichment_key_unchanged() -> None:
+    """Pure OSS path — no enrichment key at all."""
+    body = _format_comment_body(
+        {
+            "dedup_key": "sha256:xyz",
+            "severity": "HIGH",
+            "type": "SQL_INJECTION_RISK",
+            "message": "Potential SQL injection",
+            "suggestion": "Use parameterized queries",
+        }
+    )
+    assert "AI insight" not in body
+    assert "**[HIGH] SQL_INJECTION_RISK**" in body
+
+
+def test_body_enrichment_error_status_not_rendered() -> None:
+    """Enrichment with error status degrades silently."""
+    body = _format_comment_body(
+        {
+            "dedup_key": "sha256:xyz",
+            "severity": "HIGH",
+            "type": "SQL_INJECTION_RISK",
+            "message": "Potential SQL injection",
+            "enrichment": {
+                "status": "error",
+                "summary": None,
+                "error": {"code": "timeout"},
+            },
+        }
+    )
+    assert "AI insight" not in body
+
+
+def test_body_enrichment_skipped_status_not_rendered() -> None:
+    """Enrichment with skipped status degrades silently."""
+    body = _format_comment_body(
+        {
+            "dedup_key": "sha256:xyz",
+            "severity": "MEDIUM",
+            "type": "BARE_EXCEPT",
+            "message": "Bare except",
+            "enrichment": {
+                "status": "skipped",
+                "summary": None,
+            },
+        }
+    )
+    assert "AI insight" not in body
+
+
+def test_body_enrichment_empty_summary_not_rendered() -> None:
+    """Enrichment with ok status but empty summary is not rendered."""
+    body = _format_comment_body(
+        {
+            "dedup_key": "sha256:xyz",
+            "severity": "HIGH",
+            "type": "SQL_INJECTION_RISK",
+            "message": "Potential SQL injection",
+            "enrichment": {
+                "status": "ok",
+                "summary": "",
+            },
+        }
+    )
+    assert "AI insight" not in body

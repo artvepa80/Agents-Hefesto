@@ -36,6 +36,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     SILENT_EXCEPTION_SWALLOW true positives on `hefesto/`.
   - Total suite: 459 passed (was 430), 0 regressions.
 
+### Added
+- **Cross-repo schema contract test**: `PR_REVIEW_FINDING_KEYS` frozenset
+  in `tests/test_pr_review_schema_contract.py` pins the 12-key finding
+  dict produced by `_filter_and_serialize()`. Drift in either OSS or Pro
+  breaks the respective test before reaching production. Pro-side
+  `_OSS_FINDING_KEYS` + fixture validation added in parallel.
+- **`code_snippet` in PR review JSON**: `_filter_and_serialize()` now
+  includes `issue.code_snippet` (was silently dropped). Additive field,
+  `null` by default. Contract tests updated in both repos.
+- **Phase 3.1 — Enrichment rendering in PR comments**:
+  `_format_comment_body()` renders `finding["enrichment"]["summary"]`
+  as `**AI insight:** ...` when enrichment status is `"ok"` and summary
+  is non-empty. Deterministic-only output unchanged. Error/skipped
+  enrichment degrades silently.
+
+### Fixed
+- **`contextlib.suppress(ImportError)` guard recognition**:
+  `ImportsVsDepsAnalyzer._dispatch_node()` now recognizes
+  `with suppress(ImportError):` and `with contextlib.suppress(...)` as
+  optional-import guards, preventing false `UNDECLARED_DEPENDENCY`
+  findings on guarded imports. Also handles `ModuleNotFoundError`.
+- **SQL injection single-char format-spec FN resolved**:
+  `SecurityAnalyzer._check_sql_percent_binop()` uses AST `BinOp(Mod)`
+  to catch `"SQL..." % i` where `i` is a single-char variable that the
+  regex misclassified as a DB-API placeholder. DB-API parameterized
+  queries (`cur.execute("...%s", (i,))`) remain unaffected — they are
+  `Call` nodes, not `BinOp`. Closes the documented Phase 1c debt.
+- Total suite: 474 passed (was 459), 0 regressions.
+
 ## [4.10.0] - 2026-04-12
 
 ### Added

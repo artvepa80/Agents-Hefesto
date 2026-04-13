@@ -113,14 +113,15 @@ def test_full_corpus_precision_is_100_percent() -> None:
 FORMAT_SPEC_CHARS = "sdiouxXeEfFgGcrp%"
 
 
-def test_recall_gap_single_char_format_spec_variable_not_flagged() -> None:
-    """Pin the conservative FN class introduced by the Phase 1c regex.
+def test_single_char_format_spec_variable_now_caught_by_ast() -> None:
+    """Phase 1c debt resolved: the AST-based BinOp(Mod) check catches
+    single-char variables that the regex misses.
 
-    All 17 printf format-spec chars become false negatives when used as
-    a 1-char variable name at end-of-line. Multi-char variables ARE
-    caught. This test will start failing if someone tightens the rule
-    (e.g. via AST binop walk), which is the desired signal — the
-    tightening should be deliberate, not accidental.
+    Previously these were false negatives because the regex
+    ``_PY_PERCENT_OPERATOR`` treated single-char identifiers matching
+    printf format-spec chars as DB-API placeholders. The AST check
+    unambiguously identifies ``BinOp(op=Mod)`` as Python ``%``
+    interpolation — not a DB-API placeholder.
     """
     import ast
 
@@ -133,10 +134,8 @@ def test_recall_gap_single_char_format_spec_variable_not_flagged() -> None:
     sa = SecurityAnalyzer()
 
     for char in FORMAT_SPEC_CHARS:
-        # Need a distinct name to avoid shadowing; the var happens to be
-        # a 1-char identifier that the format-spec filter treats as a spec.
         if char == "%":
-            # '%' cannot be a Python identifier; skip as N/A for FN class
+            # '%' cannot be a Python identifier; skip
             continue
         code = (
             "def q(cur, " + char + "):\n"
@@ -155,9 +154,9 @@ def test_recall_gap_single_char_format_spec_variable_not_flagged() -> None:
             for i in sa.analyze(tree, "prod.py", code)
             if i.issue_type == AnalysisIssueType.SQL_INJECTION_RISK
         ]
-        assert issues == [], (
-            f"unexpected detection for 1-char format-spec var {char!r}: "
-            f"conservative FN class is documented and should not fire"
+        assert len(issues) == 1, (
+            f"1-char format-spec var {char!r} should now be caught "
+            f"by AST BinOp(Mod) check (got {len(issues)} findings)"
         )
 
 
@@ -185,6 +184,33 @@ def test_recall_multi_char_variable_does_fire() -> None:
             if i.issue_type == AnalysisIssueType.SQL_INJECTION_RISK
         ]
         assert issues, f"multi-char var {varname!r} should be flagged (real % BinOp)"
+
+
+def test_dbapi_parameterized_not_affected_by_ast_check() -> None:
+    """DB-API parameterized queries use Call nodes, not BinOp(Mod).
+
+    ``cur.execute("SELECT ... %s", (x,))`` passes ``%s`` as an argument
+    to ``.execute()`` — the ``%s`` is inside the string literal, NOT a
+    Python ``%`` operator. The AST check must not flag these.
+    """
+    from hefesto.analyzers.security import SecurityAnalyzer
+    from hefesto.core.analysis_models import AnalysisIssueType
+    from hefesto.core.language_detector import Language
+    from hefesto.core.parsers.parser_factory import ParserFactory
+
+    parser = ParserFactory.get_parser(Language.PYTHON)
+    sa = SecurityAnalyzer()
+
+    code = "def q(cur, i):\n" '    cur.execute("SELECT * FROM t WHERE id = %s", (i,))\n'
+    tree = parser.parse(code, "prod.py")
+    issues = [
+        i
+        for i in sa.analyze(tree, "prod.py", code)
+        if i.issue_type == AnalysisIssueType.SQL_INJECTION_RISK
+    ]
+    assert issues == [], (
+        "DB-API parameterized query should NOT be flagged — " f"got {len(issues)} findings"
+    )
 
 
 # ---------------------------------------------------------------------------

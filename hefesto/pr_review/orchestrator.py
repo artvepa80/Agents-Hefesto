@@ -227,6 +227,7 @@ def _filter_and_serialize(
                     "severity": issue.severity.value,
                     "message": issue.message,
                     "suggestion": issue.suggestion,
+                    "code_snippet": issue.code_snippet,
                     "dedup_key": compute_dedup_key(issue, relative_path=rel_path),
                     "in_hunk": in_hunk,
                     "engine": issue.engine,

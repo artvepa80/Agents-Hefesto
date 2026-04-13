@@ -193,6 +193,83 @@ def test_imports_vs_deps_bare_reraise_is_still_guard(tmp_path: Path) -> None:
     assert "expensive" not in msgs
 
 
+def test_imports_vs_deps_suppress_importerror_guard(tmp_path: Path) -> None:
+    """contextlib.suppress(ImportError) is an optional-import guard."""
+    _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
+    _write(tmp_path / "demo" / "__init__.py", "")
+    _write(
+        tmp_path / "demo" / "main.py",
+        "from contextlib import suppress\n"
+        "\n"
+        "with suppress(ImportError):\n"
+        "    import optional_lib\n",
+    )
+    issues = ImportsVsDepsAnalyzer().analyze_project(tmp_path)
+    msgs = " ".join(i.message for i in issues)
+    assert "optional_lib" not in msgs
+
+
+def test_imports_vs_deps_suppress_attribute_form(tmp_path: Path) -> None:
+    """contextlib.suppress(ImportError) via attribute form."""
+    _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
+    _write(tmp_path / "demo" / "__init__.py", "")
+    _write(
+        tmp_path / "demo" / "main.py",
+        "import contextlib\n"
+        "\n"
+        "with contextlib.suppress(ImportError):\n"
+        "    import optional_attr\n",
+    )
+    issues = ImportsVsDepsAnalyzer().analyze_project(tmp_path)
+    msgs = " ".join(i.message for i in issues)
+    assert "optional_attr" not in msgs
+
+
+def test_imports_vs_deps_suppress_module_not_found(tmp_path: Path) -> None:
+    """suppress(ModuleNotFoundError) is also a guard."""
+    _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
+    _write(tmp_path / "demo" / "__init__.py", "")
+    _write(
+        tmp_path / "demo" / "main.py",
+        "from contextlib import suppress\n"
+        "\n"
+        "with suppress(ModuleNotFoundError):\n"
+        "    import mod_not_found_lib\n",
+    )
+    issues = ImportsVsDepsAnalyzer().analyze_project(tmp_path)
+    msgs = " ".join(i.message for i in issues)
+    assert "mod_not_found_lib" not in msgs
+
+
+def test_imports_vs_deps_suppress_valueerror_not_guard(tmp_path: Path) -> None:
+    """suppress(ValueError) is NOT an import guard."""
+    _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
+    _write(tmp_path / "demo" / "__init__.py", "")
+    _write(
+        tmp_path / "demo" / "main.py",
+        "from contextlib import suppress\n"
+        "\n"
+        "with suppress(ValueError):\n"
+        "    import not_guarded_lib\n",
+    )
+    issues = ImportsVsDepsAnalyzer().analyze_project(tmp_path)
+    msgs = " ".join(i.message for i in issues)
+    assert "not_guarded_lib" in msgs
+
+
+def test_imports_vs_deps_regular_with_not_affected(tmp_path: Path) -> None:
+    """Regular with blocks should not be treated as import guards."""
+    _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
+    _write(tmp_path / "demo" / "__init__.py", "")
+    _write(
+        tmp_path / "demo" / "main.py",
+        "with open('config.txt') as f:\n" "    import inside_with\n",
+    )
+    issues = ImportsVsDepsAnalyzer().analyze_project(tmp_path)
+    msgs = " ".join(i.message for i in issues)
+    assert "inside_with" in msgs
+
+
 def test_imports_vs_deps_namespace_prefix_blocks_short_heads(tmp_path: Path) -> None:
     """F2 regression: py-cpuinfo must not silently satisfy ``import py``."""
     _write(
