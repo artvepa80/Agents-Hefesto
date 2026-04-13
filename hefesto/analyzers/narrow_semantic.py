@@ -170,25 +170,22 @@ class NarrowSemanticAnalyzer:
     def _collect_all_assigned_attrs(cls_node: python_ast.ClassDef) -> Set[str]:
         """Collect all ``self.X`` assignments across all methods.
 
-        Also includes ``@property`` method names — ``self.timeout`` is a
-        valid read when a ``@property def timeout(self)`` exists, even
-        though the backing store is ``self._timeout``.
+        Also includes:
+        - All method names defined in the class (``self.method`` is a
+          valid reference whether called or passed as a callback).
+        - Any decorated method name — ``@property``, ``@reify``,
+          ``@cached_property``, and any custom decorator that exposes
+          ``self.<name>`` as a valid attribute.
         """
         attrs: Set[str] = set()
         for item in cls_node.body:
             if not isinstance(item, python_ast.FunctionDef):
                 continue
-            # @property and @x.setter/@x.deleter expose self.<name>
-            # as a valid attribute read target.
-            for d in item.decorator_list:
-                if isinstance(d, python_ast.Name) and d.id == "property":
-                    attrs.add(item.name)
-                elif isinstance(d, python_ast.Attribute) and d.attr in (
-                    "property",
-                    "setter",
-                    "deleter",
-                ):
-                    attrs.add(item.name)
+            # Every method name is a valid self.<name> reference —
+            # covers @property, @reify, @cached_property, custom
+            # decorators, and method references passed as callbacks
+            # (e.g., loop.call_at(when, self._send_heartbeat)).
+            attrs.add(item.name)
             for node in python_ast.walk(item):
                 if (
                     isinstance(node, python_ast.Assign)

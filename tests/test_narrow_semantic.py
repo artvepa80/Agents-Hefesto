@@ -255,6 +255,63 @@ class TestAttributeNameMismatch:
         ]
         assert len(attr_issues) == 0
 
+    def test_custom_decorator_not_flagged(self):
+        """Custom decorators like @reify, @cached_property should be valid."""
+        code = """\
+        class Request:
+            def __init__(self):
+                self._headers = {}
+
+            @reify
+            def headers(self):
+                return self._headers
+
+            def get_host(self):
+                return self.headers.get("Host")
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 0
+
+    def test_method_reference_as_callback_not_flagged(self):
+        """self.method passed as callback (not called) should not flag."""
+        code = """\
+        class WebSocket:
+            def __init__(self, loop):
+                self._loop = loop
+                self._heartbeat_when = 0
+                self._heartbeat_cb = loop.call_at(0, self._send_heartbeat)
+
+            def _send_heartbeat(self):
+                self._heartbeat_cb = self._loop.call_at(
+                    self._heartbeat_when, self._send_heartbeat
+                )
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 0
+
+    def test_real_typo_still_caught(self):
+        """Methods don't suppress real typos on data attributes."""
+        code = """\
+        class Counter:
+            def __init__(self):
+                self.request_count = 0
+
+            def increment(self):
+                self.reqeust_count += 1
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 1
+        assert "reqeust_count" in attr_issues[0].message
+
 
 # ===================================================================
 # Check 2 — SILENT_EXCEPTION_SWALLOW
