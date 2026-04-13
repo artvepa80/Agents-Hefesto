@@ -179,6 +179,17 @@ class NarrowSemanticAnalyzer:
         """
         attrs: Set[str] = set()
         for item in cls_node.body:
+            # Class-level assignments: descriptors like
+            # ``padding = PaddingProperty()`` or ``__slots__`` entries
+            # expose ``self.<name>`` as a valid attribute.
+            if isinstance(item, python_ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, python_ast.Name):
+                        attrs.add(target.id)
+            elif isinstance(item, python_ast.AnnAssign) and isinstance(
+                item.target, python_ast.Name
+            ):
+                attrs.add(item.target.id)
             if not isinstance(item, python_ast.FunctionDef):
                 continue
             # Every method name is a valid self.<name> reference —

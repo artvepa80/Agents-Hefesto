@@ -83,6 +83,30 @@ def b():
     assert {i.line for i in issues} == {4, 10}
 
 
+def test_bare_except_with_reraise_not_flagged() -> None:
+    """except: raise is an intentional pattern (greenlet/generator boundaries)."""
+    code = """def f():
+    try:
+        x = 1
+    except:
+        raise
+"""
+    assert _run(code) == []
+
+
+def test_bare_except_reraise_with_extra_statements_still_flagged() -> None:
+    """except: log(); raise has side effects before reraise — still flag."""
+    code = """def f():
+    try:
+        x = 1
+    except:
+        print("error")
+        raise
+"""
+    issues = _run(code)
+    assert len(issues) == 1
+
+
 def test_docstring_mentioning_except_is_not_flagged() -> None:
     code = '''"""Module docstring discussing except: clauses."""
 

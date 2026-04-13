@@ -312,6 +312,24 @@ class TestAttributeNameMismatch:
         assert len(attr_issues) == 1
         assert "reqeust_count" in attr_issues[0].message
 
+    def test_class_level_descriptor_not_flagged(self):
+        """Class-level assignments (descriptors) are valid attrs."""
+        code = """\
+        class Syntax:
+            def __init__(self):
+                self._padding = (0, 0, 0, 0)
+
+            padding = PaddingProperty()
+
+            def render(self):
+                return self.padding
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 0
+
 
 # ===================================================================
 # Check 2 — SILENT_EXCEPTION_SWALLOW

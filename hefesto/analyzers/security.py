@@ -104,8 +104,8 @@ class SecurityAnalyzer:
         (r"token\s*=\s*['\"]([a-zA-Z0-9_\-]{20,})['\"]", "Token"),
         (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API key"),
         (r"ghp_[a-zA-Z0-9]{36}", "GitHub token"),
-        (r"AWS[A-Z0-9]{16,}", "AWS key"),
-        (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
+        (r"(?-i:AWS[A-Z0-9]{16,})", "AWS key"),
+        (r"(?-i:AKIA[0-9A-Z]{16})", "AWS Access Key ID"),
     ]
 
     def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
@@ -593,6 +593,14 @@ class SecurityAnalyzer:
 
         for node in python_ast.walk(py_tree):
             if isinstance(node, python_ast.ExceptHandler) and node.type is None:
+                # Skip bare except with re-raise — intentional pattern used
+                # in greenlet/generator boundaries (e.g. SQLAlchemy).
+                if (
+                    len(node.body) == 1
+                    and isinstance(node.body[0], python_ast.Raise)
+                    and node.body[0].exc is None
+                ):
+                    continue
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,

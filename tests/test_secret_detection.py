@@ -44,3 +44,30 @@ def test_clean_fixture_has_no_secrets():
         f"Expected 0 HARDCODED_SECRET in {fixture.name}, "
         f"got {len(secret_issues)}: {secret_issues}"
     )
+
+
+def test_aws_class_name_not_flagged():
+    """AWSEventStreamDecoder should not match the AWS key pattern."""
+    code = "from ._stream_decoder import AWSEventStreamDecoder\n"
+    analyzer = SecurityAnalyzer()
+    issues = analyzer._check_hardcoded_secrets(None, "lib/bedrock/_stream.py", code)
+    secret_issues = [i for i in issues if i.issue_type == AnalysisIssueType.HARDCODED_SECRET]
+    assert len(secret_issues) == 0, f"AWS class name triggered HARDCODED_SECRET FP: {secret_issues}"
+
+
+def test_aws_class_instantiation_not_flagged():
+    """self._decoder = AWSEventStreamDecoder() should not flag."""
+    code = "self._decoder = AWSEventStreamDecoder()\n"
+    analyzer = SecurityAnalyzer()
+    issues = analyzer._check_hardcoded_secrets(None, "lib/bedrock/_client.py", code)
+    secret_issues = [i for i in issues if i.issue_type == AnalysisIssueType.HARDCODED_SECRET]
+    assert len(secret_issues) == 0
+
+
+def test_real_aws_key_still_detected():
+    """A real AKIA key must still be detected after the word-boundary fix."""
+    code = 'aws_key = "AKIAIOSFODNN7EXAMPLE1"\n'
+    analyzer = SecurityAnalyzer()
+    issues = analyzer._check_hardcoded_secrets(None, "prod/config.py", code)
+    secret_issues = [i for i in issues if i.issue_type == AnalysisIssueType.HARDCODED_SECRET]
+    assert len(secret_issues) >= 1
