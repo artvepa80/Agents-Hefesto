@@ -1,0 +1,9 @@
+- id: hefesto-analyze
+  name: HefestoAI Code Analysis
+  description: Pre-commit security & complexity analysis across 21 formats
+  entry: hefesto analyze
+  language: python
+  types: [python]
+  args: ["--fail-on", "HIGH"]
+  additional_dependencies: ["hefesto-ai>=4.11.0"]
+  require_serial: true

@@ -441,6 +441,17 @@ jobs:
 
 > For production use with dedup (no duplicate comments on reruns), see the workflow templates in [`examples/github-actions/`](examples/github-actions/).
 
+### pre-commit Hook
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/artvepa80/Agents-Hefesto
+    rev: v4.11.0
+    hooks:
+      - id: hefesto-analyze
+```
+
 ### GitLab CI
 
 ```yaml
