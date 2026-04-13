@@ -319,6 +319,8 @@ def analyze(
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
 
+        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
+
         # Anonymous usage ping — also caches latest_version for upgrade notice
         from hefesto.telemetry.client import _ping_remote, get_upgrade_notice
 
@@ -331,6 +333,7 @@ def analyze(
                 "files": combined_report.summary.files_analyzed,
                 "duration_ms": int(combined_report.summary.duration_seconds * 1000),
                 "issues": combined_report.summary.total_issues,
+                "exit_code": exit_code,
             }
         )
 
@@ -339,7 +342,6 @@ def analyze(
         if upgrade_msg and not quiet:
             click.echo(upgrade_msg, err=json_mode)
 
-        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
         _exit(exit_code)
 
     except Exception as e:
