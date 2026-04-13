@@ -120,7 +120,7 @@ Contributors will be:
 
 ---
 
-**Questions?** Email: opensource@narapallc.com
+**Questions?** Email: support@narapallc.com
 
 Thank you for making Hefesto better! 🚀
 
