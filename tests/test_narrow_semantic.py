@@ -211,6 +211,50 @@ class TestAttributeNameMismatch:
         ]
         assert attr_issues[0].severity.value == "MEDIUM"
 
+    def test_property_not_flagged(self):
+        """@property exposes self.<name> as a valid attribute."""
+        code = """\
+        class Client:
+            def __init__(self):
+                self._timeout = 30
+
+            @property
+            def timeout(self):
+                return self._timeout
+
+            def get_timeout(self):
+                return self.timeout
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 0
+
+    def test_property_with_setter_not_flagged(self):
+        """Properties with setters should also be valid."""
+        code = """\
+        class Config:
+            def __init__(self):
+                self._encoding = "utf-8"
+
+            @property
+            def encoding(self):
+                return self._encoding
+
+            @encoding.setter
+            def encoding(self, value):
+                self._encoding = value
+
+            def display(self):
+                return self.encoding
+        """
+        issues = _run(code)
+        attr_issues = [
+            i for i in issues if i.issue_type == AnalysisIssueType.ATTRIBUTE_NAME_MISMATCH
+        ]
+        assert len(attr_issues) == 0
+
 
 # ===================================================================
 # Check 2 — SILENT_EXCEPTION_SWALLOW
