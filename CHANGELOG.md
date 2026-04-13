@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.11.0] - 2026-04-12
+
 ### Added
 - **Phase 4 — Narrow Semantic Analyzer**: two narrow, computable,
   auditable checks for Python files via `NarrowSemanticAnalyzer`,
@@ -25,31 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     SecurityAnalyzer. Severity: MEDIUM.
   - Check 3 (DERIVED_VALUE_IN_LOGIC) deferred per Socratic audit —
     no empirical evidence to validate it yet.
-  - 29 new tests: 10 attribute mismatch (typo, correct attrs,
-    dynamic attrs, no init, distant names, annotated assign,
-    severity), 14 silent swallow (Exception pass, BaseException
-    return None, empty list/dict/zero/False/string, bare except
-    dedup, specific exception, logging, reraise, multi-statement,
-    tuple, severity), 3 cross-cutting (non-Python, syntax error,
-    empty), 2 canary (dogfood on security.py + analyzer_engine.py).
-  - Dogfood: 0 ATTRIBUTE_NAME_MISMATCH FPs, 31
-    SILENT_EXCEPTION_SWALLOW true positives on `hefesto/`.
-  - Total suite: 459 passed (was 430), 0 regressions.
-
-### Added
 - **Cross-repo schema contract test**: `PR_REVIEW_FINDING_KEYS` frozenset
   in `tests/test_pr_review_schema_contract.py` pins the 12-key finding
   dict produced by `_filter_and_serialize()`. Drift in either OSS or Pro
-  breaks the respective test before reaching production. Pro-side
-  `_OSS_FINDING_KEYS` + fixture validation added in parallel.
+  breaks the respective test before reaching production.
 - **`code_snippet` in PR review JSON**: `_filter_and_serialize()` now
   includes `issue.code_snippet` (was silently dropped). Additive field,
-  `null` by default. Contract tests updated in both repos.
+  `null` by default.
 - **Phase 3.1 — Enrichment rendering in PR comments**:
   `_format_comment_body()` renders `finding["enrichment"]["summary"]`
   as `**AI insight:** ...` when enrichment status is `"ok"` and summary
   is non-empty. Deterministic-only output unchanged. Error/skipped
   enrichment degrades silently.
+- **Upgrade notice**: `hefesto analyze` now shows a one-line notice when
+  a newer version is available on PyPI (via telemetry ping response).
 
 ### Fixed
 - **`contextlib.suppress(ImportError)` guard recognition**:
@@ -63,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   regex misclassified as a DB-API placeholder. DB-API parameterized
   queries (`cur.execute("...%s", (i,))`) remain unaffected — they are
   `Call` nodes, not `BinOp`. Closes the documented Phase 1c debt.
-- Total suite: 474 passed (was 459), 0 regressions.
+- Total suite: 474 passed (was 430), 0 regressions.
 
 ## [4.10.0] - 2026-04-12
 

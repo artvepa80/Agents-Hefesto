@@ -3,7 +3,7 @@
   "name": "io.github.artvepa80/hefestoai",
   "title": "HefestoAI",
   "description": "Pre-commit code quality guardian. Detects semantic drift in AI-generated code.",
-  "version": "4.9.8",
+  "version": "4.11.0",
   "repository": {
     "url": "https://github.com/artvepa80/Agents-Hefesto",
     "source": "github"
