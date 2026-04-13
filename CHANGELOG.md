@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.11.2] - 2026-04-13
+
+### Fixed
+- **BARE_EXCEPT reraise exclusion**: `except: raise` (bare reraise without
+  arguments) is now excluded from BARE_EXCEPT findings. This is an
+  intentional pattern used in greenlet/generator boundaries (e.g.
+  SQLAlchemy). `except: pass` and multi-statement bodies with raise
+  are still flagged. SQLAlchemy: 49→44 findings.
+- **HARDCODED_SECRET AWS class name FP**: The `AWS[A-Z0-9]{16,}` pattern
+  now uses case-sensitive matching via `(?-i:...)` inline flag so
+  mixed-case identifiers like `AWSEventStreamDecoder` no longer trigger.
+  Anthropic SDK: 9→0 false positives. Real AWS keys (all-uppercase)
+  remain detected.
+- **ATTRIBUTE_NAME_MISMATCH descriptor FP**: Class-level assignments
+  (descriptors like `padding = PaddingProperty()`, class variables,
+  annotated class attributes) are now collected as valid attribute names.
+  Rich: 8→0 false positives.
+- **ATTRIBUTE_NAME_MISMATCH method reference FP**: All method names
+  defined in a class are treated as valid `self.<name>` references,
+  covering `@reify`, `@cached_property`, custom decorators, and method
+  references passed as callbacks (e.g. `loop.call_at(when,
+  self._send_heartbeat)`). aiohttp: 15→0 false positives.
+- **Telemetry exit_code**: `_ping_remote()` now includes `exit_code` in
+  the payload. Previously all 1016 rows had NULL.
+- Total suite: 485 passed (was 476), 0 regressions.
+
 ## [4.11.1] - 2026-04-13
 
 ### Fixed
