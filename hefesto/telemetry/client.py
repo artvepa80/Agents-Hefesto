@@ -5,6 +5,7 @@ import json
 import os
 import time
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -242,7 +243,23 @@ class TelemetryClient:
 
 
 _LATEST_VERSION_CACHE = Path.home() / ".hefesto" / ".latest_version"
+_SESSION_ID_FILE = Path.home() / ".hefesto" / ".session_id"
 _CACHE_TTL_SECONDS = 86400  # 24h
+
+
+def _get_session_id() -> str:
+    """Return a stable anonymous session ID (UUID4), generated once per machine."""
+    try:
+        if _SESSION_ID_FILE.exists():
+            sid = _SESSION_ID_FILE.read_text(encoding="utf-8").strip()
+            if sid:
+                return sid
+        sid = uuid.uuid4().hex[:12]
+        _SESSION_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SESSION_ID_FILE.write_text(sid, encoding="utf-8")
+        return sid
+    except Exception:
+        return ""
 
 
 def _ping_remote(payload: dict) -> None:
@@ -265,6 +282,10 @@ def _ping_remote(payload: dict) -> None:
             )
         except Exception:
             pass
+
+    sid = _get_session_id()
+    if sid:
+        payload["sid"] = sid
 
     try:
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
