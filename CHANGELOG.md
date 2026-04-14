@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.11.3] - 2026-04-14
+
+### Added
+- **Anonymous session_id**: telemetry pings now include a stable random
+  identifier (12-hex UUID4 prefix) stored in `~/.hefesto/.session_id`.
+  No IP, no PII — enables unique user counting without tracking.
+  Delete the file to reset. Disable all telemetry: `HEFESTO_TELEMETRY=0`.
+
 ## [4.11.2] - 2026-04-13
 
 ### Fixed
