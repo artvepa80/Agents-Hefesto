@@ -79,7 +79,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.11.2
+    uses: artvepa80/Agents-Hefesto@v4.11.3
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -238,7 +238,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.11.2)
+## CLI Reference (v4.11.3)
 
 ```bash
 # Analyze code
@@ -447,7 +447,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.11.2
+    rev: v4.11.3
     hooks:
       - id: hefesto-analyze
 ```
