@@ -672,12 +672,18 @@ export HEFESTO_TELEMETRY=0
 
 > **Keywords:** pre-commit code quality, AI generated code validation, semantic drift detection, Claude Code validator, GitHub Copilot quality gate, vibe coding safety net, code quality tool, developer tools LatAm, Peru startup, hefesto-ai, HefestoAI, open source code guardian
 
+## Contact
+
+- **Enterprise inquiries**: sales@narapallc.com
+- **Bug reports & FP reports**: [GitHub Issues](https://github.com/artvepa80/Agents-Hefesto/issues)
+- **Website**: [hefestoai.narapallc.com](https://hefestoai.narapallc.com)
+
 ## License
 
 MIT License for core functionality. PRO and OMEGA features are licensed separately.
 
 ---
 
-**Hefesto: The code quality guardian built for the age of AI-generated code. 430 tests. 21 formats. 0.01s. Now with PR review.**
+**Hefesto: The code quality guardian built for the age of AI-generated code. 485 tests. 21 formats. 0.01s. Now with PR review.**
 
 (c) 2026 Narapa LLC, Miami, Florida
