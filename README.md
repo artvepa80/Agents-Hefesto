@@ -674,8 +674,10 @@ export HEFESTO_TELEMETRY=0
 
 ## Contact
 
-- **Enterprise inquiries**: sales@narapallc.com
-- **Bug reports & FP reports**: [GitHub Issues](https://github.com/artvepa80/Agents-Hefesto/issues)
+- **Enterprise & licensing**: sales@narapallc.com
+- **Support & bug reports**: support@narapallc.com
+- **General inquiries**: contact@narapallc.com
+- **GitHub Issues**: [artvepa80/Agents-Hefesto/issues](https://github.com/artvepa80/Agents-Hefesto/issues)
 - **Website**: [hefestoai.narapallc.com](https://hefestoai.narapallc.com)
 
 ## License

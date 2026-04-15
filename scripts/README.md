@@ -127,7 +127,7 @@ python private/scripts/generate_key.py [email] [sub_id] [is_founding]
 python private/scripts/fulfill_order.py [email] [sub_id] [is_founding]
 ```
 
-For access to the private repository, contact: **team@narapallc.com**
+For access to the private repository, contact: **sales@narapallc.com**
 
 ---
 
