@@ -662,16 +662,6 @@ export HEFESTO_TELEMETRY=0
 
 ---
 
-## Support
-
-- **Email**: support@narapallc.com
-- **GitHub Issues**: [Open an issue](https://github.com/artvepa80/Agents-Hefesto/issues)
-- **PRO/OMEGA**: Priority support via email
-
----
-
-> **Keywords:** pre-commit code quality, AI generated code validation, semantic drift detection, Claude Code validator, GitHub Copilot quality gate, vibe coding safety net, code quality tool, developer tools LatAm, Peru startup, hefesto-ai, HefestoAI, open source code guardian
-
 ## Contact
 
 - **Enterprise & licensing**: sales@narapallc.com
