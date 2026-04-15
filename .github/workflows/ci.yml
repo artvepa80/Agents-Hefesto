@@ -62,10 +62,7 @@ jobs:
               echo "❌ Found security@narapallc.com."
               exit 1
             fi
-            if grep -rIn --exclude-dir=.git --exclude-dir=venv --exclude-dir=htmlcov --include="*.md" "sales@narapallc\.com" . ; then
-              echo "❌ Found sales@narapallc.com."
-              exit 1
-            fi
+            # sales@narapallc.com is intentionally in README/docs as enterprise contact
 
       - name: Verify Capabilities Parity
         run: python scripts/verify_capabilities.py
