@@ -1,7 +1,11 @@
 import os
 from pathlib import Path
 
-from hefesto.telemetry.client import TelemetryClient
+from hefesto.telemetry.client import (
+    TelemetryClient,
+    _get_environment_flags,
+    _get_install_source,
+)
 
 
 def test_telemetry_disabled_by_default(tmp_path, monkeypatch):
@@ -251,3 +255,59 @@ def test_rotation_overwrites_existing_destination(tmp_path, monkeypatch):
     content_2 = p2.read_text(encoding="utf-8")
     assert "PREEXISTING_DESTINATION_SHOULD_BE_OVERWRITTEN" not in content_2
     assert huge_cmd in content_2
+
+
+# --- Environment flags tests ---
+
+
+def test_env_flags_ci(monkeypatch):
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("GITLAB_CI", raising=False)
+    monkeypatch.delenv("JENKINS_URL", raising=False)
+    monkeypatch.delenv("CIRCLECI", raising=False)
+    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    result = _get_environment_flags()
+    assert "ci" in result
+    assert "user" not in result
+
+
+def test_env_flags_multiple(monkeypatch):
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.delenv("GITLAB_CI", raising=False)
+    monkeypatch.delenv("JENKINS_URL", raising=False)
+    monkeypatch.delenv("CIRCLECI", raising=False)
+    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    result = _get_environment_flags()
+    assert result == ["ci", "github_actions"]
+
+
+def test_env_flags_default(monkeypatch):
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("GITLAB_CI", raising=False)
+    monkeypatch.delenv("JENKINS_URL", raising=False)
+    monkeypatch.delenv("CIRCLECI", raising=False)
+    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    result = _get_environment_flags()
+    assert result == ["user"]
+
+
+def test_env_flags_docker(monkeypatch, tmp_path):
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("GITLAB_CI", raising=False)
+    monkeypatch.delenv("JENKINS_URL", raising=False)
+    monkeypatch.delenv("CIRCLECI", raising=False)
+    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    # Mock /.dockerenv existence
+    monkeypatch.setattr("os.path.exists", lambda p: p == "/.dockerenv")
+    result = _get_environment_flags()
+    assert "docker" in result
+
+
+def test_install_source_pypi():
+    result = _get_install_source()
+    # In test context, hefesto is imported from source (not site-packages)
+    assert result in ("pypi", "editable", "unknown")

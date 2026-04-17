@@ -262,6 +262,47 @@ def _get_session_id() -> str:
         return ""
 
 
+def _get_environment_flags() -> list:
+    """Detect execution environment. All matching flags appended (not first-match-wins).
+
+    A GitHub Actions run produces ['ci', 'github_actions'].
+    A Docker container in CI produces ['ci', 'docker'].
+    Default: ['user'] if none match.
+    """
+    try:
+        flags = []
+        if os.getenv("CI", "").lower() == "true":
+            flags.append("ci")
+        if os.getenv("GITHUB_ACTIONS", "").lower() == "true":
+            flags.append("github_actions")
+        if os.getenv("GITLAB_CI", "").lower() == "true":
+            flags.append("gitlab_ci")
+        if os.getenv("JENKINS_URL"):
+            flags.append("jenkins")
+        if os.getenv("CIRCLECI", "").lower() == "true":
+            flags.append("circleci")
+        if os.path.exists("/.dockerenv"):
+            flags.append("docker")
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
+            flags.append("kubernetes")
+        return flags or ["user"]
+    except Exception:
+        return ["user"]
+
+
+def _get_install_source() -> str:
+    """Detect if installed from PyPI or as editable (dev) install."""
+    try:
+        import hefesto
+
+        path = os.path.dirname(hefesto.__file__)
+        if "site-packages" not in path:
+            return "editable"
+        return "pypi"
+    except Exception:
+        return "unknown"
+
+
 def _ping_remote(payload: dict) -> None:
     """Anonymous ping. Caches ``latest_version`` from server response for upgrade notices."""
     if os.getenv("HEFESTO_TELEMETRY", "").lower() in ("0", "false", "no", "off"):
@@ -286,6 +327,8 @@ def _ping_remote(payload: dict) -> None:
     sid = _get_session_id()
     if sid:
         payload["sid"] = sid
+    payload["env"] = _get_environment_flags()
+    payload["src"] = _get_install_source()
 
     try:
         data = json.dumps(payload, separators=(",", ":")).encode("utf-8")

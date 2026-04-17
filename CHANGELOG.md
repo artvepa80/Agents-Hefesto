@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.11.4] - 2026-04-17
+
+### Added
+- **Environment classification in telemetry**: pings now include `env`
+  (Postgres TEXT[] array) detecting CI, Docker, Kubernetes environments.
+  All matching flags appended — e.g. GitHub Actions produces `{ci,github_actions}`.
+  Default: `{user}`. Enables `'ci' = ANY(env)` queries for filtering.
+- **Install source detection**: `src` field reports `pypi`, `editable`, or
+  `unknown` — distinguishes production installs from development installs.
+
 ## [4.11.3] - 2026-04-14
 
 ### Added
