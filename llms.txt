@@ -27,7 +27,7 @@ hefesto analyze . --fail-on CRITICAL
 ## GitHub Action
 
 ```yaml
-- uses: artvepa80/Agents-Hefesto@v4.11.1
+- uses: artvepa80/Agents-Hefesto@v4.11.4
   with:
     target: '.'
     fail_on: 'CRITICAL'
