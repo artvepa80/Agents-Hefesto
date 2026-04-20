@@ -1,14 +1,113 @@
 #!/usr/bin/env python3
 """
-Verify that README.md accurately reflects installed analyzers.
+Verify that README.md accurately reflects installed analyzers
+and that all version references across the repo match pyproject.toml.
 
 Usage:
     python scripts/verify_readme.py
+
+Design notes
+------------
+Version parity is enforced via VERSION_REFERENCES — a list of
+(file, [(regex, description), ...]) tuples. Patterns are anchored by
+context (``Agents-Hefesto@v``, ``CLI Reference (v``, ``rev: v``,
+``"version": "..."``) to avoid false positives on historical version
+references in README prose (e.g., migration notes, analyzer tables,
+embedded changelog excerpts).
+
+Known limitations:
+
+1. Historical prose collision: a future line like ``upgrading from
+   Agents-Hefesto@v4.11.0`` would trigger a false positive because the
+   anchor is shared with active refs. If that becomes a problem, switch
+   to explicit ``<!-- version-check -->`` ... ``<!-- /version-check -->``
+   block anchoring.
+
+2. Pre-release / build-metadata suffixes: the ``(?![\d.])`` lookahead
+   rejects ``.dev0`` / ``.5`` suffixes, but ``-rc1`` and ``+build`` pass
+   it (``-`` and ``+`` are not in the char class). If the project ever
+   publishes a pre-release, ``pyproject.toml`` would hold the full
+   ``4.X.Y-rc1`` while regex extracts only ``4.X.Y`` → false drift.
+   Project currently uses flat SemVer; extend lookahead to
+   ``(?![\d.\-+])`` when that changes.
+
+Pattern-not-found (``if not found_any``) raises an error on purpose: if a
+version reference is removed from a tracked file (e.g., legitimate refactor),
+VERSION_REFERENCES must be updated in the same change. A silent warning here
+would let new version references be added without drift protection.
 """
 
 import pkgutil
 import re
 from pathlib import Path
+
+# Files with version references that must match pyproject.toml [project] version.
+# When adding new files with version refs, add them here.
+# Each entry: (relative_path, [(regex, description), ...])
+# Use re.finditer so ALL occurrences in a file are validated.
+#   Pattern uses (\d+\.\d+\.\d+)(?![\d.]) — strict SemVer + negative lookahead
+#   to reject malformed suffixes like 4.11.4.5 or 4.11.4.dev0. Without the
+#   lookahead, \d+\.\d+\.\d+ is greedy but not anchored right, so 4.11.4.5
+#   would silently capture 4.11.4 and pass validation.
+VERSION_REFERENCES = [
+    (
+        "README.md",
+        [
+            (r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref"),
+            (r"CLI Reference \(v(\d+\.\d+\.\d+)(?![\d.])\)", "CLI ref"),
+            (r"rev: v(\d+\.\d+\.\d+)(?![\d.])", "pre-commit rev"),
+        ],
+    ),
+    ("llms.txt", [(r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref")]),
+    ("server.json", [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "MCP metadata")]),
+    (
+        ".well-known/agent-card.json",
+        [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "A2A metadata")],
+    ),
+    ("skill/SKILL.md", [(r"Version:\s*(\d+\.\d+\.\d+)(?![\d.])", "skill metadata")]),
+    (
+        ".github/copilot-instructions.md",
+        [
+            (r"\*\*Version:\*\* (\d+\.\d+\.\d+)(?![\d.])", "version header"),
+            (r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref"),
+        ],
+    ),
+]
+
+
+def check_version_parity(repo_root, source_version):
+    """Check all files in VERSION_REFERENCES for drift from source_version.
+
+    Returns a list of error strings (empty if all match).
+    Prints per-file status.
+    """
+    errors = []
+    for rel_path, patterns in VERSION_REFERENCES:
+        file_path = repo_root / rel_path
+        if not file_path.exists():
+            print(f"   ⚠ {rel_path}: file missing, skipping")
+            continue
+        content = file_path.read_text()
+        for pattern, description in patterns:
+            found_any = False
+            for match in re.finditer(pattern, content):
+                found_any = True
+                ref_version = match.group(1)
+                line_num = content[: match.start()].count("\n") + 1
+                location = f"{rel_path}:{line_num}"
+                if ref_version != source_version:
+                    msg = (
+                        f"{location} ({description}): {ref_version} " f"(expected {source_version})"
+                    )
+                    errors.append(f"Version drift — {msg}")
+                    print(f"   ❌ {msg}")
+                else:
+                    print(f"   ✅ {location} ({description}): {ref_version}")
+            if not found_any:
+                msg = f"{rel_path} ({description}): pattern not found"
+                errors.append(msg)
+                print(f"   ⚠ {msg}")
+    return errors
 
 
 def get_devops_analyzers():
@@ -61,10 +160,14 @@ def main():
     # Get README data
     readme_devops_count, _ = extract_readme_analyzers(readme_path)
 
-    # Get version from package
-    from importlib.metadata import version
-
-    pkg_version = version("hefesto-ai")
+    # Get version from pyproject.toml (single source of truth)
+    try:
+        import tomllib  # Python 3.11+
+    except ImportError:
+        import tomli as tomllib  # type: ignore[no-redef]
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        pkg_version = tomllib.load(f)["project"]["version"]
 
     print("=" * 60)
     print("README vs Reality Check")
@@ -105,24 +208,12 @@ def main():
         errors.append("Code Languages count not found in README")
         print(f"   ❌ NOT FOUND")
 
-    # Check version in GitHub Action reference or CLI Reference heading
-    print(f"\n3. README Version")
-    version_match = re.search(
-        r"(?:Agents-Hefesto@v|CLI Reference \(v)(\d+\.\d+\.\d+)", readme_content
-    )
-    if version_match:
-        readme_version = version_match.group(1)
-        print(f"   README version: {readme_version}")
-        print(f"   Package version: {pkg_version}")
-
-        if readme_version != pkg_version:
-            errors.append(f"Version mismatch: README={readme_version}, package={pkg_version}")
-            print(f"   ❌ MISMATCH")
-        else:
-            print(f"   ✅ MATCH")
-    else:
-        errors.append("Version not found in README")
-        print(f"   ❌ NOT FOUND")
+    # Check version parity across all tracked files (see VERSION_REFERENCES)
+    print(f"\n3. Version Parity (pyproject.toml → all tracked files)")
+    print(f"   Source version (pyproject.toml): {pkg_version}")
+    repo_root = Path(__file__).parent.parent
+    version_errors = check_version_parity(repo_root, pkg_version)
+    errors.extend(version_errors)
 
     # Check badge count (should be 21 = 7 + 10 + 4)
     print(f"\n4. Languages Badge")

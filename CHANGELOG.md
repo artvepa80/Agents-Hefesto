@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Sync version references to v4.11.4** across `llms.txt`, `server.json`,
+  `.well-known/agent-card.json`, `skill/SKILL.md`, and
+  `.github/copilot-instructions.md` (3 occurrences). These files were stuck
+  at v4.11.1 because prior version-parity checks only covered README.md.
+- Extend `scripts/verify_readme.py` to cover those 5 additional files
+  (closes #7). 10 version references validated across 6 files.
+- Use `re.finditer` instead of `re.search` so every version reference in a
+  file is validated (README has 3 active refs that previously went unchecked
+  after the first match).
+- Enforce strict SemVer pattern `\d+\.\d+\.\d+` in all version regexes to
+  reject malformed strings like `v4.11` or `v4.11.4.dev0`.
+- Read source version directly from `pyproject.toml` via `tomllib` instead
+  of `importlib.metadata`, so stale editable installs cannot mask drift.
+
 ## [4.11.4] - 2026-04-17
 
 ### Added
