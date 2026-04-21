@@ -53,6 +53,10 @@ pytest
 black .
 isort .
 mypy hefesto/
+
+# Verify version parity (pyproject.toml vs README, llms.txt, server.json,
+# agent-card.json, SKILL.md, copilot-instructions.md — also runs in CI)
+python scripts/verify_readme.py
 ```
 
 ## 📝 Code Style
