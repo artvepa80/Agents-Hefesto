@@ -153,7 +153,7 @@ if not tracker.check_budget_available():
 
 ## Next Steps
 
-- Review [API Reference](API_REFERENCE.md) for complete endpoint documentation
+- View live API schema (OpenAPI/Swagger) at `/docs` when running `hefesto serve` — generated automatically from code
 - Check [Examples](../examples/) for advanced usage
 - Read [Architecture](../README.md#architecture) to understand the system
 

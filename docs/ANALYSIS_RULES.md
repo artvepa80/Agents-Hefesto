@@ -1123,7 +1123,7 @@ def long_function():  # hefesto: ignore SMELL_001
 - **[Getting Started](GETTING_STARTED.md)** - Quick tutorial
 - **[Integration Guide](INTEGRATION.md)** - Phase 0+1 architecture
 - **[CLI Reference](CLI_REFERENCE.md)** - All commands
-- **[API Reference](API_REFERENCE.md)** - SDK usage
+- **Live API Schema (OpenAPI/Swagger)** - Available at `/docs` when running `hefesto serve`. Generated automatically from code.
 
 ---
 

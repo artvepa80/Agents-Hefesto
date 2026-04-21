@@ -947,7 +947,7 @@ print(f"Explanation: {result.explanation}")
 - **[Getting Started](GETTING_STARTED.md)** - Quick tutorial
 - **[Analysis Rules](ANALYSIS_RULES.md)** - All 22+ checks explained
 - **[CLI Reference](CLI_REFERENCE.md)** - Command-line usage
-- **[API Reference](API_REFERENCE.md)** - Complete SDK docs
+- **Live API Schema (OpenAPI/Swagger)** - Available at `/docs` when running `hefesto serve`. Generated automatically from code.
 
 ---
 

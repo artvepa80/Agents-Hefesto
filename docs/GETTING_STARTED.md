@@ -287,7 +287,7 @@ git push --no-verify
 
 - **[Analysis Rules](ANALYSIS_RULES.md)** - All 22+ checks explained with examples
 - **[Integration Guide](INTEGRATION.md)** - Phase 0+1 architecture deep dive
-- **[API Reference](API_REFERENCE.md)** - Complete SDK documentation
+- **Live API Schema (OpenAPI/Swagger)** - Available at `/docs` when running `hefesto serve`. Generated automatically from code.
 - **[CLI Reference](CLI_REFERENCE.md)** - All commands and options
 
 ### 💬 Get Help

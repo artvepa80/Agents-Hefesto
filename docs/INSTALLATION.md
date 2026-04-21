@@ -152,7 +152,7 @@ pip uninstall hefesto
 ## Next Steps
 
 - Read [Quick Start Guide](QUICK_START.md)
-- Review [API Reference](API_REFERENCE.md)
+- View live API schema (OpenAPI/Swagger) at `/docs` when running `hefesto serve` — generated automatically from code
 - Check [Examples](../examples/)
 - Purchase [Pro License](https://buy.stripe.com/hefesto-pro) for advanced features
 

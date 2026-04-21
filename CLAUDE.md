@@ -83,7 +83,7 @@ After completing ANY non-trivial work:
 - **Analyzers**: `/hefesto/analyzers/` (complexity, duplicates, semantic)
 - **Security**: `/hefesto/security/` (vulnerability scanning, masking)
 - **LLM**: `/hefesto/llm/` (AI provider abstraction, Vertex/Claude/OpenAI)
-- **API**: `/hefesto/api/` (REST API endpoints)
+- **API**: `hefesto/server.py` (REST API implementation)
 - **CLI**: `/hefesto/cli/` (command-line interface)
 - **OMEGA**: `/hefesto/omega/` (IRIS agent, correlation engine)
 - **Licensing**: `/hefesto/licensing/` (3-tier validation)
@@ -114,7 +114,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Current Status (v4.11.4)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
-- 8 REST API endpoints
+- 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
 - BigQuery integration
 - IRIS Agent production monitoring
 - 507 tests passing (CI green)
