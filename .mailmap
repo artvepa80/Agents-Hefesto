@@ -1,6 +1,9 @@
 # Maps historical author identities to canonical identity.
 # See: https://git-scm.com/docs/gitmailmap
+# team@narapallc.com is deprecated (docs now use sales/support/contact).
 Arturo Velasquez <sales@narapallc.com> Omega System <omega@akash.network>
 Arturo Velasquez <sales@narapallc.com> <omega@akash.network>
 Arturo Velasquez <sales@narapallc.com> <artvepa@icloud.com>
 Arturo Velasquez <sales@narapallc.com> artvepa80 <artvepa@icloud.com>
+Arturo Velasquez <sales@narapallc.com> OMEGA Development Team <team@narapallc.com>
+Arturo Velasquez <sales@narapallc.com> <team@narapallc.com>
