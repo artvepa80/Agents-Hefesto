@@ -31,6 +31,9 @@ class Language(Enum):
     DOCKERFILE = "dockerfile"
     SQL = "sql"
 
+    # Legacy languages (v4.12.0)
+    COBOL = "cobol"
+
     UNKNOWN = "unknown"
 
 
@@ -180,6 +183,16 @@ LANGUAGE_SPECS: List[LanguageSpec] = [
         providers=[
             ProviderRef(name="sqlfluff", mode="external", priority=100),
         ],
+    ),
+    # Legacy languages (v4.12.0)
+    LanguageSpec(
+        language=Language.COBOL,
+        display_name="COBOL",
+        file_globs=["*.cbl", "*.cob", "*.cpy", "*.pco", "*.CBL", "*.COB", "*.CPY"],
+        parser_type="cobol_structural",
+        internal_analyzers=["cobol_governance"],
+        providers=[],
+        tier_required="FREE",
     ),
 ]
 
