@@ -199,14 +199,16 @@ class _CobolStructuralExtractor:
 
     def _extract_occurs_depending_multiline(self, code: str, structure: _CobolStructure):
         """Extract OCCURS DEPENDING ON clauses (multi-line aware)."""
-        # Strip comments first
+        # Strip comments first and track line numbers
         clean_lines = []
-        for line in code.split("\n"):
+        line_numbers = []
+        for line_num, line in enumerate(code.split("\n"), start=1):
             if len(line) > 6 and line[6] in self.COMMENT_INDICATORS:
                 continue
             # Get code area (columns 7-72)
             code_part = line[6:72] if len(line) > 72 else line[6:]
             clean_lines.append(code_part)
+            line_numbers.append(line_num)
 
         # Join lines and search for pattern
         clean_code = " ".join(clean_lines)
@@ -215,8 +217,18 @@ class _CobolStructuralExtractor:
         pattern = r"\bOCCURS\b.*?\bDEPENDING\s+ON\s+([A-Z0-9_-]+)"
         for match in re.finditer(pattern, clean_code, re.IGNORECASE):
             controlling_var = match.group(1)
-            # Approximate line number (use 1 as placeholder - could improve)
-            structure.occurs_depending.append((1, controlling_var))
+
+            # Find line number by searching for OCCURS keyword in original lines
+            found_line = 1
+            for i, line in enumerate(clean_lines):
+                if re.search(r"\bOCCURS\b", line, re.IGNORECASE):
+                    # Check if this OCCURS has the controlling var nearby
+                    context = " ".join(clean_lines[max(0, i) : min(len(clean_lines), i + 3)])
+                    if controlling_var in context:
+                        found_line = line_numbers[i]
+                        break
+
+            structure.occurs_depending.append((found_line, controlling_var))
 
     def _extract_perform_thru(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract PERFORM THRU statements."""
