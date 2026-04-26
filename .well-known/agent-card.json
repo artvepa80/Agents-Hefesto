@@ -1,6 +1,6 @@
 {
   "name": "HefestoAI",
-  "description": "AI-powered code quality guardian. Pre-merge governance for AI-generated code: semantic drift detection, security scanning, and complexity analysis across 21 formats.",
+  "description": "AI-powered code quality guardian. Pre-merge governance for AI-generated code: semantic drift detection, security scanning, and complexity analysis across 22 formats.",
   "url": "https://hefestoai.narapallc.com",
   "version": "4.11.4",
   "provider": {
@@ -15,7 +15,7 @@
     {
       "id": "analyze",
       "name": "Code Analysis",
-      "description": "Analyze code files or directories for security vulnerabilities, complexity issues, semantic drift, and code smells. Supports Python, TypeScript, JavaScript, Java, Go, Rust, C#, plus 14 DevOps and Cloud IaC formats.",
+      "description": "Analyze code files or directories for security vulnerabilities, complexity issues, semantic drift, and code smells. Supports Python, TypeScript, JavaScript, Java, Go, Rust, C#, plus 15 DevOps and Cloud IaC formats (including COBOL governance).",
       "inputModes": ["text/plain", "application/json"],
       "outputModes": ["application/json", "text/plain", "text/html"]
     },

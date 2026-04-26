@@ -118,7 +118,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 - BigQuery integration
 - IRIS Agent production monitoring
 - 507 tests passing (CI green)
-- 21 language/format analyzers
+- 22 language/format analyzers
 - Self-validated (dogfooding successful)
 - GitHub Release automation (hardened workflow)
 

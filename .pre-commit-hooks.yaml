@@ -1,6 +1,6 @@
 - id: hefesto-analyze
   name: HefestoAI Code Analysis
-  description: Pre-commit security & complexity analysis across 21 formats
+  description: Pre-commit security & complexity analysis across 22 formats
   entry: hefesto analyze
   language: python
   types: [python]

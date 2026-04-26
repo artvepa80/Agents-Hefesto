@@ -37,7 +37,7 @@ coverage:
 
   # Ola 2: DevOps / Config analyzers (file-format analyzers)
   devops_formats:
-    declared_count: 10
+    declared_count: 11
     items:
       - id: dockerfile
         display: Dockerfile
@@ -89,6 +89,11 @@ coverage:
         status: GA
         analyzer_module: hefesto.analyzers.devops.yaml_analyzer
         file_globs: ["**/*.yml", "**/*.yaml"]
+      - id: cobol
+        display: COBOL
+        status: GA
+        analyzer_module: hefesto.analyzers.cobol_governance
+        file_globs: ["**/*.cbl", "**/*.cob", "**/*.cpy", "**/*.pco"]
 
   # Ola 4: Cloud Infrastructure analyzers
   cloud_formats:
@@ -117,7 +122,7 @@ coverage:
 
   # Convenience rollup (used for badges, README display, etc.)
   totals:
-    declared_total_formats: 21
+    declared_total_formats: 22
     computed_from:
       - coverage.code_languages.declared_count
       - coverage.devops_formats.declared_count
