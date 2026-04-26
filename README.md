@@ -9,7 +9,7 @@ AI-powered code quality guardian built for the age of AI-generated code. Catches
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Languages](https://img.shields.io/badge/languages-21-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
+[![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
 ---
 
@@ -204,6 +204,7 @@ hefesto analyze . --severity MEDIUM
 | **TOML** | T001-T003 | 3 security rules | v4.5.0 |
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 | v4.12.0 |
 
 ### Cloud Infrastructure
 
@@ -214,7 +215,7 @@ hefesto analyze . --severity MEDIUM
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 |
 
-**Total**: 7 code languages + 10 DevOps formats + 4 Cloud formats = **21 supported formats**
+**Total**: 7 code languages + 11 DevOps formats + 4 Cloud formats = **22 supported formats**
 
 ---
 
@@ -319,7 +320,7 @@ The hook runs two gates:
 | Static Analysis | Yes | Yes | Yes |
 | Security Scanning | Basic | Advanced | Advanced |
 | Pre-push Hooks | Yes | Yes | Yes |
-| 21 Language Support | Yes | Yes | Yes |
+| 22 Language Support | Yes | Yes | Yes |
 | ML Enhancement | No | Yes | Yes |
 | REST API | No | Yes | Yes |
 | BigQuery Analytics | No | Yes | Yes |
@@ -571,7 +572,7 @@ Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration runbooks
 | Semantic drift detection | **Yes** | No | No | No |
 | Pre-commit speed | **0.01s** | ~1s | ~2s | N/A |
 | MCP/Claude Code integration | **Yes** | No | No | No |
-| Languages | 21 | 30+ | Python only | 25+ |
+| Languages | 22 | 30+ | Python only | 25+ |
 | Setup | `pip install` | `pip install` | `pip install` | Server required |
 | Price | Free / $8 / $19 | Free / Enterprise | Free | Free / Enterprise |
 
