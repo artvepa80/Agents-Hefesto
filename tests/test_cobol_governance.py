@@ -44,9 +44,7 @@ class TestCobolGovernancePositive:
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_HARDCODED_CREDENTIALS
         ]
         # Should detect at least password field (WS-DB-PASSWORD)
-        assert len(cred_issues) >= 1, (
-            f"Expected ≥1 HARDCODED_CREDENTIALS, got {len(cred_issues)}"
-        )
+        assert len(cred_issues) >= 1, f"Expected ≥1 HARDCODED_CREDENTIALS, got {len(cred_issues)}"
         assert all(i.severity == AnalysisIssueSeverity.CRITICAL for i in cred_issues)
         assert all(i.rule_id == "COBOL002" for i in cred_issues)
         # Verify it mentions field name but NOT literal value
@@ -77,9 +75,9 @@ class TestCobolGovernancePositive:
         redefines_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_REDEFINES_SENSITIVE
         ]
-        assert len(redefines_issues) >= 1, (
-            f"Expected ≥1 REDEFINES_SENSITIVE, got {len(redefines_issues)}"
-        )
+        assert (
+            len(redefines_issues) >= 1
+        ), f"Expected ≥1 REDEFINES_SENSITIVE, got {len(redefines_issues)}"
         assert all(i.severity == AnalysisIssueSeverity.HIGH for i in redefines_issues)
         assert all(i.rule_id == "COBOL004" for i in redefines_issues)
 
@@ -92,9 +90,7 @@ class TestCobolGovernancePositive:
         occurs_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_OCCURS_DEPENDING_ON
         ]
-        assert len(occurs_issues) >= 1, (
-            f"Expected ≥1 OCCURS_DEPENDING_ON, got {len(occurs_issues)}"
-        )
+        assert len(occurs_issues) >= 1, f"Expected ≥1 OCCURS_DEPENDING_ON, got {len(occurs_issues)}"
         assert all(i.severity == AnalysisIssueSeverity.MEDIUM for i in occurs_issues)
         assert all(i.rule_id == "COBOL005" for i in occurs_issues)
 
@@ -107,9 +103,9 @@ class TestCobolGovernancePositive:
         perform_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_PERFORM_THRU_CHAIN
         ]
-        assert len(perform_issues) >= 1, (
-            f"Expected ≥1 PERFORM_THRU_CHAIN, got {len(perform_issues)}"
-        )
+        assert (
+            len(perform_issues) >= 1
+        ), f"Expected ≥1 PERFORM_THRU_CHAIN, got {len(perform_issues)}"
         assert all(i.severity == AnalysisIssueSeverity.HIGH for i in perform_issues)
         assert all(i.rule_id == "COBOL006" for i in perform_issues)
 
@@ -122,9 +118,9 @@ class TestCobolGovernancePositive:
         copybook_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_COPYBOOK_BLAST_RADIUS
         ]
-        assert len(copybook_issues) >= 1, (
-            f"Expected ≥1 COPYBOOK_BLAST_RADIUS, got {len(copybook_issues)}"
-        )
+        assert (
+            len(copybook_issues) >= 1
+        ), f"Expected ≥1 COPYBOOK_BLAST_RADIUS, got {len(copybook_issues)}"
         assert all(i.rule_id == "COBOL007" for i in copybook_issues)
         # CUST-RECORD is specific name → HIGH severity
         assert any(i.severity == AnalysisIssueSeverity.HIGH for i in copybook_issues)
@@ -231,9 +227,7 @@ class TestCobolGovernanceMixed:
             AnalysisIssueType.COBOL_ACCEPT_UNVALIDATED,
         }
         found_types = issue_types & expected_types
-        assert (
-            len(found_types) >= 2
-        ), f"Expected at least 2 of {expected_types}, got {found_types}"
+        assert len(found_types) >= 2, f"Expected at least 2 of {expected_types}, got {found_types}"
 
 
 class TestCobolGovernanceEdgeCases:
@@ -320,6 +314,4 @@ class TestCobolGovernanceEdgeCases:
         accept_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_ACCEPT_UNVALIDATED
         ]
-        assert len(accept_issues) == 0, (
-            "ACCEPT FROM DATE/TIME/DAY should not be flagged"
-        )
+        assert len(accept_issues) == 0, "ACCEPT FROM DATE/TIME/DAY should not be flagged"

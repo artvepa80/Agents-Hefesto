@@ -160,9 +160,7 @@ class _CobolStructuralExtractor:
     def _extract_credential_move(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract MOVE literal TO credential-field statements."""
         # Pattern: MOVE 'literal' TO FIELD-NAME or MOVE "literal" TO FIELD-NAME
-        match = re.search(
-            r"\bMOVE\s+(['\"])(.+?)\1\s+TO\s+([A-Z0-9_-]+)", line, re.IGNORECASE
-        )
+        match = re.search(r"\bMOVE\s+(['\"])(.+?)\1\s+TO\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
         if match:
             literal_value = match.group(2)
             target_field = match.group(3)
@@ -222,9 +220,7 @@ class _CobolStructuralExtractor:
 
     def _extract_perform_thru(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract PERFORM THRU statements."""
-        match = re.search(
-            r"\bPERFORM\s+([A-Z0-9_-]+)\s+THRU\s+([A-Z0-9_-]+)", line, re.IGNORECASE
-        )
+        match = re.search(r"\bPERFORM\s+([A-Z0-9_-]+)\s+THRU\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
         if match:
             start_para = match.group(1)
             end_para = match.group(2)
@@ -423,8 +419,7 @@ class CobolGovernanceAnalyzer:
                         "memory issues."
                     ),
                     suggestion=(
-                        "Validate that controlling variable is properly "
-                        "initialized and bounded."
+                        "Validate that controlling variable is properly " "initialized and bounded."
                     ),
                     engine=self.ENGINE,
                     rule_id="COBOL005",
