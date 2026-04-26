@@ -92,7 +92,7 @@ coverage:
       - id: cobol
         display: COBOL
         status: GA
-        analyzer_module: hefesto.analyzers.cobol_governance
+        analyzer_module: hefesto.analyzers.devops.cobol_governance_analyzer
         file_globs: ["**/*.cbl", "**/*.cob", "**/*.cpy", "**/*.pco"]
 
   # Ola 4: Cloud Infrastructure analyzers

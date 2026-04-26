@@ -10,7 +10,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 
 from pathlib import Path
 
-from hefesto.analyzers.cobol_governance import CobolGovernanceAnalyzer
+from hefesto.analyzers.devops.cobol_governance_analyzer import CobolGovernanceAnalyzer
 from hefesto.core.analysis_models import AnalysisIssueSeverity, AnalysisIssueType
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "cobol"

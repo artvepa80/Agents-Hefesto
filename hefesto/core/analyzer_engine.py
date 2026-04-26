@@ -400,7 +400,7 @@ class AnalyzerEngine:
                 )
 
             elif language == Language.COBOL:
-                from hefesto.analyzers.cobol_governance import CobolGovernanceAnalyzer
+                from hefesto.analyzers.devops.cobol_governance_analyzer import CobolGovernanceAnalyzer
 
                 cobol_issues = CobolGovernanceAnalyzer().analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(cobol_issues)
