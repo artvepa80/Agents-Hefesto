@@ -7,18 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.12.0] - 2026-04-25
+
 ### Added
-- **COBOL Phase 1-Lite Sprint 2**: CobolGovernanceAnalyzer with 7 mainframe governance rules
+- **COBOL Governance Analysis (Phase 1-Lite)**: 7 mainframe governance rules for COBOL-85 and IBM Enterprise COBOL
   - FREE tier (3 rules): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED
   - PRO tier (4 rules): REDEFINES_SENSITIVE, OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
-  - 20 comprehensive tests (positive, negative, mixed, edge cases) - all passing
+  - 30 COBOL tests (10 detection + 20 governance) - all passing
   - Internal structural extractor (regex-based, COBOL-85 fixed-format columns 7-72)
-  - Multi-line pattern detection for complex COBOL constructs
+  - Multi-line pattern detection for complex COBOL constructs (OCCURS DEPENDING ON, PERFORM THRU, REDEFINES)
   - Copybook (.cpy) exclusion from procedural rules
+  - 11 synthetic COBOL test fixtures (positive/negative/edge cases)
+  - Performance: 0.74s for 11 files (6.7x faster than <5s target)
+  - Investor demo script: `docs/demo/cobol_investor_demo.sh`
   - CLI integration verified: single file, directory, severity filtering
-  - 537 tests passing (zero regression)
+  - **22 supported formats** (7 code + 11 DevOps + 4 Cloud IaC)
+  - 531 tests passing (zero regression)
 
 ### Fixed
+- **COBOL OCCURS DEPENDING ON line number reporting**: Now reports correct source line instead of placeholder line 1
+- **CI discovery for COBOL analyzer**: Moved from `hefesto/analyzers/cobol_governance.py` to `hefesto/analyzers/devops/cobol_governance_analyzer.py` to match CI discovery pattern
+- **Documentation sweep**: Updated all docs from 21→22 formats across 10 files (6 OSS + 4 PRO-PRIVATE)
 - **Sync version references to v4.11.4** across `llms.txt`, `server.json`,
   `.well-known/agent-card.json`, `skill/SKILL.md`, and
   `.github/copilot-instructions.md` (3 occurrences). These files were stuck
