@@ -1,7 +1,7 @@
       *****************************************************************
       * Purpose: Legacy batch program with spaghetti control flow
       * Rules: GOTO_EXCESSIVE (positive test)
-      * Expected: 1 HIGH severity finding (>10 GO TO statements)
+      * Expected: 1 HIGH severity finding (23 GO TO statements, threshold >10)
       *****************************************************************
        IDENTIFICATION DIVISION.
        PROGRAM-ID. SPAGHETTI-LOGIC.

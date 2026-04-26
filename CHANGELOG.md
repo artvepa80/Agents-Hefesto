@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **COBOL Phase 1-Lite Sprint 2**: CobolGovernanceAnalyzer with 7 mainframe governance rules
+  - FREE tier (3 rules): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED
+  - PRO tier (4 rules): REDEFINES_SENSITIVE, OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
+  - 20 comprehensive tests (positive, negative, mixed, edge cases) - all passing
+  - Internal structural extractor (regex-based, COBOL-85 fixed-format columns 7-72)
+  - Multi-line pattern detection for complex COBOL constructs
+  - Copybook (.cpy) exclusion from procedural rules
+  - CLI integration verified: single file, directory, severity filtering
+  - 537 tests passing (zero regression)
+
 ### Fixed
 - **Sync version references to v4.11.4** across `llms.txt`, `server.json`,
   `.well-known/agent-card.json`, `skill/SKILL.md`, and
