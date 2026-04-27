@@ -4,7 +4,7 @@
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 21 formats. **476 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
+AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 22 formats. **476 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -677,6 +677,6 @@ MIT License for core functionality. PRO and OMEGA features are licensed separate
 
 ---
 
-**Hefesto: The code quality guardian built for the age of AI-generated code. 485 tests. 21 formats. 0.01s. Now with PR review.**
+**Hefesto: The code quality guardian built for the age of AI-generated code. 485 tests. 22 formats. 0.01s. Now with PR review.**
 
 (c) 2026 Narapa LLC, Miami, Florida

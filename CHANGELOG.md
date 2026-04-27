@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.12.1] - 2026-04-27
+
+### Fixed
+- **Documentation drift after v4.12.0 COBOL release**: 4 surfaces still
+  said "21 formats" after the v4.12.0 docs sweep updated the others.
+  - `README.md` header and footer taglines (lines 7, 680)
+  - `.github/copilot-instructions.md` overview and FREE tier row (lines 5, 55)
+- **Stale "Current Status" version blocks**: `CLAUDE.md:115` and
+  `docs/CLAUDE_HEFESTO.md:44` were stuck at `v4.11.4` despite v4.12.0
+  being the latest release — bumped both to `v4.12.0`.
+- **GitHub Marketplace tagline lag**: the Marketplace listing page
+  cached the pre-COBOL "21 formats" string from before the v4.12.0
+  publish. This metadata-only patch release forces the Marketplace to
+  re-pull `action.yml` (which has been correct since v4.12.0) so the
+  public-facing tagline reflects the actual format count.
+
+Metadata-only release. No code, test, or behavior changes.
+
 ## [4.12.0] - 2026-04-25
 
 ### Added

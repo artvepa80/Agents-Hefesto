@@ -41,7 +41,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Mission**: Transform code quality validation with AI-powered analysis that catches critical bugs before production.
 
-**Current Status (v4.11.4)**: Sistema completo de análisis con ML, BigQuery integration, OMEGA Guardian monitoring, y tier-based licensing.
+**Current Status (v4.12.0)**: Sistema completo de análisis con ML, BigQuery integration, OMEGA Guardian monitoring, y tier-based licensing.
 
 ---
 

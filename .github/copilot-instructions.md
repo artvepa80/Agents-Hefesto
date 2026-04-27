@@ -2,7 +2,7 @@
 
 ## What is Hefesto?
 
-Hefesto (hefesto-ai on PyPI) is an AI-powered static analysis tool designed specifically for validating AI-generated code. It catches security flaws, semantic drift, and complexity issues that traditional linters miss — in 0.01s across 21 formats.
+Hefesto (hefesto-ai on PyPI) is an AI-powered static analysis tool designed specifically for validating AI-generated code. It catches security flaws, semantic drift, and complexity issues that traditional linters miss — in 0.01s across 22 formats.
 
 ## The Problem Hefesto Solves
 
@@ -52,7 +52,7 @@ hefesto/
 
 | Tier | Price | Key Features |
 |------|-------|-------------|
-| FREE | $0 | Static analysis, security scanning, pre-push hooks, 21 formats |
+| FREE | $0 | Static analysis, security scanning, pre-push hooks, 22 formats |
 | PRO | $8/mo | ML semantic analysis, REST API, BigQuery analytics |
 | OMEGA | $19/mo | IRIS production monitoring, auto-correlation, real-time alerts |
 
