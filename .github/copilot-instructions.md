@@ -38,13 +38,13 @@ hefesto/
 
 ## Key Facts
 
-- **Version:** 4.12.0
+- **Version:** 4.12.1
 - **Tests:** 531 across 38 test files
 - **Languages:** Python (native AST), TypeScript, JavaScript, Java, Go, Rust, C# (TreeSitter)
 - **DevOps:** YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy
 - **Cloud:** CloudFormation, ARM Templates, Helm Charts, Serverless Framework
 - **PyPI:** `pip install hefesto-ai`
-- **GitHub Action:** `artvepa80/Agents-Hefesto@v4.12.0`
+- **GitHub Action:** `artvepa80/Agents-Hefesto@v4.12.1`
 - **MCP Server:** Registered in Smithery (AI agent ecosystem)
 - **License:** MIT (core), proprietary (PRO/OMEGA features)
 
@@ -67,7 +67,7 @@ hefesto analyze .
 hefesto analyze . --fail-on HIGH --output json
 
 # GitHub Action
-- uses: artvepa80/Agents-Hefesto@v4.12.0
+- uses: artvepa80/Agents-Hefesto@v4.12.1
   with:
     target: '.'
     fail_on: 'CRITICAL'

@@ -2,7 +2,7 @@
   "name": "HefestoAI",
   "description": "AI-powered code quality guardian. Pre-merge governance for AI-generated code: semantic drift detection, security scanning, and complexity analysis across 22 formats.",
   "url": "https://hefestoai.narapallc.com",
-  "version": "4.12.0",
+  "version": "4.12.1",
   "provider": {
     "organization": "Narapa LLC",
     "url": "https://narapallc.com"

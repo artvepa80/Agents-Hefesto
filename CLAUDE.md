@@ -112,7 +112,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Mission**: Build the world's most trusted AI code quality guardian that catches critical bugs before production. Self-validated (dogfooding) to catch 3+ critical bugs in its own v4.0.1 release.
 
-**Current Status (v4.12.0)**:
+**Current Status (v4.12.1)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
 - BigQuery integration
