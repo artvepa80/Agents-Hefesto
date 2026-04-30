@@ -1,10 +1,10 @@
-# Hefesto - AI-Powered Code Quality Guardian
+# HefestoAI — release truth engine for AI-generated code
 
 <p align="center">
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 22 formats. **476 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
+After your AI wrote the code, but before it ships. HefestoAI verifies that what your project declares — deps, configs, install artifacts — matches what it actually does.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
