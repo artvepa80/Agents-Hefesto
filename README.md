@@ -13,6 +13,25 @@ After your AI wrote the code, but before it ships. HefestoAI verifies that what 
 
 ---
 
+## Operational Truth Analyzers (v4.12.1)
+
+HefestoAI's core contribution: detecting drift between what your project **declares** and what it **does**. These analyzers run automatically on every `hefesto analyze` and catch issues that linters and security scanners miss because they're not in any single file — they're in the inconsistency between files.
+
+| Analyzer | What it catches | Rule ID |
+|----------|----------------|---------|
+| **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
+| **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
+| **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
+
+```bash
+# All operational truth findings appear in standard output
+hefesto analyze . --severity MEDIUM
+```
+
+---
+
 ## Quick Start
 
 ```bash
@@ -155,24 +174,6 @@ hefesto pr-review --strict
 
 See [`examples/github-actions/README.md`](examples/github-actions/README.md) for setup instructions.
 
----
-
-## Operational Truth Analyzers (v4.11.2)
-
-Project-level checks that detect drift between what your project *declares* and what it *actually does*. These run automatically as part of `hefesto analyze` — no extra commands needed.
-
-| Analyzer | What it catches | Rule ID |
-|----------|----------------|---------|
-| **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
-| **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
-| **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
-| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
-| **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
-
-```bash
-# All operational truth findings appear in standard output
-hefesto analyze . --severity MEDIUM
-```
 
 ---
 
