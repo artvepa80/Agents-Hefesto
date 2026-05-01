@@ -677,6 +677,6 @@ MIT License for core functionality. PRO and OMEGA features are licensed separate
 
 ---
 
-**Hefesto: The code quality guardian built for the age of AI-generated code. 485 tests. 22 formats. 0.01s. Now with PR review.**
+**HefestoAI — release truth engine for AI-generated code. Verifies declared-vs-real drift before code ships.**
 
 (c) 2026 Narapa LLC, Miami, Florida
