@@ -583,16 +583,13 @@ Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration runbooks
 
 ---
 
-## The Dogfooding Story
+## Dogfooding (Honest Account)
 
-We used Hefesto to validate itself before publishing v4.0.1:
+We run HefestoAI's strict gate against HefestoAI's own code on every push to main. As of 2026-04-29, the gate is GREEN — but it took us 6 weeks of refactor to get there.
 
-**Critical bugs found:**
-1. Hardcoded password in test fixtures (CRITICAL)
-2. Dangerous `exec()` call without validation (HIGH)
-3. 155 other issues (code smells, security, complexity)
+When we initially activated the gate in strict mode, it flagged 12 complexity findings in our own gate-internals code. We considered three responses: silence the findings (rejected — that's exactly the drift we critique), accept the override permanently (rejected — same reason), or refactor at root cause (chosen — took 1 PR, 4 commits, 2 days, plus a declared-vs-real drift discovery in our own positioning doc that we logged for fix).
 
-**Result:** All fixed before shipping. Meta-validation at its finest.
+The full audit and refactor history are tracked internally in our private repo. The override mechanics and reversion criteria are documented; the gate-internals refactor reduced two CRITICAL functions from cyclomatic complexity 33 → 1 and 25 → 6 respectively, all helpers under 10.
 
 ---
 
