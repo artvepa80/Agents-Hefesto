@@ -144,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.11.2)
+## PR Review (v4.12.1)
 
 Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
 
@@ -412,7 +412,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.11.2)
+### GitHub Actions — PR Review with Inline Comments (v4.12.1)
 
 ```yaml
 name: Hefesto PR Review
