@@ -106,11 +106,11 @@ After completing ANY non-trivial work:
 
 ## 🎯 **Purpose & Mission**
 
-These rules ensure Hefesto achieves enterprise-grade quality, maintainability, safety, and developer velocity for AI-powered code quality validation.
+These rules ensure Hefesto achieves enterprise-grade quality, maintainability, safety, and developer velocity for release-truth validation for AI-generated code.
 
 **MUST** rules are enforced by CI/testing; **SHOULD** rules are strongly recommended.
 
-**Mission**: Build the world's most trusted AI code quality guardian that catches critical bugs before production. Self-validated (dogfooding) to catch 3+ critical bugs in its own v4.0.1 release.
+**Mission**: Build the most trusted release truth engine for AI-generated code. We dogfood the gate against our own code on every push to main; gate-internals refactor history is documented in the private repo.
 
 **Current Status (v4.12.1)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
@@ -361,14 +361,13 @@ Run Hefesto on itself:
 
 ## ⚠️ **CRITICAL SUCCESS FACTORS**
 
-### 🔍 **Dogfooding Story (v4.0.1)**
+### 🔍 Dogfooding (Honest Account)
 
-Hefesto caught in its own codebase:
-1. **Hardcoded password** in test fixtures → CRITICAL → FIXED
-2. **Dangerous exec() call** in dynamic loader → HIGH → FIXED
-3. **155 other issues** → FIXED
+We run HefestoAI's strict gate against HefestoAI's own code on every push to main. As of 2026-04-29, the gate is GREEN — but it took us 6 weeks of refactor to get there.
 
-This proves Hefesto works. Use this as marketing.
+When we initially activated the gate in strict mode, it flagged 12 complexity findings in our own gate-internals code. We considered three responses: silence the findings (rejected — that's exactly the drift we critique), accept the override permanently (rejected — same reason), or refactor at root cause (chosen — took 1 PR, 4 commits, 2 days, plus a declared-vs-real drift discovery in our own positioning doc that we logged for fix).
+
+The full audit and refactor history are tracked internally in our private repo. The override mechanics and reversion criteria are documented; the gate-internals refactor reduced two CRITICAL functions from cyclomatic complexity 33 → 1 and 25 → 6 respectively, all helpers under 10.
 
 ### 🛡️ **Security Requirements**
 
@@ -481,7 +480,7 @@ Releases are automated via GitHub Actions:
 
 ---
 
-**Remember**: We're building the **world's most trusted AI code quality guardian** - enterprise-grade, profitable, and proven through dogfooding.
+**Remember**: We're building the **most trusted release truth engine for AI-generated code** — enterprise-grade, profitable, and proven through dogfooding the gate against our own code.
 
 ---
 

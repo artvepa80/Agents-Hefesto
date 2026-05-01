@@ -1,15 +1,34 @@
-# Hefesto - AI-Powered Code Quality Guardian
+# HefestoAI — release truth engine for AI-generated code
 
 <p align="center">
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-AI-powered code quality guardian built for the age of AI-generated code. Catches security flaws, semantic drift, operational truth drift, and complexity issues in 0.01s across 22 formats. **476 tests | 677+ monthly downloads | Used in production CI/CD pipelines worldwide.**
+After your AI wrote the code, but before it ships. HefestoAI verifies that what your project declares — deps, configs, install artifacts — matches what it actually does.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
+
+---
+
+## Operational Truth Analyzers (v4.12.1)
+
+HefestoAI's core contribution: detecting drift between what your project **declares** and what it **does**. These analyzers run automatically on every `hefesto analyze` and catch issues that linters and security scanners miss because they're not in any single file — they're in the inconsistency between files.
+
+| Analyzer | What it catches | Rule ID |
+|----------|----------------|---------|
+| **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
+| **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
+| **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
+
+```bash
+# All operational truth findings appear in standard output
+hefesto analyze . --severity MEDIUM
+```
 
 ---
 
@@ -125,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.11.2)
+## PR Review (v4.12.1)
 
 Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
 
@@ -155,24 +174,6 @@ hefesto pr-review --strict
 
 See [`examples/github-actions/README.md`](examples/github-actions/README.md) for setup instructions.
 
----
-
-## Operational Truth Analyzers (v4.11.2)
-
-Project-level checks that detect drift between what your project *declares* and what it *actually does*. These run automatically as part of `hefesto analyze` — no extra commands needed.
-
-| Analyzer | What it catches | Rule ID |
-|----------|----------------|---------|
-| **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
-| **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
-| **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
-| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
-| **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
-
-```bash
-# All operational truth findings appear in standard output
-hefesto analyze . --severity MEDIUM
-```
 
 ---
 
@@ -411,7 +412,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.11.2)
+### GitHub Actions — PR Review with Inline Comments (v4.12.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -566,30 +567,29 @@ Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration runbooks
 
 ## vs. Competition
 
-| Feature | Hefesto | Semgrep | Bandit | SonarQube |
-|---------|---------|---------|--------|-----------|
-| AI-generated code validation | **Yes** | No | No | No |
-| Semantic drift detection | **Yes** | No | No | No |
-| Pre-commit speed | **0.01s** | ~1s | ~2s | N/A |
-| MCP/Claude Code integration | **Yes** | No | No | No |
-| Languages | 22 | 30+ | Python only | 25+ |
-| Setup | `pip install` | `pip install` | `pip install` | Server required |
-| Price | Free / $8 / $19 | Free / Enterprise | Free | Free / Enterprise |
+| Criterion | Hefesto | Semgrep | CodeRabbit | Qodo | Snyk |
+|---|---|---|---|---|---|
+| **AI-generated code focus** | ✅ Primary use case | Generic | ✅ Yes | ✅ Yes | Generic |
+| **Declared-vs-real drift detection** | ✅ Core feature | ❌ | ❌ | ❌ | ❌ |
+| **Operational truth analyzers** | ✅ 5 analyzers | ❌ | ❌ | ❌ | ❌ |
+| **Languages supported** | 22 formats | Many | Many | Many | Many |
+| **Setup time** | < 5 min, no config | Config-heavy | Cloud signup | Cloud signup | Cloud signup |
+| **Where it runs** | Local CLI / GitHub Action / pre-commit / MCP | Local / cloud | Cloud only | Cloud only | Cloud / CLI |
+| **Pricing** | Free OSS / $8 Pro / $19 OMEGA | Free OSS / Contact sales | $24/dev/mo | Free Dev / $30/dev/mo | $25/dev/mo\* |
 
-**Hefesto's niche:** Validating code generated by AI tools (Claude, Copilot, Cursor). Traditional tools validate human code. Hefesto validates machine code.
+\*Snyk pricing is per product (Code, Open Source, Container, IaC); multi-product subscriptions cost more.
+
+**HefestoAI's niche:** Detecting drift between what AI-generated code **declares** and what it **does**. Traditional tools validate code against language rules. HefestoAI validates code against the project's own declarations — its dependencies, its configs, its install artifacts.
 
 ---
 
-## The Dogfooding Story
+## Dogfooding (Honest Account)
 
-We used Hefesto to validate itself before publishing v4.0.1:
+We run HefestoAI's strict gate against HefestoAI's own code on every push to main. As of 2026-04-29, the gate is GREEN — but it took us 6 weeks of refactor to get there.
 
-**Critical bugs found:**
-1. Hardcoded password in test fixtures (CRITICAL)
-2. Dangerous `exec()` call without validation (HIGH)
-3. 155 other issues (code smells, security, complexity)
+When we initially activated the gate in strict mode, it flagged 12 complexity findings in our own gate-internals code. We considered three responses: silence the findings (rejected — that's exactly the drift we critique), accept the override permanently (rejected — same reason), or refactor at root cause (chosen — took 1 PR, 4 commits, 2 days, plus a declared-vs-real drift discovery in our own positioning doc that we logged for fix).
 
-**Result:** All fixed before shipping. Meta-validation at its finest.
+The full audit and refactor history are tracked internally in our private repo. The override mechanics and reversion criteria are documented; the gate-internals refactor reduced two CRITICAL functions from cyclomatic complexity 33 → 1 and 25 → 6 respectively, all helpers under 10.
 
 ---
 
@@ -677,6 +677,6 @@ MIT License for core functionality. PRO and OMEGA features are licensed separate
 
 ---
 
-**Hefesto: The code quality guardian built for the age of AI-generated code. 485 tests. 22 formats. 0.01s. Now with PR review.**
+**HefestoAI — release truth engine for AI-generated code. Verifies declared-vs-real drift before code ships.**
 
 (c) 2026 Narapa LLC, Miami, Florida
