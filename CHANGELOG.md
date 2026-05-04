@@ -33,6 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `multilang`, `scope`, `reliability_pack_summary`).
 - `AnalyzerEngine.__init__` accepts a new `quiet: bool = False` keyword
   argument, propagated by the CLI from `--quiet`.
+- **CI smoke for `[multilang]` extra**: new workflow
+  `.github/workflows/multilang-smoke.yml` validates that
+  `pip install -e ".[multilang]"` resolves cleanly and that
+  `tree_sitter_language_pack.get_parser(<lang>)` returns a working
+  parser for each of the 6 supported languages
+  (`javascript`, `typescript`, `java`, `go`, `rust`, `csharp`) under
+  Python 3.10–3.13. Asserts that each parsed AST has at least one
+  top-level node. Scope is intentionally narrow: this job does NOT
+  validate Hefesto's `meta.parser_failures` surfacing, the PRO bridge,
+  or graceful degradation without the extra — those properties are
+  defended by their own tests. Workflow header documents the
+  three-name mapping (`Language.CSHARP.value` / `GRAMMAR_NAMES` /
+  `LANG_MAP` / language-pack manifest) so future readers don't
+  "correct" the intentional naming layers.
 
 ### Changed
 - **Tightened `[multilang]` extra pin**: `tree-sitter-language-pack>=1.0.0,<2.0`
