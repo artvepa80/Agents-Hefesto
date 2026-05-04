@@ -39,7 +39,7 @@ class TreeSitterParser(CodeParser):
         "java": "java",
         "go": "go",
         "rust": "rust",
-        "c_sharp": "c_sharp",
+        "c_sharp": "csharp",  # tree-sitter-language-pack manifest uses 'csharp'
     }
 
     def __init__(self, language: str):
