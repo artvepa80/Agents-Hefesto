@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Parser-failure visibility**: When tree-sitter-dependent languages
+  (TypeScript, JavaScript, Java, Go, Rust, C#) silently skipped due to a
+  missing `[multilang]` extra or other parser errors, Hefesto now emits a
+  categorized warning to stderr at the end of analysis and exposes the
+  structured data via `report.meta.parser_failures` in JSON output.
+  - Categorization distinguishes `parser_unavailable` (suggests
+    `pip install hefesto-ai[multilang]`) from `parse_error` (encoding,
+    syntax, runtime mismatch — no install hint).
+  - Strong-signal categorization: when language requires tree-sitter
+    (in `ParserFactory.GRAMMAR_NAMES`) and `USE_PREBUILT=False`,
+    classify as `parser_unavailable` regardless of exception type or
+    message. Catches API drift in `tree-sitter` core (e.g.,
+    `TypeError` from the deprecated manual `Language(path, name)`
+    fallback that no longer matches current `tree-sitter` signatures).
+    Falls back to the exception-type heuristic only when language
+    context is unavailable (unit-test callers).
+  - Conservative: ambiguous failures default to `parse_error` to avoid
+    false positives on the install hint.
+  - `--quiet` suppresses the stderr warning while preserving the
+    structured `meta.parser_failures` field for programmatic consumers.
+  - JSON shape: `report.meta.parser_failures = [{"path", "language",
+    "category", "exception"}, ...]` (top-level under `meta`, alongside
+    `multilang`, `scope`, `reliability_pack_summary`).
+- `AnalyzerEngine.__init__` accepts a new `quiet: bool = False` keyword
+  argument, propagated by the CLI from `--quiet`.
+
 ## [4.12.1] - 2026-04-27
 
 ### Fixed

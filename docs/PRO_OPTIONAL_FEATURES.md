@@ -148,6 +148,49 @@ Enrichment attaches to each finding:
 
 ---
 
+## Parser Failure Visibility (OSS)
+
+Not a PRO feature — but documented here because it shapes `report.meta`
+alongside the EPICs above.
+
+When tree-sitter-dependent languages (TypeScript, JavaScript, Java, Go,
+Rust, C#) are skipped because the `[multilang]` extra is not installed
+(or any other parser failure occurs), Hefesto records the skip and emits
+a categorized warning at the end of the analysis run. Without this,
+those languages would appear as silent zeroes in `files_analyzed`.
+
+### Behavior
+
+- stderr warning emitted at end of analysis (suppressed by `--quiet`)
+- Structured data always populated in `report.meta.parser_failures`
+- Categorization:
+  - `parser_unavailable` → suggests `pip install hefesto-ai[multilang]`
+  - `parse_error` → no install hint (encoding, syntax, etc.)
+
+### Output
+- Report meta: `report.meta.parser_failures = [...]` (only when non-empty)
+- Each entry: `{"path", "language", "category", "exception"}`
+
+```json
+{
+  "meta": {
+    "parser_failures": [
+      {
+        "path": "/work/src/app.js",
+        "language": "javascript",
+        "category": "parser_unavailable",
+        "exception": "TypeError"
+      }
+    ]
+  }
+}
+```
+
+`--quiet` suppresses the stderr warning while preserving the structured
+field for programmatic consumers (CI scripts, JSON pipelines).
+
+---
+
 ## Security note
 
 - OSS should never import PRO modules directly outside the guarded bridge.
