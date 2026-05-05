@@ -34,6 +34,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnalyzerEngine.__init__` accepts a new `quiet: bool = False` keyword
   argument, propagated by the CLI from `--quiet`.
 
+### Fixed
+- **C# parsing under `[multilang]` extra**: `tree-sitter-language-pack`'s
+  manifest registers C# under the canonical name `csharp`; Hefesto's
+  `LANG_MAP` passed through the legacy alias `c_sharp`, which is NOT in
+  the pack's manifest. With an empty download cache (every CI run, every
+  fresh user install), `get_parser("c_sharp")` failed with
+  `LanguageNotFoundError` and the parsers tarball was never downloaded —
+  every `.cs` file silent-skipped persistently. The bug was masked on
+  warm caches because `libtree_sitter_c_sharp.dylib` becomes
+  filesystem-resolvable once any other call (e.g. `get_parser("csharp")`)
+  has populated the cache, even though manifest lookup still fails.
+  Fixed by mapping `c_sharp` → `csharp` in `LANG_MAP`. Audited the full
+  `LANG_MAP` against the manifest; this is the only mismatch (the other
+  5 entries — `typescript`, `javascript`, `java`, `go`, `rust` — are
+  correct).
+
 ## [4.12.1] - 2026-04-27
 
 ### Fixed
