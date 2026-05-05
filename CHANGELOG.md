@@ -34,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AnalyzerEngine.__init__` accepts a new `quiet: bool = False` keyword
   argument, propagated by the CLI from `--quiet`.
 
+### Changed
+- **Tightened `[multilang]` extra pin**: `tree-sitter-language-pack>=1.0.0,<2.0`
+  (was `>=0.7.0`, no upper bound).
+  - Documents the actual compat range of the API surface used by Hefesto today
+    (PyPI latest 1.6.2 satisfies the new range).
+  - Rules out 0.x lines that no longer track `tree-sitter` core's current
+    `Language` signature — the same drift surfaced as `TypeError` in Item 1's
+    integration test of the deprecated manual fallback path.
+  - Prevents accidental future drift to a 2.x major before the API surface is
+    re-verified.
+  - No change for users who installed `[multilang]` after early-2025 (pip was
+    already resolving to 1.x).
+
 ### Fixed
 - **C# parsing under `[multilang]` extra**: `tree-sitter-language-pack`'s
   manifest registers C# under the canonical name `csharp`; Hefesto's
