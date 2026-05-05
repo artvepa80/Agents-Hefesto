@@ -821,6 +821,7 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
             verbose=verbose,
             scope_config=scope_config,
             enrich_config=enrich_config,
+            quiet=quiet,
         )
 
         # Register all analyzers

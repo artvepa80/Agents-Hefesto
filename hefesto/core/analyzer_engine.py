@@ -57,6 +57,7 @@ class AnalyzerEngine:
         verbose: bool = False,
         scope_config: Any = None,
         enrich_config: Any = None,
+        quiet: bool = False,
     ):
         """
         Initialize analyzer engine.
@@ -66,11 +67,13 @@ class AnalyzerEngine:
             verbose: Print detailed pipeline steps (default: False)
             scope_config: Optional ScopeGatingConfig (PRO feature, None = no gating)
             enrich_config: Optional EnrichmentConfig (PRO feature, None = no enrichment)
+            quiet: Suppress non-essential stderr output, including parser-skip warnings
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
         self.analyzers: List[Any] = []
         self._project_analyzers: List[Any] = []
         self.verbose = verbose
+        self._quiet = quiet
         self._registry = get_registry()
         self.source_cache: dict = {}  # ML Enhancement: cache source for semantic analysis
         self._scope_config = scope_config
@@ -80,6 +83,7 @@ class AnalyzerEngine:
         self._multilang_skip_report: Any = None
         self._tsjs_parser: Any = None
         self._all_file_results: list = []  # EPIC 4: accumulated for _build_meta
+        self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -186,6 +190,9 @@ class AnalyzerEngine:
         # Create report (meta is assembled by CLI from engine state)
         report = AnalysisReport(summary=summary, file_results=file_results)
 
+        # Surface silent parser skips before the CLI renders the report.
+        self._emit_skip_summary()
+
         if self.verbose:
             print("Analysis complete!")
             print(f"   Duration: {duration:.2f}s")
@@ -266,6 +273,7 @@ class AnalyzerEngine:
 
         self._all_file_results.extend(file_results)
 
+        self._emit_skip_summary()
         return AnalysisReport(summary=summary, file_results=file_results)
 
     def _find_files(self, path: Path, exclude_patterns: List[str]) -> List[Path]:
@@ -419,6 +427,14 @@ class AnalyzerEngine:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
             except Exception as exc:
+                self._parser_failures.append(
+                    {
+                        "path": str(file_path),
+                        "language": language.value,
+                        "category": self._categorize_parser_failure(exc, language),
+                        "exception": type(exc).__name__,
+                    }
+                )
                 logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
                 return None
 
@@ -510,6 +526,78 @@ class AnalyzerEngine:
         threshold_value = severity_order[self.severity_threshold]
 
         return [issue for issue in issues if severity_order[issue.severity] >= threshold_value]
+
+    def _categorize_parser_failure(
+        self, exc: Exception, language: Optional["Language"] = None
+    ) -> str:
+        """Classify parser failure for the skip summary.
+
+        Strong signal first: if ``language`` requires tree-sitter (i.e., is in
+        ``ParserFactory.GRAMMAR_NAMES``) AND the prebuilt grammar pack is not
+        available (``USE_PREBUILT=False``), then any failure during parser
+        instantiation/parse is definitionally a missing-pack situation —
+        regardless of exception type or message. This catches API drift in the
+        ``tree-sitter`` core library (e.g., ``TypeError`` from the deprecated
+        manual ``Language(path, name)`` fallback that no longer matches
+        current ``tree-sitter`` signatures).
+
+        Fallback heuristic: when no language context is supplied (unit-test
+        callers) or the language is not tree-sitter-dependent, classify by
+        exception type / message. Conservative: ambiguous cases default to
+        ``"parse_error"`` so we never suggest installing ``[multilang]`` when
+        the real issue is something else (encoding, syntax). Full traceback
+        goes to DEBUG for diagnostics.
+        """
+        if language is not None:
+            from hefesto.core.parsers.parser_factory import ParserFactory
+            from hefesto.core.parsers.treesitter_parser import USE_PREBUILT
+
+            if not USE_PREBUILT and language in ParserFactory.GRAMMAR_NAMES:
+                return "parser_unavailable"
+
+        if isinstance(exc, (ImportError, OSError)):
+            return "parser_unavailable"
+        msg = str(exc).lower()
+        if "languages.so" in msg or "tree_sitter_language_pack" in msg:
+            return "parser_unavailable"
+        logger.debug("Uncategorized parser failure (defaulting to parse_error)", exc_info=True)
+        return "parse_error"
+
+    def _emit_skip_summary(self) -> None:
+        """Emit categorized parser-skip warnings to stderr.
+
+        Suppressed when ``self._quiet`` is True (respects the ``--quiet`` CLI
+        contract). Both categories are emitted independently when both are
+        present; the actionable one (``parser_unavailable``) goes first.
+
+        Output goes to stderr so it does not contaminate stdout when the user
+        passes ``--output json`` (per cli/main.py policy: stdout is pure JSON).
+        """
+        if self._quiet or not self._parser_failures:
+            return
+
+        import click
+
+        unavailable = [f for f in self._parser_failures if f["category"] == "parser_unavailable"]
+        parse_errors = [f for f in self._parser_failures if f["category"] == "parse_error"]
+
+        if unavailable:
+            langs = sorted({f["language"] for f in unavailable})
+            click.echo(
+                f"⚠️  Skipped {len(unavailable)} file(s) — parser unavailable for: "
+                f"{', '.join(langs)}\n"
+                f"   To analyze these languages: pip install hefesto-ai[multilang]",
+                err=True,
+            )
+        if parse_errors:
+            sample = ", ".join(f["path"] for f in parse_errors[:3])
+            more = f" (+{len(parse_errors) - 3} more)" if len(parse_errors) > 3 else ""
+            click.echo(
+                f"⚠️  Skipped {len(parse_errors)} file(s) — parse error in: "
+                f"{sample}{more}\n"
+                f"   Run with --verbose for details.",
+                err=True,
+            )
 
     def _create_summary(
         self, file_results: List[FileAnalysisResult], duration: float
@@ -639,6 +727,10 @@ class AnalyzerEngine:
                 "total": len(reliability_issues),
                 "by_rule": by_rule,
             }
+
+        # Parser failures (silent skips of tree-sitter-dependent languages)
+        if self._parser_failures:
+            meta["parser_failures"] = list(self._parser_failures)
 
         return meta
 
