@@ -73,7 +73,12 @@ ml = [
     "torch>=2.0.0",
 ]
 multilang = [
-    "tree-sitter-language-pack>=1.0.0,<2.0",
+    # 1.6.3 excluded: upstream's malformed accidental publish ships only a
+    # cp312 wheel whose top-level was renamed to `_native/`, breaking
+    # `import tree_sitter_language_pack` on Python 3.12. Tracked upstream as
+    # kreuzberg-dev/tree-sitter-language-pack#108 (closed; superseded by
+    # 1.7.0) and #116 (open). 1.7.0+ is unaffected.
+    "tree-sitter-language-pack>=1.0.0,!=1.6.3,<2.0",
 ]
 ci = [
     "pyyaml>=6.0,<7.0",

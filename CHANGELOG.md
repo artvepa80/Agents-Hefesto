@@ -49,6 +49,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "correct" the intentional naming layers.
 
 ### Changed
+- **Defense against `tree-sitter-language-pack` 1.6.3 broken cp312 wheel**:
+  upstream's 1.6.3 release shipped only a `cp312-cp312` wheel whose top-level
+  directory was renamed to `_native/`, breaking
+  `import tree_sitter_language_pack` on Python 3.12. The new
+  `multilang-smoke` workflow (added in this same PR) caught this on its
+  first run. Pin extended to `>=1.0.0,!=1.6.3,<2.0` to skip the broken
+  release; `1.7.0+` is unaffected and resolves automatically. Tracked
+  upstream as `kreuzberg-dev/tree-sitter-language-pack#108` (closed;
+  malformed publish, superseded by 1.7.0) and `#116` (open).
 - **Tightened `[multilang]` extra pin**: `tree-sitter-language-pack>=1.0.0,<2.0`
   (was `>=0.7.0`, no upper bound).
   - Documents the actual compat range of the API surface used by Hefesto today
