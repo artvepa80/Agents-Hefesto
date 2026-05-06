@@ -33,8 +33,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `multilang`, `scope`, `reliability_pack_summary`).
 - `AnalyzerEngine.__init__` accepts a new `quiet: bool = False` keyword
   argument, propagated by the CLI from `--quiet`.
+- **CI smoke for `[multilang]` extra**: new workflow
+  `.github/workflows/multilang-smoke.yml` validates that
+  `pip install -e ".[multilang]"` resolves cleanly and that
+  `tree_sitter_language_pack.get_parser(<lang>)` returns a working
+  parser for each of the 6 supported languages
+  (`javascript`, `typescript`, `java`, `go`, `rust`, `csharp`) under
+  Python 3.10–3.13. Asserts that each parsed AST has at least one
+  top-level node. Scope is intentionally narrow: this job does NOT
+  validate Hefesto's `meta.parser_failures` surfacing, the PRO bridge,
+  or graceful degradation without the extra — those properties are
+  defended by their own tests. Workflow header documents the
+  three-name mapping (`Language.CSHARP.value` / `GRAMMAR_NAMES` /
+  `LANG_MAP` / language-pack manifest) so future readers don't
+  "correct" the intentional naming layers.
 
 ### Changed
+- **Defense against `tree-sitter-language-pack` 1.6.3 broken cp312 wheel**:
+  upstream's 1.6.3 release shipped only a `cp312-cp312` wheel whose top-level
+  directory was renamed to `_native/`, breaking
+  `import tree_sitter_language_pack` on Python 3.12. The new
+  `multilang-smoke` workflow (added in this same PR) caught this on its
+  first run. Pin extended to `>=1.0.0,!=1.6.3,<2.0` to skip the broken
+  release; `1.7.0+` is unaffected and resolves automatically. Tracked
+  upstream as `kreuzberg-dev/tree-sitter-language-pack#108` (closed;
+  malformed publish, superseded by 1.7.0) and `#116` (open).
 - **Tightened `[multilang]` extra pin**: `tree-sitter-language-pack>=1.0.0,<2.0`
   (was `>=0.7.0`, no upper bound).
   - Documents the actual compat range of the API surface used by Hefesto today

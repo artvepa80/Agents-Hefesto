@@ -1,0 +1,92 @@
+# Smoke job for the [multilang] extra.
+#
+# Validates that `pip install hefesto-ai[multilang]` resolves cleanly and that
+# `tree_sitter_language_pack.get_parser(<lang>)` returns a working parser for
+# each of the 6 languages Hefesto supports through the extra.
+#
+# This job is INTENTIONALLY narrow — it does NOT validate:
+#   - Hefesto's `meta.parser_failures` surfacing (see test_parser_failures.py)
+#   - `HAS_MULTILANG=False` graceful degradation when the extra is absent
+#   - Hefesto's TreeSitterParser wrapper (redundant with integration tests)
+#   - The bridge to PRO (`hefesto.pro_optional`)
+#
+# Naming map (three names exist for C# in this codebase; do not "correct" them):
+#   - `Language.CSHARP.value`                                    = "csharp"
+#   - `ParserFactory.GRAMMAR_NAMES[Language.CSHARP]`             = "c_sharp"
+#   - `LANG_MAP["c_sharp"]` (translates to language-pack)        = "csharp"
+#   - `tree_sitter_language_pack` manifest canonical name        = "csharp"
+# This smoke uses the manifest canonical name ("csharp", no underscore)
+# because it calls `get_parser` directly, bypassing Hefesto's layers.
+
+name: Multilang Extra Smoke
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: multilang-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  multilang-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install [multilang] extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[multilang]"
+
+      - name: Smoke — get_parser + parse for the 6 supported languages
+        run: |
+          python - <<'PY'
+          from tree_sitter_language_pack import get_parser
+
+          # Manifest canonical names (NOT Hefesto's internal LANG_MAP keys).
+          # See workflow header comment for the naming map rationale.
+          samples = {
+              "javascript": b"function f() { return 1; }",
+              "typescript": b"function f(): number { return 1; }",
+              "java":       b"class Foo { int bar() { return 1; } }",
+              "go":         b"package main\nfunc Foo() int { return 1 }\n",
+              "rust":       b"pub fn foo() -> i32 { 1 }",
+              "csharp":     b"class Foo { int Bar() { return 1; } }",
+          }
+          failures = []
+          for lang, code in samples.items():
+              try:
+                  parser = get_parser(lang)
+                  if parser is None:
+                      failures.append(f"{lang}: get_parser returned None")
+                      continue
+                  tree = parser.parse(code)
+                  if not tree.root_node.children:
+                      failures.append(f"{lang}: AST has no children (empty parse)")
+                      continue
+                  print(f"  {lang:12s} -> OK ({len(tree.root_node.children)} top-level nodes)")
+              except Exception as e:
+                  failures.append(f"{lang}: {type(e).__name__}: {e}")
+          if failures:
+              print("FAILURES:")
+              for f in failures:
+                  print(f"  - {f}")
+              raise SystemExit(1)
+          print("All 6 languages OK")
+          PY
