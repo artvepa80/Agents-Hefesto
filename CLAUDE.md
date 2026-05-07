@@ -112,7 +112,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Mission**: Build the most trusted release truth engine for AI-generated code. We dogfood the gate against our own code on every push to main; gate-internals refactor history is documented in the private repo.
 
-**Current Status (v4.12.1)**:
+**Current Status (v4.13.0)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
 - BigQuery integration
