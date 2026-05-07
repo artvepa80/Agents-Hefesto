@@ -70,6 +70,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No change for users who installed `[multilang]` after early-2025 (pip was
     already resolving to 1.x).
 
+### Documentation
+- Aligned `README.md`, `.github/copilot-instructions.md`,
+  `docs/INSTALLATION.md`, `docs/QUICK_START.md`, and
+  `docs/GETTING_STARTED.md` with the new `[multilang]` extra surfacing
+  introduced in this release. The 6 tree-sitter languages (TypeScript,
+  JavaScript, Java, Go, Rust, C#) now have explicit install instructions
+  across all install-related surfaces. Framing chosen: `[multilang]` is
+  **required** for those languages (matches the runtime stderr warning
+  users see if they skip the extra), not "optional but recommended".
+- Fixed pre-existing typo `pip install hefesto` → `pip install hefesto-ai`
+  in `docs/QUICK_START.md` (2 occurrences) and `docs/INSTALLATION.md`
+  (3 occurrences, including the uninstall command).
+
 ### Fixed
 - **C# parsing under `[multilang]` extra**: `tree-sitter-language-pack`'s
   manifest registers C# under the canonical name `csharp`; Hefesto's

@@ -5,7 +5,11 @@ Get up and running with Hefesto in 5 minutes.
 ## 1. Install Hefesto
 
 ```bash
-pip install hefesto
+pip install hefesto-ai
+
+# For TypeScript, JavaScript, Java, Go, Rust, or C# analysis,
+# also install the multilang extra:
+pip install "hefesto-ai[multilang]"
 ```
 
 ## 2. Set API Key
@@ -134,7 +138,7 @@ Add to `.github/workflows/quality.yml`:
 ```yaml
 - name: Code Quality
   run: |
-    pip install hefesto
+    pip install hefesto-ai
     hefesto serve &
     sleep 5
     # Your CI tests here

@@ -17,9 +17,17 @@
 # Install from PyPI
 pip install hefesto-ai
 
+# Required for TypeScript, JavaScript, Java, Go, Rust, or C# analysis:
+pip install "hefesto-ai[multilang]"
+
 # Verify installation
 hefesto --version
 ```
+
+Without the `[multilang]` extra, files in those 6 languages are skipped
+at parse time and Hefesto emits a stderr warning pointing to the install
+command (also exposed via `report.meta.parser_failures` in JSON output).
+Python (`.py`) analysis works without the extra.
 
 **Expected output:**
 ```
