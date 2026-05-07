@@ -13,7 +13,7 @@ After your AI wrote the code, but before it ships. HefestoAI verifies that what 
 
 ---
 
-## Operational Truth Analyzers (v4.12.1)
+## Operational Truth Analyzers (v4.13.0)
 
 HefestoAI's core contribution: detecting drift between what your project **declares** and what it **does**. These analyzers run automatically on every `hefesto analyze` and catch issues that linters and security scanners miss because they're not in any single file — they're in the inconsistency between files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.12.1
+    uses: artvepa80/Agents-Hefesto@v4.13.0
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -144,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.12.1)
+## PR Review (v4.13.0)
 
 Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
 
@@ -246,7 +246,7 @@ export HEFESTO_LICENSE_KEY="your-key"
 
 ---
 
-## CLI Reference (v4.12.1)
+## CLI Reference (v4.13.0)
 
 ```bash
 # Analyze code
@@ -418,7 +418,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.12.1)
+### GitHub Actions — PR Review with Inline Comments (v4.13.0)
 
 ```yaml
 name: Hefesto PR Review
@@ -455,7 +455,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.12.1
+    rev: v4.13.0
     hooks:
       - id: hefesto-analyze
 ```
