@@ -184,12 +184,18 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 | Language | Parser | Status |
 |----------|--------|--------|
 | Python | Native AST | Full support |
-| TypeScript | TreeSitter | Full support |
-| JavaScript | TreeSitter | Full support |
-| Java | TreeSitter | Full support |
-| Go | TreeSitter | Full support |
-| Rust | TreeSitter | Full support |
-| C# | TreeSitter | Full support |
+| TypeScript | TreeSitter | Full support¹ |
+| JavaScript | TreeSitter | Full support¹ |
+| Java | TreeSitter | Full support¹ |
+| Go | TreeSitter | Full support¹ |
+| Rust | TreeSitter | Full support¹ |
+| C# | TreeSitter | Full support¹ |
+
+¹ TreeSitter languages require the `[multilang]` extra:
+`pip install "hefesto-ai[multilang]"`. Without it, files in these
+languages are skipped at parse time and Hefesto emits a stderr warning
+pointing to the install command (also exposed via
+`report.meta.parser_failures` in JSON output).
 
 ### DevOps & Configuration
 
@@ -226,7 +232,7 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 # FREE tier
 pip install hefesto-ai
 
-# TS/JS parsing + symbol metadata (optional)
+# Required for TypeScript, JavaScript, Java, Go, Rust, and C# analysis
 pip install "hefesto-ai[multilang]"
 
 # PRO tier
