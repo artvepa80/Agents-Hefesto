@@ -245,8 +245,23 @@ class ResourceSafetyAnalyzer:
     def _r3_session_lifecycle(
         self, py_tree: ast.Module, file_path: str, code: str
     ) -> List[AnalysisIssue]:
-        """Detect Session()/connect() without context-manager or close()."""
+        """Detect Session()/connect() without context-manager or close().
+
+        Recognizes two cleanup patterns:
+
+        * Local variable: ``conn = connect(); ...; conn.close()`` or
+          ``with connect() as conn:`` within the same function.
+        * Self-managed attribute: ``self._conn = connect()`` inside a method,
+          when the enclosing class defines a sibling method whose body calls
+          ``self._conn.close()`` (lazy-getter cache pattern).
+
+        Findings are only emitted when the assigned target's name can be
+        extracted (``ast.Name`` or ``ast.Attribute`` on ``self``); unnamed
+        targets are skipped to avoid the historical ``var_name=None`` bug
+        that produced messages containing the literal ``'None'``.
+        """
         issues: List[AnalysisIssue] = []
+        class_close_index = self._build_class_close_index(py_tree)
 
         for node in ast.walk(py_tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -262,15 +277,22 @@ class ResourceSafetyAnalyzer:
                 if call_name not in _SESSION_CONSTRUCTORS:
                     continue
 
-                # Get the assigned variable name
-                var_name = None
-                if child.targets and isinstance(child.targets[0], ast.Name):
-                    var_name = child.targets[0].id
+                target = child.targets[0] if child.targets else None
+                var_name, attr_name = self._extract_target_names(target)
 
-                # Check if used in with-statement or .close() called
-                if self._has_cleanup(node, var_name, child.lineno):
+                # Skip findings we cannot meaningfully describe.
+                if var_name is None and attr_name is None:
                     continue
 
+                # Same-function cleanup (local variable case).
+                if var_name and self._has_cleanup(node, var_name, child.lineno):
+                    continue
+
+                # Cross-method cleanup (self.<attr> managed by a sibling method).
+                if attr_name and class_close_index.get(attr_name):
+                    continue
+
+                display_name = var_name or f"self.{attr_name}"
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,
@@ -279,12 +301,12 @@ class ResourceSafetyAnalyzer:
                         issue_type=AnalysisIssueType.RELIABILITY_SESSION_LIFECYCLE,
                         severity=AnalysisIssueSeverity.MEDIUM,
                         message=(
-                            f"'{call_name}()' assigned to '{var_name}' without "
+                            f"'{call_name}()' assigned to '{display_name}' without "
                             "context-manager or explicit .close() — potential connection leak."
                         ),
                         suggestion=(
-                            f"Use 'with {call_name}() as {var_name}:' or ensure "
-                            f"'{var_name}.close()' in a finally block."
+                            f"Use 'with {call_name}() as {display_name}:' or ensure "
+                            f"'{display_name}.close()' in a finally block."
                         ),
                         function_name=node.name,
                         engine=_ENGINE,
@@ -294,6 +316,62 @@ class ResourceSafetyAnalyzer:
                     )
                 )
         return issues
+
+    @staticmethod
+    def _extract_target_names(
+        target: Optional[ast.AST],
+    ) -> "tuple[Optional[str], Optional[str]]":
+        """Return ``(local_var_name, self_attr_name)`` for an assign target.
+
+        - ``conn = ...`` → ``("conn", None)``
+        - ``self._conn = ...`` → ``(None, "_conn")``
+        - anything else → ``(None, None)``
+        """
+        if isinstance(target, ast.Name):
+            return target.id, None
+        if (
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "self"
+        ):
+            return None, target.attr
+        return None, None
+
+    @staticmethod
+    def _build_class_close_index(py_tree: ast.Module) -> Dict[str, bool]:
+        """Index ``self.<attr>`` names whose ``.close()`` (or other
+        :data:`_CLOSE_METHODS`) is invoked by any method of the enclosing class.
+
+        Pattern recognized::
+
+            class Foo:
+                def close(self):
+                    self._conn.close()   # → index["_conn"] = True
+
+        Conservative: only direct ``self.<attr>.<close-method>()`` invocations.
+        Enough for the lazy-getter cache pattern without introducing
+        interprocedural complexity.
+        """
+        index: Dict[str, bool] = {}
+        for cls in ast.walk(py_tree):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            for sub in ast.walk(cls):
+                if not isinstance(sub, ast.Call):
+                    continue
+                func = sub.func
+                if not isinstance(func, ast.Attribute):
+                    continue
+                if func.attr not in _CLOSE_METHODS:
+                    continue
+                receiver = func.value
+                if (
+                    isinstance(receiver, ast.Attribute)
+                    and isinstance(receiver.value, ast.Name)
+                    and receiver.value.id == "self"
+                ):
+                    index[receiver.attr] = True
+        return index
 
     @staticmethod
     def _call_name(call_node: ast.Call) -> str:
