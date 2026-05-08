@@ -53,6 +53,45 @@ def test_r3_session_lifecycle_detected():
     assert "close" in r3[0].suggestion.lower() or "with" in r3[0].suggestion.lower()
 
 
+def test_r3_self_attribute_with_close_method_no_finding():
+    """Lazy-getter cache pattern: self._conn = connect() + class-level close().
+
+    Mirrors swarm/storage/sqlite_store.py (PRO repo) FP-1 from EPIC 4 Phase D
+    warn soak (2026-05-08). The class manages connection lifecycle via an
+    explicit close() method that calls self._conn.close(); R3 must recognize
+    this pattern and NOT emit a finding.
+    """
+    issues = _run("r3_self_attr_managed.py")
+    r3 = [i for i in issues if i.issue_type == AnalysisIssueType.RELIABILITY_SESSION_LIFECYCLE]
+    assert r3 == [], (
+        "Lazy-getter cache + class-level close() should not trigger R3, "
+        f"got {len(r3)} finding(s): {[(i.line, i.message) for i in r3]}"
+    )
+
+
+def test_r3_message_never_contains_assigned_to_none():
+    """R3 messages must never contain the literal "'None'" as the assigned
+    variable. Prior bug: ast.Attribute targets (e.g., self._conn) fell through
+    to var_name=None and produced messages like
+    "'connect()' assigned to 'None' without ...".
+
+    This regression guard scans every R3 emission across every reliability
+    fixture in the repo, including fixtures that intentionally use
+    self-attribute targets.
+    """
+    fixtures = sorted(FIXTURES_DIR.glob("*.py"))
+    assert fixtures, "no reliability fixtures discovered"
+
+    for fixture in fixtures:
+        issues = _run(fixture.name)
+        for i in issues:
+            if i.issue_type != AnalysisIssueType.RELIABILITY_SESSION_LIFECYCLE:
+                continue
+            assert "'None'" not in i.message, (
+                f"R3 emitted message with 'None' literal in {fixture.name}: " f"{i.message!r}"
+            )
+
+
 # ── R4: Logging Handler Duplication ───────────────────────────────────
 
 
