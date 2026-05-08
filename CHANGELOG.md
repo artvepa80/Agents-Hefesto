@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.13.1] - 2026-05-08
+
+### Fixed
+- **R3 detector false positive on self-managed connections** (PR #35).
+  R3 (`RELIABILITY_SESSION_LIFECYCLE`) now correctly handles `ast.Attribute`
+  assign targets such as `self._conn = sqlite3.connect(...)` and recognizes
+  the lazy-getter cache pattern: when a class assigns a connection to
+  `self.<attr>` and a sibling method invokes `self.<attr>.close()` (or
+  `disconnect`/`shutdown`/`dispose`), R3 no longer emits a finding.
+  - Eliminates messages containing the literal `'None'` literal that
+    previously surfaced when targets were not `ast.Name`.
+  - Negative-control unchanged: local-variable connections without cleanup
+    still emit R3 correctly.
+  - Added `tests/fixtures/reliability_drift/r3_self_attr_managed.py` mirroring
+    the SwarmStore lazy-getter pattern that surfaced FP-1 during EPIC 4
+    Phase D warn soak (2026-05-08).
+  - Added `test_r3_self_attribute_with_close_method_no_finding` and
+    `test_r3_message_never_contains_assigned_to_none` (regression guard).
+
 ## [4.13.0] - 2026-05-06
 
 ### Added
