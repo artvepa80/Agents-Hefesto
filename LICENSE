@@ -14,14 +14,9 @@ PHASE 0 FEATURES - MIT LICENSE
 
 The following components are licensed under the MIT License:
 
-- hefesto/llm/suggestion_validator.py
-- hefesto/llm/feedback_logger.py
-- hefesto/llm/budget_tracker.py
-- hefesto/llm/validators.py
-- hefesto/security/masking.py
-- hefesto/config/
-- hefesto/cli/
-- All base API functionality
+- All files in this repository (including the hefesto/ package, scripts/,
+  tests/, docs/ and the GitHub Action), unless a file or component is
+  explicitly marked otherwise
 
 MIT License:
 
@@ -49,8 +44,10 @@ PHASE 1 FEATURES - COMMERCIAL LICENSE
 
 The following components require a valid commercial license:
 
-- hefesto/llm/semantic_analyzer.py
-- hefesto/llm/cicd_feedback_collector.py
+- PRO and OMEGA features distributed separately as the commercial add-on
+  (the `hefesto_pro` package), which is not part of this repository
+- Any file or component in this repository explicitly marked as a Pro
+  feature requiring a commercial license
 - All ML-based features
 - Advanced analytics
 
@@ -62,13 +59,15 @@ Commercial License Terms:
    the Phase 1 (Pro) features.
 
 2. PRICING
-   Early Adopter (First 100 users): $15 USD per user/month
+   PRO: $8 USD per month
 
-   Standard Professional: $30 USD per user/month
+   OMEGA: $19 USD per month
 
-   Team (5 users): $150 USD per month
+   Enterprise: Custom pricing (contact sales)
 
-   Enterprise: Custom pricing
+   Current prices and plan details are published at
+   https://github.com/artvepa80/Agents-Hefesto#features-by-tier and may
+   change.
 
 3. RESTRICTIONS
    You may NOT:
@@ -109,5 +108,5 @@ For questions about licensing:
 - Sales: sales@narapallc.com
 - Legal: contact@narapallc.com
 
-Last Updated: October 20, 2025
+Last Updated: October 2, 2026
 
