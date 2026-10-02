@@ -4,18 +4,18 @@
   <img src="assets/hefesto-demo.gif" alt="Hefesto Demo" width="700">
 </p>
 
-After your AI wrote the code, but before it ships. HefestoAI verifies that what your project declares — deps, configs, install artifacts — matches what it actually does.
+HefestoAI runs after your AI assistant writes the code and before it ships. It checks that what your project declares (dependencies, configs, install artifacts) matches what it actually does, and it runs security and complexity checks on the code itself.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT + Commercial](https://img.shields.io/badge/License-MIT%20%2B%20Commercial-yellow.svg)](LICENSE)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
 ---
 
 ## Operational Truth Analyzers (v4.13.1)
 
-HefestoAI's core contribution: detecting drift between what your project **declares** and what it **does**. These analyzers run automatically on every `hefesto analyze` and catch issues that linters and security scanners miss because they're not in any single file — they're in the inconsistency between files.
+These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
 | Analyzer | What it catches | Rule ID |
 |----------|----------------|---------|
@@ -39,7 +39,7 @@ pip install hefesto-ai
 cd your-project
 hefesto analyze . --fail-on critical
 
-# PR review (new in v4.11.2) — analyze only changed code
+# PR review (added in v4.10.0) — analyze only changed code
 hefesto pr-review
 hefesto pr-review --strict        # include file-level context
 hefesto pr-review --post --pr 42  # post inline comments via gh CLI
@@ -49,13 +49,13 @@ hefesto pr-review --post --pr 42  # post inline comments via gh CLI
 
 ## Why Hefesto? The AI Code Problem
 
-AI tools like Claude Code, GitHub Copilot, and Cursor generate code at machine speed. But **who validates that code?**
+Assistants such as Claude Code, GitHub Copilot and Cursor write code faster than anyone can review it line by line. Some of what they write passes a linter and is still dangerous:
 
-- Copilot generates `os.system(user_input)` → **command injection**
-- Claude writes `f"SELECT * FROM {table}"` → **SQL injection**
-- AI code looks clean to linters but **changes business logic silently** (semantic drift)
+- `os.system(user_input)` → **command injection**
+- `f"SELECT * FROM {table}"` → **SQL injection**
+- code that runs but quietly changes behavior, such as a misspelled attribute or an exception that is caught and dropped (checked in Python)
 
-**Hefesto catches what your linter misses.** Pre-commit, pre-push, CI/CD — before it reaches production.
+Hefesto checks for these at pre-commit, at pre-push and in CI, so they surface before the code reaches production.
 
 ---
 
@@ -110,21 +110,21 @@ steps:
 |-------|-------------|---------|
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
-| `min_severity` | Minimum severity to report | `LOW` |
+| `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format (`text`, `json`, `html`) | `text` |
-| `telemetry` | Opt-in to anonymous telemetry (1=enable) | `0` |
+| `telemetry` | `1` also enables the CLI's anonymous telemetry inside the Action. In v4.13.1 the Action itself still sends one anonymous ping per run even when this is `0`; see [Telemetry](#telemetry) | `0` |
 
 **Outputs**:
 
 | Output | Description |
 |--------|-------------|
-| `exit_code` | The exit code of the CLI (0=Success, 1=Error, 2=Issues Found) |
+| `exit_code` | The exit code of the CLI (0 = threshold not breached, 1 = `fail_on` threshold breached or runtime error; see [Exit Codes](#exit-codes)) |
 
 ---
 
 ## AI-Generated Code Guardrails (Pre-commit + MCP)
 
-HefestoAI is a pre-commit guardian for AI-generated code. It detects semantic drift and risky changes before merge.
+HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so risky changes are flagged before merge.
 
 **Add as an MCP server:**
 ```bash
@@ -146,7 +146,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ## PR Review (v4.13.1)
 
-Analyze only the code changed in a pull request. Post inline comments on changed lines with deterministic dedup keys so reruns never create duplicate comments.
+Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
 ```bash
 # Generate review as JSON (default — no network, no token needed)
@@ -184,12 +184,12 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 | Language | Parser | Status |
 |----------|--------|--------|
 | Python | Native AST | Full support |
-| TypeScript | TreeSitter | Full support¹ |
-| JavaScript | TreeSitter | Full support¹ |
-| Java | TreeSitter | Full support¹ |
-| Go | TreeSitter | Full support¹ |
-| Rust | TreeSitter | Full support¹ |
-| C# | TreeSitter | Full support¹ |
+| TypeScript | TreeSitter | Supported¹ |
+| JavaScript | TreeSitter | Supported¹ |
+| Java | TreeSitter | Supported¹ |
+| Go | TreeSitter | Supported¹ |
+| Rust | TreeSitter | Supported¹ |
+| C# | TreeSitter | Supported¹ |
 
 ¹ TreeSitter languages require the `[multilang]` extra:
 `pip install "hefesto-ai[multilang]"`. Without it, files in these
@@ -199,30 +199,32 @@ pointing to the install command (also exposed via
 
 ### DevOps & Configuration
 
-| Format | Analyzer | Rules | Status |
-|--------|----------|-------|--------|
-| **YAML** | YamlAnalyzer | Generic YAML security | v4.4.0 |
-| **Terraform** | TerraformAnalyzer | TfSec-aligned rules | v4.4.0 |
-| **Shell** | ShellAnalyzer | ShellCheck-aligned | v4.4.0 |
-| **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | v4.4.0 |
-| **SQL** | SqlAnalyzer | SQL Injection prevention | v4.4.0 |
-| **PowerShell** | PS001-PS006 | 6 security rules | v4.5.0 |
-| **JSON** | J001-J005 | 5 security rules | v4.5.0 |
-| **TOML** | T001-T003 | 3 security rules | v4.5.0 |
-| **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 |
-| **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 | v4.12.0 |
+| Format | Analyzer | Rules | Status | Run by `hefesto analyze`² |
+|--------|----------|-------|--------|---------------------------|
+| **YAML** | YamlAnalyzer | Generic YAML security | v4.4.0 | Yes |
+| **Terraform** | TerraformAnalyzer | TfSec-aligned rules | v4.4.0 | Yes |
+| **Shell** | ShellAnalyzer | ShellCheck-aligned | v4.4.0 | Yes |
+| **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | v4.4.0 | Yes |
+| **SQL** | SqlAnalyzer | SQL Injection prevention | v4.4.0 | Yes |
+| **PowerShell** | PS001-PS006 | 6 security rules | v4.5.0 | Not yet |
+| **JSON** | J001-J005 | 5 security rules | v4.5.0 | Not yet |
+| **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
+| **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
+| **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
-| Format | Analyzer | Focus | Status |
-|--------|----------|-------|--------|
-| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | v4.7.0 |
-| **ARM Templates** | ArmAnalyzer | Azure IaC Security | v4.7.0 |
-| **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 |
-| **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 |
+| Format | Analyzer | Focus | Status | Run by `hefesto analyze`² |
+|--------|----------|-------|--------|---------------------------|
+| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | v4.7.0 | Not yet |
+| **ARM Templates** | ArmAnalyzer | Azure IaC Security | v4.7.0 | Not yet |
+| **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
+| **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: 7 code languages + 11 DevOps formats + 4 Cloud formats = **22 supported formats**
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.13.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+
+² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
 ---
 
@@ -234,15 +236,9 @@ pip install hefesto-ai
 
 # Required for TypeScript, JavaScript, Java, Go, Rust, and C# analysis
 pip install "hefesto-ai[multilang]"
-
-# PRO tier
-pip install hefesto-ai[pro]
-export HEFESTO_LICENSE_KEY="your-key"
-
-# OMEGA Guardian
-pip install hefesto-ai[omega]
-export HEFESTO_LICENSE_KEY="your-key"
 ```
+
+`pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
 
 ---
 
@@ -254,7 +250,7 @@ hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
 
-# PR review (v4.11.2)
+# PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
 hefesto pr-review --base main --head HEAD      # explicit refs
 hefesto pr-review --strict                     # file-level findings too
@@ -327,7 +323,7 @@ The hook runs two gates:
 | Static Analysis | Yes | Yes | Yes |
 | Security Scanning | Basic | Advanced | Advanced |
 | Pre-push Hooks | Yes | Yes | Yes |
-| 22 Language Support | Yes | Yes | Yes |
+| Language & format support ([details](#language-support)) | Yes | Yes | Yes |
 | ML Enhancement | No | Yes | Yes |
 | REST API | No | Yes | Yes |
 | BigQuery Analytics | No | Yes | Yes |
@@ -362,7 +358,7 @@ curl -X POST http://localhost:8000/analyze \
 
 ### API Security (v4.8.0)
 
-The API server is **secure by default**:
+The API server starts with these defaults:
 
 | Feature | Default | Configure via |
 |---------|---------|---------------|
@@ -377,7 +373,7 @@ The API server is **secure by default**:
 # Production example
 export HEFESTO_API_KEY=my-secret-key
 export HEFESTO_CORS_ORIGINS=https://app.example.com
-export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60
+export HEFESTO_RATE_LIMIT_PER_MINUTE=60
 export HEFESTO_EXPOSE_DOCS=false
 hefesto serve --host 0.0.0.0 --port 8000
 ```
@@ -484,7 +480,7 @@ export HEFESTO_OUTPUT="json"
 
 # API Security (v4.7.0)
 export HEFESTO_API_KEY="your-api-key"                # Enable API key auth
-export HEFESTO_API_RATE_LIMIT_PER_MINUTE=60           # Enable rate limiting
+export HEFESTO_RATE_LIMIT_PER_MINUTE=60               # Enable rate limiting
 export HEFESTO_CORS_ORIGINS="https://app.example.com" # Restrict CORS
 export HEFESTO_EXPOSE_DOCS=true                       # Enable /docs, /redoc
 export HEFESTO_WORKSPACE_ROOT="/srv/code"              # Path sandbox root
@@ -578,28 +574,40 @@ Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration runbooks
 | **AI-generated code focus** | ✅ Primary use case | Generic | ✅ Yes | ✅ Yes | Generic |
 | **Declared-vs-real drift detection** | ✅ Core feature | ❌ | ❌ | ❌ | ❌ |
 | **Operational truth analyzers** | ✅ 5 analyzers | ❌ | ❌ | ❌ | ❌ |
-| **Languages supported** | 22 formats | Many | Many | Many | Many |
+| **Languages supported** | 13 formats analyzed by the CLI (22 analyzers shipped; [details](#language-support)) | Many | Many | Many | Many |
 | **Setup time** | < 5 min, no config | Config-heavy | Cloud signup | Cloud signup | Cloud signup |
 | **Where it runs** | Local CLI / GitHub Action / pre-commit / MCP | Local / cloud | Cloud only | Cloud only | Cloud / CLI |
-| **Pricing** | Free OSS / $8 Pro / $19 OMEGA | Free OSS / Contact sales | $24/dev/mo | Free Dev / $30/dev/mo | $25/dev/mo\* |
+| **Pricing (as of Oct 2026)** | Free OSS / $8/mo PRO / $19/mo OMEGA | Free tier / Teams $30/contributor/mo (Code)\* | Free for public repos / $24/dev/mo (annual) | Credit-based, $0.012/credit; no permanent free plan | Free / Team $25/mo\*\* |
 
-\*Snyk pricing is per product (Code, Open Source, Container, IaC); multi-product subscriptions cost more.
+\*Semgrep Supply Chain and Secrets are priced separately. \*\*Snyk Team covers up to 10 developers; Enterprise is credit-based. Prices from each vendor's official pricing page, checked Oct 2026; they change often.
 
-**HefestoAI's niche:** Detecting drift between what AI-generated code **declares** and what it **does**. Traditional tools validate code against language rules. HefestoAI validates code against the project's own declarations — its dependencies, its configs, its install artifacts.
+**Where HefestoAI fits:** most tools check code against the rules of its language. HefestoAI also checks a project against its own declarations: whether the imports match the declared dependencies, whether the versions in `pyproject.toml`, the CHANGELOG and the README agree, and whether `action.yml` and the Dockerfile match the files they reference.
 
 ---
 
 ## Dogfooding (Honest Account)
 
-We run HefestoAI's strict gate against HefestoAI's own code on every push to main. As of 2026-04-29, the gate is GREEN — but it took us 6 weeks of refactor to get there.
+We run HefestoAI's strict gate against HefestoAI's own code on every push to main. The gate has been GREEN since 2026-04-29, and getting there took more than six weeks: we logged the findings on 2026-03-17.
 
-When we initially activated the gate in strict mode, it flagged 12 complexity findings in our own gate-internals code. We considered three responses: silence the findings (rejected — that's exactly the drift we critique), accept the override permanently (rejected — same reason), or refactor at root cause (chosen — took 1 PR, 4 commits, 2 days, plus a declared-vs-real drift discovery in our own positioning doc that we logged for fix).
+In strict mode, the gate flagged 12 complexity findings in our own gate-internals code (2 CRITICAL, 10 HIGH). We considered three responses: silence the findings (rejected — that's exactly the drift we critique), accept the override permanently (rejected — same reason), or refactor at root cause (chosen). The root-cause refactor itself was short once we started it: one PR, written over two days (2026-04-27 and 04-28) and merged on 2026-04-29. Along the way we also found a declared-vs-real drift in our own positioning doc and logged it for a fix.
 
-The full audit and refactor history are tracked internally in our private repo. The override mechanics and reversion criteria are documented; the gate-internals refactor reduced two CRITICAL functions from cyclomatic complexity 33 → 1 and 25 → 6 respectively, all helpers under 10.
+The full audit and refactor history are tracked internally in our private repo. The refactor took the two CRITICAL functions from cyclomatic complexity 33 → 1 and 25 → 6, all helpers under 10. The 10 HIGH findings are under a temporary override whose mechanics and reversion criteria are documented.
 
 ---
 
 ## Changelog
+
+Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.13.1 (2026-05-08)
+- **Fix**: R3 (`RELIABILITY_SESSION_LIFECYCLE`) no longer flags a connection stored on `self` when a sibling method closes it
+
+### v4.13.0 (2026-05-06)
+- **Parser-failure visibility**: when TypeScript, JavaScript, Java, Go, Rust or C# files are skipped (for example, because `[multilang]` is missing), Hefesto prints a warning to stderr and records the files in `report.meta.parser_failures`
+- **CI smoke test** for the `[multilang]` extra on Python 3.10–3.13
+
+### v4.12.0 (2026-04-25)
+- **COBOL governance analysis**: 7 rules for COBOL-85 and IBM Enterprise COBOL (3 FREE, 4 PRO)
 
 ### v4.11.2 (2026-04-12)
 - **Phase 4 — Narrow Semantic Analyzer**: `ATTRIBUTE_NAME_MISMATCH` (typo detection via difflib) and `SILENT_EXCEPTION_SWALLOW` (broad except with trivially silent body)
@@ -639,7 +647,7 @@ The full audit and refactor history are tracked internally in our private repo. 
 ### v4.8.5 (2026-02-13)
 - **GitHub Action**: Market-ready Docker-based action (bypassing PyPI).
 - **Security**: Deterministic smoke tests with clean/critical fixtures.
-- **CLI**: Verified exit code contract (2 = Issues Found).
+- **CLI**: Verified exit code contract (2 = Issues Found). *Current CLI exits with 1 when the `--fail-on` gate fails; see [Exit Codes](#exit-codes).*
 
 ### v4.7.0 (2026-02-10)
 - **Patch C: API Hardening** — `hefesto serve` is secure-by-default (local-first)
@@ -659,13 +667,16 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 HefestoAI collects anonymous usage data by default to help improve the tool.
 
-**What's sent:** event type, version, OS, Python version, file count, duration, issue count.
+**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions` or `docker`, and the install source (`pypi` or `editable`).
+**What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.13.1 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
 **What's NOT sent:** code, file paths, file contents, project names, or any PII.
 
-Disable with:
+The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:
 ```bash
 export HEFESTO_TELEMETRY=0
 ```
+
+`hefesto telemetry status` and `hefesto telemetry clear` manage a separate local telemetry log; they do not show or control the remote ping.
 
 ---
 
@@ -679,10 +690,8 @@ export HEFESTO_TELEMETRY=0
 
 ## License
 
-MIT License for core functionality. PRO and OMEGA features are licensed separately.
+This repository is distributed under the Hefesto Dual License in [LICENSE](LICENSE): the components listed there are under the MIT License, and Pro features are under a commercial license. Questions about licensing: sales@narapallc.com.
 
 ---
-
-**HefestoAI — release truth engine for AI-generated code. Verifies declared-vs-real drift before code ships.**
 
 (c) 2026 Narapa LLC, Miami, Florida
