@@ -9,7 +9,7 @@ Thank you for your interest in contributing to Hefesto!
 - Submit PRs for bugs, features, docs
 - No CLA required for MIT-licensed code
 
-**Phase 1 (Pro - Commercial License)**:
+**Phase 1 (Pro - Commercial License, see [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md))**:
 - Closed source, proprietary code
 - Bug reports welcome via GitHub Issues
 - Managed by Narapa LLC team

@@ -8,7 +8,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT + Commercial](https://img.shields.io/badge/License-MIT%20%2B%20Commercial-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
 ---
@@ -690,7 +690,7 @@ export HEFESTO_TELEMETRY=0
 
 ## License
 
-This repository is distributed under the Hefesto Dual License in [LICENSE](LICENSE): the components listed there are under the MIT License, and Pro features are under a commercial license. Questions about licensing: sales@narapallc.com.
+The code in this repository is licensed under the [MIT License](LICENSE). The paid PRO and OMEGA features (the separately distributed `hefesto_pro` add-on) are covered by separate commercial terms in [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Questions about licensing: sales@narapallc.com.
 
 ---
 
