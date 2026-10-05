@@ -267,6 +267,10 @@ def _get_environment_flags() -> list:
 
     A GitHub Actions run produces ['ci', 'github_actions'].
     A Docker container in CI produces ['ci', 'docker'].
+    Owner dogfood: set ``HEFESTO_TELEMETRY_ENV=dogfood`` (or ``HEFESTO_DOGFOOD=1``)
+    to append ``dogfood`` so Neon analytics can exclude internal pings.
+    Editable installs also get ``dogfood`` (src already reports editable; env
+    makes filtering by env[] alone reliable).
     Default: ['user'] if none match.
     """
     try:
@@ -285,6 +289,17 @@ def _get_environment_flags() -> list:
             flags.append("docker")
         if os.getenv("KUBERNETES_SERVICE_HOST"):
             flags.append("kubernetes")
+
+        # Separate dogfood / internal pings from end-user analytics (env text[]).
+        telemetry_env = os.getenv("HEFESTO_TELEMETRY_ENV", "").strip().lower()
+        if telemetry_env in {"dogfood", "internal", "dev"} or _env_truthy(
+            os.getenv("HEFESTO_DOGFOOD")
+        ):
+            flags.append("dogfood")
+        elif _get_install_source() == "editable":
+            # Local ``pip install -e .`` is almost never an end-user install.
+            flags.append("dogfood")
+
         return flags or ["user"]
     except Exception:
         return ["user"]

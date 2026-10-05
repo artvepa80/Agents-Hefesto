@@ -260,51 +260,103 @@ def test_rotation_overwrites_existing_destination(tmp_path, monkeypatch):
 # --- Environment flags tests ---
 
 
+def _clear_ci_env(monkeypatch):
+    for key in (
+        "CI",
+        "GITHUB_ACTIONS",
+        "GITLAB_CI",
+        "JENKINS_URL",
+        "CIRCLECI",
+        "KUBERNETES_SERVICE_HOST",
+        "HEFESTO_TELEMETRY_ENV",
+        "HEFESTO_DOGFOOD",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
 def test_env_flags_ci(monkeypatch):
+    _clear_ci_env(monkeypatch)
     monkeypatch.setenv("CI", "true")
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    monkeypatch.delenv("GITLAB_CI", raising=False)
-    monkeypatch.delenv("JENKINS_URL", raising=False)
-    monkeypatch.delenv("CIRCLECI", raising=False)
-    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    # Isolate from editable auto-tag used in local/dev installs
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
     result = _get_environment_flags()
     assert "ci" in result
     assert "user" not in result
+    assert "dogfood" not in result
 
 
 def test_env_flags_multiple(monkeypatch):
+    _clear_ci_env(monkeypatch)
     monkeypatch.setenv("CI", "true")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.delenv("GITLAB_CI", raising=False)
-    monkeypatch.delenv("JENKINS_URL", raising=False)
-    monkeypatch.delenv("CIRCLECI", raising=False)
-    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
     result = _get_environment_flags()
     assert result == ["ci", "github_actions"]
 
 
 def test_env_flags_default(monkeypatch):
-    monkeypatch.delenv("CI", raising=False)
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    monkeypatch.delenv("GITLAB_CI", raising=False)
-    monkeypatch.delenv("JENKINS_URL", raising=False)
-    monkeypatch.delenv("CIRCLECI", raising=False)
-    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
     result = _get_environment_flags()
     assert result == ["user"]
 
 
 def test_env_flags_docker(monkeypatch, tmp_path):
-    monkeypatch.delenv("CI", raising=False)
-    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    monkeypatch.delenv("GITLAB_CI", raising=False)
-    monkeypatch.delenv("JENKINS_URL", raising=False)
-    monkeypatch.delenv("CIRCLECI", raising=False)
-    monkeypatch.delenv("KUBERNETES_SERVICE_HOST", raising=False)
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
     # Mock /.dockerenv existence
     monkeypatch.setattr("os.path.exists", lambda p: p == "/.dockerenv")
     result = _get_environment_flags()
     assert "docker" in result
+    assert "dogfood" not in result
+
+
+def test_env_flags_dogfood_via_telemetry_env(monkeypatch):
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setenv("HEFESTO_TELEMETRY_ENV", "dogfood")
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
+    result = _get_environment_flags()
+    assert result == ["dogfood"]
+
+
+def test_env_flags_dogfood_with_ci(monkeypatch):
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setenv("CI", "true")
+    monkeypatch.setenv("HEFESTO_TELEMETRY_ENV", "dogfood")
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
+    result = _get_environment_flags()
+    assert result == ["ci", "dogfood"]
+
+
+def test_env_flags_dogfood_via_hefesto_dogfood(monkeypatch):
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setenv("HEFESTO_DOGFOOD", "1")
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "pypi"
+    )
+    result = _get_environment_flags()
+    assert "dogfood" in result
+
+
+def test_env_flags_dogfood_editable_auto(monkeypatch):
+    _clear_ci_env(monkeypatch)
+    monkeypatch.setattr(
+        "hefesto.telemetry.client._get_install_source", lambda: "editable"
+    )
+    result = _get_environment_flags()
+    assert result == ["dogfood"]
 
 
 def test_install_source_pypi():
