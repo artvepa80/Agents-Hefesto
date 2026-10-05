@@ -667,7 +667,7 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
 HefestoAI collects anonymous usage data by default to help improve the tool.
 
-**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions` or `docker`, and the install source (`pypi` or `editable`).
+**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
 **What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.13.1 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
 **What's NOT sent:** code, file paths, file contents, project names, or any PII.
 
@@ -675,6 +675,13 @@ The CLI prints a one-time notice to stderr the first time it sends a ping, and i
 ```bash
 export HEFESTO_TELEMETRY=0
 ```
+
+Tag owner/dogfood runs so they do not mix with end-user analytics (`env` includes `dogfood`; also auto-tagged for editable installs):
+```bash
+export HEFESTO_TELEMETRY_ENV=dogfood
+# or: export HEFESTO_DOGFOOD=1
+```
+Filter in Neon: `WHERE NOT ('dogfood' = ANY(env))`.
 
 `hefesto telemetry status` and `hefesto telemetry clear` manage a separate local telemetry log; they do not show or control the remote ping.
 
