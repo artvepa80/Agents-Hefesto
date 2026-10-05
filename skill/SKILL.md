@@ -1,67 +1,60 @@
-# HefestoAI — Claude Code Skill Reference
+---
+name: HefestoAI
+description: >-
+  Run HefestoAI before committing AI-generated code: pre-commit / CI quality
+  gate for semantic drift, security, and reliability. Use when the user asks
+  about Hefesto, code quality gates, semantic drift, install hooks, or
+  validating Claude/Codex/Cursor output before commit.
+---
 
-HefestoAI is a pre-commit code quality guardian that detects semantic drift,
-security vulnerabilities, and reliability anti-patterns in AI-generated code.
+# HefestoAI — verify before commit
 
-Package: `hefesto-ai` (PyPI) | Version: 4.13.1 | License: MIT
-Requires: Python >= 3.10
+HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
+code. Package v4.13.1, MIT, Python >= 3.10.
 
-## When to Load These Docs
+## Required workflow (do this before commit)
 
-- User asks about code quality analysis or pre-commit hooks
-- User wants to detect issues in AI-generated code
-- User needs to set up CI/CD quality gates
-- User mentions semantic drift, code smells, or security scanning
-- User wants to integrate HefestoAI with Claude Code or Cursor
+1. Ensure the tool is installed: `pip install hefesto-ai` (or confirm `hefesto` is on PATH).
+2. Analyze the repo or changed paths:
+   ```bash
+   hefesto analyze . --fail-on HIGH
+   ```
+3. If exit code is not `0`, fix the reported issues (or ask the user) before committing.
+4. Prefer hooks for every commit: `hefesto install-hooks`.
 
-## Document Index
+Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
+
+## When this skill applies
+
+- User asks to commit, open a PR, or “ship” after AI edits
+- User mentions HefestoAI, semantic drift, pre-commit quality, or AI code review
+- Integrating with Claude Code, Cursor, Codex, or CI
+
+## Progressive docs (load only what you need)
 
 | File | Contents |
 |------|----------|
-| [issue_types.md](issue_types.md) | All 73 issue types with severities and descriptions |
-| [commands.md](commands.md) | CLI commands, flags, workflows, and exit codes |
-| [semantic_drift.md](semantic_drift.md) | What semantic drift is and how HefestoAI detects it |
-| [reliability_drift.md](reliability_drift.md) | 5 RELIABILITY_* rules for long-running services |
-| [integration.md](integration.md) | Pre-commit hooks, CI/CD, MCP server setup |
+| [commands.md](commands.md) | CLI flags, workflows, exit codes |
+| [issue_types.md](issue_types.md) | Issue catalog and severities |
+| [semantic_drift.md](semantic_drift.md) | Semantic drift detection |
+| [reliability_drift.md](reliability_drift.md) | RELIABILITY_* rules |
+| [integration.md](integration.md) | Hooks, CI/CD, MCP |
+| [analysis/SKILL.md](analysis/SKILL.md) | Interpret analyze output |
 
-## Quick Start
+## Architecture (short)
 
-```bash
-pip install hefesto-ai
-hefesto analyze .
-hefesto install-hooks
-```
+**Phase 0 — static** (always): complexity, smells, security, best practices, resource safety; plus YAML/Shell/Dockerfile/Terraform/SQL analyzers.
 
-## Architecture Overview
+**Phase 1 — ML semantic** (PRO/OMEGA): embeddings when `HEFESTO_TIER=professional` or `omega`.
 
-HefestoAI runs a two-phase pipeline:
+Languages: Python, JS/TS, Java, Go, Rust, C/C++, YAML, Shell, Dockerfile, Terraform/HCL, SQL, PowerShell.
 
-**Phase 0 — Static Analysis** (always enabled):
-5 analyzers run deterministically on every file:
-1. ComplexityAnalyzer — cyclomatic and cognitive complexity
-2. CodeSmellAnalyzer — long functions, deep nesting, dead code, etc.
-3. SecurityAnalyzer — hardcoded secrets, injection risks, eval/pickle
-4. BestPracticesAnalyzer — naming, docstrings, style
-5. ResourceSafetyAnalyzer — reliability drift (EPIC 4)
+## MCP (optional)
 
-DevOps analyzers run on non-Python files:
-YAML, Shell, Dockerfile, Terraform, SQL — each with dedicated analyzer.
+Registry `io.github.artvepa80/hefestoai` · `npx @smithery/cli@latest mcp add artvepa80/hefestoai`
 
-**Phase 1 — ML Semantic Analysis** (PRO/OMEGA only):
-Detects semantic duplication across functions using embeddings.
-Enabled when HEFESTO_TIER=professional or HEFESTO_TIER=omega.
+## Rules
 
-## Supported Languages
-
-Python, JavaScript, TypeScript, Java, Go, Rust, C, C++,
-YAML, Shell/Bash, Dockerfile, Terraform/HCL, SQL, PowerShell.
-
-## MCP Server
-
-Registry: `io.github.artvepa80/hefestoai`
-Protocol: JSON-RPC 2.0 (streamable-http)
-Endpoint: `https://hefestoai.narapallc.com/api/mcp-protocol`
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
+- Never claim “all checks pass” without a fresh `hefesto analyze` exit `0`.
+- Do not skip the gate to manufacture a green commit.
+- Prefer dedicated Hefesto CLI over reinventing the same checks in the shell.
