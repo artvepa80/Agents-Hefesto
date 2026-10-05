@@ -10,7 +10,9 @@ description: >-
 # HefestoAI — verify before commit
 
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
-code. Package v4.13.1, MIT, Python >= 3.10.
+code.
+
+Package: `hefesto-ai` (PyPI) | Version: 4.13.1 | License: MIT | Python >= 3.10
 
 ## Required workflow (do this before commit)
 
