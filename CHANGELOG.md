@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `tests/fixtures/action/`. The GitHub Action smoke-test fixtures moved to
     `.github/action-smoke/`.
   - Regression tests: `tests/test_sec03_path_segments.py`.
+- **HTML report escapes every interpolated value (SEC-05).** The report from
+  `hefesto analyze --output html` / `--save-html` inserted `file_path`,
+  `message` and `function_name` without escaping (only `suggestion` was
+  escaped). A repository with a file or directory named like
+  `<script>…</script>` could run script in the browser of whoever opened its
+  report (stored XSS). All values in the issue cards and severity headers now
+  go through `html.escape(…, quote=True)`, which also covers `"` and `'` in
+  attribute context.
+  - Regression tests: `tests/test_html_reporter_escaping.py`.
+  - `docs/GETTING_STARTED.md` now describes what the HTML report actually
+    contains (it had claimed charts, filtering and syntax highlighting).
 
 ## [4.14.0] - 2026-10-06
 

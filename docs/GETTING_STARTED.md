@@ -160,11 +160,17 @@ hefesto analyze . --output json > report.json
 hefesto analyze . --output html --save-html report.html
 ```
 
-Then open `report.html` in your browser for:
-- Executive summary with charts
-- Filterable issue list
-- Syntax-highlighted code
+Then open `report.html` in your browser. It is a single static page with:
+- Summary counts (files analyzed, issues by severity)
+- Issues grouped by severity, each with location (`file:line:column`), message, function and type
 - Fix suggestions
+
+Every value taken from the analyzed code (file paths, messages, function
+names, suggestions) is HTML-escaped, so a file or directory named, for
+example, `<script>…</script>` shows up as text and never runs in your
+browser. Reports generated with v4.14.0 or earlier did not escape paths,
+messages or function names (SEC-05); don't open such reports if they were
+generated from an untrusted repository. Regenerate them instead.
 
 ---
 
