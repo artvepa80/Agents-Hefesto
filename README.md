@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.14.0)
+## Operational Truth Analyzers (v4.14.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.14.0
+    uses: artvepa80/Agents-Hefesto@v4.14.1
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -144,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.14.0)
+## PR Review (v4.14.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -222,7 +222,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -245,7 +245,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.14.0)
+## CLI Reference (v4.14.1)
 
 ```bash
 # Analyze code
@@ -447,7 +447,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.14.0)
+### GitHub Actions — PR Review with Inline Comments (v4.14.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -484,7 +484,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.14.0
+    rev: v4.14.1
     hooks:
       - id: hefesto-analyze
 ```
@@ -663,6 +663,12 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Changelog
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.14.1 (2026-10-06)
+- **Security (SEC-03)**: secret detection skips test/example code by whole path segment and file-name convention, not by any path that merely contains `test` or `example`
+- **Security (SEC-05)**: the HTML report escapes every interpolated value (stored XSS via crafted file names)
+- **Security (SEC-06)**: the GitHub Action sends telemetry only when the `telemetry` input is `1` or `true`; `hefesto telemetry status` now reports the CLI usage ping
+- **Fix (BUG-13)**: Action `min_severity: INFO` maps to `LOW` instead of failing the run
 
 ### v4.14.0 (2026-10-06)
 - **`.hefesto.yaml` project config** for `hefesto analyze`, with `--config PATH` / `--no-config`; explicit flags win over the file, and an invalid file exits 2

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.14.1] - 2026-10-06
+
 ### Security
 - **Secret detection no longer skips production files whose path merely
   contains "test" or "example" (SEC-03).** `HARDCODED_SECRET` used a substring
