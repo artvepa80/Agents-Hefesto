@@ -470,41 +470,35 @@ hefesto:
 
 ## Configuration
 
+`hefesto analyze` is configured with command-line flags (see CLI Reference
+above). There is no config file and no environment variable for analysis
+options such as severity or output format.
+
 ### Environment Variables
 
 ```bash
-# Core
-export HEFESTO_LICENSE_KEY="your-key"
-export HEFESTO_SEVERITY="MEDIUM"
-export HEFESTO_OUTPUT="json"
+# Telemetry (see Telemetry below)
+export HEFESTO_TELEMETRY=0                            # Disable anonymous usage ping
 
-# API Security (v4.7.0)
+# PRO/OMEGA only (read by the private distribution, ignored by the FREE tier)
+export HEFESTO_LICENSE_KEY="your-key"
+
+# API Security (PRO, v4.7.0) -- used by `hefesto serve`
 export HEFESTO_API_KEY="your-api-key"                # Enable API key auth
 export HEFESTO_RATE_LIMIT_PER_MINUTE=60               # Enable rate limiting
 export HEFESTO_CORS_ORIGINS="https://app.example.com" # Restrict CORS
 export HEFESTO_EXPOSE_DOCS=true                       # Enable /docs, /redoc
 export HEFESTO_WORKSPACE_ROOT="/srv/code"              # Path sandbox root
-export HEFESTO_CACHE_MAX_ITEMS=256                     # Cache size limit
+export HEFESTO_CACHE_MAX_SIZE=1000                     # Cache size limit
 export HEFESTO_CACHE_TTL_SECONDS=300                   # Cache entry TTL
 ```
 
-### Config File (.hefesto.yaml)
+### Config File (`.hefesto.yaml`) -- planned, not yet supported
 
-```yaml
-severity: HIGH
-exclude:
-  - tests/
-  - node_modules/
-  - .venv/
-
-rules:
-  complexity:
-    max_cyclomatic: 10
-    max_cognitive: 15
-  security:
-    check_secrets: true
-    check_injections: true
-```
+Hefesto does **not** read a `.hefesto.yaml` file today; a file in your repo
+is ignored. Pass options as flags instead, e.g.
+`hefesto analyze . --severity HIGH --exclude tests/,node_modules/`.
+Rule thresholds (cyclomatic complexity, etc.) are not configurable yet.
 
 ---
 

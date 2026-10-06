@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **README Configuration section no longer claims features that do not
+  exist.**
+  - The `.hefesto.yaml` example (severity, exclude, rule thresholds) was
+    never read by any Hefesto code. The section is now marked
+    "planned, not yet supported" and points to the equivalent CLI flags.
+  - Removed `HEFESTO_SEVERITY` and `HEFESTO_OUTPUT` from the environment
+    variable list; nothing reads them. Use `--severity` / `--output`.
+  - Labeled `HEFESTO_LICENSE_KEY` and the API security variables as
+    PRO/OMEGA-only, and corrected `HEFESTO_CACHE_MAX_ITEMS=256` to the
+    variable the PRO API actually reads, `HEFESTO_CACHE_MAX_SIZE`
+    (default 1000).
+  - Added `HEFESTO_TELEMETRY=0` to the list (already documented under
+    Telemetry).
+
 ## [4.13.1] - 2026-05-08
 
 ### Fixed
