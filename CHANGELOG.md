@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Opt-in `--format-check` flag for `hefesto analyze`.** Runs Black in
+  check mode (in-process; no files are modified) on the Python files the
+  analysis already selected and reports each file Black would reformat as a
+  `FORMAT_DRIFT` finding (severity LOW) in the normal text/JSON/HTML report.
+  - Off by default: without the flag, findings, output and exit codes are
+    unchanged.
+  - Respects the project's `[tool.black]` config from `pyproject.toml`
+    (line-length, target-version, string normalization, preview,
+    `extend-exclude` / `force-exclude`); warns when `required-version` does
+    not match the installed Black.
+  - Findings are appended after the `--severity` filter (same as the ML
+    pass), so they show up even at the default MEDIUM threshold.
+    `--fail-on` / `--exclude-types` apply normally: only `--fail-on LOW`
+    fails the gate on drift.
+  - JSON output includes a truncated unified diff in `code_snippet` and
+    `lines_added` / `lines_removed` in `metadata`.
+  - Black is optional: new extra `pip install "hefesto-ai[format]"`
+    (`black>=24`). If Black is missing, a one-line warning is printed and
+    the run continues.
+  - Only Black is covered; isort and flake8 still run only in the repo's
+    pre-push hook / CI.
+
 ### Documentation
 - **README Configuration section no longer claims features that do not
   exist.**

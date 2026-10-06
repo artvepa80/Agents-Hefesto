@@ -236,6 +236,9 @@ pip install hefesto-ai
 
 # Required for TypeScript, JavaScript, Java, Go, Rust, and C# analysis
 pip install "hefesto-ai[multilang]"
+
+# Optional: Black, for `hefesto analyze --format-check`
+pip install "hefesto-ai[format]"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
@@ -249,6 +252,7 @@ pip install "hefesto-ai[multilang]"
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+hefesto analyze . --format-check   # opt-in: also report Black formatting drift
 
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
@@ -275,6 +279,32 @@ hefesto telemetry clear
 hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
 hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 ```
+
+### Formatting Drift (opt-in)
+
+`hefesto analyze` does not check formatting by default. With `--format-check`
+it also runs [Black](https://github.com/psf/black) in check mode (in-process,
+files are never modified) on the Python files it analyzed:
+
+```bash
+pip install "hefesto-ai[format]"                    # or: pip install black
+hefesto analyze . --format-check                    # report drift
+hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
+```
+
+- Each file Black would reformat is one `FORMAT_DRIFT` finding, severity LOW.
+  Because the check is opt-in, these findings are shown even when
+  `--severity` is above LOW. `--fail-on` and `--exclude-types` apply to them
+  like any other finding, so `--fail-on MEDIUM` (or higher) does not trip on drift.
+- Black settings come from your `pyproject.toml` `[tool.black]` table, found
+  the same way the `black` CLI finds it (line-length, target-version,
+  skip-string-normalization, preview, `extend-exclude` / `force-exclude`, ...).
+  If `required-version` does not match the installed Black, Hefesto warns.
+- JSON output carries a unified diff (first 60 lines) in `code_snippet` and
+  `lines_added` / `lines_removed` in `metadata`.
+- If Black is not installed, Hefesto prints a one-line warning and continues;
+  the exit code is unaffected.
+- Only Black is covered; isort and flake8 are not run.
 
 ### Exit Codes
 

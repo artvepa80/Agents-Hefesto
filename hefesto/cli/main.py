@@ -206,6 +206,16 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     is_flag=True,
     help="Enable opt-in memory budget gate (EPIC 4). Threshold via env var.",
 )
+# -- Formatting drift (opt-in) --
+@click.option(
+    "--format-check",
+    is_flag=True,
+    help=(
+        "Also run Black in check mode on analyzed Python files and report each file"
+        " Black would reformat as a LOW FORMAT_DRIFT finding (needs: pip install"
+        ' "hefesto-ai[format]")'
+    ),
+)
 # -- Enrichment flags (PRO EPIC 3) --
 @click.option(
     "--enrich",
@@ -235,6 +245,7 @@ def analyze(
     include_fixtures: bool,
     scope_allow: Tuple[str, ...],
     scope_deny: Tuple[str, ...],
+    format_check: bool,
     enrich: str,
     enrich_provider: Tuple[str, ...],
     enrich_timeout: int,
@@ -253,6 +264,7 @@ def analyze(
         hefesto analyze . --output json
         hefesto analyze . --fail-on HIGH  # CI gate
         hefesto analyze . --quiet  # Summary only
+        hefesto analyze . --format-check  # also report Black formatting drift
     """
     # When --output json, all non-JSON text goes to stderr so stdout is pure JSON.
     json_mode = output == "json"
@@ -303,6 +315,7 @@ def analyze(
             )
 
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
+        _run_format_check(format_check, all_file_results, source_cache, quiet, json_mode)
 
         meta = engine._build_meta() if hasattr(engine, "_build_meta") else {}
         if budget_result is not None:
@@ -915,6 +928,40 @@ def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
         import logging
 
         logging.getLogger(__name__).debug("ML analysis skipped: %s", e)
+
+
+def _run_format_check(enabled, all_file_results, source_cache, quiet, json_mode):
+    """Opt-in Black check (--format-check). A missing Black never fails the run.
+
+    Like the ML pass above, findings are appended after the engine's
+    ``--severity`` filter: the user explicitly asked for them, so they are
+    shown even though they are LOW. ``--fail-on`` / ``--exclude-types``
+    still apply to them as to any other finding.
+    """
+    if not enabled:
+        return
+    stats = _collect_format_drift(all_file_results, source_cache)
+    if stats is not None and not (quiet or json_mode):
+        click.echo(stats.summary_line())
+
+
+def _collect_format_drift(all_file_results, source_cache):
+    """Run Black in check mode; warnings go to stderr. Returns stats, or None if skipped."""
+    from hefesto.analyzers import format_drift
+
+    if not format_drift.is_black_available():
+        click.echo(format_drift.BLACK_MISSING_WARNING, err=True)
+        return None
+
+    try:
+        _, stats = format_drift.run_format_check(all_file_results, source_cache)
+    except Exception as e:
+        click.echo(f"Warning: --format-check failed and was skipped: {e}", err=True)
+        return None
+
+    for warning in stats.warnings:
+        click.echo(f"Warning: {warning}", err=True)
+    return stats
 
 
 def _generate_report(all_file_results, total_loc, total_duration, output, save_html, meta=None):
