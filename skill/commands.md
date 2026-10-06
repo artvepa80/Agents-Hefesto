@@ -21,6 +21,7 @@ hefesto analyze <paths...> [options]
 | `--max-issues` | all | Cap displayed issues |
 | `--save-html` | (none) | Save HTML report to file path |
 | `--enable-memory-budget-gate` | false | Enable memory budget gate (EPIC 4) |
+| `--format-check` | false | Run Black in check mode on analyzed Python files; each file Black would reformat becomes a LOW `FORMAT_DRIFT` finding. Needs `pip install "hefesto-ai[format]"` (warns and skips if Black is missing) |
 
 **Scope gating (PRO):**
 `--include-third-party`, `--include-generated`, `--include-fixtures`,
@@ -50,6 +51,9 @@ hefesto analyze . --fail-on HIGH --exclude-types VERY_HIGH_COMPLEXITY,LONG_FUNCT
 
 # Analyze multiple paths
 hefesto analyze src/ lib/ types/
+
+# Also report Black formatting drift (opt-in); gate on it with --fail-on LOW
+hefesto analyze . --format-check --fail-on LOW
 ```
 
 ## install-hooks
