@@ -20,7 +20,7 @@ jobs:
         id: clean_scan
         uses: ./
         with:
-          target: 'tests/fixtures/action/clean.py'
+          target: '.github/action-smoke/clean.py'
           fail_on: 'CRITICAL'
           min_severity: 'LOW'
           format: 'text'
@@ -40,7 +40,7 @@ jobs:
         id: critical_scan
         uses: ./
         with:
-          target: 'tests/fixtures/action/critical_secret.py'
+          target: '.github/action-smoke/critical_secret.py'
           fail_on: 'CRITICAL'
           min_severity: 'CRITICAL'
           format: 'json'
