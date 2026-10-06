@@ -1,11 +1,17 @@
-"""Regression test: action fixtures must not be skipped by secret detection."""
+"""Regression test: GitHub Action smoke fixtures must not be skipped by secret detection.
+
+The fixtures live in ``.github/action-smoke/`` rather than under ``tests/``:
+files under a ``tests/`` directory are treated as test code and skipped by
+secret detection (SEC-03), and there is no longer a hardcoded exception for
+``tests/fixtures/action/``.
+"""
 
 from pathlib import Path
 
 from hefesto.analyzers.security import SecurityAnalyzer
 from hefesto.core.analysis_models import AnalysisIssueSeverity, AnalysisIssueType
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures" / "action"
+FIXTURES_DIR = Path(__file__).resolve().parent.parent / ".github" / "action-smoke"
 
 
 def test_critical_secret_detected_in_action_fixture():

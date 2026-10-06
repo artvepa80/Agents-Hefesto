@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Run from GitHub workspace so relative paths (e.g. tests/fixtures/action/clean.py) resolve.
+# Run from GitHub workspace so relative paths (e.g. .github/action-smoke/clean.py) resolve.
 # Docker image WORKDIR is /app; the repo is mounted at GITHUB_WORKSPACE.
 if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE" ]; then
     cd "$GITHUB_WORKSPACE"

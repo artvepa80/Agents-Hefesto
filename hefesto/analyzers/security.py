@@ -14,6 +14,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import re
+from pathlib import Path, PurePosixPath
 from typing import List, Tuple
 
 from hefesto.core.analysis_models import (
@@ -22,6 +23,77 @@ from hefesto.core.analysis_models import (
     AnalysisIssueType,
 )
 from hefesto.core.ast.generic_ast import GenericAST
+
+# Directory names that mark test or example code. Matched against whole path
+# segments (case-insensitive), never as substrings: ``tests/`` counts, but
+# ``contest/``, ``latest_app/`` or ``/tmp/pytest-of-user/`` do not (SEC-03).
+_TEST_DIRS = frozenset({"test", "tests", "__tests__"})
+_EXAMPLE_DIRS = frozenset({"example", "examples"})
+
+
+def _path_segments(file_path: str) -> List[str]:
+    """Split *file_path* into lower-cased segments, relative to the cwd if inside it.
+
+    The engine passes resolved absolute paths. Making them relative to the
+    directory Hefesto runs from (the project root for the CLI and the GitHub
+    Action) keeps parent directories outside the project, such as
+    ``/home/me/tests/myrepo/``, from classifying every file as test code.
+    """
+    normalized = file_path.replace("\\", "/")
+    path = Path(normalized)
+    if path.is_absolute():
+        try:
+            normalized = path.relative_to(Path.cwd().resolve()).as_posix()
+        except (ValueError, OSError):
+            pass
+    return [seg for seg in PurePosixPath(normalized.lower()).parts if seg not in ("", "/")]
+
+
+def is_test_path(file_path: str) -> bool:
+    """Return True if *file_path* is test code.
+
+    True when a directory segment is exactly ``test``, ``tests`` or
+    ``__tests__``, or the file name follows a test convention: ``test_*``,
+    ``*_test.<ext>``, ``*.test.<ext>``, ``*.spec.<ext>``, ``conftest.py``,
+    ``test.py`` or ``tests.py``. Substrings never count, so
+    ``src/contest/config.py`` and ``latest_settings.py`` are not test code.
+    There is no special case for ``fixtures``: a fixture under ``tests/`` is
+    test code because of the ``tests`` segment.
+    """
+    parts = _path_segments(file_path)
+    if not parts:
+        return False
+    *dirs, name = parts
+    if any(seg in _TEST_DIRS for seg in dirs):
+        return True
+    stem = name.split(".", 1)[0]
+    return (
+        name.startswith("test_")
+        or stem.endswith("_test")
+        or stem in ("test", "tests", "conftest")
+        or ".test." in name
+        or ".spec." in name
+    )
+
+
+def is_example_path(file_path: str) -> bool:
+    """Return True if *file_path* is example code or an example template.
+
+    True when a directory segment is exactly ``example`` or ``examples``, or
+    the file name ends in ``.example`` (e.g. ``.env.example``). Substrings never
+    count (``counterexample.py`` is scanned).
+    """
+    parts = _path_segments(file_path)
+    if not parts:
+        return False
+    *dirs, name = parts
+    return any(seg in _EXAMPLE_DIRS for seg in dirs) or name.endswith(".example")
+
+
+def is_test_or_example_path(file_path: str) -> bool:
+    """Return True if *file_path* is test code or example code (see above)."""
+    return is_test_path(file_path) or is_example_path(file_path)
+
 
 # Sinks that indicate SQL strings are actually executed (not just built/logged).
 _SQL_EXECUTE_SINKS = re.compile(
@@ -128,19 +200,17 @@ class SecurityAnalyzer:
         self, tree: GenericAST, file_path: str, code: str
     ) -> List[AnalysisIssue]:
         """Detect hardcoded secrets in code."""
-        issues = []
+        issues: List[AnalysisIssue] = []
+
+        # Skip test/example code to reduce noise. Matching is by path segment
+        # and file-name convention, never by substring (SEC-03).
+        if is_test_or_example_path(file_path):
+            return issues
 
         for line_num, line in enumerate(code.split("\n"), start=1):
             for pattern, secret_type in self.SECRET_PATTERNS:
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
-                    # Skip test/example files to reduce noise, but allow
-                    # action fixtures that are specifically designed to test detection.
-                    path_lower = file_path.lower().replace("\\", "/")
-                    is_action_fixture = "tests/fixtures/action/" in path_lower
-                    if not is_action_fixture and ("test" in path_lower or "example" in path_lower):
-                        continue
-
                     issues.append(
                         AnalysisIssue(
                             file_path=file_path,
@@ -534,7 +604,7 @@ class SecurityAnalyzer:
         """
         issues: List[AnalysisIssue] = []
 
-        if "test" in file_path.lower():
+        if is_test_path(file_path):
             return issues
 
         if tree.language != "python" or not code:

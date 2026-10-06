@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- **Secret detection no longer skips production files whose path merely
+  contains "test" or "example" (SEC-03).** `HARDCODED_SECRET` used a substring
+  check, so files such as `src/contest/config.py`, `latest_settings.py`,
+  `latest_app/…` and anything analyzed under `/tmp/pytest-of-<user>/` were
+  never scanned. Test/example code is now recognized by whole path segments
+  (`test/`, `tests/`, `__tests__/`, `example/`, `examples/`) and file-name
+  conventions (`test_*`, `*_test.*`, `*.test.*`, `*.spec.*`, `conftest.py`,
+  `test.py`, `tests.py`, `*.example`). Absolute paths are judged relative to
+  the working directory when inside it, so a checkout under a directory named
+  `tests` is not skipped wholesale.
+  - `ASSERT_IN_PRODUCTION` uses the same rule for test code (it had the same
+    substring check); its behavior on example code is unchanged.
+  - Removed the hardcoded exception that always scanned
+    `tests/fixtures/action/`. The GitHub Action smoke-test fixtures moved to
+    `.github/action-smoke/`.
+  - Regression tests: `tests/test_sec03_path_segments.py`.
+- **HTML report escapes every interpolated value (SEC-05).** The report from
+  `hefesto analyze --output html` / `--save-html` inserted `file_path`,
+  `message` and `function_name` without escaping (only `suggestion` was
+  escaped). A repository with a file or directory named like
+  `<script>…</script>` could run script in the browser of whoever opened its
+  report (stored XSS). All values in the issue cards and severity headers now
+  go through `html.escape(…, quote=True)`, which also covers `"` and `'` in
+  attribute context.
+  - Regression tests: `tests/test_html_reporter_escaping.py`.
+  - `docs/GETTING_STARTED.md` now describes what the HTML report actually
+    contains (it had claimed charts, filtering and syntax highlighting).
 - **GitHub Action telemetry is now really opt-in (SEC-06).**
   `scripts/action_entrypoint.sh` sent an anonymous `curl` ping to
   `hefestoai.narapallc.com/api/telemetry` on every run, even with
