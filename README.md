@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.13.1)
+## Operational Truth Analyzers (v4.14.0)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.13.1
+    uses: artvepa80/Agents-Hefesto@v4.14.0
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -112,7 +112,7 @@ steps:
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format (`text`, `json`, `html`) | `text` |
-| `telemetry` | `1` also enables the CLI's anonymous telemetry inside the Action. In v4.13.1 the Action itself still sends one anonymous ping per run even when this is `0`; see [Telemetry](#telemetry) | `0` |
+| `telemetry` | `1` also enables the CLI's anonymous telemetry inside the Action. In v4.14.0 the Action itself still sends one anonymous ping per run even when this is `0`; see [Telemetry](#telemetry) | `0` |
 
 **Outputs**:
 
@@ -144,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.13.1)
+## PR Review (v4.14.0)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -222,7 +222,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.13.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -245,7 +245,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.13.1)
+## CLI Reference (v4.14.0)
 
 ```bash
 # Analyze code
@@ -447,7 +447,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.13.1)
+### GitHub Actions — PR Review with Inline Comments (v4.14.0)
 
 ```yaml
 name: Hefesto PR Review
@@ -484,7 +484,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.13.1
+    rev: v4.14.0
     hooks:
       - id: hefesto-analyze
 ```
@@ -664,6 +664,11 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
+### v4.14.0 (2026-10-06)
+- **`.hefesto.yaml` project config** for `hefesto analyze`, with `--config PATH` / `--no-config`; explicit flags win over the file, and an invalid file exits 2
+- **Opt-in `--format-check`**: reports files Black would reformat as LOW `FORMAT_DRIFT` findings (`pip install "hefesto-ai[format]"`)
+- PyYAML is now a core dependency
+
 ### v4.13.1 (2026-05-08)
 - **Fix**: R3 (`RELIABILITY_SESSION_LIFECYCLE`) no longer flags a connection stored on `self` when a sibling method closes it
 
@@ -733,7 +738,7 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 HefestoAI collects anonymous usage data by default to help improve the tool.
 
 **What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
-**What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.13.1 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
+**What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.14.0 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
 **What's NOT sent:** code, file paths, file contents, project names, or any PII.
 
 The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:

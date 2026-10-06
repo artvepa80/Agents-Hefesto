@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.14.0] - 2026-10-06
+
 ### Added
 - **Opt-in `--format-check` flag for `hefesto analyze`.** Runs Black in
   check mode (in-process; no files are modified) on the Python files the
@@ -46,6 +48,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     any such key is applied generically (no per-option wiring).
   - The file in use is printed as `Config: <path>`.
 
+### Changed
+- **Telemetry: dogfood pings are tagged separately** (PR #56). When
+  `HEFESTO_TELEMETRY_ENV=dogfood` (or `internal` / `dev`) or
+  `HEFESTO_DOGFOOD=1` is set, or Hefesto runs from an editable install,
+  the anonymous ping's environment flags include `dogfood`, so owner and
+  development runs can be filtered out of end-user analytics.
+
+### Packaging
+- **License metadata** (PR #51): `LICENSE` is now the standard MIT text, and
+  the PRO/OMEGA/Enterprise terms live in `LICENSE-COMMERCIAL.md`.
+  `pyproject.toml` uses the SPDX expression `license = "MIT"` with
+  `license-files`, and the build now requires `setuptools>=77`.
+
 ### Dependencies
 - `pyyaml>=6.0,<7.0` is now a core dependency. It was already imported by
   the drift runner, CI-parity validator and YAML/Helm analyzers, but was
@@ -66,6 +81,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (default 1000).
   - Added `HEFESTO_TELEMETRY=0` to the list (already documented under
     Telemetry).
+- README honesty pass and corrected competitor pricing (PR #51).
+- `skill/SKILL.md` gained YAML frontmatter for agent discovery and asks
+  agents to run `hefesto analyze` before committing (PRs #53, #55).
 
 ## [4.13.1] - 2026-05-08
 
