@@ -27,9 +27,6 @@ MISFORMATTED = "def f( a,b ):\n    return a\n"
 EVAL_SNIPPET = "def run(cmd):\n    return eval(cmd)\n"
 
 ANALYZE_OPTIONS = {param.name for param in analyze.params}
-# --format-check is added by a separate PR; the key is accepted only when the
-# option exists in this build.
-HAS_FORMAT_CHECK = "format_check" in ANALYZE_OPTIONS
 
 
 @pytest.fixture
@@ -190,10 +187,7 @@ class TestValidation:
         assert "format_check" not in str(exc.value).split("supported:")[1]
 
     def test_every_key_maps_to_an_analyze_option(self):
-        expected = set(SUPPORTED_KEYS)
-        if not HAS_FORMAT_CHECK:
-            expected.discard("format_check")
-        assert expected <= ANALYZE_OPTIONS
+        assert set(SUPPORTED_KEYS) <= ANALYZE_OPTIONS
 
     def test_top_level_must_be_mapping(self):
         with pytest.raises(ConfigError, match="mapping"):
@@ -310,15 +304,6 @@ class TestCli:
         assert result.exit_code == 0, result.output
         assert "EVAL_USAGE" not in result.output
 
-    @pytest.mark.skipif(HAS_FORMAT_CHECK, reason="--format-check exists in this build")
-    def test_format_check_key_rejected_without_option(self, repo):
-        (repo / ".hefesto.yaml").write_text("format_check: true\n")
-        result = _invoke([str(repo / "src")])
-        assert result.exit_code == 2
-        assert "unknown key 'format_check'" in result.output
-        assert "no --format-check option" in result.output
-
-    @pytest.mark.skipif(not HAS_FORMAT_CHECK, reason="needs --format-check")
     def test_format_check_from_config(self, repo):
         pytest.importorskip("black")
         (repo / "src" / "bad.py").write_text(MISFORMATTED)
@@ -327,6 +312,21 @@ class TestCli:
         assert result.exit_code == 1, result.output
         assert "FORMAT_DRIFT" in result.output
 
+        # Explicit CLI --fail-on overrides the config's fail_on.
+        result = _invoke([str(repo / "src"), "--fail-on", "CRITICAL"])
+        assert result.exit_code == 0, result.output
+        assert "FORMAT_DRIFT" in result.output
+
+        # exclude_types from config applies to FORMAT_DRIFT in the gate.
+        (repo / ".hefesto.yaml").write_text(
+            "format_check: true\nfail_on: LOW\nexclude_types: [FORMAT_DRIFT]\n"
+        )
+        result = _invoke([str(repo / "src")])
+        assert result.exit_code == 0, result.output
+
+    def test_format_check_false_in_config(self, repo):
+        pytest.importorskip("black")
+        (repo / "src" / "bad.py").write_text(MISFORMATTED)
         (repo / ".hefesto.yaml").write_text("format_check: false\n")
         result = _invoke([str(repo / "src"), "--severity", "LOW"])
         assert result.exit_code == 0, result.output

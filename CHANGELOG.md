@@ -8,11 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Opt-in `--format-check` flag for `hefesto analyze`.** Runs Black in
+  check mode (in-process; no files are modified) on the Python files the
+  analysis already selected and reports each file Black would reformat as a
+  `FORMAT_DRIFT` finding (severity LOW) in the normal text/JSON/HTML report.
+  - Off by default: without the flag, findings, output and exit codes are
+    unchanged.
+  - Respects the project's `[tool.black]` config from `pyproject.toml`
+    (line-length, target-version, string normalization, preview,
+    `extend-exclude` / `force-exclude`); warns when `required-version` does
+    not match the installed Black.
+  - Findings are appended after the `--severity` filter (same as the ML
+    pass), so they show up even at the default MEDIUM threshold.
+    `--fail-on` / `--exclude-types` apply normally: only `--fail-on LOW`
+    fails the gate on drift.
+  - JSON output includes a truncated unified diff in `code_snippet` and
+    `lines_added` / `lines_removed` in `metadata`.
+  - Black is optional: new extra `pip install "hefesto-ai[format]"`
+    (`black>=24`). If Black is missing, a one-line warning is printed and
+    the run continues.
+  - Only Black is covered; isort and flake8 still run only in the repo's
+    pre-push hook / CI.
 - **`.hefesto.yaml` project config for `hefesto analyze`.** The nearest
   `.hefesto.yaml` / `.hefesto.yml` (searched from the first analyzed path up
   to the repo root, or the filesystem root outside a repo) can set
   `severity`, `fail_on`, `output`, `exclude`, `exclude_types`, `quiet`,
-  `max_issues` and `enable_memory_budget_gate`.
+  `max_issues`, `format_check` and `enable_memory_budget_gate`.
   - Precedence: explicit CLI flag > config file > default. Explicitness comes
     from click's parameter source, so `--severity MEDIUM` still wins over the
     file.
@@ -21,15 +42,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Unknown keys (including the old README's `rules:` block), bad values,
     invalid YAML, or both `.yaml` and `.yml` in one directory stop the run
     with exit code 2 and a message naming the problem.
-  - Only keys whose option exists in the running build are accepted, so a
-    `format_check` key is rejected until `--format-check` ships, then works
-    without further changes.
+  - Only keys whose option exists on the `analyze` command are accepted, and
+    any such key is applied generically (no per-option wiring).
   - The file in use is printed as `Config: <path>`.
 
 ### Dependencies
 - `pyyaml>=6.0,<7.0` is now a core dependency. It was already imported by
   the drift runner, CI-parity validator and YAML/Helm analyzers, but was
   declared only in the `dev` and `ci` extras.
+
+### Documentation
+- **README Configuration section no longer claims features that do not
+  exist.**
+  - The `.hefesto.yaml` example (severity, exclude, rule thresholds) was
+    never read by any Hefesto code. The section was marked "planned, not
+    yet supported"; it now documents the real `.hefesto.yaml` support added
+    above.
+  - Removed `HEFESTO_SEVERITY` and `HEFESTO_OUTPUT` from the environment
+    variable list; nothing reads them. Use `--severity` / `--output`.
+  - Labeled `HEFESTO_LICENSE_KEY` and the API security variables as
+    PRO/OMEGA-only, and corrected `HEFESTO_CACHE_MAX_ITEMS=256` to the
+    variable the PRO API actually reads, `HEFESTO_CACHE_MAX_SIZE`
+    (default 1000).
+  - Added `HEFESTO_TELEMETRY=0` to the list (already documented under
+    Telemetry).
 
 ## [4.13.1] - 2026-05-08
 

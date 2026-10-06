@@ -236,6 +236,9 @@ pip install hefesto-ai
 
 # Required for TypeScript, JavaScript, Java, Go, Rust, and C# analysis
 pip install "hefesto-ai[multilang]"
+
+# Optional: Black, for `hefesto analyze --format-check`
+pip install "hefesto-ai[format]"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
@@ -249,6 +252,7 @@ pip install "hefesto-ai[multilang]"
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+hefesto analyze . --format-check   # opt-in: also report Black formatting drift
 hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
 hefesto analyze . --no-config                 # ignore .hefesto.yaml
 
@@ -277,6 +281,32 @@ hefesto telemetry clear
 hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
 hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 ```
+
+### Formatting Drift (opt-in)
+
+`hefesto analyze` does not check formatting by default. With `--format-check`
+it also runs [Black](https://github.com/psf/black) in check mode (in-process,
+files are never modified) on the Python files it analyzed:
+
+```bash
+pip install "hefesto-ai[format]"                    # or: pip install black
+hefesto analyze . --format-check                    # report drift
+hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
+```
+
+- Each file Black would reformat is one `FORMAT_DRIFT` finding, severity LOW.
+  Because the check is opt-in, these findings are shown even when
+  `--severity` is above LOW. `--fail-on` and `--exclude-types` apply to them
+  like any other finding, so `--fail-on MEDIUM` (or higher) does not trip on drift.
+- Black settings come from your `pyproject.toml` `[tool.black]` table, found
+  the same way the `black` CLI finds it (line-length, target-version,
+  skip-string-normalization, preview, `extend-exclude` / `force-exclude`, ...).
+  If `required-version` does not match the installed Black, Hefesto warns.
+- JSON output carries a unified diff (first 60 lines) in `code_snippet` and
+  `lines_added` / `lines_removed` in `metadata`.
+- If Black is not installed, Hefesto prints a one-line warning and continues;
+  the exit code is unaffected.
+- Only Black is covered; isort and flake8 are not run.
 
 ### Exit Codes
 
@@ -473,21 +503,27 @@ hefesto:
 
 ## Configuration
 
+`hefesto analyze` takes its options from command-line flags (see CLI
+Reference above) and, optionally, from a `.hefesto.yaml` file (below). There
+is no environment variable for analysis options such as severity or output
+format.
+
 ### Environment Variables
 
 ```bash
-# Core
-export HEFESTO_LICENSE_KEY="your-key"
-export HEFESTO_SEVERITY="MEDIUM"
-export HEFESTO_OUTPUT="json"
+# Telemetry (see Telemetry below)
+export HEFESTO_TELEMETRY=0                            # Disable anonymous usage ping
 
-# API Security (v4.7.0)
+# PRO/OMEGA only (read by the private distribution, ignored by the FREE tier)
+export HEFESTO_LICENSE_KEY="your-key"
+
+# API Security (PRO, v4.7.0) -- used by `hefesto serve`
 export HEFESTO_API_KEY="your-api-key"                # Enable API key auth
 export HEFESTO_RATE_LIMIT_PER_MINUTE=60               # Enable rate limiting
 export HEFESTO_CORS_ORIGINS="https://app.example.com" # Restrict CORS
 export HEFESTO_EXPOSE_DOCS=true                       # Enable /docs, /redoc
 export HEFESTO_WORKSPACE_ROOT="/srv/code"              # Path sandbox root
-export HEFESTO_CACHE_MAX_ITEMS=256                     # Cache size limit
+export HEFESTO_CACHE_MAX_SIZE=1000                     # Cache size limit
 export HEFESTO_CACHE_TTL_SECONDS=300                   # Cache entry TTL
 ```
 
@@ -509,6 +545,7 @@ exclude_types:              # --exclude-types list or comma-separated string
   - LONG_FUNCTION
 quiet: false                # --quiet
 max_issues: 50              # --max-issues
+format_check: true          # --format-check  (needs: pip install "hefesto-ai[format]")
 enable_memory_budget_gate: false  # --enable-memory-budget-gate
 ```
 
