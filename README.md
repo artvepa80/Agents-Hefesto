@@ -249,6 +249,8 @@ pip install "hefesto-ai[multilang]"
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
+hefesto analyze . --no-config                 # ignore .hefesto.yaml
 
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
@@ -282,6 +284,7 @@ hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 |------|---------|
 | `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
 | `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+| `2`  | Invalid command-line usage or invalid `.hefesto.yaml` |
 
 ### Gate Examples
 ```bash
@@ -488,23 +491,48 @@ export HEFESTO_CACHE_MAX_ITEMS=256                     # Cache size limit
 export HEFESTO_CACHE_TTL_SECONDS=300                   # Cache entry TTL
 ```
 
-### Config File (.hefesto.yaml)
+### Config File (`.hefesto.yaml`)
+
+Put the `hefesto analyze` options you would otherwise repeat on every run in a
+`.hefesto.yaml` (or `.hefesto.yml`) file, usually at the repository root:
 
 ```yaml
-severity: HIGH
-exclude:
+# .hefesto.yaml -- every key is optional and maps to a `hefesto analyze` flag
+severity: MEDIUM            # --severity      LOW | MEDIUM | HIGH | CRITICAL
+fail_on: HIGH               # --fail-on       LOW | MEDIUM | HIGH | CRITICAL
+output: text                # --output        text | json | html
+exclude:                    # --exclude       list or "a/,b/" string
   - tests/
   - node_modules/
-  - .venv/
-
-rules:
-  complexity:
-    max_cyclomatic: 10
-    max_cognitive: 15
-  security:
-    check_secrets: true
-    check_injections: true
+exclude_types:              # --exclude-types list or comma-separated string
+  - VERY_HIGH_COMPLEXITY
+  - LONG_FUNCTION
+quiet: false                # --quiet
+max_issues: 50              # --max-issues
+enable_memory_budget_gate: false  # --enable-memory-budget-gate
 ```
+
+- **Discovery:** Hefesto starts at the first path given to `hefesto analyze`
+  (its directory if it is a file) and walks up to the repository root (the
+  first directory containing `.git`), or to the filesystem root outside a
+  repo. The nearest file wins. Both `.hefesto.yaml` and `.hefesto.yml` in one
+  directory is an error. With several paths, the first path's config applies
+  to the whole run (Hefesto warns if another path would pick a different file).
+- **Precedence:** explicit flag > config file > built-in default. A flag
+  counts as explicit even when it repeats the default (`--severity MEDIUM`
+  overrides `severity: LOW`). Lists are replaced, not merged:
+  `--exclude docs/` ignores the file's `exclude`.
+- **Flags:** `--config PATH` uses that file instead of searching;
+  `--no-config` ignores config files. They cannot be combined.
+- **Validation:** unknown keys, bad values and invalid YAML stop the run with
+  exit code 2 and a message naming the problem, e.g.
+  `Error: invalid Hefesto config in /repo/.hefesto.yaml: 'severity' must be one of LOW, MEDIUM, HIGH, CRITICAL (got 'urgent')`.
+  Keys may use `-` or `_` (`fail-on` or `fail_on`); `null` means "not set".
+- The file in use is printed as `Config: <path>` (to stderr with
+  `--output json`; hidden with `--quiet`).
+- Only `hefesto analyze` reads it (not `pr-review` or the GitHub Action
+  inputs). Rule thresholds (cyclomatic complexity, etc.), `--save-html` and
+  the PRO scope/enrichment flags are not configurable through the file.
 
 ---
 

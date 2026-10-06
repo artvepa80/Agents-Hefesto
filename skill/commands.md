@@ -21,6 +21,13 @@ hefesto analyze <paths...> [options]
 | `--max-issues` | all | Cap displayed issues |
 | `--save-html` | (none) | Save HTML report to file path |
 | `--enable-memory-budget-gate` | false | Enable memory budget gate (EPIC 4) |
+| `--config` | (auto) | Use this `.hefesto.yaml` instead of the nearest one found from the first path up to the repo root |
+| `--no-config` | false | Ignore `.hefesto.yaml` / `.hefesto.yml` files |
+
+**Config file:** `.hefesto.yaml` keys `severity`, `fail_on`, `output`,
+`exclude`, `exclude_types`, `quiet`, `max_issues`,
+`enable_memory_budget_gate` set the same options. Explicit flags win over the
+file; an invalid file exits 2.
 
 **Scope gating (PRO):**
 `--include-third-party`, `--include-generated`, `--include-fixtures`,
@@ -151,3 +158,4 @@ Requires PRO. Starts a uvicorn server with MCP, REST, and OpenAPI endpoints.
 | 1 | Gate failure: issues at or above `--fail-on` severity found |
 | 1 | Installation/runtime error |
 | 2 | Drift detection: findings at or above threshold (`drift` command) |
+| 2 | `analyze`: invalid command-line usage or invalid `.hefesto.yaml` |

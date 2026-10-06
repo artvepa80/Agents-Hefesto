@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`.hefesto.yaml` project config for `hefesto analyze`.** The nearest
+  `.hefesto.yaml` / `.hefesto.yml` (searched from the first analyzed path up
+  to the repo root, or the filesystem root outside a repo) can set
+  `severity`, `fail_on`, `output`, `exclude`, `exclude_types`, `quiet`,
+  `max_issues` and `enable_memory_budget_gate`.
+  - Precedence: explicit CLI flag > config file > default. Explicitness comes
+    from click's parameter source, so `--severity MEDIUM` still wins over the
+    file.
+  - New flags: `--config PATH` (use this file) and `--no-config` (ignore
+    config files).
+  - Unknown keys (including the old README's `rules:` block), bad values,
+    invalid YAML, or both `.yaml` and `.yml` in one directory stop the run
+    with exit code 2 and a message naming the problem.
+  - Only keys whose option exists in the running build are accepted, so a
+    `format_check` key is rejected until `--format-check` ships, then works
+    without further changes.
+  - The file in use is printed as `Config: <path>`.
+
+### Dependencies
+- `pyyaml>=6.0,<7.0` is now a core dependency. It was already imported by
+  the drift runner, CI-parity validator and YAML/Helm analyzers, but was
+  declared only in the `dev` and `ci` extras.
+
 ## [4.13.1] - 2026-05-08
 
 ### Fixed
