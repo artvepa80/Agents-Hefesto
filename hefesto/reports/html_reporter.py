@@ -6,7 +6,8 @@ Generates interactive HTML reports with basic styling.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-from typing import List
+import html as _html
+from typing import Any, List
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -247,8 +248,8 @@ class HTMLReporter:
 
         html = f"""
         <div class="severity-section">
-            <div class="severity-header severity-{severity.value}">
-                {icon} {severity.value} Issues ({len(issues)})
+            <div class="severity-header severity-{self._escape_html(severity.value)}">
+                {icon} {self._escape_html(severity.value)} Issues ({len(issues)})
             </div>
 """
 
@@ -259,27 +260,36 @@ class HTMLReporter:
         return html
 
     def _generate_issue_card(self, issue: AnalysisIssue) -> str:
-        """Generate HTML for a single issue."""
+        """Generate HTML for a single issue.
+
+        Every value interpolated here can come from the analyzed code (file
+        paths, messages built from source text, function names, suggestions),
+        so each one goes through ``_escape_html`` (SEC-05).
+        """
+        esc = self._escape_html
         location = f"{issue.file_path}:{issue.line}"
         if issue.column:
             location += f":{issue.column}"
 
         html = f"""
-            <div class="issue-card {issue.severity.value}">
-                <div class="issue-location">📄 {location}</div>
-                <div class="issue-message">{issue.message}</div>
+            <div class="issue-card {esc(issue.severity.value)}">
+                <div class="issue-location">📄 {esc(location)}</div>
+                <div class="issue-message">{esc(issue.message)}</div>
 """
 
         if issue.function_name:
-            html += f"                <div><strong>Function:</strong> {issue.function_name}</div>\n"
+            html += (
+                f"                <div><strong>Function:</strong> "
+                f"{esc(issue.function_name)}</div>\n"
+            )
 
-        html += f"                <div><strong>Type:</strong> {issue.issue_type.value}</div>\n"
+        html += f"                <div><strong>Type:</strong> {esc(issue.issue_type.value)}</div>\n"
 
         if issue.suggestion:
             html += f"""
                 <div class="issue-suggestion">
                     <div class="issue-suggestion-title">💡 Suggestion:</div>
-                    <pre>{self._escape_html(issue.suggestion)}</pre>
+                    <pre>{esc(issue.suggestion)}</pre>
                 </div>
 """
 
@@ -302,15 +312,17 @@ class HTMLReporter:
 </html>
 """
 
-    def _escape_html(self, text: str) -> str:
-        """Escape HTML special characters."""
-        return (
-            text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-            .replace("'", "&#39;")
-        )
+    @staticmethod
+    def _escape_html(value: Any) -> str:
+        """Escape a value for HTML text *and* quoted attribute contexts.
+
+        Uses ``html.escape(..., quote=True)``, which converts ``&``, ``<``,
+        ``>``, ``"`` and ``'``. ``None`` becomes an empty string; other
+        non-string values are converted with ``str()`` first.
+        """
+        if value is None:
+            return ""
+        return _html.escape(str(value), quote=True)
 
 
 __all__ = ["HTMLReporter"]
