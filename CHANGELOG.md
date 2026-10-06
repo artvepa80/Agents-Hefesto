@@ -29,13 +29,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the run continues.
   - Only Black is covered; isort and flake8 still run only in the repo's
     pre-push hook / CI.
+- **`.hefesto.yaml` project config for `hefesto analyze`.** The nearest
+  `.hefesto.yaml` / `.hefesto.yml` (searched from the first analyzed path up
+  to the repo root, or the filesystem root outside a repo) can set
+  `severity`, `fail_on`, `output`, `exclude`, `exclude_types`, `quiet`,
+  `max_issues`, `format_check` and `enable_memory_budget_gate`.
+  - Precedence: explicit CLI flag > config file > default. Explicitness comes
+    from click's parameter source, so `--severity MEDIUM` still wins over the
+    file.
+  - New flags: `--config PATH` (use this file) and `--no-config` (ignore
+    config files).
+  - Unknown keys (including the old README's `rules:` block), bad values,
+    invalid YAML, or both `.yaml` and `.yml` in one directory stop the run
+    with exit code 2 and a message naming the problem.
+  - Only keys whose option exists on the `analyze` command are accepted, and
+    any such key is applied generically (no per-option wiring).
+  - The file in use is printed as `Config: <path>`.
+
+### Dependencies
+- `pyyaml>=6.0,<7.0` is now a core dependency. It was already imported by
+  the drift runner, CI-parity validator and YAML/Helm analyzers, but was
+  declared only in the `dev` and `ci` extras.
 
 ### Documentation
 - **README Configuration section no longer claims features that do not
   exist.**
   - The `.hefesto.yaml` example (severity, exclude, rule thresholds) was
-    never read by any Hefesto code. The section is now marked
-    "planned, not yet supported" and points to the equivalent CLI flags.
+    never read by any Hefesto code. The section was marked "planned, not
+    yet supported"; it now documents the real `.hefesto.yaml` support added
+    above.
   - Removed `HEFESTO_SEVERITY` and `HEFESTO_OUTPUT` from the environment
     variable list; nothing reads them. Use `--severity` / `--output`.
   - Labeled `HEFESTO_LICENSE_KEY` and the API security variables as

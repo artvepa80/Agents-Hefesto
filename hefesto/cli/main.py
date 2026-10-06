@@ -7,6 +7,7 @@ Provides commands for running Hefesto API server and analyzing code.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
+import functools
 import sys
 from typing import Optional, Tuple
 
@@ -149,6 +150,85 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     )
 
 
+def _with_project_config(command):
+    """Apply .hefesto.yaml/.hefesto.yml values to ``hefesto analyze`` options.
+
+    Precedence: explicit CLI flag > config file > built-in default. Consumes
+    the ``--config`` / ``--no-config`` options. Only keys naming a parameter
+    of the command are accepted, and a value is applied only when click
+    reports that parameter as not given on the command line, so this works
+    for any option the command has without per-option wiring.
+    """
+
+    @functools.wraps(command)
+    def wrapper(**kwargs):
+        config_path = kwargs.pop("config_path", None)
+        no_config = kwargs.pop("no_config", False)
+        project_config = _resolve_project_config(kwargs["paths"], config_path, no_config)
+        kwargs.update(project_config.values)
+        if project_config.path is not None and not kwargs.get("quiet"):
+            click.echo(f"Config: {project_config.path}", err=kwargs.get("output") == "json")
+        return command(**kwargs)
+
+    return wrapper
+
+
+def _resolve_project_config(paths, config_path, no_config):
+    """Load the project config, keeping only keys not given explicitly on the CLI.
+
+    Returns a ProjectConfig whose ``path`` is None when no config applies.
+    Invalid or ambiguous config is a usage error (exit 2).
+    """
+    from click.core import ParameterSource
+
+    from hefesto.config.project_config import ProjectConfig
+
+    if config_path and no_config:
+        click.echo("Error: --config and --no-config cannot be used together", err=True)
+        _exit(2)
+    if no_config:
+        return ProjectConfig()
+
+    ctx = click.get_current_context()
+    option_names = {param.name for param in ctx.command.params if param.name}
+    loaded = _load_project_config(paths, config_path, option_names)
+    implicit = (ParameterSource.DEFAULT, ParameterSource.DEFAULT_MAP, None)
+    loaded.values = {
+        key: value
+        for key, value in loaded.values.items()
+        if ctx.get_parameter_source(key) in implicit
+    }
+    return loaded
+
+
+def _load_project_config(paths, config_path, option_names):
+    from pathlib import Path
+
+    from hefesto.config.project_config import (
+        ConfigError,
+        ProjectConfig,
+        discover_config,
+        load_config,
+    )
+
+    source = None
+    try:
+        if config_path:
+            source = Path(config_path)
+        else:
+            source, warnings = discover_config(paths)
+            for warning in warnings:
+                click.echo(f"Warning: {warning}", err=True)
+        if source is None:
+            return ProjectConfig()
+        return load_config(source, allowed_keys=option_names)
+    except ConfigError as e:
+        where = f" in {source}" if source else ""
+        click.echo(f"Error: invalid Hefesto config{where}: {e}", err=True)
+        _exit(2)
+        return ProjectConfig()  # unreachable; _exit raises
+
+
 @cli.command()
 @click.argument("paths", nargs=-1, type=click.Path(exists=True), required=True)
 @click.option(
@@ -194,6 +274,18 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         " (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)"
     ),
 )
+# -- Project config file (.hefesto.yaml) --
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help=(
+        "Config file to use instead of the nearest .hefesto.yaml/.hefesto.yml"
+        " (searched from the first PATH up to the repo root)"
+    ),
+)
+@click.option("--no-config", is_flag=True, help="Ignore .hefesto.yaml/.hefesto.yml files")
 # -- Scope gating flags (PRO EPIC 1) --
 @click.option("--include-third-party", is_flag=True, help="Include third-party files in analysis")
 @click.option("--include-generated", is_flag=True, help="Include generated files in analysis")
@@ -229,6 +321,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 )
 @click.option("--enrich-cache-ttl", type=int, default=300, help="Enrichment cache TTL in seconds")
 @click.option("--enrich-cache-max", type=int, default=500, help="Enrichment cache max entries")
+@_with_project_config
 def analyze(
     paths: Tuple[str, ...],
     severity: str,
@@ -265,6 +358,10 @@ def analyze(
         hefesto analyze . --fail-on HIGH  # CI gate
         hefesto analyze . --quiet  # Summary only
         hefesto analyze . --format-check  # also report Black formatting drift
+        hefesto analyze . --config ci/hefesto.yaml  # explicit config file
+
+    Options can also be set in a .hefesto.yaml/.hefesto.yml file (nearest one
+    from the first PATH up to the repo root); explicit flags win.
     """
     # When --output json, all non-JSON text goes to stderr so stdout is pure JSON.
     json_mode = output == "json"
