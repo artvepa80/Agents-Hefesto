@@ -12,7 +12,7 @@ description: >-
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
 code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.13.1 | License: MIT | Python >= 3.10
+Package: `hefesto-ai` (PyPI) | Version: 4.14.0 | License: MIT | Python >= 3.10
 
 ## Required workflow (do this before commit)
 
