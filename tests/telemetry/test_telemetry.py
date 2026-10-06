@@ -130,7 +130,8 @@ def test_telemetry_status_command(tmp_path, monkeypatch):
     res = r.invoke(cli, ["telemetry", "status"])
     assert res.exit_code == 0
     assert "Telemetry Status:" in res.output
-    assert "Enabled:   True" in res.output
+    assert "Usage ping:  enabled" in res.output
+    assert "Local log:   enabled" in res.output
     assert "Max Bytes:" in res.output
 
 

@@ -758,21 +758,32 @@ def install_hooks(force: bool):
 
 @cli.group()
 def telemetry_cmd():
-    """Telemetry utilities (local-only, privacy-first)."""
+    """Telemetry utilities: show what is sent and manage the local log."""
     pass
 
 
 @telemetry_cmd.command("status")
 def telemetry_status():
-    """Show telemetry config and local file status."""
+    """Show the anonymous usage ping and the local telemetry log status."""
     s = telemetry.get_status()
+    ping_on = bool(s.get("remote_ping_enabled"))
+    log_on = bool(s.get("enabled"))
     click.echo("Telemetry Status:")
-    click.echo(f"  Enabled:   {bool(s.get('enabled'))}")
-    click.echo(f"  Path:      {s.get('path')}")
-    click.echo(f"  Size:      {s.get('size_bytes')} bytes")
-    click.echo(f"  Max Bytes: {s.get('max_bytes')}")
-    click.echo(f"  Max Files: {s.get('max_files')}")
-    click.echo(f"  Schema:    v{s.get('schema_version')}")
+    click.echo(
+        f"  Usage ping:  {'enabled' if ping_on else 'disabled'}"
+        " (anonymous, sent after `hefesto analyze`; on by default,"
+        " disable with HEFESTO_TELEMETRY=0)"
+    )
+    click.echo(f"  Endpoint:    {s.get('remote_endpoint')}")
+    click.echo(
+        f"  Local log:   {'enabled' if log_on else 'disabled'}"
+        " (opt-in with HEFESTO_TELEMETRY=1; never uploaded)"
+    )
+    click.echo(f"  Path:        {s.get('path')}")
+    click.echo(f"  Size:        {s.get('size_bytes')} bytes")
+    click.echo(f"  Max Bytes:   {s.get('max_bytes')}")
+    click.echo(f"  Max Files:   {s.get('max_files')}")
+    click.echo(f"  Schema:      v{s.get('schema_version')}")
 
 
 @telemetry_cmd.command("clear")

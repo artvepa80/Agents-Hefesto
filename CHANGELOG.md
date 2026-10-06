@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **GitHub Action telemetry is now really opt-in (SEC-06).**
+  `scripts/action_entrypoint.sh` sent an anonymous `curl` ping to
+  `hefestoai.narapallc.com/api/telemetry` on every run, even with
+  `telemetry: 0` (the default, documented as opt-in). The ping now runs only
+  when the `telemetry` input is `1` or `true` (any case). Any other value
+  disables it and also runs the CLI with `HEFESTO_TELEMETRY=0`. Previously a
+  value like `yes` left the CLI's opt-out ping on while the Action reported
+  telemetry as off.
+  - `hefesto telemetry status` now reports the CLI's anonymous usage ping
+    (on by default, `HEFESTO_TELEMETRY=0` disables it) and its endpoint, as
+    well as the local log. It used to print only the local log
+    ("Enabled: False") while the ping was being sent. The ping and the status
+    share one check, `remote_ping_enabled()`. CLI defaults are unchanged.
+  - README, `action.yml` and `skill/` docs describe the new behavior.
+  - Regression tests: `tests/scripts/test_action_entrypoint.py` (runs the
+    real entrypoint with fake `hefesto`/`curl`) and
+    `tests/telemetry/test_telemetry_optin.py`.
+
+### Fixed
+- **Action `min_severity: INFO` no longer crashes the run (BUG-13).** The
+  Action advertised `INFO`, but the CLI's `--severity` rejects it (exit 2).
+  The entrypoint now maps `INFO` to `LOW` with a warning, and `action.yml`
+  lists only CRITICAL, HIGH, MEDIUM and LOW.
+
 ## [4.14.0] - 2026-10-06
 
 ### Added

@@ -112,7 +112,7 @@ steps:
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format (`text`, `json`, `html`) | `text` |
-| `telemetry` | `1` also enables the CLI's anonymous telemetry inside the Action. In v4.14.0 the Action itself still sends one anonymous ping per run even when this is `0`; see [Telemetry](#telemetry) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [Telemetry](#telemetry) | `0` |
 
 **Outputs**:
 
@@ -738,7 +738,7 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 HefestoAI collects anonymous usage data by default to help improve the tool.
 
 **What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
-**What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.14.0 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
+**What's sent (GitHub Action):** nothing by default. The Action's telemetry is opt-in: only with the `telemetry` input set to `1` or `true` does it send version, file count, issue count and exit code once per run, and it turns on the CLI ping described above. With `telemetry: 0` (the default) or any other value, the Action sends no ping and runs the CLI with `HEFESTO_TELEMETRY=0`. (Up to v4.14.0 the Action sent its ping even with `telemetry: 0`.)
 **What's NOT sent:** code, file paths, file contents, project names, or any PII.
 
 The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:
@@ -753,7 +753,7 @@ export HEFESTO_TELEMETRY_ENV=dogfood
 ```
 Filter in Neon: `WHERE NOT ('dogfood' = ANY(env))`.
 
-`hefesto telemetry status` and `hefesto telemetry clear` manage a separate local telemetry log; they do not show or control the remote ping.
+`hefesto telemetry status` shows whether the CLI ping is enabled and where it goes, plus the state of a separate local telemetry log (opt-in with `HEFESTO_TELEMETRY=1`, never uploaded). `hefesto telemetry clear` deletes that local log; it does not affect the remote ping.
 
 ---
 

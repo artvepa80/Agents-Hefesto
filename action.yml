@@ -15,7 +15,7 @@ inputs:
     required: false
     default: 'CRITICAL'
   min_severity:
-    description: 'Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW, INFO)'
+    description: 'Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW). INFO is accepted for backward compatibility and treated as LOW.'
     required: false
     default: 'LOW'
   format:
@@ -23,7 +23,7 @@ inputs:
     required: false
     default: 'text'
   telemetry:
-    description: 'Opt-in to anonymous telemetry (1=enable, 0=disable)'
+    description: 'Opt-in anonymous telemetry. Only 1 or true enables it: one anonymous ping per run (version, file count, issue count, exit code) plus the CLI usage ping. Any other value, including the default 0, sends nothing.'
     required: false
     default: '0'
 
