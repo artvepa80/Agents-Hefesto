@@ -54,6 +54,9 @@ class AnalysisIssueType(str, Enum):
     POOR_NAMING = "POOR_NAMING"
     STYLE_VIOLATION = "STYLE_VIOLATION"
 
+    # Formatting (opt-in via --format-check)
+    FORMAT_DRIFT = "FORMAT_DRIFT"
+
     # YAML Issues (v4.4.0)
     YAML_SYNTAX_ERROR = "YAML_SYNTAX_ERROR"
     YAML_DUPLICATE_KEY = "YAML_DUPLICATE_KEY"
