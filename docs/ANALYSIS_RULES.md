@@ -151,6 +151,24 @@ if not STRIPE_API_KEY:
 - Difficult to rotate compromised keys
 - Compliance violations (PCI, SOC2, etc.)
 
+**Test and example code is skipped.** To reduce noise, this rule does not run
+on test or example code. Hefesto decides that from whole path segments and
+file-name conventions, never from substrings:
+
+- Skipped: files under a directory named exactly `test`, `tests`, `__tests__`,
+  `example` or `examples`; files named `test_*`, `*_test.<ext>`,
+  `*.test.<ext>`, `*.spec.<ext>`, `conftest.py`, `test.py` or `tests.py`; and
+  `*.example` templates such as `.env.example`.
+- Scanned: everything else, including paths that only *contain* those words,
+  such as `src/contest/config.py`, `latest_settings.py`, `latest_app/` or
+  `counterexample.py`, and `fixtures/` directories outside `tests/`.
+- Absolute paths are judged relative to the directory Hefesto runs from when
+  the file is inside it, so a checkout under `/home/me/tests/myrepo/` is not
+  treated as test code.
+
+Up to and including v4.14.0, any path containing the substring `test` or
+`example` was skipped (SEC-03).
+
 ---
 
 ### 2.2 SQL Injection Risk
@@ -329,6 +347,12 @@ def process_payment(amount, user):
 - Security checks bypassed in production
 - Silent failures and unexpected behavior
 - Cannot rely on asserts for validation
+
+**Test code is skipped.** `assert` is expected in tests, so this rule does not
+run on test code, using the same path-segment rules as
+[Hardcoded Secrets](#21-hardcoded-secrets) (test directories and test
+file-name conventions only; example code *is* checked). Paths that merely
+contain `test`, such as `src/contest/app.py`, are checked.
 
 ---
 
