@@ -125,13 +125,18 @@ but different expected outputs. Exits 1 if contradictions found.
 
 ## telemetry
 
-Local-only, privacy-first telemetry management.
+Shows what telemetry is active and manages the local telemetry log.
 
 ```bash
-hefesto telemetry status     # Show telemetry config and file info
+hefesto telemetry status     # Usage ping on/off + endpoint, local log on/off + file info
 hefesto telemetry clear      # Delete local telemetry data
 hefesto telemetry clear --yes  # Skip confirmation
 ```
+
+The anonymous usage ping sent after `hefesto analyze` is on by default;
+disable it with `HEFESTO_TELEMETRY=0`. The local log is opt-in
+(`HEFESTO_TELEMETRY=1`) and never uploaded. In the GitHub Action, telemetry is
+off unless the `telemetry` input is `1` or `true`.
 
 ## License Management (PRO)
 
