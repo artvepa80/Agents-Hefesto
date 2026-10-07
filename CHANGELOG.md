@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **PRO/OMEGA upgrade links point at the live offer.** The PRO/OMEGA-only CLI
+  stubs (`serve` without PRO, `info`, `activate`, `deactivate`, `status`) only
+  said "Install from the private distribution"; they now also show PRO
+  $8/month, OMEGA $19/month, the 14-day trial and
+  `https://hefestoai.narapallc.com/#pricing` (`PRICING_URL`,
+  `PRO_REQUIRED_MESSAGE` in `hefesto/cli/main.py`). The README pricing section
+  linked `/trial` and `/founding` (old $99 trial and $59 founding links, now
+  inactive) and promised "no credit card" for PRO, whose checkout requires one.
+  Placeholder `buy.stripe.com/hefesto-pro…` links in `docs/` and `examples/`,
+  the truncated Stripe links in `CLAUDE.md` and the $25/$35/$49 prices in
+  `scripts/README.md` were replaced. Tests: `tests/test_cli_pro_required_message.py`;
+  `tests/test_pro_wiring.py` updated.
+
 ## [4.14.1] - 2026-10-06
 
 ### Security

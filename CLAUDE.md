@@ -91,8 +91,9 @@ After completing ANY non-trivial work:
 
 ### URLs de Producción
 - PyPI: https://pypi.org/project/hefesto-ai/
-- Stripe PRO: https://buy.stripe.com/4gM00i6jE6gV3zE4gg
-- Stripe OMEGA: https://buy.stripe.com/14A9AS23o20Fgmqb5Q
+- Pricing / checkout: https://hefestoai.narapallc.com/#pricing (PRO $8/month, OMEGA $19/month)
+- Stripe PRO: https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b
+- Stripe OMEGA: https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c
 - GitHub: https://github.com/artvepa80/Agents-Hefesto
 
 ### Estilo de Código

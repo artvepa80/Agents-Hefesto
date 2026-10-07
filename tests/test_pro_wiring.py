@@ -503,7 +503,9 @@ class TestApiHardeningWiring:
         runner = CliRunner()
         result = runner.invoke(cli, ["serve"])
         assert result.exit_code != 0
-        assert "PRO/OMEGA" in result.output or "PRO/OMEGA" in (result.stderr or "")
+        output = result.output + (result.stderr or "")
+        assert "Hefesto PRO" in output and "OMEGA" in output
+        assert "https://hefestoai.narapallc.com/#pricing" in output
 
     def test_apply_hardening_fallback_is_noop(self):
         """apply_hardening fallback should be a no-op that doesn't crash."""
