@@ -14,11 +14,11 @@
 | Archivo | Cambio |
 |---|---|
 | `hefesto/cli/main.py` | Nuevas constantes `PRICING_URL` y `PRO_REQUIRED_MESSAGE`. Los 5 avisos "requires Hefesto PRO/OMEGA" (`serve` sin PRO, `info`, `activate`, `deactivate`, `status`) muestran precios, prueba de 14 días, la URL de `#pricing` y "Already licensed? Install Hefesto PRO from the private distribution." |
-| `README.md` | La sección de precios enlazaba a `/trial` y `/founding` y decía "no credit card" para PRO, aunque su checkout exige tarjeta (`payment_method_collection: always`). Ahora enlaza a `#pricing` y explica el código `Founding40` (40% de descuento en PRO para siempre, primeros 25) |
+| `README.md` | La sección de precios enlazaba a `/trial` y `/founding` y decía "no credit card" para PRO, aunque su checkout exige tarjeta (`payment_method_collection: always`). Ahora enlaza a `#pricing`. Se quita la línea de "Founding Members" (no hay cupón extra) |
 | `docs/GETTING_STARTED.md`, `INTEGRATION.md`, `INSTALLATION.md`, `QUICK_START.md`, `LICENSE_GATES.md` | Los enlaces de ejemplo inventados (`buy.stripe.com/hefesto-pro`, `pro-link`, `omega-link`, un enlace antiguo `…4gMfZg…`, `hefesto.ai/pricing`, `support@narapa.com`) se cambian por `#pricing` y `support@narapallc.com` |
 | `examples/basic_usage.py`, `examples/pro_semantic_analysis.py` | Igual (enlace inventado → `#pricing`) |
 | `CLAUDE.md` | Los enlaces de Stripe estaban truncados (no abrían). Ahora apuntan a `#pricing` y a los enlaces completos vigentes `…eAg0b` (PRO) y `…eAg0c` (OMEGA) |
-| `scripts/README.md` | Los precios $25/$35/$49 pasan a ser PRO $8, OMEGA $19 y $4.80 con Founding40 |
+| `scripts/README.md` | Los precios $25/$35/$49 pasan a ser PRO $8 y OMEGA $19 (precio fundador, sin cupón) |
 | `tests/test_cli_pro_required_message.py` (nuevo, 5 casos) y `tests/test_pro_wiring.py` | Comprueban que el mensaje lleva la URL y los precios, y que `info`, `status` y `deactivate` salen con código 1 y lo muestran |
 
 ## Cómo verificar
@@ -36,9 +36,10 @@ MEDIUM previos en funciones que no se tocaron.
 
 ## Pendiente
 
-- Decidir la política del descuento fundador (ver el worklog del PR privado #105): la
-  landing presenta $8/$19 como precio "fundador" sin código, mientras Stripe también
-  ofrece `Founding40` → PRO $4.80. Si se elimina `Founding40`, hay que quitar la línea
-  del README.
+- Decisión de Arturo (2026-10-06): los precios son solo PRO $8 y OMEGA $19, sin cupón
+  fundador extra. Por eso el README ya no menciona `Founding40` y `scripts/README.md` no cita
+  $4.80. Él desactivará los cupones en Stripe.
+- El README ya no promete "no credit card" para PRO (el checkout de PRO exige tarjeta). Arturo
+  revisará el resto de textos "no credit card" (landing) por su cuenta.
 - `README.md:516` y `skill/commands.md:150` siguen hablando de la "private distribution".
   Es correcto: describen cómo instalar PRO, no cómo comprarlo.

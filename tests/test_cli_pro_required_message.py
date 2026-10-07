@@ -23,3 +23,12 @@ def test_pro_only_commands_print_pricing_url(args):
     assert result.exit_code == 1
     assert PRICING_URL in result.output
     assert "$8/month" in result.output
+
+
+def test_readme_pricing_has_no_retired_links_or_coupons():
+    from pathlib import Path
+
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    for retired in ("narapallc.com/trial", "narapallc.com/founding", "Founding40", "FOUNDING100"):
+        assert retired not in readme, retired
+    assert PRICING_URL in readme

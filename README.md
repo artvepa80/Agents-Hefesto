@@ -364,7 +364,6 @@ The hook runs two gates:
 | Production Correlation | No | No | Yes |
 
 - **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/#pricing), both with a 14-day free trial
-- **Founding Members**: code `Founding40` at PRO checkout, 40% off PRO forever (first 25 customers)
 
 ### Hefesto PRO Optional Features
 

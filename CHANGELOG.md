@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `https://hefestoai.narapallc.com/#pricing` (`PRICING_URL`,
   `PRO_REQUIRED_MESSAGE` in `hefesto/cli/main.py`). The README pricing section
   linked `/trial` and `/founding` (old $99 trial and $59 founding links, now
-  inactive) and promised "no credit card" for PRO, whose checkout requires one.
+  inactive), promised "no credit card" for PRO (whose checkout requires one) and
+  advertised a founding coupon; pricing is just PRO $8 / OMEGA $19.
   Placeholder `buy.stripe.com/hefesto-pro…` links in `docs/` and `examples/`,
   the truncated Stripe links in `CLAUDE.md` and the $25/$35/$49 prices in
   `scripts/README.md` were replaced. Tests: `tests/test_cli_pro_required_message.py`;
