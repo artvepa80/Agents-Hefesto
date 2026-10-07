@@ -16,6 +16,14 @@ import click
 from hefesto.__version__ import __version__
 from hefesto.telemetry.client import TelemetryClient
 
+PRICING_URL = "https://hefestoai.narapallc.com/#pricing"
+PRO_REQUIRED_MESSAGE = (
+    "This feature requires Hefesto PRO ($8/month) or OMEGA ($19/month), "
+    "both with a 14-day free trial.\n"
+    f"Plans and checkout: {PRICING_URL}\n"
+    "Already licensed? Install Hefesto PRO from the private distribution."
+)
+
 # Initialize telemetry
 telemetry = TelemetryClient()
 
@@ -111,7 +119,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 
     if not HAS_API_HARDENING:
         click.echo(
-            "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+            PRO_REQUIRED_MESSAGE,
             err=True,
         )
         _exit(1)
@@ -474,7 +482,7 @@ def _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode=False)
 def info():
     """Show Hefesto configuration and license info."""
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -530,7 +538,7 @@ def activate(license_key: str):
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -544,7 +552,7 @@ def deactivate():
     This will remove your license key and revert to free tier.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -556,7 +564,7 @@ def status():
     Show current license status and tier information.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)

@@ -292,7 +292,7 @@ git push --no-verify
    ```
 
 5. **Explore PRO Features** (optional)
-   - Try 14-day free trial: [https://buy.stripe.com/hefesto-pro-trial](https://buy.stripe.com/hefesto-pro-trial)
+   - PRO $8/month or OMEGA $19/month, 14-day free trial: [https://hefestoai.narapallc.com/#pricing](https://hefestoai.narapallc.com/#pricing)
    - Get ML-powered semantic analysis
    - Duplicate code detection
    - BigQuery analytics

@@ -107,7 +107,7 @@ For ML-based semantic analysis and duplicate detection:
 
 ```bash
 # Purchase license
-# Visit: https://buy.stripe.com/hefesto-pro
+# Visit: https://hefestoai.narapallc.com/#pricing
 
 # Install Pro features
 pip install hefesto-ai[pro]

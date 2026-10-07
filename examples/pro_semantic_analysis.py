@@ -4,7 +4,7 @@ Hefesto Pro Examples - Semantic Analysis
 These examples require a Pro license (Phase 1).
 Set environment variable: HEFESTO_LICENSE_KEY='hef_your_key'
 
-Purchase: https://buy.stripe.com/hefesto-pro
+Purchase: https://hefestoai.narapallc.com/#pricing
 """
 
 import os
@@ -18,7 +18,7 @@ def example_semantic_similarity():
         print("❌ Pro features not available")
         print("💡 Install: pip install hefesto-ai[pro]")
         print("🔑 Set: export HEFESTO_LICENSE_KEY='hef_your_key'")
-        print(f"🛒 Purchase: https://buy.stripe.com/hefesto-pro")
+        print(f"🛒 Purchase: https://hefestoai.narapallc.com/#pricing")
         return
 
     print("=" * 60)
@@ -32,7 +32,7 @@ def example_semantic_similarity():
         print("🔑 Set your Pro license key:")
         print("   export HEFESTO_LICENSE_KEY='hef_your_key_here'")
         print("\n🛒 Don't have a key? Purchase at:")
-        print("   https://buy.stripe.com/hefesto-pro")
+        print("   https://hefestoai.narapallc.com/#pricing")
         return
 
     analyzer = get_semantic_analyzer()

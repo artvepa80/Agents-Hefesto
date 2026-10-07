@@ -363,9 +363,7 @@ The hook runs two gates:
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
-- **PRO**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **OMEGA**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **Founding Members**: [40% off forever](https://hefestoai.narapallc.com/founding) (first 25 customers)
+- **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/#pricing), both with a 14-day free trial
 
 ### Hefesto PRO Optional Features
 
