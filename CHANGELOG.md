@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **COBOL: the 7 rules are documented as free, as they always ran.** The
+  analyzer had a `_is_pro_tier_available()` gate that always returned `True`
+  (a TODO left for the investor demo), so the 4 rules described as PRO
+  (COBOL004-COBOL007) already ran for everyone. The dead gate was removed with
+  no behavior change, and the README, the 4.12.0 notes below and
+  `docs/demo/cobol_investor_demo.sh` now say "7 free COBOL rules" instead of
+  "3 FREE + 4 PRO". The docs also state the current limits: fixed format is
+  assumed unless the source declares `>>SOURCE FORMAT IS FREE`; COBOL004 flags
+  every `REDEFINES` (packed decimal is not verified yet); COBOL007 flags every
+  `COPY`; there is no SARIF output yet. The demo script no longer claims "zero
+  false positives" (only one clean fixture was checked; real-code precision has
+  not been measured). Tests: `tests/test_cobol_governance.py::TestAllRulesFree`.
+
 ### Fixed
 - **PRO/OMEGA upgrade links point at the live offer.** The PRO/OMEGA-only CLI
   stubs (`serve` without PRO, `info`, `activate`, `deactivate`, `status`) only
@@ -289,8 +303,7 @@ Metadata-only release. No code, test, or behavior changes.
 
 ### Added
 - **COBOL Governance Analysis (Phase 1-Lite)**: 7 mainframe governance rules for COBOL-85 and IBM Enterprise COBOL
-  - FREE tier (3 rules): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED
-  - PRO tier (4 rules): REDEFINES_SENSITIVE, OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
+  - 7 free rules (corrected in Unreleased: this entry originally said "3 FREE, 4 PRO", but no tier gate was ever enforced): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED, REDEFINES_SENSITIVE (flags every REDEFINES), OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
   - 30 COBOL tests (10 detection + 20 governance) - all passing
   - Internal structural extractor (regex-based, COBOL-85 fixed-format columns 7-72)
   - Multi-line pattern detection for complex COBOL constructs (OCCURS DEPENDING ON, PERFORM THRU, REDEFINES)

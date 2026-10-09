@@ -2,8 +2,8 @@
 Unit tests for COBOL Governance Analyzer (Phase 1-Lite Sprint 2).
 
 Tests 7 governance rules against synthetic COBOL fixtures:
-- FREE tier: GOTO_EXCESSIVE, HARDCODED_CREDENTIALS, ACCEPT
-- PRO tier: REDEFINES_SENSITIVE, OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN, COPYBOOK_BLAST_RADIUS
+GOTO_EXCESSIVE, HARDCODED_CREDENTIALS, ACCEPT, REDEFINES_SENSITIVE,
+OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN, COPYBOOK_BLAST_RADIUS (all FREE)
 
 Copyright 2025 Narapa LLC, Miami, Florida
 """
@@ -315,3 +315,20 @@ class TestCobolGovernanceEdgeCases:
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_ACCEPT_UNVALIDATED
         ]
         assert len(accept_issues) == 0, "ACCEPT FROM DATE/TIME/DAY should not be flagged"
+
+
+class TestAllRulesFree:
+    """All 7 COBOL rules run without any license (they are FREE)."""
+
+    def test_all_seven_rules_fire_without_license(self, monkeypatch):
+        for var in ("HEFESTO_LICENSE_KEY", "HEFESTO_TIER", "HEFESTO_OMEGA_KEYS"):
+            monkeypatch.delenv(var, raising=False)
+        analyzer = CobolGovernanceAnalyzer()
+        rule_ids = set()
+        for fixture in sorted(FIXTURES_DIR.glob("*.cbl")):
+            for issue in analyzer.analyze(str(fixture), fixture.read_text()):
+                rule_ids.add(issue.rule_id)
+        assert rule_ids == {f"COBOL00{n}" for n in range(1, 8)}
+
+    def test_no_tier_gate_left_in_analyzer(self):
+        assert not hasattr(CobolGovernanceAnalyzer, "_is_pro_tier_available")

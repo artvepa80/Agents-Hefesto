@@ -211,7 +211,7 @@ pointing to the install command (also exposed via
 | **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 | v4.12.0 | Yes |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 (7 free rules)³ | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
@@ -225,6 +225,12 @@ pointing to the install command (also exposed via
 **Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
+
+³ COBOL: all 7 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cpy`, `.pco`, `.CBL`, `.COB` and `.CPY` files (copybooks are read, but rules are not applied to them).
+- **Source format:** fixed format (columns 7-72) is assumed. Free-format sources must declare `>>SOURCE FORMAT IS FREE` in their first 20 lines; without it, a free-format file is read as fixed format and can return no findings.
+- **COBOL004 (REDEFINES)** flags every `REDEFINES` clause. It does not yet check whether the redefined field is packed decimal (COMP-3), so review each finding.
+- **COBOL007 (copybooks)** flags every `COPY` statement, including standard system copybooks; it does not check whether the copybook exists.
+- Output is text, JSON or HTML. SARIF is not available yet.
 
 ---
 
@@ -681,7 +687,7 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 - **CI smoke test** for the `[multilang]` extra on Python 3.10–3.13
 
 ### v4.12.0 (2026-04-25)
-- **COBOL governance analysis**: 7 rules for COBOL-85 and IBM Enterprise COBOL (3 FREE, 4 PRO)
+- **COBOL governance analysis**: 7 free rules for COBOL-85 and IBM Enterprise COBOL
 
 ### v4.11.2 (2026-04-12)
 - **Phase 4 — Narrow Semantic Analyzer**: `ATTRIBUTE_NAME_MISMATCH` (typo detection via difflib) and `SILENT_EXCEPTION_SWALLOW` (broad except with trivially silent body)
