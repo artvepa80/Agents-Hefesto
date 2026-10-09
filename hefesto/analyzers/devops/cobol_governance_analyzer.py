@@ -1,18 +1,21 @@
 """
 COBOL Governance Analyzer for Hefesto v4.12.0 — Legacy Support Phase 1.
 
-Detects 7 governance issues in COBOL-85 + IBM Enterprise COBOL code:
+Detects 7 governance issues in COBOL-85 + IBM Enterprise COBOL code.
+All 7 rules are FREE (no license required):
 
-FREE Tier (3 rules):
 1. GOTO_EXCESSIVE: >10 GO TO statements (HIGH severity)
-2. HARDCODED_CREDENTIALS: Hardcoded passwords/secrets in MOVE (CRITICAL severity)
+2. HARDCODED_CREDENTIALS: literal MOVEd into a field whose name looks like a
+   credential (PASSWORD, TOKEN, ...) (CRITICAL severity)
 3. ACCEPT: Unvalidated external input via ACCEPT (MEDIUM severity)
-
-PRO Tier (4 rules):
-4. REDEFINES_SENSITIVE: REDEFINES on packed decimal/signed fields (HIGH severity)
+4. REDEFINES_SENSITIVE: flags every REDEFINES clause; the analyzer does not yet
+   check whether the redefined field is packed decimal (HIGH severity)
 5. OCCURS_DEPENDING_ON: Variable-length tables (MEDIUM severity)
 6. PERFORM_THRU_CHAIN: PERFORM THRU spanning >5 paragraphs (HIGH severity)
-7. COPYBOOK_BLAST_RADIUS: Shared copybook usage (CRITICAL/HIGH severity)
+7. COPYBOOK_BLAST_RADIUS: every COPY statement (CRITICAL/HIGH severity)
+
+Source format: fixed format (columns 7-72) is assumed unless the first 20
+lines contain ``>>SOURCE FORMAT IS FREE``.
 
 Copyright 2025 Narapa LLC, Miami, Florida
 """
@@ -276,32 +279,21 @@ class CobolGovernanceAnalyzer:
         is_copybook = file_path.lower().endswith(".cpy")
 
         if not is_copybook:
-            # Apply FREE tier rules (procedural)
+            # All 7 rules are FREE (procedural rules; not applied to copybooks)
             issues.extend(self._check_goto_excessive(file_path, structure))
             issues.extend(self._check_hardcoded_credentials(file_path, structure))
             issues.extend(self._check_accept_unvalidated(file_path, structure))
-
-            # Apply PRO tier rules (gated)
-            if self._is_pro_tier_available():
-                issues.extend(self._check_redefines_sensitive(file_path, structure))
-                issues.extend(self._check_occurs_depending(file_path, structure))
-                issues.extend(self._check_perform_thru_chain(file_path, structure))
-                issues.extend(self._check_copybook_blast_radius(file_path, structure))
+            issues.extend(self._check_redefines_sensitive(file_path, structure))
+            issues.extend(self._check_occurs_depending(file_path, structure))
+            issues.extend(self._check_perform_thru_chain(file_path, structure))
+            issues.extend(self._check_copybook_blast_radius(file_path, structure))
 
         return issues
-
-    def _is_pro_tier_available(self) -> bool:
-        """Check if PRO tier is available.
-
-        TODO: Replace with real tier detection from license key.
-        For MVP/investor demo, allow all rules.
-        """
-        return True
 
     def _check_goto_excessive(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 1 (FREE): GOTO_EXCESSIVE — >10 GO TO statements."""
+        """Rule 1: GOTO_EXCESSIVE — >10 GO TO statements."""
         issues = []
         goto_count = len(structure.goto_statements)
 
@@ -330,7 +322,7 @@ class CobolGovernanceAnalyzer:
     def _check_hardcoded_credentials(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 2 (FREE): HARDCODED_CREDENTIALS — hardcoded passwords/secrets."""
+        """Rule 2: HARDCODED_CREDENTIALS — hardcoded passwords/secrets."""
         issues = []
 
         for line_num, field_name, literal_value in structure.credential_moves:
@@ -356,7 +348,7 @@ class CobolGovernanceAnalyzer:
     def _check_accept_unvalidated(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 3 (FREE): ACCEPT — unvalidated external input."""
+        """Rule 3: ACCEPT — unvalidated external input."""
         issues = []
 
         for line_num in structure.accept_statements:
@@ -384,7 +376,7 @@ class CobolGovernanceAnalyzer:
     def _check_redefines_sensitive(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 4 (PRO): REDEFINES_SENSITIVE — REDEFINES on packed decimal/signed fields."""
+        """Rule 4: REDEFINES_SENSITIVE — every REDEFINES clause (COMP-3 not verified yet)."""
         issues = []
 
         for line_num, original_field, redefining_field, is_sensitive in structure.redefines_clauses:
@@ -414,7 +406,7 @@ class CobolGovernanceAnalyzer:
     def _check_occurs_depending(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 5 (PRO): OCCURS_DEPENDING_ON — variable-length tables."""
+        """Rule 5: OCCURS_DEPENDING_ON — variable-length tables."""
         issues = []
 
         for line_num, controlling_var in structure.occurs_depending:
@@ -444,7 +436,7 @@ class CobolGovernanceAnalyzer:
     def _check_perform_thru_chain(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 6 (PRO): PERFORM_THRU_CHAIN — PERFORM THRU spanning >5 paragraphs."""
+        """Rule 6: PERFORM_THRU_CHAIN — PERFORM THRU spanning >5 paragraphs."""
         issues = []
 
         # Build paragraph index
@@ -496,7 +488,7 @@ class CobolGovernanceAnalyzer:
     def _check_copybook_blast_radius(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 7 (PRO): COPYBOOK_BLAST_RADIUS — shared copybook usage."""
+        """Rule 7: COPYBOOK_BLAST_RADIUS — shared copybook usage."""
         issues = []
 
         for line_num, copybook_name in structure.copy_statements:
