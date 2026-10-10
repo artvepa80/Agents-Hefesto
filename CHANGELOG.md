@@ -51,6 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     per program, with the file names in `metadata.files`.
 
 ### Added
+- `docs/cognitive-core.md`: architecture note that maps Karpathy's
+  "cognitive core" idea onto HefestoAI (rules = core; README, skill docs,
+  repo files and CI logs = memory that agents must look up by running
+  `hefesto analyze`), with five dogfood cases. Guidance, not a research
+  claim or SLA. HefestoAI-only.
 - **`--copybook-path DIR` / `copybook_paths:`** (`.hefesto.yaml`, relative to
   the file) for COBOL copybook directories outside the scanned tree: names
   found there resolve COPY/INCLUDE for COBOL015; the files are not analyzed.
