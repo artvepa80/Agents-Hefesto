@@ -30,7 +30,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, Hashable, Iterable, List, Tuple
+from typing import Any, Dict, Hashable, Iterable, List, Tuple, TypeVar
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -342,7 +342,7 @@ class CobolGovernanceAnalyzer:
 
     ENGINE = "internal:cobol_governance"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._extractor = _CobolStructuralExtractor()
 
     @property
@@ -620,10 +620,12 @@ class CobolGovernanceAnalyzer:
 
 _MAX_LINES_IN_METADATA = 50
 
+_K = TypeVar("_K", bound=Hashable)
 
-def _group_occurrences(pairs: Iterable[Tuple[Hashable, int]]) -> Dict[Hashable, List[int]]:
+
+def _group_occurrences(pairs: Iterable[Tuple[_K, int]]) -> Dict[_K, List[int]]:
     """Group (key, line) pairs by key, keeping first-seen order and line order."""
-    grouped: Dict[Hashable, List[int]] = {}
+    grouped: Dict[_K, List[int]] = {}
     for key, line in pairs:
         grouped.setdefault(key, []).append(line)
     return grouped
