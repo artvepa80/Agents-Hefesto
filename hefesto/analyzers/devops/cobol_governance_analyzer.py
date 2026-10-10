@@ -1,23 +1,29 @@
 """
 COBOL Governance Analyzer for Hefesto v4.12.0 — Legacy Support Phase 1.
 
-Detects 14 governance issues in COBOL-85 + IBM Enterprise COBOL code.
-All 14 rules are FREE (no license required):
+Detects 15 governance issues in COBOL-85 + IBM Enterprise COBOL code.
+All 15 rules are FREE (no license required):
 
 1. GOTO_EXCESSIVE: >10 GO TO statements (HIGH severity)
 2. HARDCODED_CREDENTIALS: literal MOVEd into a field whose name looks like a
    credential (PASSWORD, TOKEN, ...) (CRITICAL severity)
 3. ACCEPT: Unvalidated external input via ACCEPT (MEDIUM severity)
-4. REDEFINES_SENSITIVE: flags every REDEFINES clause; the analyzer does not yet
-   check whether the redefined field is packed decimal (HIGH severity)
-5. OCCURS_DEPENDING_ON: Variable-length tables (MEDIUM severity)
+4. REDEFINES_SENSITIVE: a REDEFINES where one side holds packed, binary,
+   float, pointer or signed numeric data and the two layouts differ; runs on
+   programs and copybooks (HIGH severity). Lives in ``cobol_program_rules``.
+5. OCCURS_DEPENDING_ON: one finding per data entry with OCCURS ... DEPENDING
+   ON; the CICS ``DEPENDING ON EIBCALEN`` commarea idiom is skipped (MEDIUM)
 6. PERFORM_THRU_CHAIN: PERFORM THRU spanning >5 paragraphs (HIGH severity)
-7. COPYBOOK_BLAST_RADIUS: every COPY of a user copybook; vendor copybooks
-   (CICS DFH*, DB2 SQLCA/SQLDA) are skipped (CRITICAL/HIGH severity)
+7. COPYBOOK_BLAST_RADIUS: reported once on the copybook file when 5 or more
+   scanned programs COPY it (MEDIUM; HIGH at 15+ programs or a generic name
+   such as COMMON/UTILS/SHARED). Needs a project index (``CobolProjectIndex``);
+   vendor copybooks (CICS DFH*, IBM MQ CMQ*, DB2 SQLCA/SQLDA) are skipped.
+15. COPYBOOK_NOT_FOUND: a COPY whose copybook is not in the scanned tree
+   (LOW), only when the index resolves at least one COPY of the scan.
 
 COBOL008-COBOL014 (VALUE secrets, connection-string secrets, EXEC SQL CONNECT
-literal passwords, FILE STATUS missing/unchecked, dead code, unused
-paragraphs) live in ``cobol_program_rules``.
+literal passwords, FILE STATUS missing (grouped per program, LOW)/unchecked,
+dead code, unused paragraphs) live in ``cobol_program_rules``.
 
 Source format: a ``>>SOURCE FORMAT IS FREE`` / ``FIXED`` directive (or the
 Micro Focus ``$SET SOURCEFORMAT(...)`` form) in the first 50 lines decides the
@@ -26,17 +32,27 @@ format. Without a directive, free format is inferred when a division header
 fixed format (columns 7-72) is assumed.
 
 Repeated identical findings are grouped per file: one COBOL006 finding per
-``PERFORM X THRU Y`` pair and one COBOL007 finding per copybook name, with the
-occurrence count and lines in ``metadata``.
+``PERFORM X THRU Y`` pair, one COBOL015 finding per missing copybook name and
+one COBOL011 finding per program, with the occurrence count and lines in
+``metadata``.
 
 Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, Hashable, Iterable, List, Tuple, TypeVar
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Tuple, TypeVar
 
-from hefesto.analyzers.devops.cobol_program_rules import run_program_rules
+from hefesto.analyzers.devops.cobol_program_rules import occurs_depending, run_program_rules
+from hefesto.analyzers.devops.cobol_project_index import (
+    SYSTEM_COPYBOOK_PREFIXES,
+    SYSTEM_COPYBOOKS,
+    CobolProjectIndex,
+    copy_names,
+    is_copybook_path,
+    is_system_copybook,
+    stem_of,
+)
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -55,7 +71,6 @@ class _CobolStructure:
     goto_statements: List[int] = field(default_factory=list)
     credential_moves: List[Tuple[int, str, str]] = field(default_factory=list)
     accept_statements: List[int] = field(default_factory=list)
-    redefines_clauses: List[Tuple[int, str, str, bool]] = field(default_factory=list)
     occurs_depending: List[Tuple[int, str]] = field(default_factory=list)
     perform_thru: List[Tuple[int, str, str]] = field(default_factory=list)
     copy_statements: List[Tuple[int, str]] = field(default_factory=list)
@@ -82,10 +97,6 @@ class _CobolStructuralExtractor:
         re.IGNORECASE,
     )
 
-    # Packed decimal pattern
-    COMP3_PATTERN = re.compile(r"PIC\s+S9.*COMP-3", re.IGNORECASE)
-    SIGNED_PATTERN = re.compile(r"PIC\s+S9", re.IGNORECASE)
-
     # Fields whose name contains a credential word but that hold a flag, a
     # status, a length or a display label, not the secret itself
     # (e.g. WS-PASSWORD-OK-FLAG, PWD-LEN, PASSWORD-PROMPT).
@@ -95,13 +106,14 @@ class _CobolStructuralExtractor:
         re.IGNORECASE,
     )
 
-    # Generic copybook names (high blast radius) - substring match
-    GENERIC_COPYBOOKS = {"COMMON", "UTILS", "SHARED", "CUSTOMER", "ACCOUNT"}
+    # Generic copybook names (raise COBOL007 one severity step). Matched as a
+    # whole name part ("CUSTOMER-REC" yes, "ACCOUNTANT" no).
+    GENERIC_COPYBOOKS = {"COMMON", "UTILS", "UTIL", "SHARED", "CUSTOMER", "ACCOUNT"}
 
     # Vendor-supplied copybooks (CICS DFH*, DB2 SQLCA/SQLDA): not user code,
     # so changing them is not a blast-radius risk of the analyzed project.
-    SYSTEM_COPYBOOK_PREFIXES = ("DFH",)
-    SYSTEM_COPYBOOKS = {"SQLCA", "SQLDA"}
+    SYSTEM_COPYBOOK_PREFIXES = SYSTEM_COPYBOOK_PREFIXES
+    SYSTEM_COPYBOOKS = SYSTEM_COPYBOOKS
 
     FREE_DIRECTIVE = re.compile(
         r">>\s*SOURCE\s+(?:FORMAT\s+)?(?:IS\s+)?FREE\b"
@@ -144,13 +156,12 @@ class _CobolStructuralExtractor:
             self._extract_goto(logical_line, line_num, structure)
             self._extract_credential_move(logical_line, line_num, structure)
             self._extract_accept(logical_line, line_num, structure)
-            self._extract_redefines(logical_line, line_num, structure)
             self._extract_perform_thru(logical_line, line_num, structure)
             self._extract_copy(logical_line, line_num, structure)
             self._extract_paragraph(logical_line, line_num, structure)
 
-        # OCCURS DEPENDING ON can span lines - search in full code
-        self._extract_occurs_depending_multiline(code, structure, is_fixed_format)
+        # OCCURS DEPENDING ON can span lines: read it per data-division entry
+        structure.occurs_depending = occurs_depending(structure.logical_lines)
 
         return structure
 
@@ -271,65 +282,6 @@ class _CobolStructuralExtractor:
             if not re.search(r"\bFROM\s+(DATE|TIME|DAY|DAY-OF-WEEK)\b", line, re.IGNORECASE):
                 structure.accept_statements.append(line_num)
 
-    def _extract_redefines(self, line: str, line_num: int, structure: _CobolStructure):
-        """Extract REDEFINES clauses on packed decimal/signed fields."""
-        # Pattern: NN FIELD-NAME REDEFINES ORIGINAL-FIELD
-        match = re.search(
-            r"\b(\d{2})\s+([A-Z0-9_-]+)\s+REDEFINES\s+([A-Z0-9_-]+)", line, re.IGNORECASE
-        )
-        if match:
-            redefining_field = match.group(2)
-            original_field = match.group(3)
-
-            # Check if this is sensitive (need to look at previous lines for PIC COMP-3)
-            # For Phase 1, we'll flag all REDEFINES as potentially sensitive
-            # and rely on context to determine if it's on COMP-3
-            is_sensitive = bool(self.COMP3_PATTERN.search(line) or self.SIGNED_PATTERN.search(line))
-
-            structure.redefines_clauses.append(
-                (line_num, original_field, redefining_field, is_sensitive)
-            )
-
-    def _extract_occurs_depending_multiline(
-        self, code: str, structure: _CobolStructure, is_fixed_format: bool = True
-    ):
-        """Extract OCCURS DEPENDING ON clauses (multi-line aware)."""
-        # Strip comments first and track line numbers
-        clean_lines = []
-        line_numbers = []
-        for line_num, line in enumerate(code.split("\n"), start=1):
-            if is_fixed_format:
-                if len(line) > 6 and line[6] in self.COMMENT_INDICATORS:
-                    continue
-                # Get code area (columns 7-72)
-                code_part = line[6:72] if len(line) > 72 else line[6:]
-            else:
-                if line.strip().startswith("*>"):
-                    continue
-                code_part = line.split("*>")[0]
-            clean_lines.append(code_part)
-            line_numbers.append(line_num)
-
-        # Join lines and search for pattern
-        clean_code = " ".join(clean_lines)
-
-        # Find all OCCURS ... DEPENDING ON patterns
-        pattern = r"\bOCCURS\b.*?\bDEPENDING\s+ON\s+([A-Z0-9_-]+)"
-        for match in re.finditer(pattern, clean_code, re.IGNORECASE):
-            controlling_var = match.group(1)
-
-            # Find line number by searching for OCCURS keyword in original lines
-            found_line = 1
-            for i, line in enumerate(clean_lines):
-                if re.search(r"\bOCCURS\b", line, re.IGNORECASE):
-                    # Check if this OCCURS has the controlling var nearby
-                    context = " ".join(clean_lines[max(0, i) : min(len(clean_lines), i + 3)])
-                    if controlling_var in context:
-                        found_line = line_numbers[i]
-                        break
-
-            structure.occurs_depending.append((found_line, controlling_var))
-
     def _extract_perform_thru(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract PERFORM THRU statements."""
         match = re.search(r"\bPERFORM\s+([A-Z0-9_-]+)\s+THRU\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
@@ -339,11 +291,9 @@ class _CobolStructuralExtractor:
             structure.perform_thru.append((line_num, start_para, end_para))
 
     def _extract_copy(self, line: str, line_num: int, structure: _CobolStructure):
-        """Extract COPY statements."""
-        match = re.search(r"\bCOPY\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
-        if match:
-            copybook_name = match.group(1).upper()
-            structure.copy_statements.append((line_num, copybook_name))
+        """Extract COPY statements (outside literals; quoted names allowed)."""
+        for _, name in copy_names(line):
+            structure.copy_statements.append((line_num, name))
 
     def _extract_paragraph(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract paragraph names (Area A identifiers ending with period)."""
@@ -361,8 +311,13 @@ class CobolGovernanceAnalyzer:
 
     ENGINE = "internal:cobol_governance"
 
-    def __init__(self) -> None:
+    # COBOL007: programs that COPY a copybook before it is reported
+    BLAST_RADIUS_MEDIUM = 5
+    BLAST_RADIUS_HIGH = 15
+
+    def __init__(self, index: Optional[CobolProjectIndex] = None) -> None:
         self._extractor = _CobolStructuralExtractor()
+        self._index = index
 
     @property
     def last_format_reason(self) -> str:
@@ -376,21 +331,22 @@ class CobolGovernanceAnalyzer:
         # Extract structural elements
         structure = self._extractor.extract(content)
 
-        # Copybooks (.cpy files) contain data definitions, not procedure code
-        # Skip procedural rules for copybooks
-        is_copybook = file_path.lower().endswith(".cpy")
+        # Copybooks (.cpy files) contain data definitions, not procedure code:
+        # only the data rules (COBOL004, COBOL008, COBOL009) and COBOL007 apply.
+        is_copybook = is_copybook_path(file_path)
 
         if not is_copybook:
-            # COBOL001-COBOL007 (FREE; procedural rules, not applied to copybooks)
+            # COBOL001-COBOL006 (FREE; procedural rules, not applied to copybooks)
             issues.extend(self._check_goto_excessive(file_path, structure))
             issues.extend(self._check_hardcoded_credentials(file_path, structure))
             issues.extend(self._check_accept_unvalidated(file_path, structure))
-            issues.extend(self._check_redefines_sensitive(file_path, structure))
             issues.extend(self._check_occurs_depending(file_path, structure))
             issues.extend(self._check_perform_thru_chain(file_path, structure))
-            issues.extend(self._check_copybook_blast_radius(file_path, structure))
+            issues.extend(self._check_copybook_not_found(file_path, structure))
+        else:
+            issues.extend(self._check_copybook_blast_radius(file_path))
 
-        # COBOL008-COBOL014 (FREE). COBOL008/COBOL009 also run on copybooks.
+        # COBOL004 and COBOL008-COBOL014 (FREE). COBOL004/008/009 also run on copybooks.
         issues.extend(run_program_rules(file_path, structure.logical_lines, is_copybook))
 
         return issues
@@ -473,36 +429,6 @@ class CobolGovernanceAnalyzer:
                     rule_id="COBOL003",
                     confidence=0.80,
                     metadata={"cwe": "CWE-20"},
-                )
-            )
-
-        return issues
-
-    def _check_redefines_sensitive(
-        self, file_path: str, structure: _CobolStructure
-    ) -> List[AnalysisIssue]:
-        """Rule 4: REDEFINES_SENSITIVE — every REDEFINES clause (COMP-3 not verified yet)."""
-        issues = []
-
-        for line_num, original_field, redefining_field, is_sensitive in structure.redefines_clauses:
-            # For Phase 1, we flag all REDEFINES as potentially sensitive
-            # In Phase 2, we would track field definitions to verify COMP-3
-            issues.append(
-                AnalysisIssue(
-                    file_path=file_path,
-                    line=line_num,
-                    column=0,
-                    issue_type=AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
-                    severity=AnalysisIssueSeverity.HIGH,
-                    message=(
-                        f"REDEFINES clause reinterprets '{original_field}' as "
-                        f"'{redefining_field}'. Data integrity risk if original "
-                        "field is packed decimal (COMP-3)."
-                    ),
-                    suggestion="Verify that both fields have compatible PIC clauses.",
-                    engine=self.ENGINE,
-                    rule_id="COBOL004",
-                    confidence=0.85,
                 )
             )
 
@@ -597,47 +523,70 @@ class CobolGovernanceAnalyzer:
 
         return issues
 
-    def _check_copybook_blast_radius(
+    def _check_copybook_blast_radius(self, file_path: str) -> List[AnalysisIssue]:
+        """Rule 7: COPYBOOK_BLAST_RADIUS — a copybook COPYed by many scanned programs.
+
+        Reported once, on the copybook file, with the dependent programs. Needs
+        the project index; a copybook used by fewer than BLAST_RADIUS_MEDIUM
+        programs is not reported.
+        """
+        name = stem_of(file_path)
+        if self._index is None or not name or is_system_copybook(name):
+            return []
+        programs = self._index.dependent_programs(name)
+        if len(programs) < self.BLAST_RADIUS_MEDIUM:
+            return []
+        high = len(programs) >= self.BLAST_RADIUS_HIGH or _is_generic_copybook(name)
+        severity = AnalysisIssueSeverity.HIGH if high else AnalysisIssueSeverity.MEDIUM
+        return [
+            AnalysisIssue(
+                file_path=file_path,
+                line=1,
+                column=0,
+                issue_type=AnalysisIssueType.COBOL_COPYBOOK_BLAST_RADIUS,
+                severity=severity,
+                message=f"Copybook '{name}' is COPYed by {len(programs)} scanned programs. "
+                "A change to it affects all of them.",
+                suggestion="Review and test every dependent program before changing this "
+                "copybook; consider versioning the layout.",
+                engine=self.ENGINE,
+                rule_id="COBOL007",
+                confidence=0.9,
+                metadata={
+                    "dependents": len(programs),
+                    "programs": [_short_path(p) for p in programs[:_MAX_LINES_IN_METADATA]],
+                },
+            )
+        ]
+
+    def _check_copybook_not_found(
         self, file_path: str, structure: _CobolStructure
     ) -> List[AnalysisIssue]:
-        """Rule 7: COPYBOOK_BLAST_RADIUS — shared copybook usage."""
-        issues = []
-
+        """Rule 15: COPYBOOK_NOT_FOUND — COPY of a name that is not in the scanned tree."""
+        index = self._index
+        if index is None:
+            return []
         grouped = _group_occurrences(
-            (name, line)
-            for line, name in structure.copy_statements
-            if not _is_system_copybook(name)
+            (name, line) for line, name in structure.copy_statements if index.is_missing(name)
         )
-        for copybook_name, lines in grouped.items():
-            line_num = lines[0]
-            # Determine severity based on copybook name
-            is_generic = any(
-                generic in copybook_name for generic in _CobolStructuralExtractor.GENERIC_COPYBOOKS
+        return [
+            AnalysisIssue(
+                file_path=file_path,
+                line=lines[0],
+                column=0,
+                issue_type=AnalysisIssueType.COBOL_COPYBOOK_NOT_FOUND,
+                severity=AnalysisIssueSeverity.LOW,
+                message=f"Copybook '{name}' is not in the scanned files, so its data "
+                "definitions and code were not analyzed (and the build may fail)."
+                f"{_occurrence_note(lines)}",
+                suggestion="Add the copybook directory to the scan, or fix the COPY name.",
+                engine=self.ENGINE,
+                rule_id="COBOL015",
+                confidence=0.8,
+                metadata=_occurrence_metadata(lines),
             )
-
-            severity = AnalysisIssueSeverity.CRITICAL if is_generic else AnalysisIssueSeverity.HIGH
-            confidence = 0.60  # Phase 1 can't count cross-project references
-
-            issues.append(
-                AnalysisIssue(
-                    file_path=file_path,
-                    line=line_num,
-                    column=0,
-                    issue_type=AnalysisIssueType.COBOL_COPYBOOK_BLAST_RADIUS,
-                    severity=severity,
-                    message=f"Copybook '{copybook_name}' referenced. "
-                    "Changes to shared copybooks affect all dependent programs. "
-                    "Cross-project reference counts are not available yet."
-                    f"{_occurrence_note(lines)}",
-                    suggestion="Document copybook dependencies and assess impact before modifying.",
-                    engine=self.ENGINE,
-                    rule_id="COBOL007",
-                    confidence=confidence,
-                    metadata=_occurrence_metadata(lines),
-                )
-            )
-
-        return issues
+            for name, lines in grouped.items()
+        ]
 
 
 _MAX_LINES_IN_METADATA = 50
@@ -664,8 +613,11 @@ def _occurrence_metadata(lines: List[int]) -> Dict[str, Any]:
     return {"occurrences": len(lines), "lines": lines[:_MAX_LINES_IN_METADATA]}
 
 
-def _is_system_copybook(name: str) -> bool:
-    upper = name.upper()
-    return upper in _CobolStructuralExtractor.SYSTEM_COPYBOOKS or upper.startswith(
-        _CobolStructuralExtractor.SYSTEM_COPYBOOK_PREFIXES
-    )
+def _is_generic_copybook(name: str) -> bool:
+    parts = set(re.split(r"[-_]", name.upper()))
+    return bool(parts & _CobolStructuralExtractor.GENERIC_COPYBOOKS)
+
+
+def _short_path(path: str) -> str:
+    parts = path.replace("\\", "/").split("/")
+    return "/".join(parts[-2:])

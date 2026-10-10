@@ -211,7 +211,7 @@ pointing to the install command (also exposed via
 | **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL014 (14 free rules)³ | v4.12.0 | Yes |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL015 (15 free rules)³ | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
@@ -226,14 +226,14 @@ pointing to the install command (also exposed via
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
-³ COBOL: all 14 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case) (copybooks get only the data rules COBOL008/COBOL009; the other rules are not applied to them).
+³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case) (copybooks get only the data rules COBOL004/COBOL008/COBOL009 and COBOL007; the other rules are not applied to them).
 - **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt.
-- **COBOL004 (REDEFINES)** flags every `REDEFINES` clause. It does not yet check whether the redefined field is packed decimal (COMP-3), so review each finding.
-- **COBOL006 / COBOL007** report repeated identical findings once per file (one finding per `PERFORM X THRU Y` pair and per copybook name), with the occurrence count and lines in the finding metadata.
-- **COBOL007 (copybooks)** flags every `COPY` of a user copybook. Vendor copybooks (CICS `DFH*`, DB2 `SQLCA`/`SQLDA`) are skipped. It does not check whether the copybook exists.
+- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays and CICS BMS symbolic maps are skipped. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
+- **COBOL006 / COBOL011 / COBOL015** report repeated findings once (per `PERFORM X THRU Y` pair, per program, per missing copybook), with the occurrence count and lines in the finding metadata.
+- **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree; it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` and copybooks without an extension are not indexed yet.
 - **COBOL002 (credentials)** skips fields whose name ends in a flag/status/length/label suffix (for example `WS-PASSWORD-OK-FLAG`, `PWD-LEN`).
 - **COBOL008-COBOL010 (secrets, CRITICAL)**: a `VALUE` literal on a credential-named field (same suffix exclusions as COBOL002; placeholders such as `SPACES`, `XXXX`, `UNDEFINED` and key names such as `'APP-Token-Password'` are skipped), `PASS=`/`PWD=`/`PASSWORD=` with a value inside any string literal, and `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a literal password.
-- **COBOL011 (MEDIUM)** flags a `SELECT` without a `FILE STATUS` clause (sort files declared with `SD` are skipped). **COBOL012 (LOW)** flags an OPENed file whose status field, its subordinates and its 88-levels are never referenced in the PROCEDURE DIVISION (skipped when the status field is defined in a copybook or the PROCEDURE DIVISION has a `COPY`).
+- **COBOL011 (LOW)** flags `SELECT`s without a `FILE STATUS` clause, one finding per program with the file names in the metadata (sort files declared with `SD` are skipped). **COBOL012 (LOW)** flags an OPENed file whose status field, its subordinates and its 88-levels are never referenced in the PROCEDURE DIVISION (skipped when the status field is defined in a copybook or the PROCEDURE DIVISION has a `COPY`).
 - **COBOL013 (MEDIUM)** flags statements after an unconditional `STOP RUN`/`GOBACK`/`EXIT PROGRAM` in the same paragraph (`EXIT PROGRAM. STOP RUN.` and alternate `ENTRY` points are not flagged). **COBOL014 (LOW)** flags paragraphs and sections that are never referenced (PERFORM, GO TO, THRU ranges, SORT/ALTER) and cannot be reached by fall-through; the entry paragraph, DECLARATIVES, empty `EXIT` paragraphs and programs with a `COPY` in the PROCEDURE DIVISION are skipped.
 - Output is text, JSON or HTML. SARIF is not available yet.
 

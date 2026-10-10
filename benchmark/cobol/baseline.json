@@ -1,9 +1,9 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-10T01:11:03+00:00",
+ "generated_at": "2026-10-10T01:42:29+00:00",
  "hefesto": {
   "version": "4.14.1",
-  "commit": "39186db762ca4d167db9b7b4944fc13b83a4e0ab"
+  "commit": "43a777e45fb396c33a69b04b522d13668d9c3a47"
  },
  "corpora": {
   "carddemo": {
@@ -12,203 +12,131 @@
    "license": "Apache-2.0",
    "files_analyzed": 115,
    "total_loc": 38409,
-   "total_findings": 352,
-   "cobol_findings": 341,
+   "total_findings": 67,
+   "cobol_findings": 56,
    "by_rule": {
     "COBOL001": 7,
     "COBOL003": 2,
-    "COBOL004": 44,
-    "COBOL005": 24,
+    "COBOL004": 24,
+    "COBOL005": 2,
     "COBOL006": 5,
-    "COBOL007": 257,
-    "COBOL011": 2,
+    "COBOL007": 15,
+    "COBOL011": 1,
     "missing-safety": 8,
     "unquoted-var": 3
    },
    "by_severity": {
-    "HIGH": 313,
-    "MEDIUM": 39
+    "HIGH": 40,
+    "LOW": 1,
+    "MEDIUM": 26
    },
    "per_file": {
     "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl": {
-     "COBOL003": 1,
-     "COBOL007": 2
+     "COBOL003": 1
     },
-    "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl": {
-     "COBOL007": 14
-    },
-    "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 12
-    },
-    "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl": {
-     "COBOL004": 1,
-     "COBOL005": 1,
-     "COBOL007": 8
-    },
-    "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl": {
-     "COBOL004": 1,
+    "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy": {
      "COBOL007": 1
     },
-    "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL": {
-     "COBOL007": 6
-    },
-    "app/app-authorization-ims-db2-mq/cbl/PAUDBLOD.CBL": {
-     "COBOL007": 4
-    },
-    "app/app-authorization-ims-db2-mq/cbl/PAUDBUNL.CBL": {
-     "COBOL007": 4
+    "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy": {
+     "COBOL007": 1
     },
     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl": {
-     "COBOL001": 1,
-     "COBOL004": 12,
-     "COBOL005": 1,
-     "COBOL007": 8
+     "COBOL001": 1
     },
     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl": {
-     "COBOL001": 1,
-     "COBOL004": 1,
-     "COBOL005": 1,
-     "COBOL007": 9
-    },
-    "app/app-vsam-mq/cbl/COACCT01.cbl": {
-     "COBOL007": 8
-    },
-    "app/app-vsam-mq/cbl/CODATE01.cbl": {
-     "COBOL007": 7
+     "COBOL001": 1
     },
     "app/cbl/CBACT01C.cbl": {
-     "COBOL004": 2,
-     "COBOL005": 1,
-     "COBOL007": 2
+     "COBOL004": 1
     },
     "app/cbl/CBACT02C.cbl": {
-     "COBOL004": 1,
-     "COBOL007": 1
+     "COBOL004": 1
     },
     "app/cbl/CBACT03C.cbl": {
-     "COBOL004": 1,
-     "COBOL007": 1
+     "COBOL004": 1
     },
     "app/cbl/CBACT04C.cbl": {
-     "COBOL004": 2,
-     "COBOL007": 5
+     "COBOL004": 1
     },
     "app/cbl/CBCUS01C.cbl": {
-     "COBOL004": 1,
-     "COBOL007": 1
-    },
-    "app/cbl/CBEXPORT.cbl": {
-     "COBOL007": 6
-    },
-    "app/cbl/CBIMPORT.cbl": {
-     "COBOL007": 6
+     "COBOL004": 1
     },
     "app/cbl/CBSTM03A.CBL": {
      "COBOL001": 1,
      "COBOL004": 1,
      "COBOL006": 1,
-     "COBOL007": 4,
-     "COBOL011": 2
+     "COBOL011": 1
     },
     "app/cbl/CBSTM03B.CBL": {
      "COBOL001": 1,
      "COBOL006": 4
     },
     "app/cbl/CBTRN01C.cbl": {
-     "COBOL004": 1,
-     "COBOL007": 6
+     "COBOL004": 1
     },
     "app/cbl/CBTRN02C.cbl": {
-     "COBOL004": 2,
-     "COBOL007": 5
+     "COBOL004": 1
     },
     "app/cbl/CBTRN03C.cbl": {
-     "COBOL004": 1,
-     "COBOL007": 5
+     "COBOL004": 1
     },
     "app/cbl/COACTUPC.cbl": {
      "COBOL001": 1,
-     "COBOL004": 2,
-     "COBOL005": 1,
-     "COBOL007": 14
-    },
-    "app/cbl/COACTVWC.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 12
-    },
-    "app/cbl/COADM01C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 7
-    },
-    "app/cbl/COBIL00C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 8
+     "COBOL004": 10
     },
     "app/cbl/COBSWAIT.cbl": {
      "COBOL003": 1
     },
     "app/cbl/COCRDLIC.cbl": {
-     "COBOL001": 1,
-     "COBOL004": 4,
-     "COBOL005": 1,
-     "COBOL007": 8
-    },
-    "app/cbl/COCRDSLC.cbl": {
-     "COBOL004": 4,
-     "COBOL005": 1,
-     "COBOL007": 10
+     "COBOL001": 1
     },
     "app/cbl/COCRDUPC.cbl": {
-     "COBOL001": 1,
-     "COBOL004": 4,
-     "COBOL005": 1,
-     "COBOL007": 10
-    },
-    "app/cbl/COMEN01C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 7
-    },
-    "app/cbl/CORPT00C.cbl": {
-     "COBOL004": 1,
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COSGN00C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COTRN00C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COTRN01C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COTRN02C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 8
-    },
-    "app/cbl/COUSR00C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COUSR01C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COUSR02C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
-    },
-    "app/cbl/COUSR03C.cbl": {
-     "COBOL005": 1,
-     "COBOL007": 6
+     "COBOL001": 1
     },
     "app/cbl/CSUTLDTC.cbl": {
-     "COBOL004": 2,
      "COBOL005": 2
+    },
+    "app/cpy/COCOM01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/COTTL01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSDAT01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSMSG01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSMSG02Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSSTRPFY.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSUSR01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT02Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT03Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVCRD01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVCUS01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVEXPORT.cpy": {
+     "COBOL004": 5
+    },
+    "app/cpy/CVTRA05Y.cpy": {
+     "COBOL007": 1
     },
     "scripts/git-addSrcVersionInfo.sh": {
      "missing-safety": 1,
@@ -286,88 +214,8 @@
     ],
     [
      "COBOL004",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     68
-    ],
-    [
-     "COBOL004",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl",
-     36
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     167
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     180
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     192
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     227
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     312
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     380
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     388
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     434
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     440
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     446
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     452
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     457
-    ],
-    [
-     "COBOL004",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     109
-    ],
-    [
-     "COBOL004",
      "app/cbl/CBACT01C.cbl",
      108
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBACT01C.cbl",
-     137
     ],
     [
      "COBOL004",
@@ -383,11 +231,6 @@
      "COBOL004",
      "app/cbl/CBACT04C.cbl",
      126
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBACT04C.cbl",
-     151
     ],
     [
      "COBOL004",
@@ -411,218 +254,93 @@
     ],
     [
      "COBOL004",
-     "app/cbl/CBTRN02C.cbl",
-     160
-    ],
-    [
-     "COBOL004",
      "app/cbl/CBTRN03C.cbl",
      143
     ],
     [
      "COBOL004",
      "app/cbl/COACTUPC.cbl",
-     359
+     676
     ],
     [
      "COBOL004",
      "app/cbl/COACTUPC.cbl",
-     362
+     679
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDLIC.cbl",
-     74
+     "app/cbl/COACTUPC.cbl",
+     682
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDLIC.cbl",
-     100
+     "app/cbl/COACTUPC.cbl",
+     703
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDLIC.cbl",
-     103
+     "app/cbl/COACTUPC.cbl",
+     706
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDLIC.cbl",
-     254
+     "app/cbl/COACTUPC.cbl",
+     764
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDSLC.cbl",
-     74
+     "app/cbl/COACTUPC.cbl",
+     767
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDSLC.cbl",
-     77
+     "app/cbl/COACTUPC.cbl",
+     770
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDSLC.cbl",
-     80
+     "app/cbl/COACTUPC.cbl",
+     791
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDSLC.cbl",
-     85
+     "app/cbl/COACTUPC.cbl",
+     794
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDUPC.cbl",
-     105
+     "app/cpy/CVEXPORT.cpy",
+     24
     ],
     [
      "COBOL004",
-     "app/cbl/COCRDUPC.cbl",
-     108
-    ],
-    [
-     "COBOL004",
-     "app/cbl/COCRDUPC.cbl",
-     111
-    ],
-    [
-     "COBOL004",
-     "app/cbl/COCRDUPC.cbl",
-     116
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CORPT00C.cbl",
-     126
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CSUTLDTC.cbl",
-     44
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CSUTLDTC.cbl",
+     "app/cpy/CVEXPORT.cpy",
      47
     ],
     [
-     "COBOL005",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     174
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     65
     ],
     [
-     "COBOL005",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     154
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     84
     ],
     [
-     "COBOL005",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     495
-    ],
-    [
-     "COBOL005",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     342
-    ],
-    [
-     "COBOL005",
-     "app/cbl/CBACT01C.cbl",
-     1
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COACTUPC.cbl",
-     856
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COACTVWC.cbl",
-     259
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COADM01C.cbl",
-     69
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COBIL00C.cbl",
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
      93
     ],
     [
      "COBOL005",
-     "app/cbl/COCRDLIC.cbl",
-     295
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COCRDSLC.cbl",
-     245
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COCRDUPC.cbl",
-     364
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COMEN01C.cbl",
-     69
-    ],
-    [
-     "COBOL005",
-     "app/cbl/CORPT00C.cbl",
-     157
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COSGN00C.cbl",
-     67
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COTRN00C.cbl",
-     89
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COTRN01C.cbl",
-     80
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COTRN02C.cbl",
-     101
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COUSR00C.cbl",
-     92
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COUSR01C.cbl",
-     65
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COUSR02C.cbl",
-     76
-    ],
-    [
-     "COBOL005",
-     "app/cbl/COUSR03C.cbl",
-     76
+     "app/cbl/CSUTLDTC.cbl",
+     28
     ],
     [
      "COBOL005",
      "app/cbl/CSUTLDTC.cbl",
-     29
-    ],
-    [
-     "COBOL005",
-     "app/cbl/CSUTLDTC.cbl",
-     29
+     36
     ],
     [
      "COBOL006",
@@ -651,1298 +369,83 @@
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl",
-     117
+     "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl",
-     121
+     "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     149
+     "app/cpy/COCOM01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     152
+     "app/cpy/COTTL01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     161
+     "app/cpy/CSDAT01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     164
+     "app/cpy/CSMSG01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     167
+     "app/cpy/CSMSG02Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     170
+     "app/cpy/CSSTRPFY.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     178
+     "app/cpy/CSUSR01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     182
+     "app/cpy/CVACT01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     185
+     "app/cpy/CVACT02Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     193
+     "app/cpy/CVACT03Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     197
+     "app/cpy/CVCRD01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     203
+     "app/cpy/CVCUS01Y.cpy",
+     1
     ],
     [
      "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     206
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
-     209
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     116
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     129
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     132
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     135
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     138
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     141
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     144
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     147
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     150
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     153
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     161
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
-     165
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     109
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     122
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     126
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     129
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     132
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     135
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     142
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
-     146
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl",
-     78
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     136
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     143
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     147
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     154
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     155
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/DBUNLDGS.CBL",
-     156
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBLOD.CBL",
-     142
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBLOD.CBL",
-     149
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBLOD.CBL",
-     153
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBLOD.CBL",
-     161
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBUNL.CBL",
-     132
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBUNL.CBL",
-     139
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBUNL.CBL",
-     143
-    ],
-    [
-     "COBOL007",
-     "app/app-authorization-ims-db2-mq/cbl/PAUDBUNL.CBL",
-     150
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     327
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     375
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     430
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     433
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     480
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     482
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     485
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
-     490
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     241
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     262
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     265
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     268
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     271
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     274
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     277
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     292
-    ],
-    [
-     "COBOL007",
-     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
-     1358
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     71
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     75
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     79
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     83
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     87
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     90
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     171
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/COACCT01.cbl",
-     345
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     71
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     75
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     79
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     83
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     87
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     90
-    ],
-    [
-     "COBOL007",
-     "app/app-vsam-mq/cbl/CODATE01.cbl",
-     294
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT01C.cbl",
-     89
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT01C.cbl",
-     90
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT02C.cbl",
-     45
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT03C.cbl",
-     45
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT04C.cbl",
-     97
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT04C.cbl",
-     102
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT04C.cbl",
-     107
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT04C.cbl",
-     112
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBACT04C.cbl",
-     117
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBCUS01C.cbl",
-     45
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     75
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     78
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     81
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     84
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     87
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBEXPORT.cbl",
-     96
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     84
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     89
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     94
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     99
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     104
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBIMPORT.cbl",
-     113
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBSTM03A.CBL",
-     51
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBSTM03A.CBL",
-     53
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBSTM03A.CBL",
-     55
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBSTM03A.CBL",
-     57
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     99
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     104
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     109
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     114
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     119
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN01C.cbl",
-     124
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN02C.cbl",
-     102
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN02C.cbl",
-     107
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN02C.cbl",
-     112
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN02C.cbl",
-     121
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN02C.cbl",
-     126
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN03C.cbl",
-     93
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN03C.cbl",
-     98
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN03C.cbl",
-     103
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN03C.cbl",
-     108
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CBTRN03C.cbl",
-     113
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     597
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     602
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     620
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     623
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     626
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     629
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     632
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     635
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     640
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     643
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     646
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     650
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     3208
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTUPC.cbl",
-     4232
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     207
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     211
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     226
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     229
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     232
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     235
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     238
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     241
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     244
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     248
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     251
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COACTVWC.cbl",
-     254
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     50
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     51
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     53
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     55
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     56
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     57
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COADM01C.cbl",
-     58
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     63
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     74
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     76
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     77
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     78
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     80
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     81
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COBIL00C.cbl",
-     82
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     221
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     227
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     272
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     276
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     279
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     281
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     285
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDLIC.cbl",
-     290
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     194
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     198
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     213
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     215
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     218
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     221
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     224
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     227
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     234
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDSLC.cbl",
-     240
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     268
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     272
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     332
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     334
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     337
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     340
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     343
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     346
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     353
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COCRDUPC.cbl",
-     359
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     50
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     51
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     53
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     55
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     56
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     57
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COMEN01C.cbl",
-     58
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     138
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     140
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     142
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     143
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     144
-    ],
-    [
-     "COBOL007",
-     "app/cbl/CORPT00C.cbl",
-     146
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     48
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     50
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     52
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     53
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     54
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COSGN00C.cbl",
-     55
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     61
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     72
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     74
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     75
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     76
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN00C.cbl",
-     78
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     52
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     63
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     65
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     66
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     67
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN01C.cbl",
-     69
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     71
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     82
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     84
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     85
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     86
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     88
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     89
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COTRN02C.cbl",
-     90
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     66
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     76
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     78
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     79
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     80
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR00C.cbl",
-     81
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     46
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     48
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     50
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     51
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     52
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR01C.cbl",
-     53
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     49
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     60
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     62
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     63
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     64
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR02C.cbl",
-     65
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     49
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     60
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     62
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     63
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     64
-    ],
-    [
-     "COBOL007",
-     "app/cbl/COUSR03C.cbl",
-     65
+     "app/cpy/CVTRA05Y.cpy",
+     1
     ],
     [
      "COBOL011",
      "app/cbl/CBSTM03A.CBL",
      39
-    ],
-    [
-     "COBOL011",
-     "app/cbl/CBSTM03A.CBL",
-     40
     ],
     [
      "missing-safety",
@@ -2001,8 +504,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.605,
-    "wall_seconds": 1.349
+    "analyze_seconds": 0.585,
+    "wall_seconds": 1.184
    }
   },
   "genapp": {
@@ -2011,104 +514,53 @@
    "license": "EPL-2.0",
    "files_analyzed": 45,
    "total_loc": 8509,
-   "total_findings": 53,
-   "cobol_findings": 52,
+   "total_findings": 14,
+   "cobol_findings": 13,
    "by_rule": {
     "COBOL001": 5,
-    "COBOL004": 17,
-    "COBOL007": 29,
+    "COBOL007": 2,
     "COBOL008": 1,
+    "COBOL015": 5,
     "missing-safety": 1
    },
    "by_severity": {
     "CRITICAL": 1,
-    "HIGH": 51,
-    "MEDIUM": 1
+    "HIGH": 6,
+    "LOW": 5,
+    "MEDIUM": 2
    },
    "per_file": {
     "base/bin/install.sh": {
      "missing-safety": 1
     },
     "base/src/lgacdb01.cbl": {
-     "COBOL007": 1,
      "COBOL008": 1
     },
-    "base/src/lgacdb02.cbl": {
+    "base/src/lgcmarea.cpy": {
      "COBOL007": 1
     },
-    "base/src/lgacus01.cbl": {
-     "COBOL007": 2
-    },
-    "base/src/lgacvs01.cbl": {
+    "base/src/lgpolicy.cpy": {
      "COBOL007": 1
-    },
-    "base/src/lgapol01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgapvs01.cbl": {
-     "COBOL004": 4,
-     "COBOL007": 1
-    },
-    "base/src/lgastat1.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgdpol01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgdpvs01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgicdb01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgicus01.cbl": {
-     "COBOL007": 2
-    },
-    "base/src/lgicvs01.cbl": {
-     "COBOL004": 3
-    },
-    "base/src/lgipol01.cbl": {
-     "COBOL007": 2
-    },
-    "base/src/lgsetup.cbl": {
-     "COBOL004": 3
-    },
-    "base/src/lgstsq.cbl": {
-     "COBOL004": 2
     },
     "base/src/lgtestc1.cbl": {
      "COBOL001": 1,
-     "COBOL004": 1,
-     "COBOL007": 2
+     "COBOL015": 1
     },
     "base/src/lgtestp1.cbl": {
      "COBOL001": 1,
-     "COBOL007": 2
+     "COBOL015": 1
     },
     "base/src/lgtestp2.cbl": {
      "COBOL001": 1,
-     "COBOL007": 2
+     "COBOL015": 1
     },
     "base/src/lgtestp3.cbl": {
      "COBOL001": 1,
-     "COBOL007": 2
+     "COBOL015": 1
     },
     "base/src/lgtestp4.cbl": {
      "COBOL001": 1,
-     "COBOL007": 2
-    },
-    "base/src/lgucus01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgucvs01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgupol01.cbl": {
-     "COBOL007": 1
-    },
-    "base/src/lgupvs01.cbl": {
-     "COBOL004": 4,
-     "COBOL007": 1
+     "COBOL015": 1
     }
    },
    "findings": [
@@ -2138,239 +590,44 @@
      33
     ],
     [
-     "COBOL004",
-     "base/src/lgapvs01.cbl",
-     31
-    ],
-    [
-     "COBOL004",
-     "base/src/lgapvs01.cbl",
-     35
-    ],
-    [
-     "COBOL004",
-     "base/src/lgapvs01.cbl",
-     41
-    ],
-    [
-     "COBOL004",
-     "base/src/lgapvs01.cbl",
-     47
-    ],
-    [
-     "COBOL004",
-     "base/src/lgicvs01.cbl",
-     42
-    ],
-    [
-     "COBOL004",
-     "base/src/lgicvs01.cbl",
-     45
-    ],
-    [
-     "COBOL004",
-     "base/src/lgicvs01.cbl",
-     64
-    ],
-    [
-     "COBOL004",
-     "base/src/lgsetup.cbl",
-     32
-    ],
-    [
-     "COBOL004",
-     "base/src/lgsetup.cbl",
-     35
-    ],
-    [
-     "COBOL004",
-     "base/src/lgsetup.cbl",
-     97
-    ],
-    [
-     "COBOL004",
-     "base/src/lgstsq.cbl",
-     29
-    ],
-    [
-     "COBOL004",
-     "base/src/lgstsq.cbl",
-     35
-    ],
-    [
-     "COBOL004",
-     "base/src/lgtestc1.cbl",
-     23
-    ],
-    [
-     "COBOL004",
-     "base/src/lgupvs01.cbl",
-     32
-    ],
-    [
-     "COBOL004",
-     "base/src/lgupvs01.cbl",
-     36
-    ],
-    [
-     "COBOL004",
-     "base/src/lgupvs01.cbl",
-     42
-    ],
-    [
-     "COBOL004",
-     "base/src/lgupvs01.cbl",
-     48
+     "COBOL007",
+     "base/src/lgcmarea.cpy",
+     1
     ],
     [
      "COBOL007",
-     "base/src/lgacdb01.cbl",
-     88
-    ],
-    [
-     "COBOL007",
-     "base/src/lgacdb02.cbl",
-     66
-    ],
-    [
-     "COBOL007",
-     "base/src/lgacus01.cbl",
-     61
-    ],
-    [
-     "COBOL007",
-     "base/src/lgacus01.cbl",
-     70
-    ],
-    [
-     "COBOL007",
-     "base/src/lgacvs01.cbl",
-     56
-    ],
-    [
-     "COBOL007",
-     "base/src/lgapol01.cbl",
-     71
-    ],
-    [
-     "COBOL007",
-     "base/src/lgapvs01.cbl",
-     87
-    ],
-    [
-     "COBOL007",
-     "base/src/lgastat1.cbl",
-     62
-    ],
-    [
-     "COBOL007",
-     "base/src/lgdpol01.cbl",
-     69
-    ],
-    [
-     "COBOL007",
-     "base/src/lgdpvs01.cbl",
-     65
-    ],
-    [
-     "COBOL007",
-     "base/src/lgicdb01.cbl",
-     74
-    ],
-    [
-     "COBOL007",
-     "base/src/lgicus01.cbl",
-     60
-    ],
-    [
-     "COBOL007",
-     "base/src/lgicus01.cbl",
-     69
-    ],
-    [
-     "COBOL007",
-     "base/src/lgipol01.cbl",
-     55
-    ],
-    [
-     "COBOL007",
-     "base/src/lgipol01.cbl",
-     63
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestc1.cbl",
-     44
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestc1.cbl",
-     46
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp1.cbl",
-     21
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp1.cbl",
-     23
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp2.cbl",
-     21
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp2.cbl",
-     23
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp3.cbl",
-     21
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp3.cbl",
-     23
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp4.cbl",
-     21
-    ],
-    [
-     "COBOL007",
-     "base/src/lgtestp4.cbl",
-     23
-    ],
-    [
-     "COBOL007",
-     "base/src/lgucus01.cbl",
-     74
-    ],
-    [
-     "COBOL007",
-     "base/src/lgucvs01.cbl",
-     57
-    ],
-    [
-     "COBOL007",
-     "base/src/lgupol01.cbl",
-     74
-    ],
-    [
-     "COBOL007",
-     "base/src/lgupvs01.cbl",
-     90
+     "base/src/lgpolicy.cpy",
+     1
     ],
     [
      "COBOL008",
      "base/src/lgacdb01.cbl",
      74
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestc1.cbl",
+     44
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp1.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp2.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp3.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp4.cbl",
+     21
     ],
     [
      "missing-safety",
@@ -2379,8 +636,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.195,
-    "wall_seconds": 0.833
+    "analyze_seconds": 0.158,
+    "wall_seconds": 0.832
    }
   },
   "zopeneditor-sample": {
@@ -2389,33 +646,29 @@
    "license": "Apache-2.0",
    "files_analyzed": 20,
    "total_loc": 2217,
-   "total_findings": 19,
-   "cobol_findings": 14,
+   "total_findings": 9,
+   "cobol_findings": 4,
    "by_rule": {
-    "COBOL007": 14,
+    "COBOL007": 4,
     "YAML_INDENTATION": 2,
     "missing-safety": 3
    },
    "by_severity": {
-    "HIGH": 14,
     "LOW": 2,
-    "MEDIUM": 3
+    "MEDIUM": 7
    },
    "per_file": {
-    "COBOL/SAM1.cbl": {
-     "COBOL007": 2
+    "COPYBOOK/CUSTCOPY.cpy": {
+     "COBOL007": 1
     },
-    "COBOL/SAM1LIB.cbl": {
-     "COBOL007": 4
+    "COPYBOOK/TRANREC.cpy": {
+     "COBOL007": 1
     },
-    "COBOL/SAM2.cbl": {
-     "COBOL007": 2
+    "multiroot/copybooks/cust/CUSTCOPY.cpy": {
+     "COBOL007": 1
     },
-    "multiroot/sam/SAM1.cbl": {
-     "COBOL007": 3
-    },
-    "multiroot/sam/SAM2.cbl": {
-     "COBOL007": 3
+    "multiroot/copybooks/trans/TRANREC.cpy": {
+     "COBOL007": 1
     },
     "multiroot/sam/zapp.yaml": {
      "YAML_INDENTATION": 1
@@ -2436,73 +689,23 @@
    "findings": [
     [
      "COBOL007",
-     "COBOL/SAM1.cbl",
-     61
+     "COPYBOOK/CUSTCOPY.cpy",
+     1
     ],
     [
      "COBOL007",
-     "COBOL/SAM1.cbl",
-     71
+     "COPYBOOK/TRANREC.cpy",
+     1
     ],
     [
      "COBOL007",
-     "COBOL/SAM1LIB.cbl",
-     61
+     "multiroot/copybooks/cust/CUSTCOPY.cpy",
+     1
     ],
     [
      "COBOL007",
-     "COBOL/SAM1LIB.cbl",
-     71
-    ],
-    [
-     "COBOL007",
-     "COBOL/SAM1LIB.cbl",
-     84
-    ],
-    [
-     "COBOL007",
-     "COBOL/SAM1LIB.cbl",
-     89
-    ],
-    [
-     "COBOL007",
-     "COBOL/SAM2.cbl",
-     44
-    ],
-    [
-     "COBOL007",
-     "COBOL/SAM2.cbl",
-     46
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM1.cbl",
-     65
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM1.cbl",
-     75
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM1.cbl",
-     142
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM2.cbl",
-     44
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM2.cbl",
-     46
-    ],
-    [
-     "COBOL007",
-     "multiroot/sam/SAM2.cbl",
-     51
+     "multiroot/copybooks/trans/TRANREC.cpy",
+     1
     ],
     [
      "YAML_INDENTATION",
@@ -2531,8 +734,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.121,
-    "wall_seconds": 0.738
+    "analyze_seconds": 0.125,
+    "wall_seconds": 0.846
    }
   }
  }

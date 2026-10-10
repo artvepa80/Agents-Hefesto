@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from hefesto.analyzers.devops.cobol_governance_analyzer import CobolGovernanceAnalyzer
+from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
 from hefesto.core.language_detector import LanguageDetector
 from hefesto.core.languages.specs import Language
 
@@ -30,7 +31,7 @@ BAD_EXPECTED = {
     ("COBOL002", 23),  # MOVE 'hunter2' TO WS-USER-PWD
     ("COBOL002", 24),  # MOVE "tok_live_..." TO WS-API-TOKEN
     ("COBOL004", 17),  # REDEFINES on a COMP-3 field
-    ("COBOL007", 20),  # COPY MISSINGBK
+    ("COBOL015", 20),  # COPY MISSINGBK is not in the scanned files
     ("COBOL008", 12),  # VALUE 'Sup3rS3cr3t!' on WS-DB-PASSWORD
     ("COBOL009", 25),  # 'USER=ADMIN;PASS=Adm1n2024'
     ("COBOL011", 6),  # SELECT ACCT-FILE without FILE STATUS
@@ -39,8 +40,13 @@ BAD_EXPECTED = {
 }
 
 
+def _scan_index() -> CobolProjectIndex:
+    """A scan where another program's COPY resolved, so missing copybooks are reported."""
+    return CobolProjectIndex(available={"OTHERBK"}, dependents={"OTHERBK": {"other.cbl"}})
+
+
 def _analyze(name: str, content: str = None, filename: str = None):
-    analyzer = CobolGovernanceAnalyzer()
+    analyzer = CobolGovernanceAnalyzer(index=_scan_index())
     path = SMOKE_DIR / name
     text = content if content is not None else path.read_text()
     issues = analyzer.analyze(str(filename or path), text)
@@ -168,7 +174,7 @@ class TestFalsePositiveFixes:
             "           COPY CUSTREC.\n"
         )
         _, issues = _analyze("t.cbl", content=text)
-        assert [(i.rule_id, i.line) for i in issues] == [("COBOL007", 6)]
+        assert [(i.rule_id, i.line) for i in issues] == [("COBOL015", 6)]
 
 
 class TestGrouping:
@@ -208,7 +214,10 @@ class TestGrouping:
             + "           COPY OTHER.\n"
         )
         _, issues = _analyze("t.cbl", content=text)
-        assert [(i.line, i.metadata["occurrences"]) for i in issues] == [(2, 5), (7, 1)]
+        assert [(i.rule_id, i.line, i.metadata["occurrences"]) for i in issues] == [
+            ("COBOL015", 2, 5),
+            ("COBOL015", 7, 1),
+        ]
 
     def test_lowercase_perform_thru_counts_paragraphs(self):
         _, issues = _analyze("t.cbl", content=self._perform_program(1).lower())
@@ -249,10 +258,13 @@ class TestFormerMissesNowDetected:
         assert ("COBOL014", 52) in _findings(issues)
 
 
-class TestKnownMissesPhase3:
-    """Known gaps that still need tuning (Phase 3)."""
+class TestPhase3PrecisionFixes:
+    """Former Phase 3 xfails, now passing."""
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: COBOL004 flags every REDEFINES (PIC X too)")
     def test_redefines_of_alphanumeric_not_flagged(self):
         _, issues = _analyze("false_positives.cbl")
         assert not [i for i in issues if i.rule_id == "COBOL004"]
+
+    def test_redefines_of_packed_decimal_still_flagged(self):
+        _, issues = _analyze("bad_fixed.cbl")
+        assert ("COBOL004", 17) in _findings(issues)

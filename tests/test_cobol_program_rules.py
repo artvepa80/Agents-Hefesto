@@ -183,7 +183,20 @@ class TestCobol011FileStatusMissing:
         )
         issues = _issues(code, "COBOL011")
         assert [i.line for i in issues] == [6]
-        assert issues[0].severity == AnalysisIssueSeverity.MEDIUM
+        assert issues[0].severity == AnalysisIssueSeverity.LOW
+        assert issues[0].metadata["files"] == ["IN-FILE"]
+
+    def test_files_without_status_grouped_per_program(self):
+        code = _prog(
+            env=["SELECT A-FILE ASSIGN TO ADD.", "SELECT B-FILE ASSIGN TO BDD."],
+            data=FD_DATA,
+            proc=["@MAIN-PARA.", "STOP RUN."],
+        )
+        issues = _issues(code, "COBOL011")
+        assert len(issues) == 1
+        assert issues[0].metadata["files"] == ["A-FILE", "B-FILE"]
+        assert issues[0].metadata["occurrences"] == 2
+        assert "2 file(s)" in issues[0].message
 
     @pytest.mark.parametrize(
         "status", ["FILE STATUS IS WS-FS.", "STATUS WS-FS.", "FILE STATUS WS-FS."]

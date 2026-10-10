@@ -1,0 +1,4908 @@
+{
+ "schema_version": 1,
+ "description": "Labelled sample of COBOL findings (Phase 3). Each label applies the per-rule criteria below to the source at the reported line; the criteria were applied with a helper script and every category was spot-checked by hand. verdict TP = the finding is a real instance of what the rule describes; FP = it is not. sets = which run produced it (before = main 43a777e, v4.14.1; after = Phase 3 branch). duplicate = n-th identical finding at the same place.",
+ "corpora": {
+  "carddemo": "aws-samples/aws-mainframe-modernization-carddemo@59cc6c2fd7ebd7ef7925cad552a01a4b8b6e4d5e",
+  "genapp": "cicsdev/cics-genapp@f6f3f4b2580d31b7d8dcc31ce3e3676f4cceaaaa",
+  "zopeneditor-sample": "IBM/zopeneditor-sample@8f9835308de6159eb54f226041d5f81a780cb8eb",
+  "nist": "NIST COBOL85 test suite (newcob.val, GnuCOBOL mirror), file = member name + .CBL"
+ },
+ "sampling": "CardDemo, GenApp and zopeneditor: every finding of each rule, except CardDemo COBOL007 before (60 of 257, random). NIST: random 20 of COBOL004/COBOL007/COBOL011, 10 of COBOL001/COBOL003/COBOL006, every COBOL005; seed 2026.",
+ "caveats": "COBOL007 TP means the copybook really is COPYed by 5+ programs (the rule definition); it does not judge whether that blast radius is a risk. COBOL011 TP means the SELECT really lacks FILE STATUS; its Phase 3 change is about volume and severity, not precision.",
+ "criteria": {
+  "COBOL001": "TP when the file really has more than 10 GO TO statements",
+  "COBOL003": "TP when the line ACCEPTs external input (SYSIN, console, terminal)",
+  "COBOL004": "TP when packed, binary, pointer or signed numeric data is overlaid with a different layout; FP for alphanumeric/unsigned display overlays, generated BMS maps and the deliberate 2-byte file-status decoding idiom",
+  "COBOL005": "TP for a real OCCURS ... DEPENDING ON entry reported on its own line; FP for the CICS EIBCALEN commarea idiom, GO TO DEPENDING, RECORD VARYING and duplicates",
+  "COBOL006": "TP when the PERFORM THRU range spans more than 5 paragraphs",
+  "COBOL007": "TP when the copybook is COPYed by at least 5 programs of the corpus; FP for vendor copybooks, non-names and copybooks used by 1-4 programs",
+  "COBOL008": "TP for a real literal credential in a VALUE clause",
+  "COBOL011": "TP when the SELECT has no FILE STATUS clause",
+  "COBOL015": "TP when the copybook is really absent from the repository"
+ },
+ "labels": [
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 690,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "28 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 478,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "23 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 301,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "14 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/cbl/CBSTM03B.CBL",
+   "line": 128,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "13 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 973,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "51 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 438,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "16 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL001",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 497,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "21 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL003",
+   "file": "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl",
+   "line": 189,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL003",
+   "file": "app/cbl/COBSWAIT.cbl",
+   "line": 36,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
+   "line": 68,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl",
+   "line": 36,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 167,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 180,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 192,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 227,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 312,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 380,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 388,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 434,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS BMS symbolic map (generated input/output views)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 440,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 446,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 452,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 457,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS BMS symbolic map (generated input/output views)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 109,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT01C.cbl",
+   "line": 108,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT01C.cbl",
+   "line": 137,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT02C.cbl",
+   "line": 54,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT03C.cbl",
+   "line": 54,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT04C.cbl",
+   "line": 126,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBACT04C.cbl",
+   "line": 151,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBCUS01C.cbl",
+   "line": 54,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 237,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "POINTER overlaid on a binary field (pointer arithmetic, fragile)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBTRN01C.cbl",
+   "line": 134,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBTRN02C.cbl",
+   "line": 135,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBTRN02C.cbl",
+   "line": 160,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CBTRN03C.cbl",
+   "line": 143,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "deliberate idiom: 2-byte binary split into PIC X bytes to decode file status"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 359,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 362,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 676,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 679,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 682,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 703,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 706,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 764,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 767,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 770,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 791,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 794,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 100,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 103,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 254,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 77,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 80,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 85,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 105,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 108,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 111,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 116,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CORPT00C.cbl",
+   "line": 126,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 44,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 47,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cpy/CVEXPORT.cpy",
+   "line": 24,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cpy/CVEXPORT.cpy",
+   "line": 47,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cpy/CVEXPORT.cpy",
+   "line": 65,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cpy/CVEXPORT.cpy",
+   "line": 84,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL004",
+   "file": "app/cpy/CVEXPORT.cpy",
+   "line": 93,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 174,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
+   "line": 154,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 495,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 342,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CBACT01C.cbl",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 856,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COACTVWC.cbl",
+   "line": 259,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COADM01C.cbl",
+   "line": 69,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COBIL00C.cbl",
+   "line": 93,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 295,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 245,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 364,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COMEN01C.cbl",
+   "line": 69,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CORPT00C.cbl",
+   "line": 157,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COSGN00C.cbl",
+   "line": 67,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COTRN00C.cbl",
+   "line": 89,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COTRN01C.cbl",
+   "line": 80,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COTRN02C.cbl",
+   "line": 101,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COUSR00C.cbl",
+   "line": 92,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COUSR01C.cbl",
+   "line": 65,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COUSR02C.cbl",
+   "line": 76,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/COUSR03C.cbl",
+   "line": 76,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CICS commarea idiom (DEPENDING ON EIBCALEN), sized by CICS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 28,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON Vstring-length"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 29,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON Vstring-length"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 29,
+   "sets": [
+    "before"
+   ],
+   "duplicate": 1,
+   "verdict": "FP",
+   "reason": "duplicate of the previous finding (second ODO reported on the wrong line)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL005",
+   "file": "app/cbl/CSUTLDTC.cbl",
+   "line": 36,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON Vstring-length"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL006",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 486,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL006",
+   "file": "app/cbl/CBSTM03B.CBL",
+   "line": 120,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL006",
+   "file": "app/cbl/CBSTM03B.CBL",
+   "line": 122,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL006",
+   "file": "app/cbl/CBSTM03B.CBL",
+   "line": 124,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL006",
+   "file": "app/cbl/CBSTM03B.CBL",
+   "line": 126,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl",
+   "line": 117,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CIPAUSMY is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUA0C.cbl",
+   "line": 149,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "vendor copybook CMQODV (IBM MQ/CICS/DB2), not project code"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 135,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSDAT01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 138,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 144,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 153,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVCUS01Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS0C.cbl",
+   "line": 161,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CIPAUSMY is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS1C.cbl",
+   "line": 109,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CIPAUDTY is COPYed by 8 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CIPAUSMY is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 430,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 485,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 262,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 265,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COTRTUP is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 274,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG02Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-vsam-mq/cbl/COACCT01.cbl",
+   "line": 90,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "vendor copybook CMQTML (IBM MQ/CICS/DB2), not project code"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-vsam-mq/cbl/COACCT01.cbl",
+   "line": 171,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/app-vsam-mq/cbl/CODATE01.cbl",
+   "line": 87,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "vendor copybook CMQV (IBM MQ/CICS/DB2), not project code"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBACT04C.cbl",
+   "line": 97,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CVTRA01Y is COPYed by only 2 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBACT04C.cbl",
+   "line": 107,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CVTRA02Y is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBACT04C.cbl",
+   "line": 117,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBEXPORT.cbl",
+   "line": 84,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBIMPORT.cbl",
+   "line": 94,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT03Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 55,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CUSTREC is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBTRN01C.cbl",
+   "line": 114,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT02Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CBTRN02C.cbl",
+   "line": 102,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CVTRA06Y is COPYed by only 2 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 597,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVCRD01Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 623,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COACTUP is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 632,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG02Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTUPC.cbl",
+   "line": 3208,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "CSSETATY is COPYed by only 2 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTVWC.cbl",
+   "line": 211,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTVWC.cbl",
+   "line": 229,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COACTVW is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTVWC.cbl",
+   "line": 241,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COACTVWC.cbl",
+   "line": 254,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVCUS01Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COADM01C.cbl",
+   "line": 53,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COADM01 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COADM01C.cbl",
+   "line": 58,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COBIL00C.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COBIL00 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COBIL00C.cbl",
+   "line": 80,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COBIL00C.cbl",
+   "line": 82,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDLIC.cbl",
+   "line": 290,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT02Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDSLC.cbl",
+   "line": 198,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 272,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 334,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COCRDUP is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 343,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG02Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COCRDUPC.cbl",
+   "line": 353,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT02Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COMEN01C.cbl",
+   "line": 53,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COMEN01 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COMEN01C.cbl",
+   "line": 55,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COMEN01C.cbl",
+   "line": 56,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSDAT01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COMEN01C.cbl",
+   "line": 58,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/CORPT00C.cbl",
+   "line": 146,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COSGN00C.cbl",
+   "line": 50,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COSGN00 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COSGN00C.cbl",
+   "line": 52,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COTRN00C.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COTRN01C.cbl",
+   "line": 63,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COTRN01 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COTRN02C.cbl",
+   "line": 82,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COTRN02 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COTRN02C.cbl",
+   "line": 86,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR00C.cbl",
+   "line": 66,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR01C.cbl",
+   "line": 51,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSDAT01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR01C.cbl",
+   "line": 52,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR03C.cbl",
+   "line": 60,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "COUSR03 is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR03C.cbl",
+   "line": 62,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cbl/COUSR03C.cbl",
+   "line": 64,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/COCOM01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/COTTL01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CSDAT01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CSDAT01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CSMSG01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CSMSG02Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CSMSG02Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CSSTRPFY.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CSSTRPFY is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CSUSR01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVACT01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT01Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVACT02Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT02Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVACT03Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVACT03Y is COPYed by 14 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVCRD01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVCRD01Y is COPYed by 7 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVCUS01Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVCUS01Y is COPYed by 10 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL007",
+   "file": "app/cpy/CVTRA05Y.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL011",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 39,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "carddemo",
+   "rule": "COBOL011",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 40,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL001",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 56,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "13 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL001",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 33,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "17 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL001",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 33,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "17 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL001",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 33,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "17 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL001",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 33,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "14 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 31,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 35,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 41,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 47,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgicvs01.cbl",
+   "line": 42,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgicvs01.cbl",
+   "line": 45,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgicvs01.cbl",
+   "line": 64,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgsetup.cbl",
+   "line": 32,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgsetup.cbl",
+   "line": 35,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgsetup.cbl",
+   "line": 97,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgstsq.cbl",
+   "line": 29,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgstsq.cbl",
+   "line": 35,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 32,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 36,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 42,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL004",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 48,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric/unsigned display overlay (no packed, binary or signed data)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 88,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgacdb02.cbl",
+   "line": 66,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgacus01.cbl",
+   "line": 61,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgacus01.cbl",
+   "line": 70,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgacvs01.cbl",
+   "line": 56,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgapol01.cbl",
+   "line": 71,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 87,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgastat1.cbl",
+   "line": 62,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgcmarea.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgdpol01.cbl",
+   "line": 69,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgdpvs01.cbl",
+   "line": 65,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgicdb01.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgicus01.cbl",
+   "line": 60,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgicus01.cbl",
+   "line": 69,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgipol01.cbl",
+   "line": 55,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgipol01.cbl",
+   "line": 63,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgpolicy.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 44,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 46,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 21,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 21,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 21,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 21,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgucus01.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgucvs01.cbl",
+   "line": 57,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgupol01.cbl",
+   "line": 74,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL007",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 90,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL008",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 74,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "literal password in VALUE clause"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL015",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 44,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL015",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 21,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL015",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 21,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL015",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 21,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
+  },
+  {
+   "corpus": "genapp",
+   "rule": "COBOL015",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 21,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "CM202M.CBL",
+   "line": 289,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "29 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "IC103A.CBL",
+   "line": 204,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "24 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "IF136A.CBL",
+   "line": 223,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "59 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "IF138A.CBL",
+   "line": 230,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "39 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "IX103A.CBL",
+   "line": 331,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "24 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "IX209A.CBL",
+   "line": 645,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "161 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "NC102A.CBL",
+   "line": 277,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "144 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "NC127A.CBL",
+   "line": 194,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "13 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "NC171A.CBL",
+   "line": 322,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "95 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "RL206A.CBL",
+   "line": 279,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "18 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "RW101A.CBL",
+   "line": 245,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "20 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SG106A.CBL",
+   "line": 243,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "43 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SM208A.CBL",
+   "line": 217,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "24 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ112A.CBL",
+   "line": 270,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "54 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ131A.CBL",
+   "line": 318,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "13 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ135A.CBL",
+   "line": 281,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "14 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ138A.CBL",
+   "line": 338,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "36 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ142A.CBL",
+   "line": 306,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "17 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "SQ225A.CBL",
+   "line": 313,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "17 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL001",
+   "file": "ST124A.CBL",
+   "line": 258,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "18 GO TO statements (> 10)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "CM104M.CBL",
+   "line": 269,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "CM105M.CBL",
+   "line": 335,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "CM105M.CBL",
+   "line": 353,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "CM105M.CBL",
+   "line": 371,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "CM105M.CBL",
+   "line": 407,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "DB205A.CBL",
+   "line": 396,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC109M.CBL",
+   "line": 451,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC109M.CBL",
+   "line": 532,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC109M.CBL",
+   "line": 591,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC109M.CBL",
+   "line": 610,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC109M.CBL",
+   "line": 648,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 851,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 869,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 926,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 962,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 980,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 1037,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "NC204M.CBL",
+   "line": 1149,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL003",
+   "file": "SG101A.CBL",
+   "line": 23,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "ACCEPT reads external input (SYSIN/console)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "DB105A.CBL",
+   "line": 337,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "IC201A.CBL",
+   "line": 89,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "IF124A.CBL",
+   "line": 64,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "IF136A.CBL",
+   "line": 97,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "IX109A.CBL",
+   "line": 221,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC101A.CBL",
+   "line": 52,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC106A.CBL",
+   "line": 144,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC106A.CBL",
+   "line": 227,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC116A.CBL",
+   "line": 69,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC116A.CBL",
+   "line": 101,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC116A.CBL",
+   "line": 124,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC116A.CBL",
+   "line": 128,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC117A.CBL",
+   "line": 67,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC118A.CBL",
+   "line": 156,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC119A.CBL",
+   "line": 63,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC119A.CBL",
+   "line": 156,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC171A.CBL",
+   "line": 68,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC173A.CBL",
+   "line": 61,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC174A.CBL",
+   "line": 135,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC175A.CBL",
+   "line": 111,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC176A.CBL",
+   "line": 119,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC177A.CBL",
+   "line": 58,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC206A.CBL",
+   "line": 251,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC211A.CBL",
+   "line": 56,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC235A.CBL",
+   "line": 81,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC252A.CBL",
+   "line": 193,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "NC254A.CBL",
+   "line": 133,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "RW101A.CBL",
+   "line": 137,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SG101A.CBL",
+   "line": 82,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ101M.CBL",
+   "line": 305,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ101M.CBL",
+   "line": 318,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ122A.CBL",
+   "line": 160,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ123A.CBL",
+   "line": 205,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ126A.CBL",
+   "line": 197,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ154A.CBL",
+   "line": 170,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ201M.CBL",
+   "line": 141,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "SQ226A.CBL",
+   "line": 231,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "ST103A.CBL",
+   "line": 69,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "ST109A.CBL",
+   "line": 116,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL004",
+   "file": "ST131A.CBL",
+   "line": 245,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "alphanumeric field overlaid by numeric-edited/alphanumeric views (display only)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "DB105A.CBL",
+   "line": 378,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "DB201A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IC115A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IC207A.CBL",
+   "line": 50,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DN3"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IC207A.CBL",
+   "line": 51,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DN3"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IC208A.CBL",
+   "line": 40,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DN3"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IC208A.CBL",
+   "line": 41,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DN3"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IX104A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IX108A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IX204A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "IX216A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC102A.CBL",
+   "line": 116,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC107A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC123A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC247A.CBL",
+   "line": 51,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC247A.CBL",
+   "line": 60,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON NEW-DU-01V00"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "NC401M.CBL",
+   "line": 54,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON TEST-AR-NUMBER-INVOICES"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL104A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL111A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL112A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL204A.CBL",
+   "line": 1,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "not an OCCURS DEPENDING ON entry (GO TO DEPENDING / RECORD VARYING / bad line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL210A.CBL",
+   "line": 66,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON RL-VS1R2-F-G-121-124"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "RL211A.CBL",
+   "line": 68,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON RL-VS1R1-F-G-117-119"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "SQ214A.CBL",
+   "line": 87,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "ST137A.CBL",
+   "line": 139,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON LENGTH-1"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "ST137A.CBL",
+   "line": 164,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON LENGTH-100"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "ST137A.CBL",
+   "line": 164,
+   "sets": [
+    "before"
+   ],
+   "duplicate": 1,
+   "verdict": "FP",
+   "reason": "duplicate of the previous finding (second ODO reported on the wrong line)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "ST137A.CBL",
+   "line": 181,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON LENGTH-100"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL005",
+   "file": "ST146A                                                    TES00010.CBL",
+   "line": 100,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "DB104A.CBL",
+   "line": 688,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "IC101A.CBL",
+   "line": 219,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "IF109A.CBL",
+   "line": 206,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "IF113A.CBL",
+   "line": 206,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "IF135A.CBL",
+   "line": 239,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "IX114A.CBL",
+   "line": 526,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC112A.CBL",
+   "line": 223,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC126A.CBL",
+   "line": 430,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC209A.CBL",
+   "line": 307,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC218A.CBL",
+   "line": 256,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC218A.CBL",
+   "line": 257,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC234A.CBL",
+   "line": 272,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "NC248A.CBL",
+   "line": 238,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "OBSQ1A.CBL",
+   "line": 338,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "RL201A.CBL",
+   "line": 291,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "RL205A.CBL",
+   "line": 424,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "RL208A.CBL",
+   "line": 302,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "SQ222A.CBL",
+   "line": 321,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "ST112M.CBL",
+   "line": 219,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL006",
+   "file": "ST131A.CBL",
+   "line": 769,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "IC216A.CBL",
+   "line": 122,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "IF102A.CBL",
+   "line": 147,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "IF129A.CBL",
+   "line": 126,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "IX101A.CBL",
+   "line": 228,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "IX107A.CBL",
+   "line": 301,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "NC111A.CBL",
+   "line": 128,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "RL203A.CBL",
+   "line": 201,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM101A.CBL",
+   "line": 455,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "K1SEA is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM103A.CBL",
+   "line": 47,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "K3SCA is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM103A.CBL",
+   "line": 60,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "K3OCA is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM107A.CBL",
+   "line": 299,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "K7SEA is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM201A.CBL",
+   "line": 119,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "K1WKA is COPYed by only 2 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM201A.CBL",
+   "line": 242,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM205A.CBL",
+   "line": 417,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "SD is COPYed by only 0 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SM206A.CBL",
+   "line": 506,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "KP005 is COPYed by only 0 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SQ113A.CBL",
+   "line": 115,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'PIC' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SQ146A.CBL",
+   "line": 212,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "SQ229A.CBL",
+   "line": 211,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "ST107A.CBL",
+   "line": 136,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL007",
+   "file": "ST140A                                                    TES00010.CBL",
+   "line": 410,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "'-' is not a copybook name (COPY text inside a comment/literal or data)"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "CM102M.CBL",
+   "line": 30,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IC102A.CBL",
+   "line": 31,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IC213A.CBL",
+   "line": 31,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IF102A.CBL",
+   "line": 20,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IF120A.CBL",
+   "line": 19,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IF142A.CBL",
+   "line": 20,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IX104A.CBL",
+   "line": 72,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IX204A.CBL",
+   "line": 77,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "IX215A.CBL",
+   "line": 124,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "NC118A.CBL",
+   "line": 36,
+   "sets": [
+    "after",
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "NC171A.CBL",
+   "line": 40,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "NC172A.CBL",
+   "line": 40,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "OBSQ1A.CBL",
+   "line": 52,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "RW101A.CBL",
+   "line": 76,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "RW104A.CBL",
+   "line": 78,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SM204A.CBL",
+   "line": 35,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ106A.CBL",
+   "line": 60,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ108A.CBL",
+   "line": 37,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ111A.CBL",
+   "line": 43,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ112A.CBL",
+   "line": 51,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ116A.CBL",
+   "line": 42,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ122A.CBL",
+   "line": 44,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ128A.CBL",
+   "line": 35,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ137A.CBL",
+   "line": 41,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ139A.CBL",
+   "line": 43,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ202A.CBL",
+   "line": 30,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ203A.CBL",
+   "line": 48,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ206A.CBL",
+   "line": 43,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ226A.CBL",
+   "line": 51,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "SQ229A.CBL",
+   "line": 43,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST102A.CBL",
+   "line": 33,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST112M.CBL",
+   "line": 31,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST115A.CBL",
+   "line": 71,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST123A.CBL",
+   "line": 49,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST125A.CBL",
+   "line": 71,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST136A.CBL",
+   "line": 37,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST137A.CBL",
+   "line": 100,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST144A.CBL",
+   "line": 123,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "nist",
+   "rule": "COBOL011",
+   "file": "ST144A.CBL",
+   "line": 130,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "SELECT without FILE STATUS"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1.cbl",
+   "line": 61,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1.cbl",
+   "line": 71,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1LIB.cbl",
+   "line": 61,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1LIB.cbl",
+   "line": 71,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1LIB.cbl",
+   "line": 84,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "DATETIME is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM1LIB.cbl",
+   "line": 89,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "REPTTOTL is COPYed by only 1 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM2.cbl",
+   "line": 44,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COBOL/SAM2.cbl",
+   "line": 46,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COPYBOOK/CUSTCOPY.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "COPYBOOK/TRANREC.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/copybooks/cust/CUSTCOPY.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/copybooks/trans/TRANREC.cpy",
+   "line": 1,
+   "sets": [
+    "after"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM1.cbl",
+   "line": 65,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM1.cbl",
+   "line": 75,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM1.cbl",
+   "line": 142,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "SAM2PARM is COPYed by only 2 program(s); no shared blast radius"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM2.cbl",
+   "line": 44,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM2.cbl",
+   "line": 46,
+   "sets": [
+    "before"
+   ],
+   "verdict": "TP",
+   "reason": "TRANREC is COPYed by 5 programs in the corpus"
+  },
+  {
+   "corpus": "zopeneditor-sample",
+   "rule": "COBOL007",
+   "file": "multiroot/sam/SAM2.cbl",
+   "line": 51,
+   "sets": [
+    "before"
+   ],
+   "verdict": "FP",
+   "reason": "SAM2PARM is COPYed by only 2 program(s); no shared blast radius"
+  }
+ ]
+}

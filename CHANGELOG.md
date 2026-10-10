@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **COBOL Phase 3, precision tuning.** Precision measured on 440 labelled
+  findings (`tests/fixtures/cobol/labels/phase3_labels.json`,
+  `scripts/cobol_label_precision.py`); COBOL findings on CardDemo go from 341
+  to 56, GenApp from 52 to 13, zopeneditor-sample from 14 to 4
+  (`benchmark/cobol/baseline.json` regenerated).
+  - **COBOL004 (REDEFINES)** only flags a REDEFINES when one side holds
+    packed, binary, float, pointer or signed numeric data and the layouts
+    differ; it now also runs on copybooks and handles REDEFINES split across
+    lines. Plain `PIC X` overlays and CICS BMS symbolic maps are skipped.
+    Precision 1% → 82%.
+  - **COBOL005 (OCCURS DEPENDING ON)** is checked per data entry, reported on
+    the right line, without duplicates, and skips GO TO DEPENDING, RECORD
+    VARYING and the CICS `DEPENDING ON EIBCALEN` commarea idiom. Precision
+    24% → 100%.
+  - **COBOL007 (copybook blast radius)** is reported once on the copybook
+    file when 5+ scanned programs COPY it (MEDIUM; HIGH at 15+ or for a
+    generic name). Generic names are matched as whole tokens (no more
+    substring matches), COPY inside comments/literals is ignored and IBM MQ
+    `CMQ*` copybooks are skipped. Precision 65% → 100%.
+  - **COBOL011 (FILE STATUS missing)** is LOW and grouped into one finding
+    per program, with the file names in `metadata.files`.
+
+### Added
+- **COBOL015 COPYBOOK_NOT_FOUND (LOW):** a COPY whose copybook is not in the
+  scanned tree, grouped per copybook name. It needs a project-wide COPY index
+  (built for each scan, across all CLI paths) and stays silent when nothing in
+  the scan resolves.
+- `docs/cobol-corpus-baseline-ci.md`: the corpus-baseline CI workflow, ready
+  to paste through the GitHub web UI.
+
 ### Fixed
 - **COBOL: free-format sources without a directive are no longer silently
   missed.** When there is no `>>SOURCE FORMAT` directive, free format is now
