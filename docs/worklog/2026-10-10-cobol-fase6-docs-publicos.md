@@ -6,6 +6,6 @@ de que #122 esté desplegado en producción.
 
 - README (tabla de endpoints + párrafo), `docs/ai-discovery.md`, `skill/integration.md`:
   describen `/api/analyze` y sus límites (20 archivos, 100 KB c/u, 256 KB total, 20 s,
-  sin multilang, sin `.hefesto.yaml`, nada se guarda).
+  TS/JS/Java/Go/Rust/C# incluidos vía `multilang`, sin `.hefesto.yaml`, nada se guarda).
 - No hay cambios de código en el paquete; el motor es hefesto-ai 4.15.0 sin cambios.
 - `server.json` no cambia (la URL del MCP es la misma; la descripción no menciona la tool).
