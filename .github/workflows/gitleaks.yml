@@ -1,0 +1,100 @@
+name: gitleaks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_history:
+        description: "Scan the whole history (report only, does not fail)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history, needed for commit ranges)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks ${{ env.GITLEAKS_VERSION }} (pinned + checksum)
+        run: |
+          set -euo pipefail
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$tarball" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${tarball}"
+          echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum -c -
+          tar -xzf "$tarball" gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Work out the commit range
+        id: range
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+          FULL: ${{ github.event.inputs.full_history }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main" || true
+          zero=0000000000000000000000000000000000000000
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "${FULL:-false}" = "true" ]; then
+            range="--all"
+          elif [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags origin "+refs/heads/${PR_BASE_REF}:refs/remotes/origin/${PR_BASE_REF}"
+            range="origin/${PR_BASE_REF}..${PR_HEAD_SHA}"
+          elif [ "$EVENT" = "push" ] && [ -n "${PUSH_BEFORE:-}" ] && [ "$PUSH_BEFORE" != "$zero" ] \
+               && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+            range="${PUSH_BEFORE}..${SHA}"
+          elif git rev-parse -q --verify origin/main >/dev/null && [ "$(git rev-parse origin/main)" != "$SHA" ]; then
+            range="origin/main..${SHA}"
+          else
+            range="${SHA}^!"
+          fi
+          echo "Scanning: $range ($(git rev-list --count $range 2>/dev/null || echo '?') commits)"
+          echo "range=$range" >> "$GITHUB_OUTPUT"
+
+      - name: gitleaks (new commits)
+        env:
+          RANGE: ${{ steps.range.outputs.range }}
+          FULL: ${{ github.event.inputs.full_history }}
+        run: |
+          set -uo pipefail
+          exit_code=1
+          if [ "${FULL:-false}" = "true" ]; then exit_code=0; fi
+          gitleaks git . \
+            --config .gitleaks.toml \
+            --log-opts="--no-merges ${RANGE}" \
+            --redact \
+            --no-banner \
+            --exit-code "$exit_code" \
+            --report-format json \
+            --report-path gitleaks-report.json
+
+      - name: Upload redacted report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          if-no-files-found: ignore
+          retention-days: 14
