@@ -64,3 +64,26 @@ def test_match_tolerance():
     assert not mod.match(seeds, [("COBOL001", "a.cbl", 13)])[0]["found"]
     assert not mod.match(seeds, [("COBOL002", "a.cbl", 10)])[0]["found"]
     assert not mod.match(seeds, [("COBOL001", "b.cbl", 10)])[0]["found"]
+
+
+def test_after_expansion_seeds_need_copy_expansion(monkeypatch):
+    # Seeds in RCL08 live in copybook text (or are created by REPLACING): with
+    # expansion off they are all missed, with it on they are all found.
+    from hefesto.analyzers.devops.cobol_governance_analyzer import CobolGovernanceAnalyzer
+
+    expansion = [r for r in RESULTS if r.get("after_expansion")]
+    assert len(expansion) >= 7
+    assert {r["rule"] for r in expansion} >= {
+        "COBOL004",
+        "COBOL005",
+        "COBOL008",
+        "COBOL011",
+        "COBOL012",
+        "COBOL013",
+        "COBOL014",
+    }
+    assert all(r["found"] for r in expansion)
+
+    monkeypatch.setattr(CobolGovernanceAnalyzer, "_copy_expander", lambda self: None)
+    without = mod.match(SEEDS, mod.scan(FIXTURE))
+    assert not any(r["found"] for r in without if r.get("after_expansion"))

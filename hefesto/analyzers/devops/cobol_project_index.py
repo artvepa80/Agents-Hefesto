@@ -8,8 +8,9 @@ Built once per ``hefesto analyze`` run from every scanned COBOL file:
   (DB2 DCLGEN ``.dcl``, ``.copy``/``.cbk`` and extension-less copylib members).
 
 Copybook directories outside the scan (``copybook_paths`` in ``.hefesto.yaml``
-or ``--copybook-path``) only add names that resolve; their files are not
-analyzed.
+or ``--copybook-path``) add names that resolve; their files are expanded into
+the programs that COPY them (``resolve`` / ``copybook_lines``) but are not
+analyzed on their own.
 
 COBOL007 (copybook blast radius) is reported on the copybook file itself when
 enough programs depend on it; COBOL015 (copybook not found) is reported in a
@@ -23,7 +24,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 COPYBOOK_EXTENSIONS = (".cpy",)
 # Copybook files that file discovery does not pick up: DB2 DCLGEN members,
@@ -32,6 +33,8 @@ COPYBOOK_EXTENSIONS = (".cpy",)
 # data definitions.
 EXTRA_COPYBOOK_SUFFIXES = ("", ".dcl", ".copy", ".cbk")
 MAX_COPYBOOK_BYTES = 512 * 1024
+# Logical lines of copybooks kept in memory for COPY expansion (characters).
+MAX_CACHED_COPYBOOK_CHARS = 64 * 1024 * 1024
 
 logger = logging.getLogger(__name__)
 _DATA_ENTRY_LINE = re.compile(
@@ -174,6 +177,14 @@ class CobolProjectIndex:
     # (line, NAME) per scanned file, so the analyzer does not parse COPY twice.
     _copy_cache: Dict[str, List[Tuple[int, str]]] = field(default_factory=dict, repr=False)
     _resolves_any: Optional[bool] = field(default=None, repr=False)
+    # COPY expansion: files per name (scanned first, then copybook_paths), the
+    # scanned paths, and the logical lines of copybooks already read.
+    files_by_name: Dict[str, List[str]] = field(default_factory=dict, repr=False)
+    library_files: Set[str] = field(default_factory=set, repr=False)
+    scanned: Set[str] = field(default_factory=set, repr=False)
+    _lines_cache: Dict[str, Any] = field(default_factory=dict, repr=False)
+    _lines_cached_chars: int = field(default=0, repr=False)
+    expander: Any = field(default=None, repr=False)
 
     @classmethod
     def from_sources(
@@ -181,6 +192,7 @@ class CobolProjectIndex:
         sources: Iterable[Tuple[str, str]],
         extra_copybooks: Iterable[Tuple[str, str]] = (),
         library_names: Iterable[str] = (),
+        library_files: Optional[Dict[str, str]] = None,
     ) -> "CobolProjectIndex":
         """Build the index.
 
@@ -188,7 +200,8 @@ class CobolProjectIndex:
         candidate copybook files without a COBOL extension (path, text); kept
         only if their content looks like COBOL data and some scanned program
         COPYs their name. ``library_names``: copybook names available from
-        ``copybook_paths`` outside the scan.
+        ``copybook_paths`` outside the scan; ``library_files`` maps those
+        names to their files (used to expand COPY).
         """
         index = cls()
         direct: Dict[str, Set[str]] = {}  # program path -> names it COPYs
@@ -196,6 +209,7 @@ class CobolProjectIndex:
             names = copy_names(text)
             index._copy_cache[str(path)] = names
             index.available.add(Path(path).stem.upper())
+            index._add_file(str(path))
             index._record(str(path), names, direct, is_copybook_path(path))
         referenced = {name for names in direct.values() for name in names}
         referenced |= {name for names in index.nested.values() for name in names}
@@ -204,14 +218,72 @@ class CobolProjectIndex:
             if name in referenced and looks_like_copybook(text):
                 index.available.add(name)
                 index.copybook_files.add(str(path))
+                index._add_file(str(path))
                 found = copy_names(text)
                 index._copy_cache[str(path)] = found
                 index._record(str(path), found, direct, True)
-        index.available.update(name.upper() for name in library_names)
+        index._add_library(library_names, library_files or {})
         for program, copied in direct.items():
             for name in index._closure(copied):
                 index.dependents.setdefault(name, set()).add(program)
         return index
+
+    def _add_library(self, names: Iterable[str], files: Dict[str, str]) -> None:
+        """Names (and files, for expansion) from ``copybook_paths``."""
+        self.available.update(name.upper() for name in names)
+        for name, path in sorted(files.items()):
+            self.files_by_name.setdefault(name.upper(), []).append(str(path))
+            self.library_files.add(str(path))
+
+    def _add_file(self, path: str) -> None:
+        self.scanned.add(path)
+        self.files_by_name.setdefault(Path(path).stem.upper(), []).append(path)
+
+    def resolve(self, name: str, from_path: str) -> Optional[str]:
+        """File that ``COPY name`` in ``from_path`` brings in (None if unknown).
+
+        Copybook files win over programs of the same name; then the file
+        closest to the including file (longest common directory); then the
+        path order.
+        """
+        candidates = self.files_by_name.get(name.upper())
+        if not candidates:
+            return None
+        if len(candidates) == 1:
+            return candidates[0]
+        here = Path(from_path).parent.parts
+
+        def rank(path: str) -> Tuple[int, int, str]:
+            copybook = self.is_copybook_file(path) or path in self.library_files
+            parts = Path(path).parent.parts
+            common = 0
+            for a, b in zip(here, parts):
+                if a != b:
+                    break
+                common += 1
+            return (0 if copybook else 1, -common, path)
+
+        return min(candidates, key=rank)
+
+    def is_scanned(self, path: str) -> bool:
+        """True for files of the scan (analyzed on their own), not copybook_paths."""
+        return path in self.scanned
+
+    def copybook_lines(self, path: str, build: Callable[[str], Any]) -> Any:
+        """``build(text)`` of a copybook file, cached (None if unreadable or too big)."""
+        if path in self._lines_cache:
+            return self._lines_cache[path]
+        result = None
+        try:
+            if Path(path).stat().st_size <= MAX_COPYBOOK_BYTES:
+                result = build(Path(path).read_text(encoding="utf-8", errors="ignore"))
+        except OSError:
+            result = None
+        size = sum(len(line[1]) for line in result) if result else 0
+        if self._lines_cached_chars + size <= MAX_CACHED_COPYBOOK_CHARS:
+            self._lines_cache[path] = result
+            self._lines_cached_chars += size
+        return result
 
     def _record(
         self,
@@ -249,14 +321,21 @@ class CobolProjectIndex:
         library_dirs: Iterable[Path] = (),
         library_names: Optional[Iterable[str]] = None,
     ) -> "CobolProjectIndex":
-        """Index ``paths``; ``library_names`` skips the ``library_dirs`` walk."""
+        """Index ``paths``.
+
+        ``library_names`` (a set of names, or a name -> file mapping as
+        returned by :func:`library_copybook_files`) skips the
+        ``library_dirs`` walk; with a mapping, those files can be expanded.
+        """
         if library_names is None:
             dirs = list(library_dirs)
-            library_names = library_copybook_names(dirs) if dirs else ()
+            library_names = library_copybook_files(dirs) if dirs else {}
+        files = library_names if isinstance(library_names, dict) else None
         return cls.from_sources(
             _read_all(paths),
             _read_all(p for p in extra_copybooks if _small_file(p)),
             library_names,
+            files,
         )
 
     def is_copybook_file(self, path: str) -> bool:
@@ -314,13 +393,24 @@ def library_copybook_names(
     max_depth: int = LIBRARY_MAX_DEPTH,
     max_files: int = LIBRARY_MAX_FILES,
 ) -> Set[str]:
-    """Copybook names in ``copybook_paths`` directories (searched recursively).
+    """Copybook names in ``copybook_paths`` directories (searched recursively)."""
+    return set(library_copybook_files(dirs, max_depth, max_files))
+
+
+def library_copybook_files(
+    dirs: Iterable[Path],
+    max_depth: int = LIBRARY_MAX_DEPTH,
+    max_files: int = LIBRARY_MAX_FILES,
+) -> Dict[str, str]:
+    """NAME -> file for copybooks in ``copybook_paths`` directories (recursive).
 
     COBOL extensions count by name; other candidates (``.dcl``, extension-less
     members, ...) only when their content looks like a copybook. Hidden
-    directories are skipped and the walk is bounded (see LIBRARY_MAX_*).
+    directories are skipped and the walk is bounded (see LIBRARY_MAX_*). The
+    first file found for a name wins (directories in the given order, then
+    sorted paths).
     """
-    names: Set[str] = set()
+    names: Dict[str, str] = {}
     seen = 0
     for directory in dirs:
         base_depth = str(directory).rstrip(os.sep).count(os.sep)
@@ -338,9 +428,10 @@ def library_copybook_names(
                         max_files,
                     )
                     return names
-                name = _library_name(Path(dirpath) / filename)
-                if name:
-                    names.add(name)
+                path = Path(dirpath) / filename
+                name = _library_name(path)
+                if name and name not in names:
+                    names[name] = str(path)
     return names
 
 

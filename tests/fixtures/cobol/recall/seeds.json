@@ -186,6 +186,55 @@
    "known_limit": true
   },
   {
+   "rule": "COBOL011",
+   "file": "RCL08.cbl",
+   "line": 6,
+   "seed": "after expansion: SELECT without FILE STATUS in a copybook",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL012",
+   "file": "RCL08.cbl",
+   "line": 7,
+   "seed": "after expansion: status field from another copybook unused",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL008",
+   "file": "RCL08.cbl",
+   "line": 16,
+   "seed": "after expansion: REPLACING puts a secret literal in a VALUE",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL005",
+   "file": "RCL08.cbl",
+   "line": 18,
+   "seed": "after expansion: OCCURS DEPENDING ON in a nested copybook",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL004",
+   "file": "RCL08.cbl",
+   "line": 19,
+   "seed": "after expansion: REDEFINES over COMP-3 named by REPLACING",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL013",
+   "file": "RCL08.cbl",
+   "line": 25,
+   "seed": "after expansion: statements after STOP RUN in a procedure copybook",
+   "after_expansion": true
+  },
+  {
+   "rule": "COBOL014",
+   "file": "RCL08.cbl",
+   "line": 28,
+   "seed": "after expansion: unused paragraph (a PROCEDURE COPY used to skip the rule)",
+   "after_expansion": true
+  },
+  {
    "rule": "COBOL007",
    "file": "copy/RECSHARE.cpy",
    "line": 1,

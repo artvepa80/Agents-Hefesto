@@ -152,32 +152,35 @@ sample", not "none at all".
 
 ### Recall on seeded issues
 
-`tests/fixtures/cobol/recall/` holds 7 programs and 3 copybooks (a `.cpy`
+`tests/fixtures/cobol/recall/` holds 8 programs and 11 copybooks (a `.cpy`
 COPYed by 6 programs, an extension-less copybook COPYed by 5, a DCLGEN
-`.dcl` pulled in by `EXEC SQL INCLUDE`) with 34 seeded issues listed in
-`seeds.json`, at least 2 per rule. A seed counts as found when a finding of
+`.dcl` pulled in by `EXEC SQL INCLUDE`, and 8 copybooks used by `RCL08`
+through `COPY ... REPLACING`) with 41 seeded issues listed in `seeds.json`,
+at least 2 per rule. The 7 `RCL08` seeds (marked `after_expansion`) sit in
+copybook text or are created by `REPLACING`, so they are only found with COPY
+expansion; a test checks that all 7 are missed with expansion turned off. A seed counts as found when a finding of
 the same rule is reported in the same file within 2 lines. Run
 `python scripts/cobol_recall.py` (`--json`, `--min-recall`); regenerate the
 fixture with `scripts/cobol_recall_fixture.py`.
 
-| Rule | Main (Phase 3) | Leftovers |
-|---|---|---|
-| COBOL001 | 2/2 | 2/2 |
-| COBOL002 | 2/3 | 2/3 |
-| COBOL003 | 2/2 | 2/2 |
-| COBOL004 | 2/2 | 2/2 |
-| COBOL005 | 2/2 | 2/2 |
-| COBOL006 | 2/2 | 2/2 |
-| COBOL007 | 1/2 | 2/2 |
-| COBOL008 | 3/4 | 3/4 |
-| COBOL009 | 1/3 | 3/3 |
-| COBOL010 | 2/2 | 2/2 |
-| COBOL011 | 2/2 | 2/2 |
-| COBOL012 | 2/2 | 2/2 |
-| COBOL013 | 2/2 | 2/2 |
-| COBOL014 | 2/2 | 2/2 |
-| COBOL015 | 1/2 | 2/2 |
-| **All** | **28/34 (82%)** | **32/34 (94%)** |
+| Rule | Main (Phase 3) | Leftovers | COPY expansion (41 seeds) |
+|---|---|---|---|
+| COBOL001 | 2/2 | 2/2 | 2/2 |
+| COBOL002 | 2/3 | 2/3 | 2/3 |
+| COBOL003 | 2/2 | 2/2 | 2/2 |
+| COBOL004 | 2/2 | 2/2 | 3/3 |
+| COBOL005 | 2/2 | 2/2 | 3/3 |
+| COBOL006 | 2/2 | 2/2 | 2/2 |
+| COBOL007 | 1/2 | 2/2 | 2/2 |
+| COBOL008 | 3/4 | 3/4 | 4/5 |
+| COBOL009 | 1/3 | 3/3 | 3/3 |
+| COBOL010 | 2/2 | 2/2 | 2/2 |
+| COBOL011 | 2/2 | 2/2 | 3/3 |
+| COBOL012 | 2/2 | 2/2 | 3/3 |
+| COBOL013 | 2/2 | 2/2 | 3/3 |
+| COBOL014 | 2/2 | 2/2 | 3/3 |
+| COBOL015 | 1/2 | 2/2 | 2/2 |
+| **All** | **28/34 (82%)** | **32/34 (94%)** | **39/41 (95%)** |
 
 The two misses are seeds marked `known_limit` (the test fails if one
 starts being found, so the docs get updated):
@@ -204,3 +207,37 @@ copybook's own `COPY` statements (none missing on the pinned corpora).
 
 Synthetic scale numbers come from `scripts/cobol_perf_bench.py` (see the
 README, COBOL section): about 8 s per million lines.
+
+## COPY ... REPLACING expansion
+
+Programs are now analyzed with their `COPY` / `EXEC SQL INCLUDE` statements
+replaced by the copybook text (REPLACING applied; see the README, COBOL
+section). On the pinned corpora:
+
+| Corpus | Programs with an expanded COPY | COPYs expanded | with REPLACING | not expanded |
+|---|---|---|---|---|
+| CardDemo | 40 of 44 | 291 | 40 (`CSSETATY`, `==(TESTVAR1)==` idiom) | 64 vendor (DFH*, SQLCA) |
+| GenApp | 26 of 31 | 35 | 0 | 8 vendor, 5 not in the repo |
+| zopeneditor-sample | 5 of 5 | 22 | 11 (`==:TAG:==` idiom) | 0 |
+
+No finding changed (rule, file, line) on any pinned corpus or on NIST
+(7,307), so the labels and the precision table are unchanged; the baseline
+was regenerated for the analyzer commit and timings. Two effects were
+reviewed:
+
+- **COBOL004, CardDemo `COTRTLIC.cbl:434`** (`01 FILLER REDEFINES CTRTLIAI`)
+  appeared once the BMS map copybook `COTRTLI` was expanded: the program
+  overlays the generated input map to index its 7 screen rows. The overlay
+  follows the generated layout, so it is not the corruption risk the rule is
+  about; COBOL004 now skips a REDEFINES of a BMS symbolic input map (every
+  binary field is an `xxxL` length field with its `xxxI` field in the same
+  group), like it already skipped the generated `xxxO REDEFINES xxxI`.
+- **COBOL001, CardDemo `COACTUPC.cbl:973`** (same finding, same line): the
+  count in the message goes from 51 to 66 GO TOs, because the procedure
+  copybook `CSUTLDPY` (date validation, 15 GO TOs) is now part of the
+  program.
+
+Analyzer time with `compare` (expansion included): see the table at the top
+of this file; the change is within run-to-run noise on these small corpora.
+On the synthetic benchmark (`scripts/cobol_perf_bench.py`, 2 COPYs per
+program, one with REPLACING) the project stays under 8 s per million lines.

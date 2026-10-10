@@ -51,6 +51,8 @@ def write(rel, spec, raw=False):
             seed = {"rule": rule, "file": rel, "line": num, "seed": why}
             if why.startswith("known limit"):
                 seed["known_limit"] = True
+            if why.startswith("after expansion"):
+                seed["after_expansion"] = True
             seeds.append(seed)
 
 
@@ -320,6 +322,97 @@ spec = header("RCL07") + [
     ("B", "GOBACK."),
 ]
 write("RCL07.cbl", spec)
+
+# ---------------------------------------------------------------- RCL08
+# Every seed here only fires once COPY ... REPLACING is expanded: the issue is
+# in copybook text (or created by REPLACING) and is reported at the COPY line.
+spec = header("RCL08") + [
+    ("A", "ENVIRONMENT DIVISION."),
+    ("A", "INPUT-OUTPUT SECTION."),
+    ("A", "FILE-CONTROL."),
+    ("B", "COPY XSELECT.", "COBOL011", "after expansion: SELECT without FILE STATUS in a copybook"),
+    ("B", "COPY XSELST.", "COBOL012", "after expansion: status field from another copybook unused"),
+    ("A", "DATA DIVISION."),
+    ("A", "FILE SECTION."),
+    ("A", "FD  X-IN."),
+    ("A", "01  X-IN-REC                PIC X(80)."),
+    ("A", "FD  X-OUT."),
+    ("A", "01  X-OUT-REC               PIC X(80)."),
+    ("A", "WORKING-STORAGE SECTION."),
+    ("B", "COPY XSTATUS."),
+    (
+        "B",
+        "COPY XSECRET REPLACING ==:PFX:== BY ==WS==",
+        "COBOL008",
+        "after expansion: REPLACING puts a secret literal in a VALUE",
+    ),
+    ("B", "                       ==:PWD:== BY =='Tr0ub4dor&3'==."),
+    (
+        "B",
+        "COPY XTABLE REPLACING LEADING ==TPL-== BY ==WS-==.",
+        "COBOL005",
+        "after expansion: OCCURS DEPENDING ON in a nested copybook",
+    ),
+    (
+        "B",
+        "COPY XAMOUNT REPLACING ==:T:== BY ==WS-TOT==.",
+        "COBOL004",
+        "after expansion: REDEFINES over COMP-3 named by REPLACING",
+    ),
+    ("A", "01  WS-DB-PASSWORD          PIC X(12)."),
+    ("A", "PROCEDURE DIVISION."),
+    ("A", "MAIN-PARA."),
+    ("B", "OPEN INPUT X-IN OUTPUT X-OUT"),
+    ("B", "PERFORM WORK-PARA"),
+    (
+        "B",
+        "COPY XFINISH.",
+        "COBOL013",
+        "after expansion: statements after STOP RUN in a procedure copybook",
+    ),
+    ("A", "WORK-PARA."),
+    ("B", "DISPLAY 'WORK'."),
+    (
+        "A",
+        "ORPHAN-PARA.",
+        "COBOL014",
+        "after expansion: unused paragraph (a PROCEDURE COPY used to skip the rule)",
+    ),
+    ("B", "DISPLAY 'NEVER'."),
+]
+write("RCL08.cbl", spec)
+write("copy/XSELECT.cpy", [("B", "SELECT X-IN ASSIGN TO XIN.")])
+write(
+    "copy/XSELST.cpy",
+    [("B", "SELECT X-OUT ASSIGN TO XOUT"), ("B", "    FILE STATUS IS XS-STATUS.")],
+)
+write("copy/XSTATUS.cpy", [("A", "01  XS-STATUS               PIC XX.")])
+write("copy/XSECRET.cpy", [("A", "01  :PFX:-DB-PASSWORD       PIC X(12) VALUE :PWD:.")])
+write(
+    "copy/XTABLE.cpy",
+    [
+        ("A", "01  TPL-TABLE."),
+        ("B", "05  TPL-COUNT             PIC 9(4) COMP."),
+        ("B", "05  TPL-ENTRY OCCURS 1 TO 50 TIMES DEPENDING ON TPL-COUNT."),
+        ("B", "    COPY XTKEY."),
+    ],
+)
+write("copy/XTKEY.cpy", [("B", "    10  TPL-KEY           PIC X(8).")])
+write(
+    "copy/XAMOUNT.cpy",
+    [
+        ("A", "01  :T:-AMT                 PIC S9(7)V99 COMP-3."),
+        ("A", "01  :T:-AMT-X REDEFINES :T:-AMT PIC X(6)."),
+    ],
+)
+write(
+    "copy/XFINISH.cpy",
+    [
+        ("B", "CLOSE X-IN X-OUT"),
+        ("B", "STOP RUN."),
+        ("B", "DISPLAY 'AFTER STOP'."),
+    ],
+)
 
 # ---------------------------------------------------------------- copybooks
 write(

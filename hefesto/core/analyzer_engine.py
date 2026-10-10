@@ -16,7 +16,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -97,7 +97,7 @@ class AnalyzerEngine:
         self._cobol_index_pinned = False
         # Copybook directories outside the scan (copybook_paths / --copybook-path)
         self._copybook_paths: List[Path] = []
-        self._copybook_library_names: Optional[Set[str]] = None
+        self._copybook_library_names: Optional[Dict[str, str]] = None
         # COBOL files whose source format was inferred as free (no directive)
         self._cobol_inferred_free: List[str] = []
 
@@ -147,7 +147,7 @@ class AnalyzerEngine:
             return None
         from hefesto.analyzers.devops.cobol_project_index import (
             CobolProjectIndex,
-            library_copybook_names,
+            library_copybook_files,
         )
 
         extra: List[Path] = []
@@ -156,7 +156,7 @@ class AnalyzerEngine:
         if self._copybook_library_names is None:
             # walked once per engine: analyze_path on several paths reuses it
             self._copybook_library_names = (
-                library_copybook_names(self._copybook_paths) if self._copybook_paths else set()
+                library_copybook_files(self._copybook_paths) if self._copybook_paths else {}
             )
         return CobolProjectIndex.from_paths(
             cobol, extra, library_names=self._copybook_library_names
