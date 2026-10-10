@@ -31,6 +31,11 @@ BAD_EXPECTED = {
     ("COBOL002", 24),  # MOVE "tok_live_..." TO WS-API-TOKEN
     ("COBOL004", 17),  # REDEFINES on a COMP-3 field
     ("COBOL007", 20),  # COPY MISSINGBK
+    ("COBOL008", 12),  # VALUE 'Sup3rS3cr3t!' on WS-DB-PASSWORD
+    ("COBOL009", 25),  # 'USER=ADMIN;PASS=Adm1n2024'
+    ("COBOL011", 6),  # SELECT ACCT-FILE without FILE STATUS
+    ("COBOL013", 51),  # DISPLAY after STOP RUN
+    ("COBOL014", 52),  # DEAD-PARA is never performed
 }
 
 
@@ -211,33 +216,41 @@ class TestGrouping:
         assert "spans 9 paragraphs" in issue.message
 
 
-class TestKnownMissesPhase3:
-    """Known gaps. Phase 3 of the COBOL plan adds the rules/tuning."""
+class TestFormerMissesNowDetected:
+    """Misses found in the Phase 1 smoke run, covered by COBOL008-COBOL014."""
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: VALUE clause secrets not scanned")
     def test_value_clause_secret(self):
         _, issues = _analyze("bad_fixed.cbl")
-        assert ("COBOL002", 12) in _findings(issues)
+        assert ("COBOL008", 12) in _findings(issues)
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: connection-string secrets in neutral fields")
     def test_connection_string_secret(self):
         _, issues = _analyze("bad_fixed.cbl")
-        assert ("COBOL002", 25) in _findings(issues)
+        assert ("COBOL009", 25) in _findings(issues)
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: EXEC SQL CONNECT ... USING literal")
     def test_exec_sql_connect_password_literal(self):
         _, issues = _analyze("false_positives.cbl")
-        assert ("COBOL002", 19) in _findings(issues)
+        assert ("COBOL010", 19) in _findings(issues)
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: no FILE STATUS rule yet")
     def test_open_without_file_status(self):
         _, issues = _analyze("bad_fixed.cbl")
-        assert any(i.line == 26 for i in issues)
+        assert ("COBOL011", 6) in _findings(issues)
 
-    @pytest.mark.xfail(strict=True, reason="Phase 3: no dead-code rule yet")
     def test_code_after_stop_run(self):
         _, issues = _analyze("bad_fixed.cbl")
-        assert any(i.line in (51, 52) for i in issues)
+        assert ("COBOL013", 51) in _findings(issues)
+
+    def test_file_status_never_checked(self):
+        _, issues = _analyze("file_status_unchecked.cbl")
+        # IN-FILE's status is never read; OUT-FILE's is checked through 88 OUT-OK
+        assert [(i.rule_id, i.line) for i in issues] == [("COBOL012", 6)]
+
+    def test_unused_paragraph(self):
+        _, issues = _analyze("bad_fixed.cbl")
+        assert ("COBOL014", 52) in _findings(issues)
+
+
+class TestKnownMissesPhase3:
+    """Known gaps that still need tuning (Phase 3)."""
 
     @pytest.mark.xfail(strict=True, reason="Phase 3: COBOL004 flags every REDEFINES (PIC X too)")
     def test_redefines_of_alphanumeric_not_flagged(self):

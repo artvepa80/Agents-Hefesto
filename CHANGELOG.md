@@ -34,6 +34,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   zopeneditor-sample goes from 20 to 14.
 
 ### Added
+- **7 new free COBOL rules (COBOL008-COBOL014), 14 in total.** They come
+  from the misses found in the Phase 1 smoke run and use a small program
+  model (data entries, SELECTs, EXEC SQL blocks, paragraphs, sentences):
+  - COBOL008 (CRITICAL): hardcoded secret in a `VALUE` clause of a
+    credential-named field. Same suffix exclusions as COBOL002; placeholders
+    (`SPACES`, `XXXX`, `UNDEFINED`, ...) and key names (`'APP-Token-Password'`)
+    are skipped. Also runs on copybooks.
+  - COBOL009 (CRITICAL): `PASS=`/`PWD=`/`PASSWORD=` with a value inside a
+    string literal (connection strings). Also runs on copybooks.
+  - COBOL010 (CRITICAL): `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a
+    literal password, or Oracle `CONNECT 'user/password'`.
+  - COBOL011 (MEDIUM): `SELECT` without a `FILE STATUS` clause (SD sort files
+    skipped).
+  - COBOL012 (LOW): OPENed file whose status field (with subordinates and
+    88-levels) is never referenced in the PROCEDURE DIVISION, DECLARATIVES
+    included.
+  - COBOL013 (MEDIUM): statements after an unconditional `STOP RUN`/`GOBACK`/
+    `EXIT PROGRAM` in the same paragraph.
+  - COBOL014 (LOW): paragraph or section never referenced and not reachable
+    by fall-through (entry paragraph, DECLARATIVES, THRU ranges, empty EXIT
+    paragraphs and programs with a procedure `COPY` are skipped).
+  On CardDemo/GenApp/zopeneditor they add 2/1/0 findings. A manual review of
+  findings on the NIST COBOL85 suite and a 125-file sample of public GitHub
+  COBOL put precision at 100% for COBOL008-COBOL012 and COBOL014 on the
+  reviewed samples (small for COBOL008/010/012); COBOL013 had 1 false
+  positive (prose in a `.cob` file). The Phase 1 xfail tests for these gaps
+  now pass; REDEFINES on PIC X (COBOL004 tuning) stays xfail.
 - COBOL smoke regression tests (`tests/test_cobol_smoke.py`): detected cases,
   false-positive fixes, free-format inference, extensions and grouping, plus
   6 strict `xfail` tests for known misses that Phase 3 will address.
