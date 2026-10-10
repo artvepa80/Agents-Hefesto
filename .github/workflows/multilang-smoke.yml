@@ -10,6 +10,10 @@
 #   - Hefesto's TreeSitterParser wrapper (redundant with integration tests)
 #   - The bridge to PRO (`hefesto.pro_optional`)
 #
+# One exception: the last step runs the unit tests that need real grammars
+# (they `importorskip("tree_sitter_language_pack")`, so lint-and-test, which
+# installs only [dev,lint], skips them). Today: EVAL_USAGE from the syntax tree.
+#
 # Naming map (three names exist for C# in this codebase; do not "correct" them):
 #   - `Language.CSHARP.value`                                    = "csharp"
 #   - `ParserFactory.GRAMMAR_NAMES[Language.CSHARP]`             = "c_sharp"
@@ -90,3 +94,8 @@ jobs:
               raise SystemExit(1)
           print("All 6 languages OK")
           PY
+
+      - name: Unit tests that need the grammars
+        run: |
+          pip install -e ".[multilang,dev]"
+          python -m pytest -q -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py

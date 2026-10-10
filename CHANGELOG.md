@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **EVAL_USAGE on JavaScript, TypeScript and Java reads calls from the syntax tree instead of matching `eval(` / `exec(` in the text.** The non-Python detector reported every line containing those characters: `RegExp.prototype.exec` (`/re/.exec(s)`), a project's own method named `exec` (an ESQL API's `exec(sqlca, query)`), and the words in comments, Javadoc and strings. New module `hefesto.analyzers.eval_calls` walks the tree-sitter tree. JavaScript/TypeScript: `eval(...)` and `window`/`globalThis`/`self.eval(...)`; `exec` only when it is the `child_process` function (a name bound by `require("child_process")` or `import ... from "child_process"`, a member call on such a binding or on `require("child_process")` itself) or Cypress `cy.exec`. Java: `exec` on a `Runtime` (`Runtime.getRuntime().exec`, or a variable, field or parameter declared `Runtime`) and `eval` on a `ScriptEngine`. Go, Rust and C# have no eval/exec builtin and no longer report one. Node text is read from byte positions, so non-ASCII text earlier in a file does not shift it. Python detection (the `ast` module) is unchanged.
+
+### CI
+
+- The multilang smoke job also runs the unit tests that need real tree-sitter grammars (`tests/test_eval_usage_ast.py`); `lint-and-test` installs only `[dev,lint]` and skips them.
+
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).
