@@ -745,6 +745,29 @@ def _is_bms_output_map(name: str, target: str) -> bool:
     )
 
 
+def _is_bms_input_map(items: List[_DataItem], idx: int) -> bool:
+    """A CICS BMS symbolic input map: every binary field is a ``xxxL`` length
+    field with its ``xxxI`` data field in the same group (generated layout).
+
+    Programs overlay these maps to index repeated screen rows (CardDemo
+    ``01 FILLER REDEFINES CTRTLIAI``); the overlay follows the generated
+    layout, so it is not reported. Seen once COPY expansion put the map
+    copybook in the program.
+    """
+    root = items[idx]
+    names: Set[str] = set()
+    lengths: List[str] = []
+    for item in items[idx + 1 :]:
+        if item.level <= root.level or item.level in (66, 77):
+            break
+        names.add(item.name)
+        if _usage_class(item.clause) == "binary":
+            if not item.name.endswith("L"):
+                return False
+            lengths.append(item.name)
+    return bool(lengths) and all(f"{name[:-1]}I" in names for name in lengths)
+
+
 def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
     """COBOL004: REDEFINES that reinterprets packed/binary/signed numeric data.
 
@@ -770,7 +793,7 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
             ),
             None,
         )
-        if orig_idx is None:
+        if orig_idx is None or _is_bms_input_map(items, orig_idx):
             continue
         original, redefined = _layout(items, orig_idx), _layout(items, idx)
         sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})

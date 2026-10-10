@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **COBOL: COPY ... REPLACING expansion.** Programs are analyzed with each
+  `COPY` and `EXEC SQL INCLUDE` replaced by the copybook text, so every rule
+  sees copybook data definitions, `SELECT`s and procedure code in the
+  program's context (COBOL004/005/008, FILE STATUS COBOL011/012, dead code
+  COBOL013/014 included). REPLACING supports `==pseudo-text==` (also empty),
+  literals, words, identifiers (`A OF B`, `T(1)`), `LEADING`/`TRAILING`
+  partial words and the `==:TAG:==` / `==(TAG)==` idioms, matched by text
+  word (first pair wins, no rescan); a REPLACING also applies to copybooks
+  nested under it. Guards: recursion, 16 nesting levels, 250,000 copybook
+  lines per program. Findings on copybook text are reported at the
+  program's `COPY` line with the copybook file and line in
+  `metadata.expanded_from`; COBOL004/008/009 on an unchanged line of a
+  scanned copybook stay on the copybook file. Copybooks from
+  `copybook_paths` are expanded too. COBOL012 and COBOL014 no longer skip a
+  program because of a `COPY` that could be expanded. New module
+  `cobol_copy_expansion`; the project index resolves a name to the closest
+  copybook file.
+  - COBOL004 skips a REDEFINES of a CICS BMS symbolic input map (seen on
+    CardDemo once the map copybook is expanded).
+  - Recall fixture: 7 new seeds that only fire after expansion (`RCL08`);
+    recall 39/41. No finding changed on the pinned corpora or NIST; perf on
+    the synthetic 1M-line project stays at about 8 s per million lines.
+
 ### Changed
 - **COBOL Phase 4, performance.** On a synthetic 1.05M-line project (1,000
   programs, 60 copybooks with nested `COPY` and `COPY ... REPLACING`) the
@@ -27,8 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     per run instead of once per scanned path.
   - Nested `COPY`: COBOL007 counts programs that reach a copybook through
     other copybooks (cycle-safe), and COBOL015 also reports a missing
-    copybook COPYed by a copybook. `COPY ... REPLACING` is resolved by name;
-    the replaced text is not expanded into the program.
+    copybook COPYed by a copybook. (`COPY ... REPLACING` was resolved by
+    name only; full expansion is listed under Added.)
   - New `scripts/cobol_perf_bench.py` (synthetic 100k-1M line inputs, time
     and peak memory per scenario in a fresh process) and
     `tests/test_cobol_phase4_performance.py` (a 4x bigger input must take

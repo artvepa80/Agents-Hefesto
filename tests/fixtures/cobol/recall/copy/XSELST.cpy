@@ -1,0 +1,2 @@
+           SELECT X-OUT ASSIGN TO XOUT
+               FILE STATUS IS XS-STATUS.

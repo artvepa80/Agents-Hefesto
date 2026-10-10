@@ -1,0 +1,1 @@
+           SELECT X-IN ASSIGN TO XIN.

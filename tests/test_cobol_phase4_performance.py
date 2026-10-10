@@ -184,13 +184,13 @@ def test_engine_walks_copybook_paths_once(tmp_path, monkeypatch):
     src.mkdir()
     (src / "P1.cbl").write_text(_a("IDENTIFICATION DIVISION.") + "\n" + _b("COPY EXT.") + "\n")
     calls = []
-    real = cpi.library_copybook_names
+    real = cpi.library_copybook_files
 
     def counting(dirs, *args, **kwargs):
         calls.append(list(dirs))
         return real(dirs, *args, **kwargs)
 
-    monkeypatch.setattr(cpi, "library_copybook_names", counting)
+    monkeypatch.setattr(cpi, "library_copybook_files", counting)
     engine = AnalyzerEngine(severity_threshold="LOW")
     engine.set_copybook_paths([str(lib)])
     engine.analyze_path(str(src))

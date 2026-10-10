@@ -31,6 +31,13 @@ format. Without a directive, free format is inferred when a division header
 (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise
 fixed format (columns 7-72) is assumed.
 
+COPY expansion: with a project index, a program is analyzed with each COPY
+(and EXEC SQL INCLUDE) replaced by the copybook text, REPLACING applied (see
+``cobol_copy_expansion``). Findings on copybook text are reported at the
+program's COPY line with ``metadata["expanded_from"]``; COBOL004/008/009 on
+an unchanged line of a scanned copybook are left to the copybook file itself.
+Copybook files are analyzed as written.
+
 Repeated identical findings are grouped per file: one COBOL006 finding per
 ``PERFORM X THRU Y`` pair, one COBOL015 finding per missing copybook name and
 one COBOL011 finding per program, with the occurrence count and lines in
@@ -41,8 +48,20 @@ Copyright 2025 Narapa LLC, Miami, Florida
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
+from hefesto.analyzers.devops.cobol_copy_expansion import CopyExpander, Origin
 from hefesto.analyzers.devops.cobol_program_rules import (
     occurs_depending,
     run_program_rules,
@@ -83,6 +102,9 @@ class _CobolStructure:
     logical_lines: List[Tuple[int, str, bool]] = field(default_factory=list)
     # split_program_units(logical_lines), computed once for all rules
     units: List[Any] = field(default_factory=list)
+    # After COPY expansion the line numbers above are positions in the
+    # expanded text; origins[n - 1] says where line n really comes from.
+    origins: Optional[List[Union[int, Origin]]] = None
 
 
 class _CobolStructuralExtractor:
@@ -150,9 +172,13 @@ class _CobolStructuralExtractor:
     _PARAGRAPH = re.compile(r"^([A-Z0-9_-]+)\.\s*$", re.IGNORECASE)
 
     def extract(
-        self, code: str, copy_statements: Optional[List[Tuple[int, str]]] = None
+        self,
+        code: str,
+        copy_statements: Optional[List[Tuple[int, str]]] = None,
+        expander: Optional[CopyExpander] = None,
+        path: str = "",
     ) -> _CobolStructure:
-        """Extract structural elements from COBOL source."""
+        """Extract structural elements (COPY expanded first with an ``expander``)."""
         structure = _CobolStructure()
         lines = code.split("\n")
 
@@ -166,6 +192,7 @@ class _CobolStructuralExtractor:
             for num, text in logical_lines
         ]
         del logical_lines, lines  # bounded memory on huge files
+        _expand_copies(structure, expander, path)
 
         # Extract elements from logical lines (cheap substring tests first)
         for line_num, logical_line, _ in structure.logical_lines:
@@ -245,6 +272,15 @@ class _CobolStructuralExtractor:
             code = code.expandtabs(4)
         stripped = code.lstrip()
         return bool(stripped) and len(code) - len(stripped) < 4
+
+    def logical_lines_of(self, code: str) -> List[Tuple[int, str, bool]]:
+        """(line, text, starts in Area A) of a source in its own format."""
+        lines = code.split("\n")
+        fixed = self._detect_fixed_format(lines)
+        return [
+            (num, text, self._starts_in_area_a(lines[num - 1], fixed))
+            for num, text in self._build_logical_lines(lines, fixed)
+        ]
 
     def _build_logical_lines(
         self, lines: List[str], is_fixed_format: bool
@@ -337,6 +373,47 @@ class _CobolStructuralExtractor:
             structure.paragraphs.append((para_name, line_num))
 
 
+def _expand_copies(structure: _CobolStructure, expander: Optional[CopyExpander], path: str) -> None:
+    """Put copybook text in place of COPY (see ``cobol_copy_expansion``).
+
+    Line numbers then become positions in the expanded text;
+    ``structure.origins`` maps them back to the program and copybooks.
+    """
+    if expander is None:
+        return
+    expanded = expander.expand(path, structure.logical_lines)
+    if expanded is not None:
+        structure.origins = [origin for origin, _, _ in expanded]
+        structure.logical_lines = [
+            (num, text, area_a) for num, (_, text, area_a) in enumerate(expanded, start=1)
+        ]
+
+
+def _point_to_program(
+    issue: AnalysisIssue, origin: Optional[Origin], program_line: Callable[[int], int]
+) -> None:
+    """Rewrite an issue's lines (line, message, metadata) to program lines."""
+    issue.message = _LINE_REF.sub(lambda m: f"line {program_line(int(m.group(1)))}", issue.message)
+    metadata = dict(issue.metadata or {})
+    if isinstance(metadata.get("lines"), list):
+        metadata["lines"] = sorted({program_line(n) for n in metadata["lines"]})
+    if origin is not None:
+        metadata["expanded_from"] = {
+            "copybook": origin.copybook,
+            "file": origin.path,
+            "line": origin.line,
+            "copy_lines": [line for _, line in origin.via],
+            "replaced": origin.replaced,
+        }
+        issue.message += (
+            f" (in copybook {origin.copybook}, line {origin.line}; "
+            f"COPY at line {origin.via[0][1]})"
+        )
+    issue.line = program_line(issue.line)
+    if metadata:
+        issue.metadata = metadata
+
+
 def _join_continuation(current: str, text: str) -> str:
     """Append a fixed-format continuation line (indicator '-') to a logical line.
 
@@ -371,18 +448,20 @@ class CobolGovernanceAnalyzer:
         """Analyze COBOL code for governance issues."""
         issues: List[AnalysisIssue] = []
 
-        # Extract structural elements
-        cached = self._index.copy_names_for(file_path) if self._index is not None else None
-        structure = self._extractor.extract(content, cached)
-
         # Copybooks (.cpy files) contain data definitions, not procedure code:
         # only the data rules (COBOL004, COBOL008, COBOL009), COBOL007 and
-        # COBOL015 (a nested COPY that is missing) apply.
+        # COBOL015 (a nested COPY that is missing) apply. They are analyzed
+        # as written; programs are analyzed with their COPYs expanded.
         is_copybook = (
             self._index.is_copybook_file(file_path)
             if self._index is not None
             else is_copybook_path(file_path)
         )
+
+        # Extract structural elements
+        cached = self._index.copy_names_for(file_path) if self._index is not None else None
+        expander = None if is_copybook else self._copy_expander()
+        structure = self._extractor.extract(content, cached, expander, file_path)
 
         if not is_copybook:
             # COBOL001-COBOL006 (FREE; procedural rules, not applied to copybooks)
@@ -391,18 +470,70 @@ class CobolGovernanceAnalyzer:
             issues.extend(self._check_accept_unvalidated(file_path, structure))
             issues.extend(self._check_occurs_depending(file_path, structure))
             issues.extend(self._check_perform_thru_chain(file_path, structure))
-            issues.extend(self._check_copybook_not_found(file_path, structure))
-        else:
-            issues.extend(self._check_copybook_blast_radius(file_path))
-            # nested COPY inside a copybook can be missing too
-            issues.extend(self._check_copybook_not_found(file_path, structure))
 
         # COBOL004 and COBOL008-COBOL014 (FREE). COBOL004/008/009 also run on copybooks.
         issues.extend(
             run_program_rules(file_path, structure.logical_lines, is_copybook, structure.units)
         )
+        if structure.origins is not None:
+            issues = self._attribute_expanded(issues, structure.origins)
 
+        # Index rules: their lines are the file's own (not expanded positions)
+        if is_copybook:
+            issues.extend(self._check_copybook_blast_radius(file_path))
+        # COBOL015 also for a nested COPY inside a copybook
+        issues.extend(self._check_copybook_not_found(file_path, structure))
         return issues
+
+    def _copy_expander(self) -> Optional[CopyExpander]:
+        """One expander per project index (its copybook cache is shared)."""
+        index = self._index
+        if index is None:
+            return None
+        if index.expander is None:
+            build = _CobolStructuralExtractor().logical_lines_of
+            index.expander = CopyExpander(
+                index.resolve,
+                lambda path: index.copybook_lines(path, build),
+                is_system_copybook,
+            )
+        expander: CopyExpander = index.expander
+        return expander
+
+    def _attribute_expanded(
+        self, issues: List[AnalysisIssue], origins: List[Union[int, Origin]]
+    ) -> List[AnalysisIssue]:
+        """Map expanded-text lines back to the program (and the copybook line).
+
+        A finding on a copybook line is reported at the program's COPY
+        statement, with the copybook file and line in ``metadata``. Data
+        rules that already run on the copybook file itself (COBOL004/008/009)
+        are not repeated in every program, unless REPLACING changed that line
+        or the copybook is outside the scan (``copybook_paths``).
+        """
+
+        def program_line(line: int) -> int:
+            origin = origins[line - 1] if 0 < line <= len(origins) else line
+            return origin if isinstance(origin, int) else origin.via[0][1]
+
+        out: List[AnalysisIssue] = []
+        for issue in issues:
+            found = origins[issue.line - 1] if 0 < issue.line <= len(origins) else None
+            origin = found if isinstance(found, Origin) else None
+            if origin is not None and self._reported_on_copybook(issue, origin):
+                continue
+            _point_to_program(issue, origin, program_line)
+            out.append(issue)
+        return out
+
+    def _reported_on_copybook(self, issue: AnalysisIssue, origin: Origin) -> bool:
+        """A data finding on an unchanged line of a scanned copybook."""
+        return (
+            issue.rule_id in _COPYBOOK_RULES
+            and not origin.replaced
+            and self._index is not None
+            and self._index.is_scanned(origin.path)
+        )
 
     def _check_goto_excessive(
         self, file_path: str, structure: _CobolStructure
@@ -643,6 +774,11 @@ class CobolGovernanceAnalyzer:
 
 
 _MAX_LINES_IN_METADATA = 50
+
+# Rules that also run on copybook files (see analyze): a finding on an
+# unchanged copybook line is reported there, not again in every program.
+_COPYBOOK_RULES = {"COBOL004", "COBOL008", "COBOL009"}
+_LINE_REF = re.compile(r"\bline (\d+)\b")
 
 _K = TypeVar("_K", bound=Hashable)
 
