@@ -237,7 +237,9 @@ reviewed:
   copybook `CSUTLDPY` (date validation, 15 GO TOs) is now part of the
   program.
 
-Analyzer time with `compare` (expansion included): see the table at the top
-of this file; the change is within run-to-run noise on these small corpora.
+Analyzer time in the regenerated baseline (expansion included): CardDemo
+0.42 s → 0.50 s, GenApp 0.10 s → 0.15 s, zopeneditor-sample 0.11 s →
+0.12 s; the extra time is reading and expanding the copybooks (a second
+`compare` run measured CardDemo at 0.47 s and GenApp at 0.15 s).
 On the synthetic benchmark (`scripts/cobol_perf_bench.py`, 2 COPYs per
 program, one with REPLACING) the project stays under 8 s per million lines.
