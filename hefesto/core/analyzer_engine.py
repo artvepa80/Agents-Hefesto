@@ -16,7 +16,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -53,6 +53,59 @@ DEFAULT_EXCLUDES = [
     ".eggs/",
     ".egg-info/",
 ]
+
+
+def _pattern_parts(pattern: str) -> Tuple[List[str], bool]:
+    """Components of an exclude pattern and whether it only names directories."""
+    text = pattern.strip().replace("\\", "/")
+    while text.startswith("./"):
+        text = text[2:]
+    return [part for part in text.split("/") if part], text.endswith("/")
+
+
+def path_is_excluded(
+    rel_parts: Sequence[str], patterns: Iterable[str], is_dir: bool = False
+) -> bool:
+    """True if a path below the analysis root matches an exclude pattern.
+
+    ``rel_parts`` are the components of the path relative to the analysis
+    root, so directories above the root never match. A pattern is a sequence
+    of whole components: ``build/`` matches a ``build`` directory at any
+    depth (not ``rebuild/``), ``src/legacy/`` matches those two consecutive
+    directories, ``evil.py`` matches a file or directory with that name. A
+    trailing ``/`` restricts the pattern to directories; set ``is_dir`` when
+    ``rel_parts`` names a directory. ``.egg-info/`` matches directories whose
+    name ends with ``.egg-info`` (``pkg.egg-info/``).
+    """
+    parts = tuple(rel_parts)
+    for pattern in patterns:
+        wanted, dir_only = _pattern_parts(pattern)
+        if not wanted:
+            continue
+        candidates = parts if (is_dir or not dir_only) else parts[:-1]
+        size = len(wanted)
+        for start in range(len(candidates) - size + 1):
+            window = candidates[start : start + size]
+            if all(_component_matches(name, want) for name, want in zip(window, wanted)):
+                return True
+    return False
+
+
+def _component_matches(name: str, wanted: str) -> bool:
+    if wanted in _SUFFIX_EXCLUDES:
+        return name.endswith(wanted) and name != wanted
+    return name == wanted
+
+
+# Default excludes that name a suffix of a directory (``pkg.egg-info``).
+_SUFFIX_EXCLUDES = frozenset({".egg-info"})
+
+
+def _relative_parts(path: Path, root: Path) -> Tuple[str, ...]:
+    try:
+        return path.relative_to(root).parts
+    except ValueError:
+        return path.parts
 
 
 class AnalyzerEngine:
@@ -172,15 +225,17 @@ class AnalyzerEngine:
         excludes = list(DEFAULT_EXCLUDES) + list(exclude_patterns)
         found: List[Path] = []
         for dirpath, dirnames, filenames in os.walk(root):
+            rel_dir = _relative_parts(Path(dirpath), root)
             dirnames[:] = [
                 d
                 for d in dirnames
-                if not d.startswith(".") and not any(p in f"{dirpath}/{d}/" for p in excludes)
+                if not d.startswith(".")
+                and not path_is_excluded(rel_dir + (d,), excludes, is_dir=True)
             ]
             for name in filenames:
                 candidate = Path(dirpath) / name
-                if is_extra_copybook_candidate(candidate) and not any(
-                    p in str(candidate) for p in excludes
+                if is_extra_copybook_candidate(candidate) and not path_is_excluded(
+                    rel_dir + (name,), excludes
                 ):
                     found.append(candidate)
         return found
@@ -389,8 +444,7 @@ class AnalyzerEngine:
         all_excludes = list(DEFAULT_EXCLUDES) + list(exclude_patterns)
 
         def excluded(p: Path) -> bool:
-            sp = str(p)
-            return any(pattern in sp for pattern in all_excludes)
+            return path_is_excluded(_relative_parts(p, path), all_excludes)
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():

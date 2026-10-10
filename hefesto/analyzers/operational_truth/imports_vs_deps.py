@@ -361,6 +361,8 @@ class ImportsVsDepsAnalyzer:
 
     def _iter_python_files(self, project_root: Path) -> Iterable[Path]:
         for path in project_root.rglob("*.py"):
-            if any(part in EXCLUDED_DIRS for part in path.parts):
+            # Only components below the project root: a checkout under
+            # ``~/build/`` or ``~/docs/`` must still be scanned.
+            if any(part in EXCLUDED_DIRS for part in path.relative_to(project_root).parts):
                 continue
             yield path
