@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **COBOL: free-format sources without a directive are no longer silently
+  missed.** When there is no `>>SOURCE FORMAT` directive, free format is now
+  inferred if a division header (or a level-01/77 entry in a copybook) starts
+  before column 8. Before, such files were read as fixed format and returned 0
+  findings. `>>SOURCE FREE`, lowercase directives and Micro Focus
+  `$SET SOURCEFORMAT(FREE)` are recognized, and a `FIXED` directive wins.
+  OCCURS DEPENDING ON detection now also honors free format.
+- **COBOL: `.cobol` and uppercase `.PCO`/`.COBOL` files are scanned** (they
+  were not discovered before).
+- **COBOL002 false positives:** fields named like credentials but ending in a
+  flag/status/length/label suffix (`-FLAG`, `-OK`, `-SW`, `-IND`, `-STATUS`,
+  `-LEN`, `-MSG`, `-PROMPT`, ...) are no longer flagged.
+- **COBOL007 false positives:** vendor copybooks (CICS `DFH*`, DB2
+  `SQLCA`/`SQLDA`) are skipped.
+- **COBOL006:** lowercase `perform ... thru ...` now counts the paragraphs in
+  the chain instead of falling back to "partial detection".
+
+### Changed
+- **COBOL006/COBOL007 group repeated identical findings per file:** one
+  finding per `PERFORM X THRU Y` pair and per copybook name, with
+  `metadata.occurrences` and the first 50 `metadata.lines`. A file with 20,000
+  identical `PERFORM THRU` statements now returns 1 finding instead of 20,000.
+  On CardDemo, COBOL findings go from 421 to 339; GenApp stays at 51;
+  zopeneditor-sample goes from 20 to 14.
+
+### Added
+- COBOL smoke regression tests (`tests/test_cobol_smoke.py`): detected cases,
+  false-positive fixes, free-format inference, extensions and grouping, plus
+  6 strict `xfail` tests for known misses that Phase 3 will address.
+- `scripts/cobol_nist_smoke.py`: downloads the NIST COBOL85 suite on demand
+  (not vendored) and checks the analyzer for crashes and timing. Result: 510
+  members (459 programs, 51 copybooks, 347k lines), 0 crashes, about 3 s.
+
 ### Changed
 - **COBOL: the 7 rules are documented as free, as they always ran.** The
   analyzer had a `_is_pro_tier_available()` gate that always returned `True`

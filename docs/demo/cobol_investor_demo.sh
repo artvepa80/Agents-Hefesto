@@ -128,7 +128,7 @@ echo "  ✓ No findings on the clean program (real-code precision not yet measur
 echo "  ✓ 7 free governance rules (credentials, spaghetti logic, copybooks)"
 echo ""
 echo "Limits:"
-echo "  • Fixed format by default; free-format code needs >>SOURCE FORMAT IS FREE"
+echo "  • Fixed format by default; free format is inferred (heuristic) or set with >>SOURCE FORMAT IS FREE"
 echo "  • COBOL004 flags every REDEFINES (COMP-3 not verified yet)"
 echo ""
 echo "Next Steps:"
