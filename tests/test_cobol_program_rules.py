@@ -417,3 +417,52 @@ class TestFixturesAndSafety:
         outer = _prog(proc=["@MAIN-PARA.", "STOP RUN.", "DISPLAY 'DEAD'."])
         code = outer + _fixed(["@END PROGRAM T."]) + inner
         assert [r for r, _ in _rules(code) if r >= "COBOL008"] == ["COBOL013"]
+
+
+class TestRegexBacktrackingSafety:
+    """Adversarial inputs for the patterns CodeQL flagged (ReDoS); each must be fast."""
+
+    N = 20000
+    LIMIT_S = 1.0
+
+    def _timed(self, fn, *args):
+        import time
+
+        start = time.perf_counter()
+        result = fn(*args)
+        assert time.perf_counter() - start < self.LIMIT_S
+        return result
+
+    def test_only_terminators_repeated_exit(self):
+        from hefesto.analyzers.devops import cobol_program_rules as rules
+
+        assert not self._timed(rules.only_terminators, "exit" + " exit" * self.N + " x")
+        assert self._timed(rules.only_terminators, "GOBACK EXIT PROGRAM  STOP RUN EXIT")
+        assert not rules.only_terminators("")
+        assert not rules.only_terminators("STOP")
+
+    def test_open_repeated_io(self):
+        from hefesto.analyzers.devops import cobol_program_rules as rules
+
+        text = "OPEN " + "  i-o" * self.N + "!"
+        ops = self._timed(rules._open_operands, text, len("OPEN"))
+        assert ops == set()
+        text = "OPEN " + "i-o " * self.N + "F1"
+        assert self._timed(rules._open_operands, text, len("OPEN")) == {"F1"}
+        assert rules._open_operands("OPEN INPUT A B OUTPUT C. OPEN X", 4) == {"A", "B", "C"}
+
+    def test_goto_many_words_without_depending(self):
+        from hefesto.analyzers.devops import cobol_program_rules as rules
+
+        text = "GO TO P1" + " W" * self.N + "."
+        assert self._timed(rules._goto_targets, text) == {"P1"}
+        assert rules._goto_targets("GO TO A B C DEPENDING ON X. GO TO D.") == {"A", "B", "C", "D"}
+
+    def test_sql_connect_many_connects_without_using(self):
+        from hefesto.analyzers.devops import cobol_program_rules as rules
+
+        sql = " CONNECT" * self.N + " TO DB"
+        assert not self._timed(rules._connect_has_literal_password, sql)
+        assert rules._connect_has_literal_password(" CONNECT :U IDENTIFIED BY 'x'")
+        assert rules._connect_has_literal_password(" CONNECT 'scott/tiger'")
+        assert not rules._connect_has_literal_password(" CONNECT :U IDENTIFIED BY :P")

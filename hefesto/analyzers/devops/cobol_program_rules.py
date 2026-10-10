@@ -40,16 +40,14 @@ _DIVISION = re.compile(r"^(IDENTIFICATION|ID|ENVIRONMENT|DATA|PROCEDURE)\s+DIVIS
 _END_PROGRAM = re.compile(r"^END\s+PROGRAM\b", re.I)
 _SECTION_HEADER = re.compile(rf"^({_WORD})\s+SECTION(?:\s+\d+)?\s*\.\s*(.*)$", re.I)
 _PARAGRAPH_HEADER = re.compile(rf"^({_WORD})\s*\.(?:\s+(.*))?$", re.I)
-_TERMINATOR = re.compile(r"\b(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM)\b", re.I)
-_GO_TO = re.compile(rf"\bGO\s+TO\s+({_WORD})(?:\s+({_WORD}(?:\s+{_WORD})*)\s+DEPENDING\b)?", re.I)
+_GO_TO = re.compile(r"\bGO\s+TO\b", re.I)
+_WORD_TOKEN = re.compile(_WORD, re.I)
 _UNCONDITIONAL_END = re.compile(
     rf"(?:\bSTOP\s+RUN|\bGOBACK|\bEXIT\s+PROGRAM|\bGO\s+TO\s+{_WORD})\s*$", re.I
 )
 _ENTRY = re.compile(r"^ENTRY\s+['\"]", re.I)
 _ONLY_EXIT = re.compile(r"^\s*EXIT\s*$", re.I)
 # "EXIT PROGRAM. STOP RUN." / "GOBACK. EXIT." are idioms, not dead code
-_TERMINATOR = r"(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM|EXIT)"
-_ONLY_TERMINATORS = re.compile(rf"^\s*{_TERMINATOR}(?:\s+{_TERMINATOR})*\s*$", re.I)
 _CONDITION_PHRASES = re.compile(
     r"\b(?:AT\s+END|AT\s+END-OF-PAGE|AT\s+EOP|INVALID\s+KEY|SIZE\s+ERROR|ON\s+EXCEPTION"
     r"|ON\s+OVERFLOW|WHEN|ELSE|NOT\s+AT|NOT\s+INVALID|NOT\s+ON)\b",
@@ -103,13 +101,57 @@ _CONN_SECRET = re.compile(r"(?:^|[;,\s(])(?:PASS|PWD|PASSWORD|PASSWD)\s*=\s*([^;
 _EXEC_SQL = re.compile(r"\bEXEC\s+SQL\b(.*?)\bEND-EXEC\b", re.I | re.S)
 _SQL_CONNECT_LITERAL = re.compile(
     r"\bCONNECT\s+['\"][^'\"]*/"  # Oracle 'user/password'
-    r"|\bCONNECT\b.*?(?:\bUSING|\bIDENTIFIED\s+BY)\s+['\"]",
-    re.I | re.S,
+    r"|\bCONNECT\b",
+    re.I,
 )
+_SQL_LITERAL_PASSWORD = re.compile(r"(?:\bUSING|\bIDENTIFIED\s+BY)\s+['\"]", re.I)
 _SELECT = re.compile(rf"\bSELECT\s+(?:OPTIONAL\s+)?({_WORD})", re.I)
 _STATUS_CLAUSE = re.compile(rf"\b(?:FILE\s+)?STATUS\s+(?:IS\s+)?({_WORD})", re.I)
 _SD = re.compile(rf"(?:^|\s)SD\s+({_WORD})", re.I)
-_OPEN = re.compile(r"\bOPEN\s+((?:INPUT|OUTPUT|I-O|EXTEND)\s[^.]*)", re.I)
+_OPEN = re.compile(r"\bOPEN\b", re.I)
+_OPEN_MODES = {"INPUT", "OUTPUT", "I-O", "EXTEND"}
+
+
+_TERMINATOR_WORDS = {"GOBACK", "EXIT"}
+_TERMINATOR_PAIRS = {("STOP", "RUN"), ("EXIT", "PROGRAM")}
+
+
+def only_terminators(text: str) -> bool:
+    """True when ``text`` is only STOP RUN / GOBACK / EXIT PROGRAM / EXIT tokens.
+
+    Token loop instead of a repeated regex group (avoids ReDoS backtracking).
+    """
+    tokens = text.upper().split()
+    if not tokens:
+        return False
+    i = 0
+    while i < len(tokens):
+        if tuple(tokens[i : i + 2]) in _TERMINATOR_PAIRS:
+            i += 2
+        elif tokens[i] in _TERMINATOR_WORDS:
+            i += 1
+        else:
+            return False
+    return True
+
+
+def _open_operands(text: str, start: int) -> Set[str]:
+    """File names after an OPEN verb, up to the end of the sentence."""
+    stop = text.find(".", start)
+    tokens = [t.upper() for t in _WORD_TOKEN.findall(text[start : stop if stop >= 0 else None])]
+    if not tokens or tokens[0] not in _OPEN_MODES:
+        return set()
+    return set(tokens) - _OPEN_MODES - {"REVERSED", "WITH", "NO", "REWIND"}
+
+
+def _connect_has_literal_password(sql: str) -> bool:
+    """Oracle CONNECT 'user/pass', or CONNECT ... USING/IDENTIFIED BY '<literal>'."""
+    match = _SQL_CONNECT_LITERAL.search(sql)
+    if not match:
+        return False
+    if match.group(0).upper() != "CONNECT":
+        return True
+    return bool(_SQL_LITERAL_PASSWORD.search(sql, match.end()))
 
 
 def mask_literals(text: str) -> str:
@@ -470,7 +512,7 @@ def check_sql_connect_literal(file_path: str, proc: List[LogicalLine]) -> List[A
         pos += len(text) + 1
     code = "\n".join(joined)
     for block in _EXEC_SQL.finditer(code):
-        if _SQL_CONNECT_LITERAL.search(block.group(1)):
+        if _connect_has_literal_password(block.group(1)):
             line = max((ln for off, ln in offsets if off <= block.start()), default=1)
             issues.append(
                 _issue(
@@ -540,7 +582,7 @@ def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]
     proc_words = _words(proc_text)
     opened: Set[str] = set()
     for match in _OPEN.finditer(proc_text):
-        opened |= _words(match.group(1)) - {"INPUT", "OUTPUT", "I-O", "EXTEND", "REVERSED"}
+        opened |= _open_operands(proc_text, match.end())
     proc_has_copy = bool(_COPY.search(proc_text))
     entries: Optional[List[Tuple[int, str]]] = None
     for sentence in split_sentences(unit.env):
@@ -602,7 +644,7 @@ def check_dead_code(file_path: str, items: List[_ProcItem]) -> List[AnalysisIssu
             for later in sentences[idx + 1 :]:
                 if _ENTRY.match(later.text):
                     break  # alternate entry point: code below is reachable
-                if not _ONLY_TERMINATORS.match(later.text):
+                if not only_terminators(later.text):
                     rest.append(later)
             if rest:
                 where = f"paragraph '{item.name}'" if item.name else "the PROCEDURE DIVISION"
@@ -642,10 +684,20 @@ def _referenced_words(unit: _ProgramUnit, items: List[_ProcItem]) -> Set[str]:
 
 def _goto_targets(proc_text: str) -> Set[str]:
     targets: Set[str] = set()
-    for match in _GO_TO.finditer(proc_text):
-        targets.add(match.group(1).upper())
-        if match.group(2):
-            targets |= _words(match.group(2))
+    starts = [m.end() for m in _GO_TO.finditer(proc_text)]
+    for pos, start in enumerate(starts):
+        stop = proc_text.find(".", start)
+        if pos + 1 < len(starts) and (stop < 0 or starts[pos + 1] < stop):
+            stop = starts[pos + 1]
+        tokens = [
+            t.upper() for t in _WORD_TOKEN.findall(proc_text[start : stop if stop >= 0 else None])
+        ]
+        if not tokens:
+            continue
+        if "DEPENDING" in tokens:
+            targets.update(tokens[: tokens.index("DEPENDING")])
+        else:
+            targets.add(tokens[0])
     return targets
 
 
