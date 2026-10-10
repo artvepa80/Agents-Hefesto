@@ -226,10 +226,12 @@ pointing to the install command (also exposed via
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
-³ COBOL: all 7 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cpy`, `.pco`, `.CBL`, `.COB` and `.CPY` files (copybooks are read, but rules are not applied to them).
-- **Source format:** fixed format (columns 7-72) is assumed. Free-format sources must declare `>>SOURCE FORMAT IS FREE` in their first 20 lines; without it, a free-format file is read as fixed format and can return no findings.
+³ COBOL: all 7 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case) (copybooks are read, but rules are not applied to them).
+- **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt.
 - **COBOL004 (REDEFINES)** flags every `REDEFINES` clause. It does not yet check whether the redefined field is packed decimal (COMP-3), so review each finding.
-- **COBOL007 (copybooks)** flags every `COPY` statement, including standard system copybooks; it does not check whether the copybook exists.
+- **COBOL006 / COBOL007** report repeated identical findings once per file (one finding per `PERFORM X THRU Y` pair and per copybook name), with the occurrence count and lines in the finding metadata.
+- **COBOL007 (copybooks)** flags every `COPY` of a user copybook. Vendor copybooks (CICS `DFH*`, DB2 `SQLCA`/`SQLDA`) are skipped. It does not check whether the copybook exists.
+- **COBOL002 (credentials)** skips fields whose name ends in a flag/status/length/label suffix (for example `WS-PASSWORD-OK-FLAG`, `PWD-LEN`). It does not yet scan `VALUE` clauses or `EXEC SQL CONNECT ... USING` literals.
 - Output is text, JSON or HTML. SARIF is not available yet.
 
 ---
