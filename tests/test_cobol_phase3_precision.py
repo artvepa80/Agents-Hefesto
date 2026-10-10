@@ -309,8 +309,13 @@ class TestEngineIntegration:
         """prepare_cobol_index walks paths like analyze_path: excludes and missing paths."""
         self._tree(tmp_path)
         engine = AnalyzerEngine(severity_threshold="LOW")
-        engine.prepare_cobol_index([str(tmp_path / "missing"), str(tmp_path / "cbl")], ["cbl"])
+        # Excludes apply below the analyzed path ...
+        engine.prepare_cobol_index([str(tmp_path / "missing"), str(tmp_path)], ["cbl/", "cpy/"])
         assert engine._cobol_index is None
+        # ... never to the path itself: a pattern equal to the root's name
+        # (here ``cbl``) used to drop the whole root and every ``.cbl`` file.
+        engine.prepare_cobol_index([str(tmp_path / "cbl")], ["cbl"])
+        assert len(engine._cobol_index.dependent_programs("SHAREDREC")) == 5
         engine.prepare_cobol_index([str(tmp_path / "cbl"), str(tmp_path / "cpy")], [])
         assert "SHAREDREC" in engine._cobol_index.available
         assert len(engine._cobol_index.dependent_programs("SHAREDREC")) == 5
