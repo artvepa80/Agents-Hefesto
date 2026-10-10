@@ -38,6 +38,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/cobol-corpus-baseline-ci.md`: the corpus-baseline CI workflow, ready
   to paste through the GitHub web UI.
 
+### Security
+- **`hefesto.security.path_sandbox.resolve_under_root`** (API server path
+  guard) now normalizes with `os.path.realpath` and checks the root prefix,
+  rejecting siblings that share it (`/work/app-evil` for root `/work/app`)
+  and symlinks that leave the root. Same accepted paths as before. CodeQL
+  recognizes this check, so `py/path-injection` no longer reports the
+  engine's file discovery (it flagged the new multi-path COPY index).
+  New tests in `tests/test_path_sandbox.py`.
+
 ### Fixed
 - **COBOL: free-format sources without a directive are no longer silently
   missed.** When there is no `>>SOURCE FORMAT` directive, free format is now

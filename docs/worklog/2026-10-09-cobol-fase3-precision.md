@@ -46,6 +46,12 @@ Notas:
 - Los 8 FP restantes de COBOL004 son el idiom de CardDemo que parte un file status binario de 2 bytes en dos `PIC X`.
 - COBOL004 ganó 15 TP que el matcher anterior (una sola línea) no veía: `PIC X(12)` sobre `PIC S9(10)V99` en COACTUPC y CVEXPORT.cpy.
 
+## CodeQL
+
+- El primer push dio 1 alerta alta `py/path-injection` en `prepare_cobol_index` (nuevo índice multi-ruta). La fuente es `request.paths` del servidor API (`hefesto/server.py`), que ya pasaba por `resolve_under_root`, pero CodeQL no reconoce `Path.resolve()` + `relative_to()` como sanitizador (por eso había alertas descartadas en `server.py` y `path_sandbox.py`).
+- Arreglo: `resolve_under_root` usa `os.path.realpath` + verificación de prefijo (patrón que CodeQL sí reconoce), y además rechaza hermanos con el mismo prefijo (`/work/app-evil`) y symlinks que salen de la raíz. Tests nuevos en `tests/test_path_sandbox.py`.
+- CodeQL 2.27.2 local (suite `python-code-scanning`): 0 alertas.
+
 ## Verificación
 
 - black, isort, flake8 y mypy (solo el error conocido de `treesitter_parser.py:17`, que pasa en CI).
