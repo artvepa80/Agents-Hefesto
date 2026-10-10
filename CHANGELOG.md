@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.0] - 2026-10-10
+
 ### Added
 - **SARIF 2.1.0 output for every analyzer** (`hefesto analyze --format sarif`;
   `--format` is now an alias of `--output`, and `output: sarif` is accepted in
@@ -50,6 +52,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Recall fixture: 7 new seeds that only fire after expansion (`RCL08`);
     recall 39/41. No finding changed on the pinned corpora or NIST; perf on
     the synthetic 1M-line project stays at about 8 s per million lines.
+
+- `docs/cognitive-core.md`: architecture note that maps Karpathy's
+  "cognitive core" idea onto HefestoAI (rules = core; README, skill docs,
+  repo files and CI logs = memory that agents must look up by running
+  `hefesto analyze`), with five dogfood cases. Guidance, not a research
+  claim or SLA. HefestoAI-only.
+- **`--copybook-path DIR` / `copybook_paths:`** (`.hefesto.yaml`, relative to
+  the file) for COBOL copybook directories outside the scanned tree: names
+  found there resolve COPY/INCLUDE for COBOL015; the files are not analyzed.
+- The text report lists COBOL files read as free format by inference (no
+  `>>SOURCE` directive) under **Notes**; JSON has them in
+  `meta.cobol_format_notices` and per file in `metadata.cobol_source_format`.
+- **COBOL recall fixture:** 34 seeded issues across all 15 rules
+  (`tests/fixtures/cobol/recall/`) and `scripts/cobol_recall.py`, which
+  prints recall per rule; 2 seeds are documented known limits.
+- **COBOL015 COPYBOOK_NOT_FOUND (LOW):** a COPY whose copybook is not in the
+  scanned tree, grouped per copybook name. It needs a project-wide COPY index
+  (built for each scan, across all CLI paths) and stays silent when nothing in
+  the scan resolves.
+- `docs/cobol-corpus-baseline-ci.md`: the corpus-baseline CI workflow, ready
+  to paste through the GitHub web UI.
+
+- **COBOL corpus baseline:** `scripts/cobol_corpus_baseline.py` clones AWS
+  CardDemo, IBM CICS GenApp and IBM zopeneditor-sample at pinned commits,
+  runs `hefesto analyze` and records counts per rule, severity and file, every
+  finding and timing in `benchmark/cobol/baseline.json` (results only, no
+  corpus code). `compare` diffs a new run against it and lists new/removed
+  findings per rule. See `docs/cobol-corpus-baseline.md`.
+- **7 new free COBOL rules (COBOL008-COBOL014), 14 in total.** They come
+  from the misses found in the Phase 1 smoke run and use a small program
+  model (data entries, SELECTs, EXEC SQL blocks, paragraphs, sentences):
+  - COBOL008 (CRITICAL): hardcoded secret in a `VALUE` clause of a
+    credential-named field. Same suffix exclusions as COBOL002; placeholders
+    (`SPACES`, `XXXX`, `UNDEFINED`, ...) and key names (`'APP-Token-Password'`)
+    are skipped. Also runs on copybooks.
+  - COBOL009 (CRITICAL): `PASS=`/`PWD=`/`PASSWORD=` with a value inside a
+    string literal (connection strings). Also runs on copybooks.
+  - COBOL010 (CRITICAL): `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a
+    literal password, or Oracle `CONNECT 'user/password'`.
+  - COBOL011 (MEDIUM): `SELECT` without a `FILE STATUS` clause (SD sort files
+    skipped).
+  - COBOL012 (LOW): OPENed file whose status field (with subordinates and
+    88-levels) is never referenced in the PROCEDURE DIVISION, DECLARATIVES
+    included.
+  - COBOL013 (MEDIUM): statements after an unconditional `STOP RUN`/`GOBACK`/
+    `EXIT PROGRAM` in the same paragraph.
+  - COBOL014 (LOW): paragraph or section never referenced and not reachable
+    by fall-through (entry paragraph, DECLARATIVES, THRU ranges, empty EXIT
+    paragraphs and programs with a procedure `COPY` are skipped).
+  On CardDemo/GenApp/zopeneditor they add 2/1/0 findings. A manual review of
+  findings on the NIST COBOL85 suite and a 125-file sample of public GitHub
+  COBOL put precision at 100% for COBOL008-COBOL012 and COBOL014 on the
+  reviewed samples (small for COBOL008/010/012); COBOL013 had 1 false
+  positive (prose in a `.cob` file). The Phase 1 xfail tests for these gaps
+  now pass; REDEFINES on PIC X (COBOL004 tuning) stays xfail.
+- COBOL smoke regression tests (`tests/test_cobol_smoke.py`): detected cases,
+  false-positive fixes, free-format inference, extensions and grouping, plus
+  6 strict `xfail` tests for known misses that Phase 3 will address.
+- `scripts/cobol_nist_smoke.py`: downloads the NIST COBOL85 suite on demand
+  (not vendored) and checks the analyzer for crashes and timing. Result: 510
+  members (459 programs, 51 copybooks, 347k lines), 0 crashes, about 3 s.
 
 ### Changed
 - **GitHub Action is now a composite action** (it has to run
@@ -135,27 +198,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **COBOL011 (FILE STATUS missing)** is LOW and grouped into one finding
     per program, with the file names in `metadata.files`.
 
-### Added
-- `docs/cognitive-core.md`: architecture note that maps Karpathy's
-  "cognitive core" idea onto HefestoAI (rules = core; README, skill docs,
-  repo files and CI logs = memory that agents must look up by running
-  `hefesto analyze`), with five dogfood cases. Guidance, not a research
-  claim or SLA. HefestoAI-only.
-- **`--copybook-path DIR` / `copybook_paths:`** (`.hefesto.yaml`, relative to
-  the file) for COBOL copybook directories outside the scanned tree: names
-  found there resolve COPY/INCLUDE for COBOL015; the files are not analyzed.
-- The text report lists COBOL files read as free format by inference (no
-  `>>SOURCE` directive) under **Notes**; JSON has them in
-  `meta.cobol_format_notices` and per file in `metadata.cobol_source_format`.
-- **COBOL recall fixture:** 34 seeded issues across all 15 rules
-  (`tests/fixtures/cobol/recall/`) and `scripts/cobol_recall.py`, which
-  prints recall per rule; 2 seeds are documented known limits.
-- **COBOL015 COPYBOOK_NOT_FOUND (LOW):** a COPY whose copybook is not in the
-  scanned tree, grouped per copybook name. It needs a project-wide COPY index
-  (built for each scan, across all CLI paths) and stays silent when nothing in
-  the scan resolves.
-- `docs/cobol-corpus-baseline-ci.md`: the corpus-baseline CI workflow, ready
-  to paste through the GitHub web UI.
+- **COBOL006/COBOL007 group repeated identical findings per file:** one
+  finding per `PERFORM X THRU Y` pair and per copybook name, with
+  `metadata.occurrences` and the first 50 `metadata.lines`. A file with 20,000
+  identical `PERFORM THRU` statements now returns 1 finding instead of 20,000.
+  On CardDemo, COBOL findings go from 421 to 339; GenApp stays at 51;
+  zopeneditor-sample goes from 20 to 14.
+
+- **COBOL: the 7 rules are documented as free, as they always ran.** The
+  analyzer had a `_is_pro_tier_available()` gate that always returned `True`
+  (a TODO left for the investor demo), so the 4 rules described as PRO
+  (COBOL004-COBOL007) already ran for everyone. The dead gate was removed with
+  no behavior change, and the README, the 4.12.0 notes below and
+  `docs/demo/cobol_investor_demo.sh` now say "7 free COBOL rules" instead of
+  "3 FREE + 4 PRO". The docs also state the current limits: fixed format is
+  assumed unless the source declares `>>SOURCE FORMAT IS FREE`; COBOL004 flags
+  every `REDEFINES` (packed decimal is not verified yet); COBOL007 flags every
+  `COPY`; there is no SARIF output yet. The demo script no longer claims "zero
+  false positives" (only one clean fixture was checked; real-code precision has
+  not been measured). Tests: `tests/test_cobol_governance.py::TestAllRulesFree`.
 
 ### Security
 - **Revoked license keys removed from the docs.** `CHANGELOG.md` (the
@@ -222,70 +283,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **COBOL006:** lowercase `perform ... thru ...` now counts the paragraphs in
   the chain instead of falling back to "partial detection".
 
-### Changed
-- **COBOL006/COBOL007 group repeated identical findings per file:** one
-  finding per `PERFORM X THRU Y` pair and per copybook name, with
-  `metadata.occurrences` and the first 50 `metadata.lines`. A file with 20,000
-  identical `PERFORM THRU` statements now returns 1 finding instead of 20,000.
-  On CardDemo, COBOL findings go from 421 to 339; GenApp stays at 51;
-  zopeneditor-sample goes from 20 to 14.
-
-### Added
-- **COBOL corpus baseline:** `scripts/cobol_corpus_baseline.py` clones AWS
-  CardDemo, IBM CICS GenApp and IBM zopeneditor-sample at pinned commits,
-  runs `hefesto analyze` and records counts per rule, severity and file, every
-  finding and timing in `benchmark/cobol/baseline.json` (results only, no
-  corpus code). `compare` diffs a new run against it and lists new/removed
-  findings per rule. See `docs/cobol-corpus-baseline.md`.
-- **7 new free COBOL rules (COBOL008-COBOL014), 14 in total.** They come
-  from the misses found in the Phase 1 smoke run and use a small program
-  model (data entries, SELECTs, EXEC SQL blocks, paragraphs, sentences):
-  - COBOL008 (CRITICAL): hardcoded secret in a `VALUE` clause of a
-    credential-named field. Same suffix exclusions as COBOL002; placeholders
-    (`SPACES`, `XXXX`, `UNDEFINED`, ...) and key names (`'APP-Token-Password'`)
-    are skipped. Also runs on copybooks.
-  - COBOL009 (CRITICAL): `PASS=`/`PWD=`/`PASSWORD=` with a value inside a
-    string literal (connection strings). Also runs on copybooks.
-  - COBOL010 (CRITICAL): `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a
-    literal password, or Oracle `CONNECT 'user/password'`.
-  - COBOL011 (MEDIUM): `SELECT` without a `FILE STATUS` clause (SD sort files
-    skipped).
-  - COBOL012 (LOW): OPENed file whose status field (with subordinates and
-    88-levels) is never referenced in the PROCEDURE DIVISION, DECLARATIVES
-    included.
-  - COBOL013 (MEDIUM): statements after an unconditional `STOP RUN`/`GOBACK`/
-    `EXIT PROGRAM` in the same paragraph.
-  - COBOL014 (LOW): paragraph or section never referenced and not reachable
-    by fall-through (entry paragraph, DECLARATIVES, THRU ranges, empty EXIT
-    paragraphs and programs with a procedure `COPY` are skipped).
-  On CardDemo/GenApp/zopeneditor they add 2/1/0 findings. A manual review of
-  findings on the NIST COBOL85 suite and a 125-file sample of public GitHub
-  COBOL put precision at 100% for COBOL008-COBOL012 and COBOL014 on the
-  reviewed samples (small for COBOL008/010/012); COBOL013 had 1 false
-  positive (prose in a `.cob` file). The Phase 1 xfail tests for these gaps
-  now pass; REDEFINES on PIC X (COBOL004 tuning) stays xfail.
-- COBOL smoke regression tests (`tests/test_cobol_smoke.py`): detected cases,
-  false-positive fixes, free-format inference, extensions and grouping, plus
-  6 strict `xfail` tests for known misses that Phase 3 will address.
-- `scripts/cobol_nist_smoke.py`: downloads the NIST COBOL85 suite on demand
-  (not vendored) and checks the analyzer for crashes and timing. Result: 510
-  members (459 programs, 51 copybooks, 347k lines), 0 crashes, about 3 s.
-
-### Changed
-- **COBOL: the 7 rules are documented as free, as they always ran.** The
-  analyzer had a `_is_pro_tier_available()` gate that always returned `True`
-  (a TODO left for the investor demo), so the 4 rules described as PRO
-  (COBOL004-COBOL007) already ran for everyone. The dead gate was removed with
-  no behavior change, and the README, the 4.12.0 notes below and
-  `docs/demo/cobol_investor_demo.sh` now say "7 free COBOL rules" instead of
-  "3 FREE + 4 PRO". The docs also state the current limits: fixed format is
-  assumed unless the source declares `>>SOURCE FORMAT IS FREE`; COBOL004 flags
-  every `REDEFINES` (packed decimal is not verified yet); COBOL007 flags every
-  `COPY`; there is no SARIF output yet. The demo script no longer claims "zero
-  false positives" (only one clean fixture was checked; real-code precision has
-  not been measured). Tests: `tests/test_cobol_governance.py::TestAllRulesFree`.
-
-### Fixed
 - **PRO/OMEGA upgrade links point at the live offer.** The PRO/OMEGA-only CLI
   stubs (`serve` without PRO, `info`, `activate`, `deactivate`, `status`) only
   said "Install from the private distribution"; they now also show PRO
