@@ -1,4 +1,4 @@
-# Hefesto - AI Code Quality Guardian - Claude Code Guidelines
+# HefestoAI — release truth engine for AI-generated code — Claude Code Guidelines
 ## Enterprise Code Quality & Security Development Standards
 
 ---
