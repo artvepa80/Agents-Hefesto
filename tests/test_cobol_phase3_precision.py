@@ -252,7 +252,9 @@ class TestCopyNames:
             ]
         )
         assert index.dependent_programs("REC") == ["a/P1.cbl", "a/P2.cbl"]
-        assert "NESTED" not in index.dependents  # copybooks are not programs
+        # nested COPY: the programs that COPY REC also depend on NESTED (Phase 4);
+        # the copybook itself is never counted as a dependent program
+        assert index.dependent_programs("NESTED") == ["a/P1.cbl", "a/P2.cbl"]
         assert index.resolves_any
         assert index.is_missing("GONE") and not index.is_missing("REC")
 

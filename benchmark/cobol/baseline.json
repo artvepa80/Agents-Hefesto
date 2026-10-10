@@ -1,10 +1,10 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-10T13:09:58+00:00",
+ "generated_at": "2026-10-10T14:09:16+00:00",
  "hefesto": {
   "version": "4.14.1",
-  "commit": "8d58c55b92cc6c9785ff27ce32d6d96ebbbff79d",
-  "analyzer_tree": "a03a8de834833c63dba2442a3981fae2cac912ed",
+  "commit": "b67242a927d38b60b2b5583df60cffdb8531bb2e",
+  "analyzer_tree": "24cf1825ef61a5b2f3ff4f369d5d208a72dfcbd7",
   "dirty": false
  },
  "corpora": {
@@ -442,8 +442,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.651,
-    "wall_seconds": 1.421
+    "analyze_seconds": 0.416,
+    "wall_seconds": 1.152
    }
   },
   "genapp": {
@@ -574,8 +574,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.193,
-    "wall_seconds": 0.986
+    "analyze_seconds": 0.103,
+    "wall_seconds": 0.779
    }
   },
   "zopeneditor-sample": {
@@ -672,8 +672,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.124,
-    "wall_seconds": 0.986
+    "analyze_seconds": 0.112,
+    "wall_seconds": 0.745
    }
   }
  }

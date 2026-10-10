@@ -16,7 +16,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -97,6 +97,7 @@ class AnalyzerEngine:
         self._cobol_index_pinned = False
         # Copybook directories outside the scan (copybook_paths / --copybook-path)
         self._copybook_paths: List[Path] = []
+        self._copybook_library_names: Optional[Set[str]] = None
         # COBOL files whose source format was inferred as free (no directive)
         self._cobol_inferred_free: List[str] = []
 
@@ -122,6 +123,7 @@ class AnalyzerEngine:
         names exist outside the scanned tree.
         """
         self._copybook_paths = [Path(p).resolve() for p in paths]
+        self._copybook_library_names = None  # walked again on next build
 
     def prepare_cobol_index(self, paths: List[str], exclude_patterns: List[str]) -> None:
         """Index COPY statements across every path of the run (COBOL007/COBOL015)."""
@@ -143,12 +145,22 @@ class AnalyzerEngine:
         cobol = [f for f in files if self._is_cobol_path(f)]
         if not cobol:
             return None
-        from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
+        from hefesto.analyzers.devops.cobol_project_index import (
+            CobolProjectIndex,
+            library_copybook_names,
+        )
 
         extra: List[Path] = []
         for root in roots:
             extra.extend(self._extra_copybook_candidates(root, exclude_patterns))
-        return CobolProjectIndex.from_paths(cobol, extra, self._copybook_paths)
+        if self._copybook_library_names is None:
+            # walked once per engine: analyze_path on several paths reuses it
+            self._copybook_library_names = (
+                library_copybook_names(self._copybook_paths) if self._copybook_paths else set()
+            )
+        return CobolProjectIndex.from_paths(
+            cobol, extra, library_names=self._copybook_library_names
+        )
 
     @staticmethod
     def _extra_copybook_candidates(root: Path, exclude_patterns: List[str]) -> List[Path]:

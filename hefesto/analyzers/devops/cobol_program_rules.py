@@ -23,9 +23,10 @@ structural extractor produces, then runs the rules on it. All rules are FREE.
 Copyright 2025 Narapa LLC, Miami, Florida
 """
 
+import itertools
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -159,6 +160,8 @@ def _connect_has_literal_password(sql: str) -> bool:
 
 def mask_literals(text: str) -> str:
     """Blank out the contents of string literals, keeping quotes and length."""
+    if "'" not in text and '"' not in text:
+        return text  # fast path: most lines have no literal
     return _LITERAL.sub(
         lambda m: m.group(0)[0] + " " * (len(m.group(0)) - 2) + m.group(0)[-1], text
     )
@@ -186,10 +189,13 @@ class _ProgramUnit:
     data: List[Tuple[int, str]] = field(default_factory=list)  # (line, raw text)
     env: List[Tuple[int, str]] = field(default_factory=list)
     proc: List[LogicalLine] = field(default_factory=list)
+    _proc_text: Optional[str] = field(default=None, repr=False, compare=False)
 
 
 def _strip_comments(text: str) -> Optional[str]:
     """Drop '*>' inline comments; None for lines that are comments altogether."""
+    if "*" not in text:
+        return text  # fast path
     masked = mask_literals(text)
     if masked.lstrip().startswith("*"):
         return None  # '*>' comment line, or a misplaced '*' comment
@@ -208,12 +214,20 @@ def _add_line(unit: _ProgramUnit, division: str, line: LogicalLine) -> None:
         unit.data.append((line_num, text))
 
 
+_PERIOD_SPLIT = re.compile(r"\.(?=\s|$)")
+_GO_TO_START = re.compile(r"GO\s+TO\b", re.I)
+_PROC_HEADER_REST = re.compile(r"^(?:USING|RETURNING|CHAINING)\b", re.I)
+_END_DECLARATIVES = re.compile(r"^END\s+DECLARATIVES\b")
+_WHITESPACE = re.compile(r"\s")
+
+
 def split_program_units(lines: List[LogicalLine]) -> List[_ProgramUnit]:
     """Split logical lines into program units and divisions."""
     units: List[_ProgramUnit] = []
     unit = _ProgramUnit()
     division = ""
-    for line_num, raw, area_a in lines:
+    for line in lines:
+        line_num, raw, area_a = line
         text = _strip_comments(raw)
         if text is None:
             continue
@@ -229,7 +243,8 @@ def split_program_units(lines: List[LogicalLine]) -> List[_ProgramUnit]:
             division = "IDENTIFICATION" if name == "ID" else name
             if division == "PROCEDURE":
                 continue
-        _add_line(unit, division, (line_num, text, area_a))
+        # reuse the caller's tuple when nothing was stripped (memory)
+        _add_line(unit, division, line if text is raw else (line_num, text, area_a))
     if unit.proc or unit.data or unit.env:
         units.append(unit)
     return units
@@ -244,7 +259,7 @@ def split_sentences(lines: List[Tuple[int, str]]) -> List[_Sentence]:
         masked = mask_literals(raw)
         if start is None and masked.strip():
             start = line_num
-        pieces = re.split(r"\.(?=\s|$)", masked)
+        pieces = _PERIOD_SPLIT.split(masked) if "." in masked else [masked]
         for i, piece in enumerate(pieces):
             if i > 0:
                 text = " ".join(buf).strip()
@@ -270,7 +285,7 @@ def _raw_sentences(lines: List[Tuple[int, str]]) -> List[Tuple[int, str]]:
     for line_num, raw in lines:
         masked = mask_literals(raw)
         cut = 0
-        for match in re.finditer(r"\.(?=\s|$)", masked):
+        for match in _PERIOD_SPLIT.finditer(masked):
             piece = raw[cut : match.start()]
             if piece.strip():
                 buf.append(piece.strip())
@@ -312,7 +327,7 @@ def ends_unconditionally(sentence: str, include_goto: bool) -> bool:
     match = _UNCONDITIONAL_END.search(sentence)
     if not match:
         return False
-    if re.match(r"GO\s+TO\b", match.group(0), re.I) and not include_goto:
+    if not include_goto and _GO_TO_START.match(match.group(0)):
         return False
     return not _is_conditional(sentence[: match.start()])
 
@@ -333,13 +348,13 @@ def build_procedure(proc: List[LogicalLine]) -> List[_ProcItem]:
         if first:
             first = False
             # "PROCEDURE DIVISION [USING ...]." header remainder
-            if re.match(r"^(?:USING|RETURNING|CHAINING)\b", text, re.I):
+            if _PROC_HEADER_REST.match(text):
                 continue
         upper = text.upper().strip()
         if upper.startswith("DECLARATIVES"):
             in_declaratives = True
             continue
-        if re.match(r"^END\s+DECLARATIVES\b", upper):
+        if upper.startswith("END") and _END_DECLARATIVES.match(upper):
             in_declaratives = False
             continue
         if in_declaratives:
@@ -347,17 +362,16 @@ def build_procedure(proc: List[LogicalLine]) -> List[_ProcItem]:
         # A header starts in Area A; in free format (or badly indented
         # sources) accept it when the previous line closed a sentence.
         header_ok = area_a or at_sentence_start
-        at_sentence_start = bool(re.search(r"\.\s*$", mask_literals(text)))
-        sec = _SECTION_HEADER.match(text)
-        if sec and header_ok:
+        at_sentence_start = mask_literals(text).rstrip().endswith(".")
+        sec = _SECTION_HEADER.match(text) if header_ok and "." in text else None
+        if sec:
             section = sec.group(1).upper()
             items.append(_ProcItem(section, line_num, True, section))
             bodies[len(items) - 1] = [(line_num, sec.group(2))] if sec.group(2) else []
             continue
-        par = _PARAGRAPH_HEADER.match(text)
+        par = _PARAGRAPH_HEADER.match(text) if header_ok and "." in text else None
         if (
             par
-            and header_ok
             and par.group(1).upper() not in _RESERVED_NOT_PARAGRAPH
             and not _SCOPE_TERMINATOR.match(par.group(1))
         ):
@@ -435,7 +449,7 @@ def _looks_like_secret(literal: str) -> bool:
     value = literal.strip()
     if _is_placeholder(value):
         return False
-    if re.search(r"\s", value) or value.endswith((":", "=")):
+    if _WHITESPACE.search(value) or value.endswith((":", "=")):
         return False  # display labels such as 'ENTER PASSWORD:'
     if _CREDENTIAL_NAME.search(value) and value.upper() not in _BARE_CREDENTIAL_WORDS:
         return False  # key/variable names such as 'BAQHAPI-Token-Password'
@@ -505,7 +519,9 @@ def check_connection_string_secrets(
 
 def check_sql_connect_literal(file_path: str, proc: List[LogicalLine]) -> List[AnalysisIssue]:
     """COBOL010: EXEC SQL CONNECT ... USING/IDENTIFIED BY with a literal password."""
-    issues = []
+    issues: List[AnalysisIssue] = []
+    if not any("CONNECT" in text.upper() for _, text, _ in proc):
+        return issues
     joined: List[str] = []
     offsets: List[Tuple[int, int]] = []  # (char offset, line)
     pos = 0
@@ -568,13 +584,26 @@ def _related_names(entries: List[Tuple[int, str]], name: str) -> Optional[Set[st
     return None
 
 
+_WORDS = re.compile(rf"(?<![\w-]){_WORD}(?![\w-])")
+# "<word> THRU <word>": find the keyword first, then the word right before it
+# (a pattern starting with the first word is tried at every position: slow).
+_THRU_KEYWORD = re.compile(rf"(?<=\s)(?:THRU|THROUGH)\s+({_WORD})")
+_WORD_BEFORE = re.compile(rf"({_WORD})\s+$")
+_WORDS_CHUNK = 2000  # lines joined per word scan in _referenced_words
+
+
 def _words(text: str) -> Set[str]:
-    return set(re.findall(rf"(?<![\w-]){_WORD}(?![\w-])", text.upper()))
+    if len(text) < 65536:
+        return set(_WORDS.findall(text.upper()))
+    # big text: no list of every word occurrence (bounded memory)
+    return {m.group(0) for m in _WORDS.finditer(text.upper())}
 
 
 def _procedure_text(unit: _ProgramUnit) -> str:
-    """Whole PROCEDURE DIVISION (DECLARATIVES included), literals masked."""
-    return " ".join(mask_literals(text) for _, text, _ in unit.proc)
+    """Whole PROCEDURE DIVISION (DECLARATIVES included), literals masked (cached)."""
+    if unit._proc_text is None:
+        unit._proc_text = " ".join(mask_literals(text) for _, text, _ in unit.proc)
+    return unit._proc_text
 
 
 _REDEFINES = re.compile(rf"\bREDEFINES\s+({_WORD})", re.I)
@@ -799,10 +828,12 @@ _DEPENDING_ON = re.compile(rf"\bDEPENDING\s+ON\s+({_WORD})", re.I)
 _ODO_SAFE_CONTROLS = {"EIBCALEN"}
 
 
-def occurs_depending(logical_lines: List[LogicalLine]) -> List[Tuple[int, str]]:
+def occurs_depending(
+    logical_lines: List[LogicalLine], units: Optional[List[_ProgramUnit]] = None
+) -> List[Tuple[int, str]]:
     """(line, controlling item) of each OCCURS ... DEPENDING ON data entry (COBOL005)."""
     out: List[Tuple[int, str]] = []
-    for unit in split_program_units(logical_lines):
+    for unit in split_program_units(logical_lines) if units is None else units:
         for sentence in split_sentences(unit.data):
             occurs = _OCCURS.search(sentence.text)
             if not occurs:
@@ -813,17 +844,28 @@ def occurs_depending(logical_lines: List[LogicalLine]) -> List[Tuple[int, str]]:
     return out
 
 
+def _status_referenced(unit: _ProgramUnit, proc_text: str, name: str, lazy: Dict[str, Any]) -> bool:
+    """True if the status field (or a subordinate/88/ancestor) is used, or undefined."""
+    if "entries" not in lazy:
+        lazy["entries"] = _data_entries(unit)
+    related = _related_names(lazy["entries"], name)
+    if related is None:
+        return True  # defined in a copybook or elsewhere: do not report
+    if "words" not in lazy:
+        lazy["words"] = _words(proc_text)
+    return bool(related & lazy["words"])
+
+
 def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
     """COBOL011 (no FILE STATUS clause) and COBOL012 (status never referenced)."""
     issues: List[AnalysisIssue] = []
     sort_files = {m.group(1).upper() for _, t in unit.data for m in _SD.finditer(mask_literals(t))}
     proc_text = _procedure_text(unit)
-    proc_words = _words(proc_text)
+    lazy: Dict[str, Any] = {}  # data entries / procedure words, built on first use
     opened: Set[str] = set()
     for match in _OPEN.finditer(proc_text):
         opened |= _open_operands(proc_text, match.end())
     proc_has_copy = bool(_COPY.search(proc_text))
-    entries: Optional[List[Tuple[int, str]]] = None
     missing: List[Tuple[int, str]] = []
     for sentence in split_sentences(unit.env):
         select = _SELECT.search(sentence.text)
@@ -836,12 +878,11 @@ def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]
         if not status:
             missing.append((sentence.line, fname))
             continue
-        if fname not in opened or proc_has_copy:
-            continue
-        if entries is None:
-            entries = _data_entries(unit)
-        related = _related_names(entries, status.group(1).upper())
-        if related is None or related & proc_words:
+        if (
+            fname not in opened
+            or proc_has_copy
+            or _status_referenced(unit, proc_text, status.group(1).upper(), lazy)
+        ):
             continue
         issues.append(
             _issue(
@@ -903,12 +944,20 @@ def _ends_paragraph(item: _ProcItem) -> bool:
 def _referenced_words(unit: _ProgramUnit, items: List[_ProcItem]) -> Set[str]:
     """Every word in the procedure text except the paragraph/section headers."""
     headers: Dict[int, str] = {item.line: item.name for item in items if item.name}
+    body: List[str] = []
     referenced: Set[str] = set()
     for line_num, text, _ in unit.proc:
+        header = headers.get(line_num)
+        if header is None:
+            body.append(mask_literals(text))
+            if len(body) >= _WORDS_CHUNK:  # bounded memory on huge programs
+                referenced |= _words(" ".join(body))
+                body.clear()
+            continue
         words = _words(mask_literals(text))
-        words.discard(headers.get(line_num, ""))
+        words.discard(header)
         referenced |= words
-    return referenced
+    return referenced | _words(" ".join(body))
 
 
 def _goto_targets(proc_text: str) -> Set[str]:
@@ -933,15 +982,30 @@ def _goto_targets(proc_text: str) -> Set[str]:
 def _thru_covered(proc_text: str, index: Dict[str, int]) -> Set[int]:
     """Indexes of items inside a THRU range (everything from start to end runs)."""
     covered: Set[int] = set()
-    for match in re.finditer(rf"\b({_WORD})\s+(?:THRU|THROUGH)\s+({_WORD})", proc_text, re.I):
-        start, end = index.get(match.group(1).upper()), index.get(match.group(2).upper())
+    upper = proc_text.upper()
+    if "THRU" not in upper and "THROUGH" not in upper:
+        return covered
+    for match in _THRU_KEYWORD.finditer(upper):
+        before = _WORD_BEFORE.search(upper, max(0, match.start() - 64), match.start())
+        if before is None:
+            continue
+        start, end = index.get(before.group(1)), index.get(match.group(1))
         if start is not None and end is not None and start <= end:
             covered.update(range(start, end + 1))
     return covered
 
 
-def _reachable(items: List[_ProcItem], referenced: Set[str], goto_targets: Set[str]) -> List[bool]:
-    """Fall-through reachability from the entry point (and GO TO / ENTRY targets)."""
+def _reachable(
+    items: List[_ProcItem],
+    referenced: Set[str],
+    goto_targets: Set[str],
+    ends: Optional[List[bool]] = None,
+) -> List[bool]:
+    """Fall-through reachability from the entry point (and GO TO / ENTRY targets).
+
+    ``ends[k]`` is ``_ends_paragraph(items[k])`` when the caller computed it."""
+    if ends is None:
+        ends = [_ends_paragraph(item) for item in items]
     reached = [False] * len(items)
     reached[0] = bool(items[0].sentences)
     for n in range(1, len(items)):
@@ -952,23 +1016,32 @@ def _reachable(items: List[_ProcItem], referenced: Set[str], goto_targets: Set[s
         if prev.is_section and not prev.sentences:
             falls_in = reached[n - 1] or prev.name in referenced
         else:
-            falls_in = reached[n - 1] and not _ends_paragraph(prev)
+            falls_in = reached[n - 1] and not ends[n - 1]
         has_entry = any(_ENTRY.match(s.text) for s in item.sentences)
         reached[n] = falls_in or item.name in goto_targets or has_entry
     return reached
 
 
 def _runs_inside_section(
-    items: List[_ProcItem], n: int, index: Dict[str, int], reached: List[bool], referenced: Set[str]
+    items: List[_ProcItem],
+    n: int,
+    index: Dict[str, int],
+    reached: List[bool],
+    referenced: Set[str],
+    ends_before: List[int],
 ) -> bool:
-    """A reached or PERFORMed section runs its paragraphs in order until a terminator."""
+    """A reached or PERFORMed section runs its paragraphs in order until a terminator.
+
+    ``ends_before[k]`` counts the items before ``k`` that end unconditionally,
+    so "no terminator between the section header and item n" is O(1).
+    """
     item = items[n]
     sec_idx = index.get(item.section or "")
     if item.is_section or sec_idx is None:
         return False
     if not (reached[sec_idx] or items[sec_idx].name in referenced):
         return False
-    return not any(_ends_paragraph(items[k]) for k in range(sec_idx, n))
+    return ends_before[n] == ends_before[sec_idx]
 
 
 def check_unused_paragraphs(
@@ -983,7 +1056,11 @@ def check_unused_paragraphs(
     referenced = _referenced_words(unit, items)
     index = {item.name: n for n, item in enumerate(items) if item.name}
     covered = _thru_covered(proc_text, index)
-    reached = _reachable(items, referenced, _goto_targets(proc_text))
+    ends = [_ends_paragraph(item) for item in items]
+    reached = _reachable(items, referenced, _goto_targets(proc_text), ends)
+    ends_before = [0]
+    for end in ends:
+        ends_before.append(ends_before[-1] + end)
 
     issues = []
     reported_sections: Set[str] = set()
@@ -995,7 +1072,7 @@ def check_unused_paragraphs(
             or item.name in referenced  # PERFORM, GO TO, ALTER, SORT ... PROCEDURE
             or (not item.is_section and item.section in reported_sections)
             or (item.sentences and all(_ONLY_EXIT.match(s.text) for s in item.sentences))
-            or _runs_inside_section(items, n, index, reached, referenced)
+            or _runs_inside_section(items, n, index, reached, referenced, ends_before)
         )
         if skip:
             continue
@@ -1018,16 +1095,29 @@ def check_unused_paragraphs(
     return issues
 
 
+def _has_quote(text: str) -> bool:
+    return '"' in text or "'" in text
+
+
 def run_program_rules(
-    file_path: str, logical_lines: List[LogicalLine], is_copybook: bool
+    file_path: str,
+    logical_lines: List[LogicalLine],
+    is_copybook: bool,
+    units: Optional[List[_ProgramUnit]] = None,
 ) -> List[AnalysisIssue]:
-    """Run COBOL004 and COBOL008-COBOL014 on the logical lines of one file."""
+    """Run COBOL004 and COBOL008-COBOL014 on the logical lines of one file.
+
+    ``units`` lets the caller pass ``split_program_units(logical_lines)`` it
+    already computed.
+    """
     issues: List[AnalysisIssue] = []
-    for unit in split_program_units(logical_lines):
+    for unit in split_program_units(logical_lines) if units is None else units:
         issues.extend(check_redefines(file_path, unit))
         issues.extend(check_value_secrets(file_path, unit))
-        all_lines = [(n, t) for n, t in unit.data + unit.env] + [(n, t) for n, t, _ in unit.proc]
-        issues.extend(check_connection_string_secrets(file_path, sorted(all_lines)))
+        # COBOL009 only looks inside literals: skip lines without a quote
+        quoted = [(n, t) for n, t in itertools.chain(unit.data, unit.env) if _has_quote(t)]
+        quoted += [(n, t) for n, t, _ in unit.proc if _has_quote(t)]
+        issues.extend(check_connection_string_secrets(file_path, sorted(quoted)))
         if is_copybook:
             continue
         issues.extend(check_sql_connect_literal(file_path, unit.proc))

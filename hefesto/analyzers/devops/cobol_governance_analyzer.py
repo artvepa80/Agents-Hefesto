@@ -43,7 +43,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Tuple, TypeVar
 
-from hefesto.analyzers.devops.cobol_program_rules import occurs_depending, run_program_rules
+from hefesto.analyzers.devops.cobol_program_rules import (
+    occurs_depending,
+    run_program_rules,
+    split_program_units,
+)
 from hefesto.analyzers.devops.cobol_project_index import (
     SYSTEM_COPYBOOK_PREFIXES,
     SYSTEM_COPYBOOKS,
@@ -77,6 +81,8 @@ class _CobolStructure:
     paragraphs: List[Tuple[str, int]] = field(default_factory=list)
     # (line number, text, starts in Area A) for the program-level rules
     logical_lines: List[Tuple[int, str, bool]] = field(default_factory=list)
+    # split_program_units(logical_lines), computed once for all rules
+    units: List[Any] = field(default_factory=list)
 
 
 class _CobolStructuralExtractor:
@@ -136,7 +142,16 @@ class _CobolStructuralExtractor:
         # ("directive-free", "directive-fixed", "inferred-free", "default-fixed").
         self.last_format_reason = "default-fixed"
 
-    def extract(self, code: str) -> _CobolStructure:
+    _GOTO = re.compile(r"\bGO\s+TO\b", re.IGNORECASE)
+    _CREDENTIAL_MOVE = re.compile(r"\bMOVE\s+(['\"])(.+?)\1\s+TO\s+([A-Z0-9_-]+)", re.IGNORECASE)
+    _ACCEPT = re.compile(r"(?:^|\s)\bACCEPT\s+", re.IGNORECASE)
+    _ACCEPT_SYSTEM = re.compile(r"\bFROM\s+(DATE|TIME|DAY|DAY-OF-WEEK)\b", re.IGNORECASE)
+    _PERFORM_THRU = re.compile(r"\bPERFORM\s+([A-Z0-9_-]+)\s+THRU\s+([A-Z0-9_-]+)", re.IGNORECASE)
+    _PARAGRAPH = re.compile(r"^([A-Z0-9_-]+)\.\s*$", re.IGNORECASE)
+
+    def extract(
+        self, code: str, copy_statements: Optional[List[Tuple[int, str]]] = None
+    ) -> _CobolStructure:
         """Extract structural elements from COBOL source."""
         structure = _CobolStructure()
         lines = code.split("\n")
@@ -150,20 +165,31 @@ class _CobolStructuralExtractor:
             (num, text, self._starts_in_area_a(lines[num - 1], is_fixed_format))
             for num, text in logical_lines
         ]
+        del logical_lines, lines  # bounded memory on huge files
 
-        # Extract elements from logical lines
-        for line_num, logical_line in logical_lines:
-            self._extract_goto(logical_line, line_num, structure)
-            self._extract_credential_move(logical_line, line_num, structure)
-            self._extract_accept(logical_line, line_num, structure)
-            self._extract_perform_thru(logical_line, line_num, structure)
-            self._extract_paragraph(logical_line, line_num, structure)
+        # Extract elements from logical lines (cheap substring tests first)
+        for line_num, logical_line, _ in structure.logical_lines:
+            upper = logical_line.upper()
+            if "GO" in upper:
+                self._extract_goto(logical_line, line_num, structure)
+            if "MOVE" in upper:
+                self._extract_credential_move(logical_line, line_num, structure)
+            if "ACCEPT" in upper:
+                self._extract_accept(logical_line, line_num, structure)
+            if "THRU" in upper:
+                self._extract_perform_thru(logical_line, line_num, structure)
+            if logical_line.endswith(".") or logical_line.rstrip().endswith("."):
+                self._extract_paragraph(logical_line, line_num, structure)
 
-        # COPY and EXEC SQL INCLUDE (INCLUDE can span lines inside EXEC SQL)
-        structure.copy_statements = copy_names(code, is_fixed_format)
+        # COPY and EXEC SQL INCLUDE (INCLUDE can span lines inside EXEC SQL);
+        # the project index passes the names it already read for this file.
+        structure.copy_statements = (
+            copy_statements if copy_statements is not None else copy_names(code, is_fixed_format)
+        )
 
         # OCCURS DEPENDING ON can span lines: read it per data-division entry
-        structure.occurs_depending = occurs_depending(structure.logical_lines)
+        structure.units = split_program_units(structure.logical_lines)
+        structure.occurs_depending = occurs_depending(structure.logical_lines, structure.units)
 
         return structure
 
@@ -184,32 +210,41 @@ class _CobolStructuralExtractor:
                 self.last_format_reason = "directive-fixed"
                 return True
 
+        if self._indent_means_free(lines):
+            self.last_format_reason = "inferred-free"
+            return False
+        self.last_format_reason = "default-fixed"
+        return True
+
+    def _indent_means_free(self, lines: List[str]) -> bool:
+        """A division header (else a level-01/77 entry) starting before column 8."""
         saw_division = False
         for raw in lines:
-            line = raw.expandtabs(8)
-            match = self.DIVISION_HEADER.match(line)
+            if "ivision" not in raw.lower():
+                continue  # cheap filter before the regex
+            match = self.DIVISION_HEADER.match(raw.expandtabs(8))
             if match:
                 saw_division = True
                 if len(match.group(1)) < 7:
-                    self.last_format_reason = "inferred-free"
-                    return False
-        if not saw_division:
-            for raw in lines:
-                match = self.COPYBOOK_ENTRY.match(raw.expandtabs(8))
-                if match and len(match.group(1)) < 7:
-                    self.last_format_reason = "inferred-free"
-                    return False
-
-        self.last_format_reason = "default-fixed"
-        return True
+                    return True
+        if saw_division:
+            return False
+        for raw in lines:
+            match = self.COPYBOOK_ENTRY.match(raw.expandtabs(8))
+            if match and len(match.group(1)) < 7:
+                return True
+        return False
 
     @staticmethod
     def _starts_in_area_a(line: str, is_fixed_format: bool) -> bool:
         """True if the code starts in Area A (columns 8-11). Unknown in free format."""
         if not is_fixed_format:
             return True
-        code = line[7:72].expandtabs(4)
-        return bool(code.strip()) and len(code) - len(code.lstrip()) < 4
+        code = line[7:72]
+        if "\t" in code:
+            code = code.expandtabs(4)
+        stripped = code.lstrip()
+        return bool(stripped) and len(code) - len(stripped) < 4
 
     def _build_logical_lines(
         self, lines: List[str], is_fixed_format: bool
@@ -257,13 +292,13 @@ class _CobolStructuralExtractor:
 
     def _extract_goto(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract GO TO statements."""
-        if re.search(r"\bGO\s+TO\b", line, re.IGNORECASE):
+        if self._GOTO.search(line):
             structure.goto_statements.append(line_num)
 
     def _extract_credential_move(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract MOVE literal TO credential-field statements."""
         # Pattern: MOVE 'literal' TO FIELD-NAME or MOVE "literal" TO FIELD-NAME
-        match = re.search(r"\bMOVE\s+(['\"])(.+?)\1\s+TO\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
+        match = self._CREDENTIAL_MOVE.search(line)
         if match:
             literal_value = match.group(2)
             target_field = match.group(3)
@@ -278,14 +313,14 @@ class _CobolStructuralExtractor:
         """Extract ACCEPT statements (exclude FROM DATE/TIME/DAY)."""
         # Match ACCEPT statement (must be preceded by whitespace or start of line)
         # Excludes false positives like "PROGRAM-ID. ACCEPT-SAFE"
-        if re.search(r"(?:^|\s)\bACCEPT\s+", line, re.IGNORECASE):
+        if self._ACCEPT.search(line):
             # Exclude system calls - must check for FROM followed by system keywords
-            if not re.search(r"\bFROM\s+(DATE|TIME|DAY|DAY-OF-WEEK)\b", line, re.IGNORECASE):
+            if not self._ACCEPT_SYSTEM.search(line):
                 structure.accept_statements.append(line_num)
 
     def _extract_perform_thru(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract PERFORM THRU statements."""
-        match = re.search(r"\bPERFORM\s+([A-Z0-9_-]+)\s+THRU\s+([A-Z0-9_-]+)", line, re.IGNORECASE)
+        match = self._PERFORM_THRU.search(line)
         if match:
             start_para = match.group(1)
             end_para = match.group(2)
@@ -296,7 +331,7 @@ class _CobolStructuralExtractor:
         # Paragraph names typically start at column 8 (Area A) and end with period
         # For logical lines, we can't rely on column position, so use heuristic:
         # Line starts with identifier and ends with period, no spaces before period
-        match = re.match(r"^([A-Z0-9_-]+)\.\s*$", line, re.IGNORECASE)
+        match = self._PARAGRAPH.match(line)
         if match:
             para_name = match.group(1).upper()
             structure.paragraphs.append((para_name, line_num))
@@ -337,10 +372,12 @@ class CobolGovernanceAnalyzer:
         issues: List[AnalysisIssue] = []
 
         # Extract structural elements
-        structure = self._extractor.extract(content)
+        cached = self._index.copy_names_for(file_path) if self._index is not None else None
+        structure = self._extractor.extract(content, cached)
 
         # Copybooks (.cpy files) contain data definitions, not procedure code:
-        # only the data rules (COBOL004, COBOL008, COBOL009) and COBOL007 apply.
+        # only the data rules (COBOL004, COBOL008, COBOL009), COBOL007 and
+        # COBOL015 (a nested COPY that is missing) apply.
         is_copybook = (
             self._index.is_copybook_file(file_path)
             if self._index is not None
@@ -357,9 +394,13 @@ class CobolGovernanceAnalyzer:
             issues.extend(self._check_copybook_not_found(file_path, structure))
         else:
             issues.extend(self._check_copybook_blast_radius(file_path))
+            # nested COPY inside a copybook can be missing too
+            issues.extend(self._check_copybook_not_found(file_path, structure))
 
         # COBOL004 and COBOL008-COBOL014 (FREE). COBOL004/008/009 also run on copybooks.
-        issues.extend(run_program_rules(file_path, structure.logical_lines, is_copybook))
+        issues.extend(
+            run_program_rules(file_path, structure.logical_lines, is_copybook, structure.units)
+        )
 
         return issues
 

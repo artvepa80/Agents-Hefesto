@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **COBOL Phase 4, performance.** On a synthetic 1.05M-line project (1,000
+  programs, 60 copybooks with nested `COPY` and `COPY ... REPLACING`) the
+  analysis goes from 18.5 s to 8.0 s (17.6 → 7.6 s per million lines; peak
+  memory 60 MB); a single 500,000-line program from 10.5 s / 356 MB to
+  4.4 s / 245 MB; `hefesto analyze --output json` on the project from
+  20.0 s to 9.1 s. No finding changed on the pinned corpora or NIST
+  (`benchmark/cobol/baseline.json` regenerated for the new analyzer commit
+  and timings).
+  - Hot paths: fast paths when a line has no literal or comment,
+    precompiled regexes, program units split once per file, COPY names
+    reused from the project index, keyword-first `THRU` scan, lazy word sets.
+    COBOL014 no longer rescans a section from its start for each of its
+    paragraphs (it was O(n²) on a PERFORMed section with thousands of
+    paragraphs).
+  - `copybook_paths`: the recursive search stops at 8 directory levels and
+    50,000 files (with a warning), skips hidden directories and runs once
+    per run instead of once per scanned path.
+  - Nested `COPY`: COBOL007 counts programs that reach a copybook through
+    other copybooks (cycle-safe), and COBOL015 also reports a missing
+    copybook COPYed by a copybook. `COPY ... REPLACING` is resolved by name;
+    the replaced text is not expanded into the program.
+  - New `scripts/cobol_perf_bench.py` (synthetic 100k-1M line inputs, time
+    and peak memory per scenario in a fresh process) and
+    `tests/test_cobol_phase4_performance.py` (a 4x bigger input must take
+    under 10x the time, so an O(n²) path fails without depending on the CI
+    machine's speed).
 - **COBOL Phase 3 leftovers.** CardDemo COBOL findings 56 → 48
   (`benchmark/cobol/baseline.json` regenerated); recall on seeded issues
   28/34 → 32/34.
