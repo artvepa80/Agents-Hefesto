@@ -17,6 +17,7 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import List, Tuple
 
+from hefesto.analyzers.eval_calls import find_eval_calls
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -469,9 +470,10 @@ class SecurityAnalyzer:
     def _check_eval_usage(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Detect dangerous eval() usage.
 
-        For Python files: Uses AST to detect actual eval/exec calls, avoiding
-        false positives from regex patterns, docstrings, or comments.
-        For other languages: Falls back to regex-based detection.
+        Python uses the ``ast`` module; JavaScript, TypeScript and Java use the
+        tree-sitter syntax tree (``hefesto.analyzers.eval_calls``). Comments,
+        strings, ``RegExp.prototype.exec`` and a project's own ``exec`` methods
+        are never reported.
         """
         issues: List[AnalysisIssue] = []
 
@@ -504,30 +506,22 @@ class SecurityAnalyzer:
                 # If AST parsing fails, fall back to regex
                 pass
         else:
-            # For non-Python languages: use regex-based detection
-            patterns = [
-                (r"\beval\s*\(", "eval"),
-                (r"\bexec\s*\(", "exec"),
-            ]
-
-            for line_num, line in enumerate(code.split("\n"), start=1):
-                for pattern, func_name in patterns:
-                    if re.search(pattern, line):
-                        issues.append(
-                            AnalysisIssue(
-                                file_path=file_path,
-                                line=line_num,
-                                column=0,
-                                issue_type=AnalysisIssueType.EVAL_USAGE,
-                                severity=AnalysisIssueSeverity.CRITICAL,
-                                message=f"Dangerous {func_name}() usage detected",
-                                suggestion="Avoid eval/exec. Use safe alternatives:\n"
-                                "- ast.literal_eval() for literals\n"
-                                "- json.loads() for JSON\n"
-                                "- Implement proper parsing logic",
-                                metadata={"function": func_name},
-                            )
-                        )
+            for line_num, func_name in find_eval_calls(tree, code):
+                issues.append(
+                    AnalysisIssue(
+                        file_path=file_path,
+                        line=line_num,
+                        column=0,
+                        issue_type=AnalysisIssueType.EVAL_USAGE,
+                        severity=AnalysisIssueSeverity.CRITICAL,
+                        message=f"Dangerous {func_name}() usage detected",
+                        suggestion="Avoid eval/exec. Use safe alternatives:\n"
+                        "- JSON.parse() / a real parser for data\n"
+                        "- execFile/spawn (or ProcessBuilder) with an argument list, no shell\n"
+                        "- an allow-list of operations instead of evaluating input",
+                        metadata={"function": func_name},
+                    )
+                )
 
         return issues
 
