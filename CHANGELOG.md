@@ -82,6 +82,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   New tests in `tests/test_path_sandbox.py`.
 
 ### Fixed
+- **Claude Code integration guide** (`skill/integration.md`): the manual MCP
+  config now uses `claude mcp add --transport http` or a project `.mcp.json`
+  with `"type": "http"`; the old `~/.claude/mcp_servers.json` +
+  `streamable-http` example is not read by Claude Code. New "Claude Code
+  Feedback Loop" section: a `PostToolUse` hook that runs `hefesto analyze` on
+  each edited file and maps a gate failure (exit 1) to exit 2 so Claude fixes
+  it in the same session, plus a filter-first workflow (`--output json` →
+  `claude -p`). Rescued from the stale `claude/hefestoai-100-dollars-wrjgqq`
+  branch without reverting the newer `min_severity`/`telemetry` rows. Tests:
+  `tests/test_skill_integration_docs.py`.
 - **COBOL: free-format sources without a directive are no longer silently
   missed.** When there is no `>>SOURCE FORMAT` directive, free format is now
   inferred if a division header (or a level-01/77 entry in a copybook) starts
