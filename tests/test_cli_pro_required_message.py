@@ -17,12 +17,71 @@ def test_message_names_current_prices_and_url():
     assert "buy.stripe.com" not in PRO_REQUIRED_MESSAGE
 
 
-@pytest.mark.parametrize("args", [["info"], ["status"], ["deactivate"]])
-def test_pro_only_commands_print_pricing_url(args):
-    result = CliRunner().invoke(cli, args)
+def test_info_prints_pricing_url():
+    result = CliRunner().invoke(cli, ["info"])
     assert result.exit_code == 1
     assert PRICING_URL in result.output
     assert "$8/month" in result.output
+
+
+def test_message_points_licensed_users_at_env_var():
+    assert "HEFESTO_LICENSE_KEY" in PRO_REQUIRED_MESSAGE
+    assert "private distribution" not in PRO_REQUIRED_MESSAGE
+
+
+# activate/deactivate/status: licensed users activate with HEFESTO_LICENSE_KEY.
+# Before 4.14.2 `activate` printed the purchase message and exited 1 even with
+# Pro installed, so the license email told paying customers to run a command
+# that always failed.
+KEY = "HFST-1234-5678-9ABC-DEF0-1234"
+
+
+def _set_pro(monkeypatch, installed):
+    import hefesto.cli.main as m
+
+    monkeypatch.setattr(m, "_pro_installed", lambda: installed)
+
+
+@pytest.mark.parametrize("installed", [True, False])
+def test_activate_prints_export_line(monkeypatch, installed):
+    _set_pro(monkeypatch, installed)
+    result = CliRunner().invoke(cli, ["activate", KEY.lower()])
+    assert result.exit_code == 0
+    assert f"export HEFESTO_LICENSE_KEY={KEY}" in result.output
+    assert ("NOT installed" in result.output) is (not installed)
+    assert PRICING_URL not in result.output
+
+
+def test_activate_rejects_bad_format():
+    result = CliRunner().invoke(cli, ["activate", "not-a-key"])
+    assert result.exit_code == 1
+    assert "Invalid license key format" in result.output
+
+
+def test_deactivate_prints_unset():
+    result = CliRunner().invoke(cli, ["deactivate"])
+    assert result.exit_code == 0
+    assert "unset HEFESTO_LICENSE_KEY" in result.output
+
+
+def test_status_licensed_shows_prefix_only(monkeypatch):
+    _set_pro(monkeypatch, True)
+    monkeypatch.setenv("HEFESTO_LICENSE_KEY", KEY)
+    result = CliRunner().invoke(cli, ["status"])
+    assert result.exit_code == 0
+    assert "Pro package:  installed" in result.output
+    assert "HFST-1234-..." in result.output
+    assert KEY not in result.output
+    assert PRICING_URL not in result.output
+
+
+def test_status_unlicensed_shows_offer(monkeypatch):
+    _set_pro(monkeypatch, False)
+    monkeypatch.delenv("HEFESTO_LICENSE_KEY", raising=False)
+    result = CliRunner().invoke(cli, ["status"])
+    assert result.exit_code == 0
+    assert "not installed" in result.output and "not set" in result.output
+    assert PRICING_URL in result.output
 
 
 def test_readme_pricing_has_no_retired_links_or_coupons():

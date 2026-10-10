@@ -26,6 +26,26 @@ import hefesto.config.settings as _cfg  # noqa: E402
 _cfg._settings = None
 
 
+# Git exports these to hooks (the pre-push hook runs this suite). When set,
+# git ignores cwd, so tests that build temporary repos would operate on the
+# hook's repository instead. Clear them for every test.
+_REPO_LOCATING_GIT_VARS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_PREFIX",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_inherited_git_repo(monkeypatch):
+    for var in _REPO_LOCATING_GIT_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+
 @pytest.fixture
 def sample_code_hardcoded_secret():
     """Sample code with hardcoded secret."""
