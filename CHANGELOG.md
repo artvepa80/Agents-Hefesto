@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SARIF 2.1.0 output for every analyzer** (`hefesto analyze --format sarif`;
+  `--format` is now an alias of `--output`, and `output: sarif` is accepted in
+  `.hefesto.yaml`). `--sarif-file PATH` writes a SARIF log next to any other
+  output. One rule per rule ID (or issue type) with name, descriptions, help
+  text/markdown, help URI and default level; `level` from severity
+  (CRITICAL/HIGH error, MEDIUM warning, LOW note); `security-severity`
+  (9.5/8.0/5.5/3.0), `security` and CWE tags on security rules; repo-relative
+  URIs (`%SRCROOT%`); `partialFingerprints` from rule, file and flagged line
+  text (stable when code moves); COBOL copybook origins as related locations;
+  GitHub limits enforced (25,000 results, 10 MB gzipped, highest severity
+  kept, drops reported in tool notifications). New `SARIFReporter`; tests
+  validate every log against the vendored OASIS schema (`jsonschema` added to
+  the `dev` extra).
+- **GitHub Action: optional SARIF upload.** New inputs `sarif`, `sarif_file`,
+  `upload_sarif`, `sarif_category` and output `sarif_file`; with
+  `sarif: 'true'` the findings are uploaded with
+  `github/codeql-action/upload-sarif@v4` (also when the gate fails). `format`
+  accepts `sarif`. Reference: `docs/github-action.md`, with an example
+  repository layout (COBOL app with planted issues and a SARIF workflow).
+
 - **COBOL: COPY ... REPLACING expansion.** Programs are analyzed with each
   `COPY` and `EXEC SQL INCLUDE` replaced by the copybook text, so every rule
   sees copybook data definitions, `SELECT`s and procedure code in the
@@ -32,6 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the synthetic 1M-line project stays at about 8 s per million lines.
 
 ### Changed
+- **GitHub Action is now a composite action** (it has to run
+  `upload-sarif`): it installs HefestoAI from the Action checkout into a
+  virtualenv under `$RUNNER_TEMP` and runs the same
+  `scripts/action_entrypoint.sh`. Needs `python3` >= 3.10 on the runner
+  (`ubuntu-latest` has it). Existing inputs, defaults and the `exit_code`
+  output are unchanged. `Dockerfile.action` is kept for `docker run` use but is
+  no longer built by the Action.
 - **COBOL Phase 4, performance.** On a synthetic 1.05M-line project (1,000
   programs, 60 copybooks with nested `COPY` and `COPY ... REPLACING`) the
   analysis goes from 18.5 s to 8.0 s (17.6 → 7.6 s per million lines; peak

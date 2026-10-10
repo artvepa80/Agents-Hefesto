@@ -1,4 +1,7 @@
-# Dockerfile for GitHub Actions
+# Container image of the Action entrypoint (scripts/action_entrypoint.sh).
+# action.yml is a composite action since Phase 5 (it can then run
+# github/codeql-action/upload-sarif) and no longer builds this image; it is kept
+# for running the same entrypoint with `docker run` in other CI systems.
 # Optimized for ephemeral execution, bypassing PyPI installation.
 
 FROM python:3.11-slim

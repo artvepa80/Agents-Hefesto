@@ -104,6 +104,27 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
+With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
+
+```yaml
+jobs:
+  hefesto:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # upload-sarif
+      actions: read            # private repositories only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: artvepa80/Agents-Hefesto@main   # SARIF ships after v4.14.1; pin the release tag once published
+        with:
+          target: '.'
+          fail_on: 'CRITICAL'
+          sarif: 'true'
+```
+
+The Action is a composite action: it installs HefestoAI from the Action's own checkout into a private virtualenv (needs `python3` >= 3.10 on the runner; `ubuntu-latest` has it), runs `hefesto analyze`, and with `sarif: 'true'` uploads the SARIF file with `github/codeql-action/upload-sarif@v4`, also when the `fail_on` gate fails. Full reference: [docs/github-action.md](docs/github-action.md).
+
 **Inputs**:
 
 | Input | Description | Default |
@@ -111,7 +132,11 @@ steps:
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
-| `format` | Output format (`text`, `json`, `html`) | `text` |
+| `format` | Output format printed to the log (`text`, `json`, `html`, `sarif`) | `text` |
+| `sarif` | `true`: also write a SARIF 2.1.0 file and upload it to code scanning (needs `security-events: write`) | `false` |
+| `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
+| `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
+| `sarif_category` | Code scanning category of the upload | `hefesto` |
 | `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [Telemetry](#telemetry) | `0` |
 
 **Outputs**:
@@ -119,6 +144,7 @@ steps:
 | Output | Description |
 |--------|-------------|
 | `exit_code` | The exit code of the CLI (0 = threshold not breached, 1 = `fail_on` threshold breached or runtime error; see [Exit Codes](#exit-codes)) |
+| `sarif_file` | Path of the SARIF file, when `sarif` is `true` and the file was written |
 
 ---
 
@@ -238,7 +264,7 @@ pointing to the install command (also exposed via
 - **COBOL013 (MEDIUM)** flags statements after an unconditional `STOP RUN`/`GOBACK`/`EXIT PROGRAM` in the same paragraph (`EXIT PROGRAM. STOP RUN.` and alternate `ENTRY` points are not flagged). **COBOL014 (LOW)** flags paragraphs and sections that are never referenced (PERFORM, GO TO, THRU ranges, SORT/ALTER) and cannot be reached by fall-through; the entry paragraph, DECLARATIVES, empty `EXIT` paragraphs and programs with a PROCEDURE DIVISION `COPY` that could not be expanded are skipped.
 - **Measured recall:** 39 of 41 seeded issues (every rule at least twice) are found, including 7 that only fire after COPY expansion; the 2 misses are documented limits: a secret whose value contains a credential word (skipped to avoid placeholder false positives) and a literal that reaches a password field through another field (no data-flow analysis). Run `python scripts/cobol_recall.py`; precision on real corpora is in [docs/cobol-corpus-baseline.md](docs/cobol-corpus-baseline.md).
 - **Performance:** about 8 s per million lines on a synthetic 1,000-program project (1.05M lines, nested `COPY` and `COPY ... REPLACING`), about 4.5 s for a single 500,000-line program, with peak memory around 60 MB for the project and 250 MB for the 500k-line file (measured on an 8-vCPU Linux VM with Python 3.13; the analysis is single-threaded). Findings stay grouped, so a 500,000-line file yields 4 findings. Reproduce with `python scripts/cobol_perf_bench.py`.
-- Output is text, JSON or HTML. SARIF is not available yet.
+- Output is text, JSON, HTML or SARIF 2.1.0 (`--format sarif`). In SARIF, a finding on copybook text carries the copybook file and line as a related location. A ready-to-push example repository layout (COBOL app with planted issues and a SARIF workflow) is described in [docs/github-action.md](docs/github-action.md#example-repository).
 
 ---
 
@@ -266,6 +292,8 @@ pip install "hefesto-ai[format]"
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+hefesto analyze . --format sarif > hefesto.sarif   # SARIF 2.1.0 (--format is an alias of --output)
+hefesto analyze . --sarif-file hefesto.sarif       # text report + SARIF file
 hefesto analyze . --format-check   # opt-in: also report Black formatting drift
 hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
 hefesto analyze . --no-config                 # ignore .hefesto.yaml
@@ -296,6 +324,21 @@ hefesto telemetry clear
 hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
 hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 ```
+
+### SARIF Output
+```bash
+hefesto analyze . --format sarif > hefesto.sarif   # stdout = pure SARIF, banners -> stderr
+hefesto analyze . --sarif-file out/hefesto.sarif   # any --output, plus a SARIF file
+```
+
+SARIF 2.1.0 for every finding `hefesto analyze` reports (all analyzers it runs, COBOL included, plus Operational Truth and provider findings), validated against the OASIS schema in the tests:
+
+- one rule per rule ID (`COBOL004`, `DOCKER010`, ...; the issue type such as `HARDCODED_SECRET` when an analyzer has no ID) with name, description, help, help URI and a default level;
+- `level`: CRITICAL/HIGH -> `error`, MEDIUM -> `warning`, LOW -> `note`; security rules (secrets, injection, unsafe commands, ...) also get `security-severity` (9.5 / 8.0 / 5.5 / 3.0), so GitHub rates them Critical/High/Medium/Low, plus CWE tags when known;
+- repo-relative URIs (`%SRCROOT%`, the git top level of the current directory) and `partialFingerprints` built from the rule, the file and the text of the flagged line, so alerts keep their identity when code above them moves;
+- GitHub upload limits: at most 25,000 results (highest severity kept) and 10 MB gzipped; anything dropped is reported in the log's tool notifications.
+
+Columns are not reported (start line only).
 
 ### Formatting Drift (opt-in)
 
@@ -458,6 +501,26 @@ jobs:
         run: pip install hefesto-ai
       - name: Run Analysis
         run: hefesto analyze . --severity HIGH
+```
+
+### GitHub Actions — Code Scanning (SARIF) with the CLI
+
+```yaml
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install hefesto-ai
+      - run: hefesto analyze . --severity LOW --fail-on CRITICAL --sarif-file hefesto.sarif
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: hefesto.sarif
+          category: hefesto
 ```
 
 ### GitHub Actions — PR Review with Inline Comments (v4.14.1)
