@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **COBOL004 skips four REDEFINES idioms that never reinterpret a value.** (1) A signed zoned number split into digit groups with the sign on the last group (`PIC S9(10)` redefined as `9(9)` + `S9`): same digits in the same bytes, sign in the same byte. (2) A pointer and one address-sized view of it (`USAGE POINTER`/`PROCEDURE-POINTER`/`FUNCTION-POINTER` against `PIC X(4)`, `PIC X(8)` or an unsigned 4- or 8-byte binary such as `PIC 9(9) COMP`), in either direction. (3) Two views with the same storage layout once fixed `OCCURS` are expanded, PICs are spelled out (`S9(02)` = `S99`) and adjacent `PIC X` fields are merged, which covers tables of constants (FILLERs with VALUE) redefined as an `OCCURS` table. (4) The `PIC X` byte view of a *signed* binary field (`PIC S9(4) COMP` read as two bytes), which was only skipped for unsigned binary. Still reported: a SIGN clause, a different digit count or sign position, a signed, display, group or other-sized view of a pointer, `INDEX` items, `OCCURS ... DEPENDING ON`, a different per-entry layout, and any byte view whose size does not match. The recall fixture seed in `RCL02.cbl` that encoded the signed byte view as a finding now overlays the signed binary with a byte and a digit, which is still reported.
+
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).

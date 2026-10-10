@@ -667,8 +667,8 @@ def _elementary_class(pic: Optional[str], usage: Optional[str]) -> str:
     return "alphanumeric"
 
 
-def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
-    """(class, PIC) of every elementary item under ``items[idx]`` (or itself)."""
+def _members(items: List[_DataItem], idx: int) -> List[_DataItem]:
+    """``items[idx]`` and every item below it (66/88 entries skipped)."""
     root = items[idx]
     members = [root]
     for item in items[idx + 1 :]:
@@ -677,6 +677,12 @@ def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
         if root.level == 77 or item.level <= root.level or item.level == 77:
             break
         members.append(item)
+    return members
+
+
+def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
+    """(class, PIC) of every elementary item under ``items[idx]`` (or itself)."""
+    members = _members(items, idx)
     out = []
     stack: List[Tuple[int, Optional[str]]] = []  # (level, own usage) of open groups
     for pos, item in enumerate(members):
@@ -717,22 +723,168 @@ def _binary_bytes(digits: int) -> Optional[int]:
 
 
 def _is_byte_view(one: Tuple[Tuple[str, str], ...], other: Tuple[Tuple[str, str], ...]) -> bool:
-    """Unsigned binary integer overlaid by PIC X bytes of exactly its storage size.
+    """Binary integer (signed or not) overlaid by PIC X bytes of exactly its storage size.
 
     The CardDemo idiom ``01 TWO-BYTES-BINARY PIC 9(4) BINARY`` +
     ``01 TWO-BYTES-ALPHA REDEFINES ... 05 PIC X. 05 PIC X.`` reads the bytes of
     a binary field (e.g. to decode a VSAM file status). No digit is ever
-    reinterpreted, so it is not the corruption risk COBOL004 is about. Signed
-    binary, a size mismatch, or any non-PIC X byte still counts as a finding.
+    reinterpreted, so it is not the corruption risk COBOL004 is about. The same
+    holds for signed binary (``PIC S9(4) COMP`` read byte by byte to print it in
+    hex): the sign is a bit of those bytes, not a separate encoding. A size
+    mismatch or any non-PIC X byte still counts as a finding.
     """
     if len(one) != 1 or one[0][0] != "binary":
         return False
-    digits = _pic_count(one[0][1], "9")
+    digits = _pic_count(one[0][1][1:] if one[0][1].startswith("S") else one[0][1], "9")
     size = _binary_bytes(digits) if digits else None
     if size is None or not other:
         return False
     widths = [_pic_count(pic, "X") if cls == "alphanumeric" else None for cls, pic in other]
     return all(widths) and sum(w for w in widths if w) == size
+
+
+_ZONED_PIC = re.compile(r"^(S?)((?:9(?:\(\d+\))?|V)+)$", re.IGNORECASE)
+_ZONED_RUN = re.compile(r"9(?:\((\d+)\))?", re.IGNORECASE)
+_SIGN_CLAUSE = re.compile(r"(?<![\w-])(?:SIGN|LEADING|TRAILING|SEPARATE)(?![\w-])", re.I)
+
+
+def _zoned(entry: Tuple[str, str]) -> Optional[Tuple[bool, int]]:
+    """(signed, digits) of a zoned decimal (USAGE DISPLAY numeric) PIC, else None."""
+    cls, pic = entry
+    match = _ZONED_PIC.match(pic) if cls in ("signed", "numeric") else None
+    if not match:
+        return None
+    digits = sum(int(run.group(1) or 1) for run in _ZONED_RUN.finditer(match.group(2)))
+    return bool(match.group(1)), digits
+
+
+def _is_zoned_split(
+    whole: Tuple[Tuple[str, str], ...],
+    parts: Tuple[Tuple[str, str], ...],
+    clauses: List[str],
+) -> bool:
+    """A signed zoned number split into digit groups, sign on the last group.
+
+    ``PIC S9(10)`` redefined as ``9(9)`` + ``S9``: zoned decimal stores one
+    digit per byte with the sign in the zone of the last byte, so both views
+    hold the same digits in the same bytes and the sign stays where it was. A
+    SIGN clause (leading or separate sign) changes where the sign lives and is
+    still reported, as is any other split.
+    """
+    if len(whole) != 1 or len(parts) < 2 or any(_SIGN_CLAUSE.search(c) for c in clauses):
+        return False
+    one = _zoned(whole[0])
+    split = [_zoned(entry) for entry in parts]
+    if one is None or not one[0] or any(s is None for s in split):
+        return False
+    signs = [s[0] for s in split if s]
+    return sum(s[1] for s in split if s) == one[1] and signs[-1] and not any(signs[:-1])
+
+
+_POINTER_USAGE = re.compile(r"(?<![\w-])(?:PROCEDURE-|FUNCTION-)?POINTER(?![\w-])", re.I)
+_ADDRESS_SIZES = (4, 8)  # 31/32-bit and 64-bit addressing
+
+
+def _is_pointer_view(
+    pointer: List[_DataItem],
+    pointer_layout: Tuple[Tuple[str, str], ...],
+    view_layout: Tuple[Tuple[str, str], ...],
+) -> bool:
+    """A pointer and one address-sized elementary view of the same storage.
+
+    ``USAGE POINTER`` overlaid by ``PIC X(8)``, ``PIC X(4)`` or an unsigned
+    binary of 4 or 8 bytes (``PIC 9(9) COMP``) is how programs print, compare
+    or pass an address; no numeric value is reinterpreted. Signed, display,
+    group or other-sized views are still reported, and INDEX is not a pointer.
+    """
+    if len(pointer) != 1 or len(pointer_layout) != 1 or len(view_layout) != 1:
+        return False
+    if pointer_layout[0][0] != "pointer" or not _POINTER_USAGE.search(pointer[0].clause):
+        return False
+    cls, pic = view_layout[0]
+    if cls == "alphanumeric":
+        return _pic_count(pic, "X") in _ADDRESS_SIZES
+    digits = _pic_count(pic, "9") if cls == "binary" else None
+    return digits is not None and _binary_bytes(digits) in _ADDRESS_SIZES
+
+
+_OCCURS_FIXED = re.compile(r"(?<![\w-])OCCURS\s+(\d+)(?:\s+TIMES)?(?:\s+(TO)\b)?", re.I)
+_OCCURS_WORD = re.compile(r"(?<![\w-])OCCURS(?![\w-])", re.I)
+_PIC_EXPAND = re.compile(r"(.)\((\d+)\)")
+
+
+class _VariableTable(Exception):
+    """OCCURS ... DEPENDING ON (or an unreadable OCCURS): no fixed layout."""
+
+
+def _occurs_count(clause: str) -> int:
+    if not _OCCURS_WORD.search(clause):
+        return 1
+    match = _OCCURS_FIXED.search(clause)
+    if not match or match.group(2) or re.search(r"\bDEPENDING\b", clause, re.I):
+        raise _VariableTable
+    return int(match.group(1))
+
+
+def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[str, str], ...]]:
+    """Elementary (class, PIC) sequence of the storage, OCCURS expanded.
+
+    PICs are spelled out (``S9(02)`` and ``S99`` compare equal) and adjacent
+    PIC X fields are merged into one byte string (``X(34)`` + ``X(6)`` is
+    ``X(40)``). None for variable-length tables.
+    """
+    members = _members(items, idx)
+
+    def node(pos: int, inherited: Optional[str]) -> Tuple[List[Tuple[str, str]], int]:
+        item = members[pos]
+        usage = _usage_class(item.clause) or inherited
+        count = _occurs_count(item.clause)
+        out: List[Tuple[str, str]] = []
+        nxt = pos + 1
+        while nxt < len(members) and members[nxt].level > item.level:
+            child, nxt = node(nxt, usage)
+            out.extend(child)
+        if nxt == pos + 1:
+            pic = _PIC.search(item.clause)
+            pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+            spelled = _PIC_EXPAND.sub(lambda m: m.group(1) * int(m.group(2)), pic_text)
+            out = [(_elementary_class(pic_text or None, usage), spelled)]
+        return out * count, nxt
+
+    try:
+        flat, _ = node(0, None)
+    except _VariableTable:
+        return None
+    merged: List[Tuple[str, str]] = []
+    for cls, pic in flat:
+        if (
+            merged
+            and cls == "alphanumeric" == merged[-1][0]
+            and set(pic) == {"X"} == set(merged[-1][1])
+        ):
+            merged[-1] = (cls, merged[-1][1] + pic)
+        else:
+            merged.append((cls, pic))
+    return tuple(merged)
+
+
+def _is_intended_overlay(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
+    """REDEFINES idioms that keep every value's bytes and meaning (not reported)."""
+    original, redefined = _layout(items, orig_idx), _layout(items, idx)
+    if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
+        return True
+    orig_members, redef_members = _members(items, orig_idx), _members(items, idx)
+    clauses = [m.clause for m in orig_members + redef_members]
+    if _is_zoned_split(original, redefined, clauses) or _is_zoned_split(
+        redefined, original, clauses
+    ):
+        return True
+    if _is_pointer_view(orig_members, original, redefined) or _is_pointer_view(
+        redef_members, redefined, original
+    ):
+        return True
+    storage = _storage_layout(items, orig_idx)
+    return storage is not None and storage == _storage_layout(items, idx)
 
 
 def _is_bms_output_map(name: str, target: str) -> bool:
@@ -799,7 +951,7 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
         sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})
         if not sensitive or original == redefined:
             continue
-        if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
+        if _is_intended_overlay(items, orig_idx, idx):
             continue
         kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
         issues.append(
