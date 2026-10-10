@@ -59,6 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`ubuntu-latest` has it). Existing inputs, defaults and the `exit_code`
   output are unchanged. `Dockerfile.action` is kept for `docker run` use but is
   no longer built by the Action.
+- **Positioning: "release truth engine" in the machine-readable files** (Path Y).
+  `.well-known/agent-card.json` (description and `analyze` skill), `llms.txt`,
+  the `pyproject.toml` description (PyPI summary) and the `CLAUDE.md` H1 now
+  match the README headline. Removed "code quality guardian", "17 languages",
+  "Designed for low false positives" and the unverified "0.01s". Figures used:
+  22 formats (7 code + 15 DevOps/IaC); `hefesto analyze` runs 13. New
+  `tests/test_positioning_cards.py` pins the card description. The private
+  landing card has a parity test against this file.
 - **COBOL Phase 4, performance.** On a synthetic 1.05M-line project (1,000
   programs, 60 copybooks with nested `COPY` and `COPY ... REPLACING`) the
   analysis goes from 18.5 s to 8.0 s (17.6 → 7.6 s per million lines; peak

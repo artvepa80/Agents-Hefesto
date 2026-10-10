@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hefesto-ai"
 version = "4.14.1"
-description = "AI-Powered Code Quality Guardian — Pre-commit security & complexity analysis in 0.01s"
+description = "Release truth engine for AI-generated code: checks that what a project declares matches what it does, plus security and complexity analysis"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
