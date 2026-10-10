@@ -161,3 +161,39 @@ def test_checkout_pins_local_repo(tmp_path):
     path = mod.checkout(corpus, tmp_path / "work")
     assert (path / "a.cbl").read_text() == "x\n"
     assert mod.checkout(corpus, tmp_path / "work") == path  # reused
+
+
+class TestHefestoRef:
+    def test_committed_baseline_from_clean_tree(self):
+        ref = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))["hefesto"]
+        assert ref["dirty"] is False, "regenerate the baseline after committing the analyzer"
+        assert ref["commit"] and len(ref["commit"]) == 40
+        assert ref["analyzer_tree"] and len(ref["analyzer_tree"]) == 40
+
+    @pytest.mark.skipif(shutil.which("git") is None, reason="git not available")
+    def test_dirty_flag(self, tmp_path, monkeypatch, capsys):
+        git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+        subprocess.run(git + ["init", "-q"], cwd=tmp_path, check=True)
+        (tmp_path / "hefesto").mkdir()
+        (tmp_path / "hefesto" / "a.py").write_text("x = 1\n")
+        (tmp_path / "pyproject.toml").write_text('version = "9.9.9"\n')
+        subprocess.run(git + ["add", "."], cwd=tmp_path, check=True)
+        subprocess.run(git + ["commit", "-qm", "one"], cwd=tmp_path, check=True)
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=tmp_path, capture_output=True, text=True
+        ).stdout.strip()
+        tree = subprocess.run(
+            ["git", "rev-parse", "HEAD:hefesto"], cwd=tmp_path, capture_output=True, text=True
+        ).stdout.strip()
+        monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+        assert mod._hefesto_ref() == {
+            "version": "9.9.9",
+            "commit": head,
+            "analyzer_tree": tree,
+            "dirty": False,
+        }
+        (tmp_path / "docs.md").write_text("unrelated\n")
+        assert mod._hefesto_ref()["dirty"] is False
+        (tmp_path / "hefesto" / "a.py").write_text("x = 2\n")
+        assert mod._hefesto_ref()["dirty"] is True
+        assert "uncommitted analyzer changes" in capsys.readouterr().err

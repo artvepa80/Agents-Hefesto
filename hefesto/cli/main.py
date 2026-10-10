@@ -282,6 +282,16 @@ def _load_project_config(paths, config_path, option_names):
         " (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)"
     ),
 )
+@click.option(
+    "--copybook-path",
+    "copybook_paths",
+    multiple=True,
+    type=click.Path(exists=True, file_okay=False),
+    help=(
+        "COBOL: directory with copybooks outside the analyzed paths (repeatable). "
+        "COPY names found there are not reported as missing (COBOL015)."
+    ),
+)
 # -- Project config file (.hefesto.yaml) --
 @click.option(
     "--config",
@@ -340,6 +350,7 @@ def analyze(
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
+    copybook_paths: Tuple[str, ...],
     enable_memory_budget_gate: bool,
     include_third_party: bool,
     include_generated: bool,
@@ -367,6 +378,7 @@ def analyze(
         hefesto analyze . --quiet  # Summary only
         hefesto analyze . --format-check  # also report Black formatting drift
         hefesto analyze . --config ci/hefesto.yaml  # explicit config file
+        hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks elsewhere
 
     Options can also be set in a .hefesto.yaml/.hefesto.yml file (nearest one
     from the first PATH up to the repo root); explicit flags win.
@@ -402,6 +414,8 @@ def analyze(
         engine = _setup_analyzer_engine(severity, quiet, json_mode, scope_config, enrich_config)
         if not engine:
             _exit(1)
+        if copybook_paths and hasattr(engine, "set_copybook_paths"):
+            engine.set_copybook_paths(list(copybook_paths))
 
         # Memory budget gate (EPIC 4, opt-in)
         budget_result = None

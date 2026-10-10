@@ -3,8 +3,8 @@
 
 Reads a labels JSON (default: tests/fixtures/cobol/labels/phase3_labels.json),
 where each label has ``rule``, ``file``, ``line``, ``verdict`` (TP/FP),
-``reason`` and ``sets`` (the runs that produced the finding, e.g. ``before``
-and ``after``), and prints TP / labelled findings per rule and run.
+``reason`` and ``sets`` (the runs that produced the finding: ``before``,
+``after`` and ``leftovers``), and prints TP / labelled findings per rule and run.
 
 Usage:
     python scripts/cobol_label_precision.py [--labels PATH] [--json]
@@ -27,6 +27,9 @@ DEFAULT_LABELS = (
 )
 VERDICTS = ("TP", "FP")
 REQUIRED = ("corpus", "rule", "file", "line", "verdict", "reason", "sets")
+# Runs in order: main before Phase 3, the Phase 3 branch, the Phase 3 leftovers branch.
+RUNS = ("before", "after", "leftovers")
+LATEST_RUN = RUNS[-1]
 
 
 def validate(doc: dict) -> List[str]:
@@ -47,8 +50,8 @@ def validate(doc: dict) -> List[str]:
             problems.append(f"label {i}: empty reason")
         if not isinstance(label["line"], int) or label["line"] < 1:
             problems.append(f"label {i}: line must be a positive integer")
-        if not label["sets"] or not set(label["sets"]) <= {"before", "after"}:
-            problems.append(f"label {i}: sets must be a non-empty subset of before/after")
+        if not label["sets"] or not set(label["sets"]) <= set(RUNS):
+            problems.append(f"label {i}: sets must be a non-empty subset of {'/'.join(RUNS)}")
         key = (
             label["corpus"],
             label["rule"],
@@ -71,7 +74,7 @@ def precision(doc: dict) -> Dict[str, Dict[str, Tuple[int, int]]]:
             cell[0] += label["verdict"] == "TP"
             cell[1] += 1
     return {
-        rule: {run: (cell[0], cell[1]) for run, cell in sorted(runs.items())}
+        rule: {run: (runs[run][0], runs[run][1]) for run in RUNS if run in runs}
         for rule, runs in sorted(stats.items())
     }
 
@@ -99,9 +102,9 @@ def main(argv=None) -> int:
         print(json.dumps(table, indent=2))
         return 0
     print(f"{len(doc['labels'])} labels from {args.labels}")
-    print(f"{'rule':<10} {'before':>16} {'after':>16}")
+    print(f"{'rule':<10}" + "".join(f" {run:>16}" for run in RUNS))
     for rule, runs in table.items():
-        print(f"{rule:<10} {_fmt(runs.get('before')):>16} {_fmt(runs.get('after')):>16}")
+        print(f"{rule:<10}" + "".join(f" {_fmt(runs.get(run)):>16}" for run in RUNS))
     return 0
 
 

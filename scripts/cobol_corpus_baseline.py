@@ -144,8 +144,21 @@ def summarize(report: Dict[str, Any], root: Path) -> Dict[str, Any]:
     }
 
 
-def _hefesto_ref() -> Dict[str, Optional[str]]:
-    """Version from pyproject.toml (installed metadata can be stale) and git commit."""
+# Paths whose uncommitted changes would make the findings differ from ``commit``.
+ANALYZER_PATHS = ["hefesto", "pyproject.toml"]
+
+
+def _hefesto_ref() -> Dict[str, Any]:
+    """Version from pyproject.toml (installed metadata can be stale) and git commit.
+
+    ``commit`` is the HEAD the findings were produced from. ``dirty`` is True
+    when the analyzer code had uncommitted changes, i.e. the findings do not
+    correspond to ``commit``. Commit the code first, then regenerate the
+    baseline, so the committed file says ``dirty: false``. ``analyzer_tree``
+    is the git tree hash of ``hefesto/`` at ``commit``: unlike the commit SHA
+    it survives a squash merge, so ``git rev-parse <commit>:hefesto`` on main
+    tells whether a later commit still has the same analyzer code.
+    """
     version: Optional[str] = None
     pyproject = REPO_ROOT / "pyproject.toml"
     if pyproject.is_file():
@@ -153,11 +166,21 @@ def _hefesto_ref() -> Dict[str, Optional[str]]:
             if line.startswith("version"):
                 version = line.split("=", 1)[1].strip().strip('"')
                 break
+    commit: Optional[str]
+    tree: Optional[str]
+    dirty: Optional[bool]
     try:
-        commit: Optional[str] = _git(["rev-parse", "HEAD"], REPO_ROOT)
+        commit = _git(["rev-parse", "HEAD"], REPO_ROOT)
+        tree = _git(["rev-parse", "HEAD:hefesto"], REPO_ROOT)
+        dirty = bool(_git(["status", "--porcelain", "--", *ANALYZER_PATHS], REPO_ROOT))
     except (subprocess.CalledProcessError, OSError):
-        commit = None
-    return {"version": version, "commit": commit}
+        commit, tree, dirty = None, None, None
+    if dirty:
+        print(
+            f"warning: uncommitted analyzer changes; findings do not match {commit}",
+            file=sys.stderr,
+        )
+    return {"version": version, "commit": commit, "analyzer_tree": tree, "dirty": dirty}
 
 
 def run_all(workdir: Path, only: Optional[List[str]] = None) -> Dict[str, Any]:
