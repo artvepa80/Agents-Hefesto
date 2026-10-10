@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   zopeneditor-sample goes from 20 to 14.
 
 ### Added
+- **COBOL corpus baseline:** `scripts/cobol_corpus_baseline.py` clones AWS
+  CardDemo, IBM CICS GenApp and IBM zopeneditor-sample at pinned commits,
+  runs `hefesto analyze` and records counts per rule, severity and file, every
+  finding and timing in `benchmark/cobol/baseline.json` (results only, no
+  corpus code). `compare` diffs a new run against it and lists new/removed
+  findings per rule. See `docs/cobol-corpus-baseline.md`.
 - **7 new free COBOL rules (COBOL008-COBOL014), 14 in total.** They come
   from the misses found in the Phase 1 smoke run and use a small program
   model (data entries, SELECTs, EXEC SQL blocks, paragraphs, sentences):
