@@ -175,6 +175,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   New tests in `tests/test_path_sandbox.py`.
 
 ### Fixed
+- **`hefesto pr-review` reads the right repository inside git hooks.**
+  Git exports `GIT_DIR` (and friends) to hooks, and git then ignores `cwd`.
+  A review started from a pre-push hook therefore read the hook's repository
+  instead of `--project-root`. `hefesto.pr_review.orchestrator` now drops the
+  repository-locating `GIT_*` variables when it runs git. An autouse fixture
+  in `tests/conftest.py` clears them for every test (8 tests that build temp
+  repos used to fail inside the pre-push hook). A regression test in
+  `tests/test_pr_review_cli.py` covers it.
+- **`hefesto activate`, `deactivate` and `status` work for licensed users.**
+  They used to print the purchase message and exit 1 even with Pro installed,
+  and the license email told paying customers to run `hefesto activate`. The
+  license is the `HEFESTO_LICENSE_KEY` environment variable:
+  - `activate KEY` checks the format, prints the `export` line and says
+    whether the Pro package is installed.
+  - `deactivate` prints the `unset` line.
+  - `status` shows Pro installed or not and whether a key is set (prefix
+    only). It shows the offer only when one of them is missing.
+  - The purchase message now tells licensed users to install the package
+    from their download email and set the variable.
+  - Tests in `tests/test_cli_pro_required_message.py`.
 - **Claude Code integration guide** (`skill/integration.md`): the manual MCP
   config now uses `claude mcp add --transport http` or a project `.mcp.json`
   with `"type": "http"`; the old `~/.claude/mcp_servers.json` +
