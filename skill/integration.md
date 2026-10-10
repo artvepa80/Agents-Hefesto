@@ -100,16 +100,26 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ### Manual Configuration
 
-Add to your MCP settings (`~/.claude/mcp_servers.json` or editor config):
+Claude Code:
+
+```bash
+claude mcp add --transport http hefestoai https://hefestoai.narapallc.com/api/mcp-protocol
+```
+
+Or commit a project-scoped `.mcp.json` at the repo root:
 
 ```json
 {
-  "hefestoai": {
-    "type": "streamable-http",
-    "url": "https://hefestoai.narapallc.com/api/mcp-protocol"
+  "mcpServers": {
+    "hefestoai": {
+      "type": "http",
+      "url": "https://hefestoai.narapallc.com/api/mcp-protocol"
+    }
   }
 }
 ```
+
+Other editors: use the same URL with their streamable-HTTP transport.
 
 ### Available MCP Endpoints
 
@@ -125,6 +135,45 @@ Add to your MCP settings (`~/.claude/mcp_servers.json` or editor config):
 
 - Official MCP Registry: `io.github.artvepa80/hefestoai`
 - Smithery: `artvepa80/hefestoai`
+
+## Claude Code Feedback Loop
+
+`hefesto analyze` makes no LLM calls: analysis is deterministic and runs
+locally, so it consumes no Claude API credit. Pair it with Claude Code so the
+credit is spent on fixing findings, not on finding them.
+
+### PostToolUse Hook
+
+Add to `.claude/settings.json` (requires `jq`):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "f=$(jq -r '.tool_input.file_path'); hefesto analyze \"$f\" --fail-on HIGH --quiet >&2 || exit 2"
+      }]
+    }]
+  }
+}
+```
+
+`hefesto analyze` exits 1 on a gate failure; the hook maps that to exit 2,
+which Claude Code feeds back to Claude so it fixes the finding in the same
+session.
+
+### Filter First, Then Fix
+
+Hand Claude only the findings instead of the whole repository:
+
+```bash
+hefesto analyze . --severity HIGH --output json > findings.json
+claude -p "Fix the findings in findings.json"
+```
+
+For pull requests, `hefesto pr-review` emits the same JSON scoped to the diff.
 
 ## Environment Variables
 
