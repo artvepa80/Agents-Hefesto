@@ -300,3 +300,13 @@ class TestEngineIntegration:
             found += self._found(engine.analyze_path(path))
         assert ("SHAREDREC.cpy", "COBOL007", 1) in found
         assert len([f for f in found if f[1] == "COBOL015"]) == 5
+
+    def test_prepared_index_uses_engine_discovery(self, tmp_path):
+        """prepare_cobol_index walks paths like analyze_path: excludes and missing paths."""
+        self._tree(tmp_path)
+        engine = AnalyzerEngine(severity_threshold="LOW")
+        engine.prepare_cobol_index([str(tmp_path / "missing"), str(tmp_path / "cbl")], ["cbl"])
+        assert engine._cobol_index is None
+        engine.prepare_cobol_index([str(tmp_path / "cbl"), str(tmp_path / "cpy")], [])
+        assert "SHAREDREC" in engine._cobol_index.available
+        assert len(engine._cobol_index.dependent_programs("SHAREDREC")) == 5
