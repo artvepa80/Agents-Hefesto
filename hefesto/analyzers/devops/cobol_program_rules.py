@@ -48,7 +48,8 @@ _UNCONDITIONAL_END = re.compile(
 _ENTRY = re.compile(r"^ENTRY\s+['\"]", re.I)
 _ONLY_EXIT = re.compile(r"^\s*EXIT\s*$", re.I)
 # "EXIT PROGRAM. STOP RUN." / "GOBACK. EXIT." are idioms, not dead code
-_ONLY_TERMINATORS = re.compile(r"^(?:\s*(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM|EXIT)\s*)+$", re.I)
+_TERMINATOR = r"(?:STOP\s+RUN|GOBACK|EXIT\s+PROGRAM|EXIT)"
+_ONLY_TERMINATORS = re.compile(rf"^\s*{_TERMINATOR}(?:\s+{_TERMINATOR})*\s*$", re.I)
 _CONDITION_PHRASES = re.compile(
     r"\b(?:AT\s+END|AT\s+END-OF-PAGE|AT\s+EOP|INVALID\s+KEY|SIZE\s+ERROR|ON\s+EXCEPTION"
     r"|ON\s+OVERFLOW|WHEN|ELSE|NOT\s+AT|NOT\s+INVALID|NOT\s+ON)\b",
@@ -108,7 +109,7 @@ _SQL_CONNECT_LITERAL = re.compile(
 _SELECT = re.compile(rf"\bSELECT\s+(?:OPTIONAL\s+)?({_WORD})", re.I)
 _STATUS_CLAUSE = re.compile(rf"\b(?:FILE\s+)?STATUS\s+(?:IS\s+)?({_WORD})", re.I)
 _SD = re.compile(rf"(?:^|\s)SD\s+({_WORD})", re.I)
-_OPEN = re.compile(r"\bOPEN\s+((?:(?:INPUT|OUTPUT|I-O|EXTEND)\s+[^.]*?)+)(?=\.|$)", re.I)
+_OPEN = re.compile(r"\bOPEN\s+((?:INPUT|OUTPUT|I-O|EXTEND)\s[^.]*)", re.I)
 
 
 def mask_literals(text: str) -> str:
