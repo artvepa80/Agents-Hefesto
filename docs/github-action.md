@@ -23,7 +23,7 @@ The Action is a composite action with three steps:
    `sarif_file` and `category: <sarif_category>`. It runs even when the gate
    failed (`if: always()`), so the alerts that failed the build are visible.
 
-Until Phase 5 the Action was a Docker action built from `Dockerfile.action`.
+Up to v4.14.1 the Action was a Docker action built from `Dockerfile.action`.
 That image is still in the repository for running the same entrypoint with
 `docker run` elsewhere; `action.yml` no longer uses it.
 
@@ -69,7 +69,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@main   # pin the first release tag with SARIF once published
+      - uses: artvepa80/Agents-Hefesto@v4.15.0   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'

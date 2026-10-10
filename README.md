@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.14.1)
+## Operational Truth Analyzers (v4.15.0)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.14.1
+    uses: artvepa80/Agents-Hefesto@v4.15.0
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -116,7 +116,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@main   # SARIF ships after v4.14.1; pin the release tag once published
+      - uses: artvepa80/Agents-Hefesto@v4.15.0   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'
@@ -170,7 +170,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.14.1)
+## PR Review (v4.15.0)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -248,7 +248,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -285,7 +285,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.14.1)
+## CLI Reference (v4.15.0)
 
 ```bash
 # Analyze code
@@ -523,7 +523,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.14.1)
+### GitHub Actions — PR Review with Inline Comments (v4.15.0)
 
 ```yaml
 name: Hefesto PR Review
@@ -560,7 +560,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.14.1
+    rev: v4.15.0
     hooks:
       - id: hefesto-analyze
 ```
@@ -741,6 +741,12 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Changelog
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.15.0 (2026-10-10)
+- **SARIF 2.1.0 output for every analyzer** (`--format sarif`, `--sarif-file`): rule metadata, security-severity, stable fingerprints, repo-relative paths; validated against the OASIS schema
+- **GitHub Action**: now a composite action; `sarif: 'true'` uploads findings to GitHub code scanning (`upload-sarif@v4`), also when the gate fails
+- **COBOL**: full `COPY ... REPLACING` expansion with copybook line attribution; ~2.3x faster on large projects (Phase 4)
+- **CLI**: `hefesto activate/deactivate/status` give the environment-variable instructions; `pr-review` ignores an inherited `GIT_DIR`
 
 ### v4.14.1 (2026-10-06)
 - **Security (SEC-03)**: secret detection skips test/example code by whole path segment and file-name convention, not by any path that merely contains `test` or `example`

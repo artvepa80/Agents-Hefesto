@@ -45,7 +45,7 @@ hefesto analyze . --fail-on HIGH --exclude tests/
 
 ## GitHub Actions
 
-### As a Docker Action
+### As a GitHub Action (composite)
 
 ```yaml
 name: Code Quality
@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@main
+      - uses: artvepa80/Agents-Hefesto@v4.15.0
         with:
           target: '.'
           fail_on: 'CRITICAL'
