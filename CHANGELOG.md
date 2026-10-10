@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **YAML_SYNTAX_ERROR no longer flags valid multi-document files or Helm chart templates.** The syntax check loaded files with a single-document loader, so every stream with `---` between documents (the usual form of Kubernetes manifests) was reported as "expected a single document in the stream". All documents are now parsed, and an error in any of them is still reported on its own line. Files under a Helm chart's `templates/` directory (a `templates` directory next to `Chart.yaml`, at any depth) that contain `{{ ... }}` actions are Go templates, not YAML until Helm renders them, and are no longer syntax-checked; the other YAML rules (secrets, tabs, Kubernetes and GitHub Actions risks) still run on them. The same template syntax outside a chart, chart metadata such as `values.yaml`, and chart templates without actions are still checked.
+
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).
