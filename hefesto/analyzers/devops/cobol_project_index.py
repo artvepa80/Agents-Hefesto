@@ -18,10 +18,12 @@ program that COPYs a name that is not in the scanned tree. Without an index
 cannot know either fact.
 """
 
+import logging
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 COPYBOOK_EXTENSIONS = (".cpy",)
 # Copybook files that file discovery does not pick up: DB2 DCLGEN members,
@@ -30,6 +32,8 @@ COPYBOOK_EXTENSIONS = (".cpy",)
 # data definitions.
 EXTRA_COPYBOOK_SUFFIXES = ("", ".dcl", ".copy", ".cbk")
 MAX_COPYBOOK_BYTES = 512 * 1024
+
+logger = logging.getLogger(__name__)
 _DATA_ENTRY_LINE = re.compile(
     r"^(?:[\d ]{6}[ D]|\s*)\s*(?:0?[1-9]|[1-4]\d|66|77|88)\s+[A-Z][A-Z0-9-]*\b",
     re.I | re.M,
@@ -58,6 +62,8 @@ def is_copybook_path(path: str) -> bool:
 
 
 def _mask(text: str) -> str:
+    if "'" not in text and '"' not in text:
+        return text
     return _LITERAL.sub(
         lambda m: m.group(0)[0] + " " * (len(m.group(0)) - 2) + m.group(0)[-1], text
     )
@@ -87,11 +93,16 @@ def copy_names(text: str, fixed: Optional[bool] = None) -> List[Tuple[int, str]]
     identification area in 73-80 that would otherwise glue onto a COPY name
     written up to column 72. ``fixed=None`` detects the format.
     """
-    if fixed is None:
-        fixed = is_fixed_format(text)
     out: List[Tuple[int, str]] = []
+    upper_text = text.upper()
+    if "COPY" not in upper_text and "EXEC" not in upper_text:
+        return out  # fast path: nothing to find
     in_sql = False
     for num, raw in enumerate(text.splitlines(), start=1):
+        if not in_sql and not _may_hold_copy(raw):
+            continue  # cheap test on the raw line first
+        if fixed is None:
+            fixed = is_fixed_format(text)  # only when some line may hold a COPY
         line = _code_part(raw[:72] if fixed else raw)
         if not in_sql and not _may_hold_copy(line):
             continue
@@ -148,12 +159,21 @@ def _still_in_sql(masked: str, in_sql: bool) -> bool:
 
 @dataclass
 class CobolProjectIndex:
-    """Copybook names present in the scan and the programs that COPY each one."""
+    """Copybook names present in the scan and the programs that COPY each one.
+
+    ``dependents`` is transitive: a program that COPYs ``TOP``, where ``TOP``
+    COPYs ``MID`` and ``MID`` COPYs ``LEAF``, depends on all three.
+    """
 
     available: Set[str] = field(default_factory=set)
     dependents: Dict[str, Set[str]] = field(default_factory=dict)
     # Copybooks without a COBOL extension found in the scanned tree (paths as given).
     copybook_files: Set[str] = field(default_factory=set)
+    # COPY/INCLUDE names nested inside each copybook (by copybook name).
+    nested: Dict[str, Set[str]] = field(default_factory=dict)
+    # (line, NAME) per scanned file, so the analyzer does not parse COPY twice.
+    _copy_cache: Dict[str, List[Tuple[int, str]]] = field(default_factory=dict, repr=False)
+    _resolves_any: Optional[bool] = field(default=None, repr=False)
 
     @classmethod
     def from_sources(
@@ -171,19 +191,55 @@ class CobolProjectIndex:
         ``copybook_paths`` outside the scan.
         """
         index = cls()
+        direct: Dict[str, Set[str]] = {}  # program path -> names it COPYs
         for path, text in sources:
+            names = copy_names(text)
+            index._copy_cache[str(path)] = names
             index.available.add(Path(path).stem.upper())
-            if is_copybook_path(path):
-                continue
-            for _, name in copy_names(text):
-                index.dependents.setdefault(name, set()).add(str(path))
+            index._record(str(path), names, direct, is_copybook_path(path))
+        referenced = {name for names in direct.values() for name in names}
+        referenced |= {name for names in index.nested.values() for name in names}
         for path, text in extra_copybooks:
             name = Path(path).stem.upper()
-            if name in index.dependents and looks_like_copybook(text):
+            if name in referenced and looks_like_copybook(text):
                 index.available.add(name)
                 index.copybook_files.add(str(path))
+                found = copy_names(text)
+                index._copy_cache[str(path)] = found
+                index._record(str(path), found, direct, True)
         index.available.update(name.upper() for name in library_names)
+        for program, copied in direct.items():
+            for name in index._closure(copied):
+                index.dependents.setdefault(name, set()).add(program)
         return index
+
+    def _record(
+        self,
+        path: str,
+        names: List[Tuple[int, str]],
+        direct: Dict[str, Set[str]],
+        is_copybook: bool,
+    ) -> None:
+        if is_copybook:
+            self.nested.setdefault(Path(path).stem.upper(), set()).update(n for _, n in names)
+        elif names:
+            direct[path] = {n for _, n in names}
+
+    def _closure(self, names: Set[str]) -> Set[str]:
+        """``names`` plus every copybook they COPY, at any depth (cycle-safe)."""
+        seen: Set[str] = set()
+        stack = list(names)
+        while stack:
+            name = stack.pop()
+            if name in seen:
+                continue
+            seen.add(name)
+            stack.extend(self.nested.get(name, ()))
+        return seen
+
+    def copy_names_for(self, path: str) -> Optional[List[Tuple[int, str]]]:
+        """COPY/INCLUDE names already read for ``path`` (None if not indexed)."""
+        return self._copy_cache.get(str(path))
 
     @classmethod
     def from_paths(
@@ -191,11 +247,16 @@ class CobolProjectIndex:
         paths: Iterable[Path],
         extra_copybooks: Iterable[Path] = (),
         library_dirs: Iterable[Path] = (),
+        library_names: Optional[Iterable[str]] = None,
     ) -> "CobolProjectIndex":
+        """Index ``paths``; ``library_names`` skips the ``library_dirs`` walk."""
+        if library_names is None:
+            dirs = list(library_dirs)
+            library_names = library_copybook_names(dirs) if dirs else ()
         return cls.from_sources(
             _read_all(paths),
             _read_all(p for p in extra_copybooks if _small_file(p)),
-            library_copybook_names(library_dirs),
+            library_names,
         )
 
     def is_copybook_file(self, path: str) -> bool:
@@ -208,7 +269,9 @@ class CobolProjectIndex:
         COBOL015 only runs then: if no COPY resolves, the copybooks were simply
         not part of the scan and every COPY would be reported.
         """
-        return any(name in self.available for name in self.dependents)
+        if self._resolves_any is None:
+            self._resolves_any = any(name in self.available for name in self.dependents)
+        return self._resolves_any
 
     def is_missing(self, name: str) -> bool:
         return self.resolves_any and not is_system_copybook(name) and name not in self.available
@@ -224,14 +287,13 @@ def _small_file(path: Path) -> bool:
         return False
 
 
-def _read_all(paths: Iterable[Path]) -> List[Tuple[str, str]]:
-    sources = []
+def _read_all(paths: Iterable[Path]) -> Iterator[Tuple[str, str]]:
+    """(path, text) one file at a time, so indexing never holds every source."""
     for path in paths:
         try:
-            sources.append((str(path), path.read_text(encoding="utf-8", errors="ignore")))
+            yield str(path), path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-    return sources
 
 
 def is_extra_copybook_candidate(path: Path) -> bool:
@@ -239,18 +301,46 @@ def is_extra_copybook_candidate(path: Path) -> bool:
     return path.suffix.lower() in EXTRA_COPYBOOK_SUFFIXES and not path.name.startswith(".")
 
 
-def library_copybook_names(dirs: Iterable[Path]) -> Set[str]:
+# Bounds for the ``copybook_paths`` search, so pointing it at a huge tree
+# (or ``/``) cannot make a scan crawl: directories deeper than
+# LIBRARY_MAX_DEPTH below a copybook path, and files past LIBRARY_MAX_FILES
+# per run, are not looked at (a warning says so).
+LIBRARY_MAX_DEPTH = 8
+LIBRARY_MAX_FILES = 50_000
+
+
+def library_copybook_names(
+    dirs: Iterable[Path],
+    max_depth: int = LIBRARY_MAX_DEPTH,
+    max_files: int = LIBRARY_MAX_FILES,
+) -> Set[str]:
     """Copybook names in ``copybook_paths`` directories (searched recursively).
 
     COBOL extensions count by name; other candidates (``.dcl``, extension-less
-    members, ...) only when their content looks like a copybook.
+    members, ...) only when their content looks like a copybook. Hidden
+    directories are skipped and the walk is bounded (see LIBRARY_MAX_*).
     """
     names: Set[str] = set()
+    seen = 0
     for directory in dirs:
-        for path in sorted(Path(directory).rglob("*")):
-            name = _library_name(path)
-            if name:
-                names.add(name)
+        base_depth = str(directory).rstrip(os.sep).count(os.sep)
+        for dirpath, dirnames, filenames in os.walk(directory):
+            depth = dirpath.rstrip(os.sep).count(os.sep) - base_depth
+            dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+            if depth >= max_depth:
+                dirnames[:] = []
+            for filename in sorted(filenames):
+                seen += 1
+                if seen > max_files:
+                    logger.warning(
+                        "copybook_paths: stopped after %d files; copybooks beyond that "
+                        "are not used to resolve COPY names",
+                        max_files,
+                    )
+                    return names
+                name = _library_name(Path(dirpath) / filename)
+                if name:
+                    names.add(name)
     return names
 
 
