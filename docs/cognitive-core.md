@@ -1,8 +1,7 @@
 # Cognitive core mapping for HefestoAI
 
 Product architecture note (not a research claim). Applies Andrej Karpathy’s
-“cognitive core” idea to how we want agents to use HefestoAI—and, briefly,
-how the same split shows up in Kronos.
+“cognitive core” idea to how we want agents to use HefestoAI.
 
 ## What “cognitive core” means here
 
@@ -63,18 +62,10 @@ Use these as manual or CI-oriented checks that the core-vs-memory split holds:
 These are acceptance scenarios for the architecture, not claims of zero false
 positives.
 
-## Kronos (brief)
-
-Kronos is a Hyperliquid trading bot running a **cloud** loop on Railway. It is
-not a place to host a local LLM cognitive core. The useful analogy only: trading
-**rules / risk policy = core**; live market and API state = **external memory**.
-Do not plan on-box LLM inference inside that Railway service as part of this
-mapping.
-
 ## What we are not doing next
 
-- Training or shipping a ~1B “cognitive core” model for Hefesto or Kronos.
-- Running a local LLM as the Kronos runtime on Railway.
+- Training or shipping a ~1B “cognitive core” model for Hefesto.
+- Bundling or running a local LLM runtime as part of Hefesto.
 - Treating community infographics or interview speculation as peer-reviewed
   evidence or product SLAs.
 
