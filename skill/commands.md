@@ -147,7 +147,10 @@ hefesto status
 hefesto info
 ```
 
-These commands require the PRO/OMEGA private distribution.
+The license is the `HEFESTO_LICENSE_KEY` environment variable; nothing is
+stored. `activate` checks the key format and prints the `export` line,
+`deactivate` prints the `unset` line, and `status` shows whether the Pro
+package is installed and a key is set (prefix only). `info` requires PRO.
 
 ## serve (PRO)
 

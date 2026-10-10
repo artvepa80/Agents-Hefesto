@@ -8,6 +8,8 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import functools
+import os
+import re
 import sys
 from typing import Optional, Tuple
 
@@ -21,8 +23,22 @@ PRO_REQUIRED_MESSAGE = (
     "This feature requires Hefesto PRO ($8/month) or OMEGA ($19/month), "
     "both with a 14-day free trial.\n"
     f"Plans and checkout: {PRICING_URL}\n"
-    "Already licensed? Install Hefesto PRO from the private distribution."
+    "Already licensed? Install the Pro package from your HefestoAI download email\n"
+    "and set HEFESTO_LICENSE_KEY (see `hefesto activate --help`)."
 )
+LICENSE_KEY_ENV = "HEFESTO_LICENSE_KEY"
+_LICENSE_KEY_RE = re.compile(r"^HFST(-[A-Z0-9]{4}){5}$")
+
+
+def _pro_installed() -> bool:
+    """True when the private hefesto_pro package is importable."""
+    from hefesto import pro_optional
+
+    return any(
+        getattr(pro_optional, flag, False)
+        for flag in ("HAS_SCOPE_GATING", "HAS_MULTILANG", "HAS_ENRICHMENT", "HAS_API_HARDENING")
+    )
+
 
 # Initialize telemetry
 telemetry = TelemetryClient()
@@ -546,42 +562,58 @@ def check():
 @click.argument("license_key")
 def activate(license_key: str):
     """
-    Activate Hefesto Professional with license key.
+    Show how to activate a PRO/OMEGA license.
+
+    The license is read from the HEFESTO_LICENSE_KEY environment variable;
+    this command stores nothing. It checks the key format and prints the
+    export line to use (shell profile and CI secret).
 
     Usage:
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
-    click.echo(
-        PRO_REQUIRED_MESSAGE,
-        err=True,
-    )
-    _exit(1)
+    key = license_key.strip().upper()
+    if not _LICENSE_KEY_RE.match(key):
+        click.echo("Invalid license key format. Expected HFST-XXXX-XXXX-XXXX-XXXX-XXXX.", err=True)
+        _exit(1)
+    click.echo("HefestoAI reads the license from an environment variable; nothing is stored.")
+    click.echo("Run this (and add it to your shell profile and as a CI secret):")
+    click.echo("")
+    click.echo(f"  export {LICENSE_KEY_ENV}={key}")
+    click.echo("")
+    if _pro_installed():
+        click.echo("Pro package: installed.")
+    else:
+        click.echo("Pro package: NOT installed. Install it from the link in your HefestoAI")
+        click.echo("download email (pip install ./hefesto_pro-<version>-py3-none-any.whl).")
 
 
 @cli.command()
 def deactivate():
     """
-    Deactivate Hefesto Professional license.
-
-    This will remove your license key and revert to free tier.
+    Show how to deactivate the PRO/OMEGA license (unset the environment variable).
     """
-    click.echo(
-        PRO_REQUIRED_MESSAGE,
-        err=True,
-    )
-    _exit(1)
+    click.echo(f"Remove {LICENSE_KEY_ENV} from your environment, shell profile and CI secrets:")
+    click.echo("")
+    click.echo(f"  unset {LICENSE_KEY_ENV}")
 
 
 @cli.command()
 def status():
     """
-    Show current license status and tier information.
+    Show whether the Pro package is installed and a license key is set.
     """
-    click.echo(
-        PRO_REQUIRED_MESSAGE,
-        err=True,
-    )
-    _exit(1)
+    key = os.environ.get(LICENSE_KEY_ENV, "").strip().upper()
+    pro = _pro_installed()
+    click.echo(f"Pro package:  {'installed' if pro else 'not installed'}")
+    if not key:
+        click.echo(f"License key:  not set ({LICENSE_KEY_ENV})")
+    elif _LICENSE_KEY_RE.match(key):
+        click.echo(f"License key:  set ({key[:9]}-...)")
+    else:
+        click.echo("License key:  set, but not in HFST-XXXX-XXXX-XXXX-XXXX-XXXX format")
+    if not (pro and key):
+        click.echo("")
+        click.echo(PRO_REQUIRED_MESSAGE)
 
 
 @cli.command()
