@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+
+- README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, skips the multilang languages and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122); merge this only after that one is deployed.
+
 ## [4.15.0] - 2026-10-10
 
 ### Added

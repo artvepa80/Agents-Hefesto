@@ -33,6 +33,7 @@ Semantic drift is when a change still compiles and tests pass, but the change si
 | Integration | Protocol | Endpoint |
 |-------------|----------|----------|
 | MCP Server | JSON-RPC 2.0 (streamable-http) | `/api/mcp-protocol` |
+| Hosted analysis | HTTP POST (20 files, 100 KB each, 20 s; nothing stored) | `/api/analyze` |
 | REST Discovery | HTTP GET/POST | `/api/mcp` |
 | OpenAPI | OpenAPI 3.0 spec | `/api/openapi.json` |
 | Natural Language Q&A | HTTP POST | `/api/ask` |
