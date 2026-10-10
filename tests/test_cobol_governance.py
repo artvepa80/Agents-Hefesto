@@ -12,6 +12,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 from pathlib import Path
 
 from hefesto.analyzers.devops.cobol_governance_analyzer import CobolGovernanceAnalyzer
+from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
 from hefesto.core.analysis_models import AnalysisIssueSeverity, AnalysisIssueType
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "cobol"
@@ -110,21 +111,25 @@ class TestCobolGovernancePositive:
         assert all(i.severity == AnalysisIssueSeverity.HIGH for i in perform_issues)
         assert all(i.rule_id == "COBOL006" for i in perform_issues)
 
-    def test_copybook_blast_radius_acct_open(self):
-        """ACCT-OPEN.cbl CUST-RECORD copybook → COPYBOOK_BLAST_RADIUS."""
-        fixture = FIXTURES_DIR / "ACCT-OPEN.cbl"
-        code = fixture.read_text()
-        issues = self.analyzer.analyze(str(fixture), code)
-
+    def test_copybook_blast_radius_needs_project_index(self):
+        """COBOL007 is reported on the copybook, from the programs that COPY it."""
+        fixture = FIXTURES_DIR / "CUST-RECORD.cpy"
+        programs = {f"P{n}.cbl" for n in range(6)}
+        index = CobolProjectIndex(available={"CUST-RECORD"}, dependents={"CUST-RECORD": programs})
+        issues = CobolGovernanceAnalyzer(index=index).analyze(str(fixture), fixture.read_text())
         copybook_issues = [
             i for i in issues if i.issue_type == AnalysisIssueType.COBOL_COPYBOOK_BLAST_RADIUS
         ]
-        assert (
-            len(copybook_issues) >= 1
-        ), f"Expected ≥1 COPYBOOK_BLAST_RADIUS, got {len(copybook_issues)}"
-        assert all(i.rule_id == "COBOL007" for i in copybook_issues)
-        # CUST-RECORD is specific name → HIGH severity
-        assert any(i.severity == AnalysisIssueSeverity.HIGH for i in copybook_issues)
+        assert [(i.rule_id, i.line, i.severity) for i in copybook_issues] == [
+            ("COBOL007", 1, AnalysisIssueSeverity.MEDIUM)
+        ]
+        assert copybook_issues[0].metadata["dependents"] == 6
+
+    def test_acct_open_alone_has_no_copybook_finding(self):
+        """Without a project index the analyzer cannot know the blast radius."""
+        fixture = FIXTURES_DIR / "ACCT-OPEN.cbl"
+        issues = self.analyzer.analyze(str(fixture), fixture.read_text())
+        assert not [i for i in issues if i.rule_id in ("COBOL007", "COBOL015")]
 
 
 class TestCobolGovernanceNegative:
@@ -183,15 +188,12 @@ class TestCobolGovernanceNegative:
         ]
         assert len(cred_issues) == 0, "SPAGHETTI-LOGIC should not trigger HARDCODED_CREDENTIALS"
 
-    def test_cust_record_copybook_no_findings(self):
-        """CUST-RECORD.cpy is data definition only → should have 0 findings."""
+    def test_cust_record_copybook_only_data_rules(self):
+        """CUST-RECORD.cpy is data only: no procedural rules, only its COMP-3 REDEFINES."""
         fixture = FIXTURES_DIR / "CUST-RECORD.cpy"
         code = fixture.read_text()
         issues = self.analyzer.analyze(str(fixture), code)
-
-        # Copybooks may have data structures but no procedure code
-        # Should not trigger procedural rules
-        assert len(issues) == 0, f"CUST-RECORD.cpy should have 0 findings, got {len(issues)}"
+        assert [(i.rule_id, i.line) for i in issues] == [("COBOL004", 20)]
 
     def test_acct_open_no_goto_excessive(self):
         """ACCT-OPEN.cbl uses PERFORM, not GO TO → should NOT trigger GOTO_EXCESSIVE."""
@@ -324,12 +326,16 @@ class TestAllRulesFree:
     def test_all_rules_fire_without_license(self, monkeypatch):
         for var in ("HEFESTO_LICENSE_KEY", "HEFESTO_TIER", "HEFESTO_OMEGA_KEYS"):
             monkeypatch.delenv(var, raising=False)
-        analyzer = CobolGovernanceAnalyzer()
+        fixtures = sorted(FIXTURES_DIR.rglob("*.cbl")) + sorted(FIXTURES_DIR.rglob("*.cpy"))
+        index = CobolProjectIndex.from_paths(fixtures)
+        # Five more programs COPY CUST-RECORD, so its blast radius is reported.
+        index.dependents["CUST-RECORD"].update(f"extra{n}.cbl" for n in range(5))
+        analyzer = CobolGovernanceAnalyzer(index=index)
         rule_ids = set()
-        for fixture in sorted(FIXTURES_DIR.rglob("*.cbl")):
+        for fixture in fixtures:
             for issue in analyzer.analyze(str(fixture), fixture.read_text()):
                 rule_ids.add(issue.rule_id)
-        assert rule_ids == {f"COBOL{n:03d}" for n in range(1, 15)}
+        assert rule_ids == {f"COBOL{n:03d}" for n in range(1, 16)}
 
     def test_no_tier_gate_left_in_analyzer(self):
         assert not hasattr(CobolGovernanceAnalyzer, "_is_pro_tier_available")

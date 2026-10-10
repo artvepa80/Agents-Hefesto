@@ -7,12 +7,17 @@ preventing directory traversal attacks.
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
 
+import os
 from pathlib import Path
 
 
 def resolve_under_root(path: str, root: Path) -> Path:
     """
     Resolve *path* and ensure it lives under *root*.
+
+    The path is normalized with ``os.path.realpath`` (symlinks and ``..``
+    resolved) and then checked against the root prefix, the sanitizer
+    pattern that static analyzers such as CodeQL recognize.
 
     Args:
         path: Relative or absolute file/dir path.
@@ -24,21 +29,16 @@ def resolve_under_root(path: str, root: Path) -> Path:
     Raises:
         ValueError: If the resolved path escapes the root.
     """
-    root = root.resolve()
-    candidate = Path(path)
+    root_real = os.path.realpath(root)
+    resolved = os.path.realpath(os.path.join(root_real, path))
+    if not resolved.startswith(root_real):
+        raise ValueError(_escape_message(path, resolved, root_real))
+    rest = resolved[len(root_real) :]
+    if rest and not rest.startswith(os.sep) and not root_real.endswith(os.sep):
+        # A sibling sharing the prefix, e.g. /work/app-evil for root /work/app.
+        raise ValueError(_escape_message(path, resolved, root_real))
+    return Path(resolved)
 
-    if candidate.is_absolute():
-        resolved = candidate.resolve()
-    else:
-        resolved = (root / candidate).resolve()
 
-    # Python 3.9+ has is_relative_to; fallback for 3.8
-    try:
-        resolved.relative_to(root)
-    except ValueError:
-        raise ValueError(
-            f"Path escapes workspace root: {path!r} "
-            f"resolves to {resolved} which is outside {root}"
-        )
-
-    return resolved
+def _escape_message(path: str, resolved: str, root: str) -> str:
+    return f"Path escapes workspace root: {path!r} resolves to {resolved} which is outside {root}"

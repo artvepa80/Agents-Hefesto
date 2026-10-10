@@ -1,16 +1,19 @@
 """
-COBOL program-level rules (COBOL008-COBOL014).
+COBOL program-level rules (COBOL004, COBOL008-COBOL014).
 
 These rules need more context than a single line: data entries split by
 period, SELECT clauses, EXEC SQL blocks, paragraphs and sentences. This module
 builds a small regex-based program model from the logical lines that the
 structural extractor produces, then runs the rules on it. All rules are FREE.
 
+- COBOL004 REDEFINES_SENSITIVE         REDEFINES over packed/binary/float/pointer/signed
+  numeric data with a different layout (HIGH); also runs on copybooks
 - COBOL008 HARDCODED_SECRET_VALUE      VALUE literal on a credential-named field (CRITICAL)
 - COBOL009 CONNECTION_STRING_SECRET    PASS=/PWD=/PASSWORD= inside a literal (CRITICAL)
 - COBOL010 SQL_CONNECT_LITERAL_CREDENTIAL EXEC SQL CONNECT ... USING/IDENTIFIED BY 'literal'
   (CRITICAL)
-- COBOL011 FILE_STATUS_MISSING         SELECT without a FILE STATUS clause (MEDIUM)
+- COBOL011 FILE_STATUS_MISSING         SELECTs without a FILE STATUS clause, one finding
+  per program (LOW)
 - COBOL012 FILE_STATUS_UNCHECKED       OPENed file whose status is never referenced (LOW)
 - COBOL013 DEAD_CODE_AFTER_STOP        statements after an unconditional STOP RUN /
   GOBACK / EXIT PROGRAM in the same paragraph (MEDIUM)
@@ -574,6 +577,195 @@ def _procedure_text(unit: _ProgramUnit) -> str:
     return " ".join(mask_literals(text) for _, text, _ in unit.proc)
 
 
+_REDEFINES = re.compile(rf"\bREDEFINES\s+({_WORD})", re.I)
+_PIC = re.compile(r"\bPIC(?:TURE)?\s+(?:IS\s+)?(\S+)", re.I)
+_USAGE_PACKED = re.compile(r"\b(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)\b", re.I)
+_USAGE_FLOAT = re.compile(r"\bCOMP(?:UTATIONAL)?-[12]\b", re.I)
+_USAGE_BINARY = re.compile(r"\b(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)\b(?!-)", re.I)
+_USAGE_OTHER = re.compile(r"\b(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)\b", re.I)
+_NUMERIC_PIC = re.compile(r"^[S9VP()0-9]+$", re.I)
+_SENSITIVE = {"packed", "binary", "signed", "float", "pointer"}
+_CLASS_LABEL = {
+    "packed": "packed-decimal (COMP-3)",
+    "binary": "binary (COMP)",
+    "signed": "signed numeric",
+    "float": "floating point",
+    "pointer": "index/pointer",
+}
+
+
+@dataclass
+class _DataItem:
+    line: int
+    level: int
+    name: str
+    clause: str  # text after the name, literals masked
+
+
+def _data_items(unit: _ProgramUnit) -> List[_DataItem]:
+    items = []
+    for sentence in split_sentences(unit.data):
+        match = _DATA_ENTRY.match(sentence.text.strip())
+        if not match:
+            continue
+        name, clause = match.group(2).upper(), match.group(3)
+        if name in ("PIC", "PICTURE", "VALUE", "USAGE", "COMP", "COMP-3", "OCCURS"):
+            name, clause = "FILLER", f"{name} {clause}"  # anonymous FILLER item
+        items.append(_DataItem(sentence.line, int(match.group(1)), name, clause))
+    return items
+
+
+def _usage_class(clause: str) -> Optional[str]:
+    if _USAGE_PACKED.search(clause):
+        return "packed"
+    if _USAGE_FLOAT.search(clause):
+        return "float"
+    if _USAGE_BINARY.search(clause):
+        return "binary"
+    if _USAGE_OTHER.search(clause):
+        return "pointer"
+    return None
+
+
+def _elementary_class(pic: Optional[str], usage: Optional[str]) -> str:
+    if usage:
+        return usage
+    if pic and _NUMERIC_PIC.match(pic):
+        return "signed" if pic.upper().startswith("S") else "numeric"
+    return "alphanumeric"
+
+
+def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
+    """(class, PIC) of every elementary item under ``items[idx]`` (or itself)."""
+    root = items[idx]
+    members = [root]
+    for item in items[idx + 1 :]:
+        if item.level in (66, 88):
+            continue
+        if root.level == 77 or item.level <= root.level or item.level == 77:
+            break
+        members.append(item)
+    out = []
+    stack: List[Tuple[int, Optional[str]]] = []  # (level, own usage) of open groups
+    for pos, item in enumerate(members):
+        while stack and stack[-1][0] >= item.level:
+            stack.pop()
+        own = _usage_class(item.clause)
+        inherited = next((usage for _, usage in reversed(stack) if usage), None)
+        stack.append((item.level, own))
+        if pos + 1 < len(members) and members[pos + 1].level > item.level:
+            continue  # group item: its children carry the layout
+        pic = _PIC.search(item.clause)
+        pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+        out.append((_elementary_class(pic_text or None, own or inherited), pic_text))
+    return tuple(out)
+
+
+def _is_bms_output_map(name: str, target: str) -> bool:
+    """CICS BMS symbolic map: ``01 xxxO REDEFINES xxxI`` is generated, not user code."""
+    return (
+        len(name) == len(target)
+        and name.endswith("O")
+        and target.endswith("I")
+        and name[:-1] == target[:-1]
+    )
+
+
+def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
+    """COBOL004: REDEFINES that reinterprets packed/binary/signed numeric data.
+
+    Flagged only when one side holds COMP-3, binary, floating-point, pointer or
+    signed numeric data and the two layouts differ. REDEFINES between
+    alphanumeric/unsigned display fields (e.g. a PIC X split into parts) and
+    REDEFINES of items defined elsewhere (copybooks) are not flagged.
+    """
+    issues = []
+    items = _data_items(unit)
+    for idx, item in enumerate(items):
+        match = _REDEFINES.search(item.clause)
+        if not match:
+            continue
+        target = match.group(1).upper()
+        if _is_bms_output_map(item.name, target):
+            continue
+        orig_idx = next(
+            (
+                j
+                for j in range(idx - 1, -1, -1)
+                if items[j].name == target and items[j].level == item.level
+            ),
+            None,
+        )
+        if orig_idx is None:
+            continue
+        original, redefined = _layout(items, orig_idx), _layout(items, idx)
+        sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})
+        if not sensitive or original == redefined:
+            continue
+        kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
+        issues.append(
+            _issue(
+                file_path,
+                item.line,
+                AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
+                AnalysisIssueSeverity.HIGH,
+                f"'{item.name}' REDEFINES '{target}' with a different layout over "
+                f"{kinds} data. Reading or moving through the other view can corrupt "
+                "values or raise data exceptions (S0C7).",
+                "Use a single numeric view, or convert explicitly (MOVE to a display "
+                "field) instead of overlaying the storage.",
+                "COBOL004",
+                0.85,
+            )
+        )
+    return issues
+
+
+def _file_status_missing(file_path: str, missing: List[Tuple[int, str]]) -> AnalysisIssue:
+    """COBOL011, one finding per program listing every file without FILE STATUS."""
+    names = [name for _, name in missing]
+    shown = ", ".join(f"'{n}'" for n in names[:10]) + (" ..." if len(names) > 10 else "")
+    issue = _issue(
+        file_path,
+        missing[0][0],
+        AnalysisIssueType.COBOL_FILE_STATUS_MISSING,
+        AnalysisIssueSeverity.LOW,
+        f"{len(names)} file(s) without a FILE STATUS clause: {shown}. I/O errors cannot "
+        "be detected and the program may continue with bad data or abend.",
+        "Add FILE STATUS IS <2-byte field> to each SELECT and check it after "
+        "each OPEN/READ/WRITE/CLOSE.",
+        "COBOL011",
+        0.8,
+    )
+    issue.metadata = {
+        "occurrences": len(names),
+        "files": names[:50],
+        "lines": [line for line, _ in missing][:50],
+    }
+    return issue
+
+
+_OCCURS = re.compile(r"\bOCCURS\b", re.I)
+_DEPENDING_ON = re.compile(rf"\bDEPENDING\s+ON\s+({_WORD})", re.I)
+# CICS commarea idiom: LK-COMMAREA OCCURS 1 TO 32767 DEPENDING ON EIBCALEN is
+# sized by CICS itself, not by program data.
+_ODO_SAFE_CONTROLS = {"EIBCALEN"}
+
+
+def occurs_depending(logical_lines: List[LogicalLine]) -> List[Tuple[int, str]]:
+    """(line, controlling item) of each OCCURS ... DEPENDING ON data entry (COBOL005)."""
+    out: List[Tuple[int, str]] = []
+    for unit in split_program_units(logical_lines):
+        for sentence in split_sentences(unit.data):
+            occurs = _OCCURS.search(sentence.text)
+            if not occurs:
+                continue
+            control = _DEPENDING_ON.search(sentence.text, occurs.end())
+            if control and control.group(1).upper() not in _ODO_SAFE_CONTROLS:
+                out.append((sentence.line, control.group(1)))
+    return out
+
+
 def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
     """COBOL011 (no FILE STATUS clause) and COBOL012 (status never referenced)."""
     issues: List[AnalysisIssue] = []
@@ -585,6 +777,7 @@ def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]
         opened |= _open_operands(proc_text, match.end())
     proc_has_copy = bool(_COPY.search(proc_text))
     entries: Optional[List[Tuple[int, str]]] = None
+    missing: List[Tuple[int, str]] = []
     for sentence in split_sentences(unit.env):
         select = _SELECT.search(sentence.text)
         if not select:
@@ -594,20 +787,7 @@ def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]
             continue
         status = _STATUS_CLAUSE.search(sentence.text[select.end() :])
         if not status:
-            issues.append(
-                _issue(
-                    file_path,
-                    sentence.line,
-                    AnalysisIssueType.COBOL_FILE_STATUS_MISSING,
-                    AnalysisIssueSeverity.MEDIUM,
-                    f"File '{fname}' has no FILE STATUS clause. I/O errors cannot be "
-                    "detected and the program may continue with bad data or abend.",
-                    "Add FILE STATUS IS <2-byte field> to the SELECT and check it after "
-                    "each OPEN/READ/WRITE/CLOSE.",
-                    "COBOL011",
-                    0.8,
-                )
-            )
+            missing.append((sentence.line, fname))
             continue
         if fname not in opened or proc_has_copy:
             continue
@@ -629,6 +809,8 @@ def check_file_status(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]
                 0.7,
             )
         )
+    if missing:
+        issues.insert(0, _file_status_missing(file_path, missing))
     return issues
 
 
@@ -792,9 +974,10 @@ def check_unused_paragraphs(
 def run_program_rules(
     file_path: str, logical_lines: List[LogicalLine], is_copybook: bool
 ) -> List[AnalysisIssue]:
-    """Run COBOL008-COBOL014 on the logical lines of one file."""
+    """Run COBOL004 and COBOL008-COBOL014 on the logical lines of one file."""
     issues: List[AnalysisIssue] = []
     for unit in split_program_units(logical_lines):
+        issues.extend(check_redefines(file_path, unit))
         issues.extend(check_value_secrets(file_path, unit))
         all_lines = [(n, t) for n, t in unit.data + unit.env] + [(n, t) for n, t, _ in unit.proc]
         issues.extend(check_connection_string_secrets(file_path, sorted(all_lines)))

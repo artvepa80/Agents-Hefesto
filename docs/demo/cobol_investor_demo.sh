@@ -63,19 +63,19 @@ sleep 3
 echo -e "${BOLD}${YELLOW}[STEP 2] Scanning Entire Legacy COBOL Codebase${NC}"
 echo ""
 echo "Corpus: 11 synthetic COBOL files (10 programs + 1 copybook) from tests/fixtures"
-echo "Rules: 14 free COBOL governance rules (no license needed)"
+echo "Rules: 15 free COBOL governance rules (no license needed)"
 echo ""
 sleep 2
 
 hefesto analyze tests/fixtures/cobol/*.cbl tests/fixtures/cobol/*.cpy --severity HIGH
 
 echo ""
-echo -e "${GREEN}✓ Found 10 HIGH+ severity governance issues across codebase${NC}"
+echo -e "${GREEN}✓ Found 9 HIGH+ severity governance issues across codebase${NC}"
 echo "  - Hardcoded credentials: 4 CRITICAL"
 echo "  - Spaghetti GO TOs: 2 HIGH"
-echo "  - Copybook blast radius: 2 HIGH"
+echo "  - REDEFINES over COMP-3/signed numeric data: 2 HIGH"
 echo "  - PERFORM THRU chains: 1 HIGH"
-echo "  - REDEFINES (every REDEFINES is flagged): 1 HIGH"
+echo "  (copybook blast radius needs 5+ programs sharing a copybook; the fixtures have 2)"
 echo ""
 sleep 3
 
@@ -84,7 +84,7 @@ sleep 3
 #
 echo -e "${BOLD}${YELLOW}[STEP 3] Performance Benchmark — Speed Test${NC}"
 echo ""
-echo "Analyzing 11 synthetic COBOL files with all 14 governance rules..."
+echo "Analyzing 11 synthetic COBOL files with all 15 governance rules..."
 echo ""
 sleep 1
 
@@ -122,20 +122,21 @@ echo "════════════════════════�
 echo -e "${NC}"
 echo ""
 echo "Summary:"
-echo "  ✓ 13 governance issues detected across 11 synthetic COBOL files"
+echo "  ✓ 12 governance issues detected across 11 synthetic COBOL files"
 echo "  ✓ <1 second analysis time (production-ready)"
-echo "  ✓ No findings on the clean program (real-code precision not yet measured)"
-echo "  ✓ 14 free governance rules (credentials, spaghetti logic, copybooks,"
+echo "  ✓ No findings on the clean program (precision on ~440 labelled real-corpus findings: docs/cobol-corpus-baseline.md)"
+echo "  ✓ 15 free governance rules (credentials, spaghetti logic, copybooks,"
 echo "    FILE STATUS, dead code; COBOL008-014 are exercised by tests/fixtures/cobol/smoke)"
 echo ""
 echo "Limits:"
 echo "  • Fixed format by default; free format is inferred (heuristic) or set with >>SOURCE FORMAT IS FREE"
-echo "  • COBOL004 flags every REDEFINES (COMP-3 not verified yet)"
+echo "  • COBOL004 checks COMP-3/binary/signed layouts but not field lengths or runtime use"
+echo "  • Copybook rules (COBOL007/015) only see copybooks inside the scanned tree"
 echo "  • Dead-code/unused-paragraph rules do not follow procedure copybooks (COPY in PROCEDURE)"
 echo ""
 echo "Next Steps:"
 echo "  • SARIF output (not available yet; the GitHub Action already runs these rules)"
-echo "  • Phase 3: Copybook reference counting + impact analysis"
+echo "  • Phase 4: performance on large codebases"
 echo "  • Target: Banking/insurance/gov COBOL teams (300K+ active developers)"
 echo ""
 echo -e "${YELLOW}Questions?${NC}"

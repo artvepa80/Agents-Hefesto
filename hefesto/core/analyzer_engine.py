@@ -84,6 +84,10 @@ class AnalyzerEngine:
         self._tsjs_parser: Any = None
         self._all_file_results: list = []  # EPIC 4: accumulated for _build_meta
         self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
+        # COBOL COPY index (COBOL007/COBOL015). Set for the whole run by
+        # prepare_cobol_index(); otherwise built per analyze_path() call.
+        self._cobol_index: Any = None
+        self._cobol_index_pinned = False
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -99,6 +103,22 @@ class AnalyzerEngine:
             self._tsjs_parser = TsJsParser()
         if HAS_MULTILANG and SkipReport is not None:
             self._multilang_skip_report = SkipReport()
+
+    def prepare_cobol_index(self, paths: List[str], exclude_patterns: List[str]) -> None:
+        """Index COPY statements across every path of the run (COBOL007/COBOL015)."""
+        files: List[Path] = []
+        for path in paths:
+            files.extend(self._find_files(Path(path).resolve(), exclude_patterns))
+        cobol = [f for f in files if self._is_cobol_path(f)]
+        if cobol:
+            from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
+
+            self._cobol_index = CobolProjectIndex.from_paths(cobol)
+            self._cobol_index_pinned = True
+
+    @staticmethod
+    def _is_cobol_path(path: Path) -> bool:
+        return path.suffix.lower() in (".cbl", ".cob", ".cobol", ".cpy", ".pco")
 
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
@@ -158,6 +178,14 @@ class AnalyzerEngine:
 
         file_results = []
         all_issues = []
+
+        if not self._cobol_index_pinned:
+            cobol_files = [f for f in source_files if self._is_cobol_path(f)]
+            self._cobol_index = None
+            if cobol_files:
+                from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
+
+                self._cobol_index = CobolProjectIndex.from_paths(cobol_files)
 
         for py_file in source_files:
             file_result = self._analyze_file(py_file)
@@ -412,7 +440,9 @@ class AnalyzerEngine:
                     CobolGovernanceAnalyzer,
                 )
 
-                cobol_issues = CobolGovernanceAnalyzer().analyze(str(file_path), code)
+                cobol_issues = CobolGovernanceAnalyzer(index=self._cobol_index).analyze(
+                    str(file_path), code
+                )
                 filtered_issues = self._filter_by_severity(cobol_issues)
                 duration_ms = (time.time() - start_time) * 1000
                 return FileAnalysisResult(

@@ -996,6 +996,10 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
     total_loc = 0
     total_duration = 0.0
 
+    # One COPY index for all paths, so `analyze a.cbl b.cpy` sees both (COBOL007/015).
+    if len(paths_list) > 1 and hasattr(engine, "prepare_cobol_index"):
+        engine.prepare_cobol_index(list(paths_list), exclude_patterns or [])
+
     for path in paths_list:
         report = engine.analyze_path(path, exclude_patterns)
         all_file_results.extend(report.file_results)
