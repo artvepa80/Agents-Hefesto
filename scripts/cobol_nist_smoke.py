@@ -44,7 +44,7 @@ def split_members(newcob: Path):
             if name:
                 yield kind, name, "\n".join(buf) + "\n"
             parts = line.split(",")
-            kind, name = parts[1].strip(), parts[2].strip()
+            kind, name = parts[1].strip(), parts[-1].strip()
             buf = []
         elif line.startswith("*END-OF,"):
             continue

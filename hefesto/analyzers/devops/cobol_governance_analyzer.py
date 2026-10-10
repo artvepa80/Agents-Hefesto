@@ -1,8 +1,8 @@
 """
 COBOL Governance Analyzer for Hefesto v4.12.0 — Legacy Support Phase 1.
 
-Detects 7 governance issues in COBOL-85 + IBM Enterprise COBOL code.
-All 7 rules are FREE (no license required):
+Detects 14 governance issues in COBOL-85 + IBM Enterprise COBOL code.
+All 14 rules are FREE (no license required):
 
 1. GOTO_EXCESSIVE: >10 GO TO statements (HIGH severity)
 2. HARDCODED_CREDENTIALS: literal MOVEd into a field whose name looks like a
@@ -14,6 +14,10 @@ All 7 rules are FREE (no license required):
 6. PERFORM_THRU_CHAIN: PERFORM THRU spanning >5 paragraphs (HIGH severity)
 7. COPYBOOK_BLAST_RADIUS: every COPY of a user copybook; vendor copybooks
    (CICS DFH*, DB2 SQLCA/SQLDA) are skipped (CRITICAL/HIGH severity)
+
+COBOL008-COBOL014 (VALUE secrets, connection-string secrets, EXEC SQL CONNECT
+literal passwords, FILE STATUS missing/unchecked, dead code, unused
+paragraphs) live in ``cobol_program_rules``.
 
 Source format: a ``>>SOURCE FORMAT IS FREE`` / ``FIXED`` directive (or the
 Micro Focus ``$SET SOURCEFORMAT(...)`` form) in the first 50 lines decides the
@@ -32,6 +36,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, Hashable, Iterable, List, Tuple, TypeVar
 
+from hefesto.analyzers.devops.cobol_program_rules import run_program_rules
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -55,6 +60,8 @@ class _CobolStructure:
     perform_thru: List[Tuple[int, str, str]] = field(default_factory=list)
     copy_statements: List[Tuple[int, str]] = field(default_factory=list)
     paragraphs: List[Tuple[str, int]] = field(default_factory=list)
+    # (line number, text, starts in Area A) for the program-level rules
+    logical_lines: List[Tuple[int, str, bool]] = field(default_factory=list)
 
 
 class _CobolStructuralExtractor:
@@ -127,6 +134,10 @@ class _CobolStructuralExtractor:
 
         # Extract logical lines (handle continuations, strip comments)
         logical_lines = self._build_logical_lines(lines, is_fixed_format)
+        structure.logical_lines = [
+            (num, text, self._starts_in_area_a(lines[num - 1], is_fixed_format))
+            for num, text in logical_lines
+        ]
 
         # Extract elements from logical lines
         for line_num, logical_line in logical_lines:
@@ -178,6 +189,14 @@ class _CobolStructuralExtractor:
 
         self.last_format_reason = "default-fixed"
         return True
+
+    @staticmethod
+    def _starts_in_area_a(line: str, is_fixed_format: bool) -> bool:
+        """True if the code starts in Area A (columns 8-11). Unknown in free format."""
+        if not is_fixed_format:
+            return True
+        code = line[7:72].expandtabs(4)
+        return bool(code.strip()) and len(code) - len(code.lstrip()) < 4
 
     def _build_logical_lines(
         self, lines: List[str], is_fixed_format: bool
@@ -362,7 +381,7 @@ class CobolGovernanceAnalyzer:
         is_copybook = file_path.lower().endswith(".cpy")
 
         if not is_copybook:
-            # All 7 rules are FREE (procedural rules; not applied to copybooks)
+            # COBOL001-COBOL007 (FREE; procedural rules, not applied to copybooks)
             issues.extend(self._check_goto_excessive(file_path, structure))
             issues.extend(self._check_hardcoded_credentials(file_path, structure))
             issues.extend(self._check_accept_unvalidated(file_path, structure))
@@ -370,6 +389,9 @@ class CobolGovernanceAnalyzer:
             issues.extend(self._check_occurs_depending(file_path, structure))
             issues.extend(self._check_perform_thru_chain(file_path, structure))
             issues.extend(self._check_copybook_blast_radius(file_path, structure))
+
+        # COBOL008-COBOL014 (FREE). COBOL008/COBOL009 also run on copybooks.
+        issues.extend(run_program_rules(file_path, structure.logical_lines, is_copybook))
 
         return issues
 

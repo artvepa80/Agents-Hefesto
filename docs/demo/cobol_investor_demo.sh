@@ -63,11 +63,11 @@ sleep 3
 echo -e "${BOLD}${YELLOW}[STEP 2] Scanning Entire Legacy COBOL Codebase${NC}"
 echo ""
 echo "Corpus: 11 synthetic COBOL files (10 programs + 1 copybook) from tests/fixtures"
-echo "Rules: 7 free COBOL governance rules (no license needed)"
+echo "Rules: 14 free COBOL governance rules (no license needed)"
 echo ""
 sleep 2
 
-hefesto analyze tests/fixtures/cobol/ --severity HIGH
+hefesto analyze tests/fixtures/cobol/*.cbl tests/fixtures/cobol/*.cpy --severity HIGH
 
 echo ""
 echo -e "${GREEN}✓ Found 10 HIGH+ severity governance issues across codebase${NC}"
@@ -84,11 +84,11 @@ sleep 3
 #
 echo -e "${BOLD}${YELLOW}[STEP 3] Performance Benchmark — Speed Test${NC}"
 echo ""
-echo "Analyzing 11 synthetic COBOL files with all 7 governance rules..."
+echo "Analyzing 11 synthetic COBOL files with all 14 governance rules..."
 echo ""
 sleep 1
 
-time hefesto analyze tests/fixtures/cobol/ --severity MEDIUM > /dev/null 2>&1
+time hefesto analyze tests/fixtures/cobol/*.cbl tests/fixtures/cobol/*.cpy --severity MEDIUM > /dev/null 2>&1
 
 echo ""
 echo -e "${GREEN}✓ Analysis complete in <1 second (production-ready speed)${NC}"
@@ -125,11 +125,13 @@ echo "Summary:"
 echo "  ✓ 13 governance issues detected across 11 synthetic COBOL files"
 echo "  ✓ <1 second analysis time (production-ready)"
 echo "  ✓ No findings on the clean program (real-code precision not yet measured)"
-echo "  ✓ 7 free governance rules (credentials, spaghetti logic, copybooks)"
+echo "  ✓ 14 free governance rules (credentials, spaghetti logic, copybooks,"
+echo "    FILE STATUS, dead code; COBOL008-014 are exercised by tests/fixtures/cobol/smoke)"
 echo ""
 echo "Limits:"
 echo "  • Fixed format by default; free format is inferred (heuristic) or set with >>SOURCE FORMAT IS FREE"
 echo "  • COBOL004 flags every REDEFINES (COMP-3 not verified yet)"
+echo "  • Dead-code/unused-paragraph rules do not follow procedure copybooks (COPY in PROCEDURE)"
 echo ""
 echo "Next Steps:"
 echo "  • SARIF output (not available yet; the GitHub Action already runs these rules)"
