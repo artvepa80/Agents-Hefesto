@@ -75,6 +75,8 @@ class TextReporter:
             low = [i for i in all_issues if i.severity == AnalysisIssueSeverity.LOW]
             lines.append(self._format_severity_section(AnalysisIssueSeverity.LOW, low))
 
+        lines.extend(self._notes_block(report))
+
         # Footer
         lines.append("")
         lines.append(self._format_footer(report))
@@ -156,6 +158,30 @@ class TextReporter:
             for sug_line in suggestion_lines[1:]:
                 lines.append(f"     {sug_line}")
 
+        return "\n".join(lines)
+
+    def _notes_block(self, report: AnalysisReport) -> List[str]:
+        notes = self._format_notes(report)
+        return ["", notes] if notes else []
+
+    def _format_notes(self, report: AnalysisReport) -> str:
+        """Notes that are not findings (e.g. COBOL source format inferred as free)."""
+        cobol = (report.meta or {}).get("cobol_format_notices") or {}
+        files = cobol.get("inferred_free") or []
+        if not files:
+            return ""
+        bold = self.COLORS["BOLD"]
+        reset = self.COLORS["RESET"]
+        lines = [f"{bold}ℹ️  Notes:{reset}"]
+        lines.append(
+            f"   {len(files)} COBOL file(s) read as free format: {cobol.get('message', '')}"
+        )
+        for path in files[:10]:
+            lines.append(f"   - {path}")
+        if len(files) > 10:
+            lines.append(
+                f"   ... and {len(files) - 10} more (see meta.cobol_format_notices in JSON)"
+            )
         return "\n".join(lines)
 
     def _format_footer(self, report: AnalysisReport) -> str:

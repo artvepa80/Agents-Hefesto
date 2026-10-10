@@ -7,6 +7,303 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **COBOL Phase 3 leftovers.** CardDemo COBOL findings 56 → 48
+  (`benchmark/cobol/baseline.json` regenerated); recall on seeded issues
+  28/34 → 32/34.
+  - **COBOL004** skips the byte view of an unsigned binary integer
+    (`PIC 9(4) BINARY` redefined as `PIC X` bytes of exactly its storage
+    size, CardDemo's VSAM file-status idiom); signed binary or a size
+    mismatch is still flagged. USAGE words are no longer matched inside data
+    names (`REDEFINES TWO-BYTES-BINARY`, `INDEXED BY STATIC-INDEX`).
+    Precision on the labelled sample 80% → 100% (35/35).
+  - **COBOL007/COBOL015** index `EXEC SQL INCLUDE` members and `.dcl`,
+    `.copy`, `.cbk` and extension-less copybooks (only when a scanned program
+    COPYs or INCLUDEs them and they hold COBOL data definitions; such files
+    are analyzed as copybooks too). In fixed format a COPY name stops at
+    column 72, so an identification area in 73-80 is not glued to it.
+  - Fixed-format continuation of an alphanumeric literal is joined without
+    the continuation line's opening quote, so a connection string split
+    over two lines is checked as one (COBOL009).
+  - `benchmark/cobol/baseline.json` records `dirty` and `analyzer_tree`
+    next to `commit`; the committed baseline must come from a clean tree.
+- **COBOL Phase 3, precision tuning.** Precision measured on 440 labelled
+  findings (`tests/fixtures/cobol/labels/phase3_labels.json`,
+  `scripts/cobol_label_precision.py`); COBOL findings on CardDemo go from 341
+  to 56, GenApp from 52 to 13, zopeneditor-sample from 14 to 4
+  (`benchmark/cobol/baseline.json` regenerated).
+  - **COBOL004 (REDEFINES)** only flags a REDEFINES when one side holds
+    packed, binary, float, pointer or signed numeric data and the layouts
+    differ; it now also runs on copybooks and handles REDEFINES split across
+    lines. Plain `PIC X` overlays and CICS BMS symbolic maps are skipped.
+    Precision 1% → 80% (first published as 82%; one NIST finding was
+    relabelled FP, see the leftovers entry).
+  - **COBOL005 (OCCURS DEPENDING ON)** is checked per data entry, reported on
+    the right line, without duplicates, and skips GO TO DEPENDING, RECORD
+    VARYING and the CICS `DEPENDING ON EIBCALEN` commarea idiom. Precision
+    24% → 100%.
+  - **COBOL007 (copybook blast radius)** is reported once on the copybook
+    file when 5+ scanned programs COPY it (MEDIUM; HIGH at 15+ or for a
+    generic name). Generic names are matched as whole tokens (no more
+    substring matches), COPY inside comments/literals is ignored and IBM MQ
+    `CMQ*` copybooks are skipped. Precision 65% → 100%.
+  - **COBOL011 (FILE STATUS missing)** is LOW and grouped into one finding
+    per program, with the file names in `metadata.files`.
+
+### Added
+- **`--copybook-path DIR` / `copybook_paths:`** (`.hefesto.yaml`, relative to
+  the file) for COBOL copybook directories outside the scanned tree: names
+  found there resolve COPY/INCLUDE for COBOL015; the files are not analyzed.
+- The text report lists COBOL files read as free format by inference (no
+  `>>SOURCE` directive) under **Notes**; JSON has them in
+  `meta.cobol_format_notices` and per file in `metadata.cobol_source_format`.
+- **COBOL recall fixture:** 34 seeded issues across all 15 rules
+  (`tests/fixtures/cobol/recall/`) and `scripts/cobol_recall.py`, which
+  prints recall per rule; 2 seeds are documented known limits.
+- **COBOL015 COPYBOOK_NOT_FOUND (LOW):** a COPY whose copybook is not in the
+  scanned tree, grouped per copybook name. It needs a project-wide COPY index
+  (built for each scan, across all CLI paths) and stays silent when nothing in
+  the scan resolves.
+- `docs/cobol-corpus-baseline-ci.md`: the corpus-baseline CI workflow, ready
+  to paste through the GitHub web UI.
+
+### Security
+- **`hefesto.security.path_sandbox.resolve_under_root`** (API server path
+  guard) now normalizes with `os.path.realpath` and checks the root prefix,
+  rejecting siblings that share it (`/work/app-evil` for root `/work/app`)
+  and symlinks that leave the root. Same accepted paths as before. CodeQL
+  recognizes this check, so `py/path-injection` no longer reports the
+  engine's file discovery (it flagged the new multi-path COPY index).
+  New tests in `tests/test_path_sandbox.py`.
+
+### Fixed
+- **COBOL: free-format sources without a directive are no longer silently
+  missed.** When there is no `>>SOURCE FORMAT` directive, free format is now
+  inferred if a division header (or a level-01/77 entry in a copybook) starts
+  before column 8. Before, such files were read as fixed format and returned 0
+  findings. `>>SOURCE FREE`, lowercase directives and Micro Focus
+  `$SET SOURCEFORMAT(FREE)` are recognized, and a `FIXED` directive wins.
+  OCCURS DEPENDING ON detection now also honors free format.
+- **COBOL: `.cobol` and uppercase `.PCO`/`.COBOL` files are scanned** (they
+  were not discovered before).
+- **COBOL002 false positives:** fields named like credentials but ending in a
+  flag/status/length/label suffix (`-FLAG`, `-OK`, `-SW`, `-IND`, `-STATUS`,
+  `-LEN`, `-MSG`, `-PROMPT`, ...) are no longer flagged.
+- **COBOL007 false positives:** vendor copybooks (CICS `DFH*`, DB2
+  `SQLCA`/`SQLDA`) are skipped.
+- **COBOL006:** lowercase `perform ... thru ...` now counts the paragraphs in
+  the chain instead of falling back to "partial detection".
+
+### Changed
+- **COBOL006/COBOL007 group repeated identical findings per file:** one
+  finding per `PERFORM X THRU Y` pair and per copybook name, with
+  `metadata.occurrences` and the first 50 `metadata.lines`. A file with 20,000
+  identical `PERFORM THRU` statements now returns 1 finding instead of 20,000.
+  On CardDemo, COBOL findings go from 421 to 339; GenApp stays at 51;
+  zopeneditor-sample goes from 20 to 14.
+
+### Added
+- **COBOL corpus baseline:** `scripts/cobol_corpus_baseline.py` clones AWS
+  CardDemo, IBM CICS GenApp and IBM zopeneditor-sample at pinned commits,
+  runs `hefesto analyze` and records counts per rule, severity and file, every
+  finding and timing in `benchmark/cobol/baseline.json` (results only, no
+  corpus code). `compare` diffs a new run against it and lists new/removed
+  findings per rule. See `docs/cobol-corpus-baseline.md`.
+- **7 new free COBOL rules (COBOL008-COBOL014), 14 in total.** They come
+  from the misses found in the Phase 1 smoke run and use a small program
+  model (data entries, SELECTs, EXEC SQL blocks, paragraphs, sentences):
+  - COBOL008 (CRITICAL): hardcoded secret in a `VALUE` clause of a
+    credential-named field. Same suffix exclusions as COBOL002; placeholders
+    (`SPACES`, `XXXX`, `UNDEFINED`, ...) and key names (`'APP-Token-Password'`)
+    are skipped. Also runs on copybooks.
+  - COBOL009 (CRITICAL): `PASS=`/`PWD=`/`PASSWORD=` with a value inside a
+    string literal (connection strings). Also runs on copybooks.
+  - COBOL010 (CRITICAL): `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a
+    literal password, or Oracle `CONNECT 'user/password'`.
+  - COBOL011 (MEDIUM): `SELECT` without a `FILE STATUS` clause (SD sort files
+    skipped).
+  - COBOL012 (LOW): OPENed file whose status field (with subordinates and
+    88-levels) is never referenced in the PROCEDURE DIVISION, DECLARATIVES
+    included.
+  - COBOL013 (MEDIUM): statements after an unconditional `STOP RUN`/`GOBACK`/
+    `EXIT PROGRAM` in the same paragraph.
+  - COBOL014 (LOW): paragraph or section never referenced and not reachable
+    by fall-through (entry paragraph, DECLARATIVES, THRU ranges, empty EXIT
+    paragraphs and programs with a procedure `COPY` are skipped).
+  On CardDemo/GenApp/zopeneditor they add 2/1/0 findings. A manual review of
+  findings on the NIST COBOL85 suite and a 125-file sample of public GitHub
+  COBOL put precision at 100% for COBOL008-COBOL012 and COBOL014 on the
+  reviewed samples (small for COBOL008/010/012); COBOL013 had 1 false
+  positive (prose in a `.cob` file). The Phase 1 xfail tests for these gaps
+  now pass; REDEFINES on PIC X (COBOL004 tuning) stays xfail.
+- COBOL smoke regression tests (`tests/test_cobol_smoke.py`): detected cases,
+  false-positive fixes, free-format inference, extensions and grouping, plus
+  6 strict `xfail` tests for known misses that Phase 3 will address.
+- `scripts/cobol_nist_smoke.py`: downloads the NIST COBOL85 suite on demand
+  (not vendored) and checks the analyzer for crashes and timing. Result: 510
+  members (459 programs, 51 copybooks, 347k lines), 0 crashes, about 3 s.
+
+### Changed
+- **COBOL: the 7 rules are documented as free, as they always ran.** The
+  analyzer had a `_is_pro_tier_available()` gate that always returned `True`
+  (a TODO left for the investor demo), so the 4 rules described as PRO
+  (COBOL004-COBOL007) already ran for everyone. The dead gate was removed with
+  no behavior change, and the README, the 4.12.0 notes below and
+  `docs/demo/cobol_investor_demo.sh` now say "7 free COBOL rules" instead of
+  "3 FREE + 4 PRO". The docs also state the current limits: fixed format is
+  assumed unless the source declares `>>SOURCE FORMAT IS FREE`; COBOL004 flags
+  every `REDEFINES` (packed decimal is not verified yet); COBOL007 flags every
+  `COPY`; there is no SARIF output yet. The demo script no longer claims "zero
+  false positives" (only one clean fixture was checked; real-code precision has
+  not been measured). Tests: `tests/test_cobol_governance.py::TestAllRulesFree`.
+
+### Fixed
+- **PRO/OMEGA upgrade links point at the live offer.** The PRO/OMEGA-only CLI
+  stubs (`serve` without PRO, `info`, `activate`, `deactivate`, `status`) only
+  said "Install from the private distribution"; they now also show PRO
+  $8/month, OMEGA $19/month, the 14-day trial and
+  `https://hefestoai.narapallc.com/#pricing` (`PRICING_URL`,
+  `PRO_REQUIRED_MESSAGE` in `hefesto/cli/main.py`). The README pricing section
+  linked `/trial` and `/founding` (old $99 trial and $59 founding links, now
+  inactive), promised "no credit card" for PRO (whose checkout requires one) and
+  advertised a founding coupon; pricing is just PRO $8 / OMEGA $19.
+  Placeholder `buy.stripe.com/hefesto-pro…` links in `docs/` and `examples/`,
+  the truncated Stripe links in `CLAUDE.md` and the $25/$35/$49 prices in
+  `scripts/README.md` were replaced. Tests: `tests/test_cli_pro_required_message.py`;
+  `tests/test_pro_wiring.py` updated.
+
+## [4.14.1] - 2026-10-06
+
+### Security
+- **Secret detection no longer skips production files whose path merely
+  contains "test" or "example" (SEC-03).** `HARDCODED_SECRET` used a substring
+  check, so files such as `src/contest/config.py`, `latest_settings.py`,
+  `latest_app/…` and anything analyzed under `/tmp/pytest-of-<user>/` were
+  never scanned. Test/example code is now recognized by whole path segments
+  (`test/`, `tests/`, `__tests__/`, `example/`, `examples/`) and file-name
+  conventions (`test_*`, `*_test.*`, `*.test.*`, `*.spec.*`, `conftest.py`,
+  `test.py`, `tests.py`, `*.example`). Absolute paths are judged relative to
+  the working directory when inside it, so a checkout under a directory named
+  `tests` is not skipped wholesale.
+  - `ASSERT_IN_PRODUCTION` uses the same rule for test code (it had the same
+    substring check); its behavior on example code is unchanged.
+  - Removed the hardcoded exception that always scanned
+    `tests/fixtures/action/`. The GitHub Action smoke-test fixtures moved to
+    `.github/action-smoke/`.
+  - Regression tests: `tests/test_sec03_path_segments.py`.
+- **HTML report escapes every interpolated value (SEC-05).** The report from
+  `hefesto analyze --output html` / `--save-html` inserted `file_path`,
+  `message` and `function_name` without escaping (only `suggestion` was
+  escaped). A repository with a file or directory named like
+  `<script>…</script>` could run script in the browser of whoever opened its
+  report (stored XSS). All values in the issue cards and severity headers now
+  go through `html.escape(…, quote=True)`, which also covers `"` and `'` in
+  attribute context.
+  - Regression tests: `tests/test_html_reporter_escaping.py`.
+  - `docs/GETTING_STARTED.md` now describes what the HTML report actually
+    contains (it had claimed charts, filtering and syntax highlighting).
+- **GitHub Action telemetry is now really opt-in (SEC-06).**
+  `scripts/action_entrypoint.sh` sent an anonymous `curl` ping to
+  `hefestoai.narapallc.com/api/telemetry` on every run, even with
+  `telemetry: 0` (the default, documented as opt-in). The ping now runs only
+  when the `telemetry` input is `1` or `true` (any case). Any other value
+  disables it and also runs the CLI with `HEFESTO_TELEMETRY=0`. Previously a
+  value like `yes` left the CLI's opt-out ping on while the Action reported
+  telemetry as off.
+  - `hefesto telemetry status` now reports the CLI's anonymous usage ping
+    (on by default, `HEFESTO_TELEMETRY=0` disables it) and its endpoint, as
+    well as the local log. It used to print only the local log
+    ("Enabled: False") while the ping was being sent. The ping and the status
+    share one check, `remote_ping_enabled()`. CLI defaults are unchanged.
+  - README, `action.yml` and `skill/` docs describe the new behavior.
+  - Regression tests: `tests/scripts/test_action_entrypoint.py` (runs the
+    real entrypoint with fake `hefesto`/`curl`) and
+    `tests/telemetry/test_telemetry_optin.py`.
+
+### Fixed
+- **Action `min_severity: INFO` no longer crashes the run (BUG-13).** The
+  Action advertised `INFO`, but the CLI's `--severity` rejects it (exit 2).
+  The entrypoint now maps `INFO` to `LOW` with a warning, and `action.yml`
+  lists only CRITICAL, HIGH, MEDIUM and LOW.
+
+## [4.14.0] - 2026-10-06
+
+### Added
+- **Opt-in `--format-check` flag for `hefesto analyze`.** Runs Black in
+  check mode (in-process; no files are modified) on the Python files the
+  analysis already selected and reports each file Black would reformat as a
+  `FORMAT_DRIFT` finding (severity LOW) in the normal text/JSON/HTML report.
+  - Off by default: without the flag, findings, output and exit codes are
+    unchanged.
+  - Respects the project's `[tool.black]` config from `pyproject.toml`
+    (line-length, target-version, string normalization, preview,
+    `extend-exclude` / `force-exclude`); warns when `required-version` does
+    not match the installed Black.
+  - Findings are appended after the `--severity` filter (same as the ML
+    pass), so they show up even at the default MEDIUM threshold.
+    `--fail-on` / `--exclude-types` apply normally: only `--fail-on LOW`
+    fails the gate on drift.
+  - JSON output includes a truncated unified diff in `code_snippet` and
+    `lines_added` / `lines_removed` in `metadata`.
+  - Black is optional: new extra `pip install "hefesto-ai[format]"`
+    (`black>=24`). If Black is missing, a one-line warning is printed and
+    the run continues.
+  - Only Black is covered; isort and flake8 still run only in the repo's
+    pre-push hook / CI.
+- **`.hefesto.yaml` project config for `hefesto analyze`.** The nearest
+  `.hefesto.yaml` / `.hefesto.yml` (searched from the first analyzed path up
+  to the repo root, or the filesystem root outside a repo) can set
+  `severity`, `fail_on`, `output`, `exclude`, `exclude_types`, `quiet`,
+  `max_issues`, `format_check` and `enable_memory_budget_gate`.
+  - Precedence: explicit CLI flag > config file > default. Explicitness comes
+    from click's parameter source, so `--severity MEDIUM` still wins over the
+    file.
+  - New flags: `--config PATH` (use this file) and `--no-config` (ignore
+    config files).
+  - Unknown keys (including the old README's `rules:` block), bad values,
+    invalid YAML, or both `.yaml` and `.yml` in one directory stop the run
+    with exit code 2 and a message naming the problem.
+  - Only keys whose option exists on the `analyze` command are accepted, and
+    any such key is applied generically (no per-option wiring).
+  - The file in use is printed as `Config: <path>`.
+
+### Changed
+- **Telemetry: dogfood pings are tagged separately** (PR #56). When
+  `HEFESTO_TELEMETRY_ENV=dogfood` (or `internal` / `dev`) or
+  `HEFESTO_DOGFOOD=1` is set, or Hefesto runs from an editable install,
+  the anonymous ping's environment flags include `dogfood`, so owner and
+  development runs can be filtered out of end-user analytics.
+
+### Packaging
+- **License metadata** (PR #51): `LICENSE` is now the standard MIT text, and
+  the PRO/OMEGA/Enterprise terms live in `LICENSE-COMMERCIAL.md`.
+  `pyproject.toml` uses the SPDX expression `license = "MIT"` with
+  `license-files`, and the build now requires `setuptools>=77`.
+
+### Dependencies
+- `pyyaml>=6.0,<7.0` is now a core dependency. It was already imported by
+  the drift runner, CI-parity validator and YAML/Helm analyzers, but was
+  declared only in the `dev` and `ci` extras.
+
+### Documentation
+- **README Configuration section no longer claims features that do not
+  exist.**
+  - The `.hefesto.yaml` example (severity, exclude, rule thresholds) was
+    never read by any Hefesto code. The section was marked "planned, not
+    yet supported"; it now documents the real `.hefesto.yaml` support added
+    above.
+  - Removed `HEFESTO_SEVERITY` and `HEFESTO_OUTPUT` from the environment
+    variable list; nothing reads them. Use `--severity` / `--output`.
+  - Labeled `HEFESTO_LICENSE_KEY` and the API security variables as
+    PRO/OMEGA-only, and corrected `HEFESTO_CACHE_MAX_ITEMS=256` to the
+    variable the PRO API actually reads, `HEFESTO_CACHE_MAX_SIZE`
+    (default 1000).
+  - Added `HEFESTO_TELEMETRY=0` to the list (already documented under
+    Telemetry).
+- README honesty pass and corrected competitor pricing (PR #51).
+- `skill/SKILL.md` gained YAML frontmatter for agent discovery and asks
+  agents to run `hefesto analyze` before committing (PRs #53, #55).
+
 ## [4.13.1] - 2026-05-08
 
 ### Fixed
@@ -142,8 +439,7 @@ Metadata-only release. No code, test, or behavior changes.
 
 ### Added
 - **COBOL Governance Analysis (Phase 1-Lite)**: 7 mainframe governance rules for COBOL-85 and IBM Enterprise COBOL
-  - FREE tier (3 rules): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED
-  - PRO tier (4 rules): REDEFINES_SENSITIVE, OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
+  - 7 free rules (corrected in Unreleased: this entry originally said "3 FREE, 4 PRO", but no tier gate was ever enforced): GOTO_EXCESSIVE (>10 threshold), HARDCODED_CREDENTIALS, ACCEPT_UNVALIDATED, REDEFINES_SENSITIVE (flags every REDEFINES), OCCURS_DEPENDING_ON, PERFORM_THRU_CHAIN (>5 paragraphs), COPYBOOK_BLAST_RADIUS
   - 30 COBOL tests (10 detection + 20 governance) - all passing
   - Internal structural extractor (regex-based, COBOL-85 fixed-format columns 7-72)
   - Multi-line pattern detection for complex COBOL constructs (OCCURS DEPENDING ON, PERFORM THRU, REDEFINES)

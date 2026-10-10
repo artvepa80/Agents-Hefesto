@@ -692,7 +692,7 @@ class AnalyzerEngine:
             click.echo("      • BigQuery analytics")
             click.echo("      • Confidence boosting")
             click.echo("")
-            click.echo("   Try 14-day free trial: https://buy.stripe.com/hefesto-pro-trial")
+            click.echo("   14-day free trial: https://hefestoai.narapallc.com/#pricing")
 ```
 
 ### Graceful Degradation

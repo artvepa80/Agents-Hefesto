@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Run from GitHub workspace so relative paths (e.g. tests/fixtures/action/clean.py) resolve.
+# Run from GitHub workspace so relative paths (e.g. .github/action-smoke/clean.py) resolve.
 # Docker image WORKDIR is /app; the repo is mounted at GITHUB_WORKSPACE.
 if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE" ]; then
     cd "$GITHUB_WORKSPACE"
@@ -15,10 +15,24 @@ FAIL_ON="${FAIL_ON^^}" # Force uppercase
 SEVERITY="${INPUT_MIN_SEVERITY:-LOW}"
 SEVERITY="${SEVERITY^^}" # Force uppercase
 FORMAT="${INPUT_FORMAT:-text}"
-TELEMETRY="${INPUT_TELEMETRY:-0}"
+TELEMETRY_INPUT="${INPUT_TELEMETRY:-0}"
 
-# Telemetry Opt-in
-export HEFESTO_TELEMETRY="${TELEMETRY}"
+# The CLI has no INFO level (its --severity accepts LOW..CRITICAL), so INFO
+# used to make the Action exit 2. Treat it as LOW, the lowest level (BUG-13).
+if [ "$SEVERITY" = "INFO" ]; then
+    echo "::warning::min_severity INFO is not supported; using LOW (the lowest level)."
+    SEVERITY="LOW"
+fi
+
+# Telemetry is opt-in (SEC-06). Only the values 1 or true (any case) enable it.
+# Anything else, including the default 0, disables both the Action ping below
+# and the CLI's own ping (the CLI treats HEFESTO_TELEMETRY=0 as off).
+TELEMETRY_NORMALIZED="${TELEMETRY_INPUT//[[:space:]]/}"
+case "${TELEMETRY_NORMALIZED,,}" in
+    1|true) TELEMETRY_ENABLED=1 ;;
+    *) TELEMETRY_ENABLED=0 ;;
+esac
+export HEFESTO_TELEMETRY="${TELEMETRY_ENABLED}"
 
 echo "::group::Hefesto Configuration"
 echo "Workspace: $(pwd)"
@@ -55,16 +69,19 @@ EXIT_CODE=${PIPESTATUS[0]}
 
 echo "::endgroup::"
 
-# Anonymous telemetry ping (always-on for CI)
-HEFESTO_VERSION=$(hefesto --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
-FILE_COUNT=$(grep -oE 'Files analyzed: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
-ISSUE_COUNT=$(grep -oE 'Issues found: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
-rm -f "$TMPOUT"
+# Anonymous Action ping: sent ONLY when the `telemetry` input is enabled
+# (1/true). With the default `telemetry: 0` nothing leaves the runner (SEC-06).
+if [ "$TELEMETRY_ENABLED" = "1" ]; then
+    HEFESTO_VERSION=$(hefesto --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
+    FILE_COUNT=$(grep -oE 'Files analyzed: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
+    ISSUE_COUNT=$(grep -oE 'Issues found: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
 
-curl -s -X POST https://hefestoai.narapallc.com/api/telemetry \
-  -H "Content-Type: application/json" \
-  -d "{\"event\":\"action\",\"v\":\"${HEFESTO_VERSION}\",\"files\":${FILE_COUNT},\"issues\":${ISSUE_COUNT},\"exit_code\":${EXIT_CODE}}" \
-  --connect-timeout 2 --max-time 3 || true
+    curl -s -X POST https://hefestoai.narapallc.com/api/telemetry \
+      -H "Content-Type: application/json" \
+      -d "{\"event\":\"action\",\"v\":\"${HEFESTO_VERSION}\",\"files\":${FILE_COUNT},\"issues\":${ISSUE_COUNT},\"exit_code\":${EXIT_CODE}}" \
+      --connect-timeout 2 --max-time 3 || true
+fi
+rm -f "$TMPOUT"
 
 # Set Outputs
 echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"

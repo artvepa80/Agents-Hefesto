@@ -1,0 +1,680 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-10-10T13:09:58+00:00",
+ "hefesto": {
+  "version": "4.14.1",
+  "commit": "8d58c55b92cc6c9785ff27ce32d6d96ebbbff79d",
+  "analyzer_tree": "a03a8de834833c63dba2442a3981fae2cac912ed",
+  "dirty": false
+ },
+ "corpora": {
+  "carddemo": {
+   "url": "https://github.com/aws-samples/aws-mainframe-modernization-carddemo.git",
+   "commit": "59cc6c2fd7ebd7ef7925cad552a01a4b8b6e4d5e",
+   "license": "Apache-2.0",
+   "files_analyzed": 118,
+   "total_loc": 38600,
+   "total_findings": 59,
+   "cobol_findings": 48,
+   "by_rule": {
+    "COBOL001": 7,
+    "COBOL003": 2,
+    "COBOL004": 16,
+    "COBOL005": 2,
+    "COBOL006": 5,
+    "COBOL007": 15,
+    "COBOL011": 1,
+    "missing-safety": 8,
+    "unquoted-var": 3
+   },
+   "by_severity": {
+    "HIGH": 32,
+    "LOW": 1,
+    "MEDIUM": 26
+   },
+   "per_file": {
+    "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl": {
+     "COBOL003": 1
+    },
+    "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy": {
+     "COBOL007": 1
+    },
+    "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy": {
+     "COBOL007": 1
+    },
+    "app/app-transaction-type-db2/cbl/COTRTLIC.cbl": {
+     "COBOL001": 1
+    },
+    "app/app-transaction-type-db2/cbl/COTRTUPC.cbl": {
+     "COBOL001": 1
+    },
+    "app/cbl/CBSTM03A.CBL": {
+     "COBOL001": 1,
+     "COBOL004": 1,
+     "COBOL006": 1,
+     "COBOL011": 1
+    },
+    "app/cbl/CBSTM03B.CBL": {
+     "COBOL001": 1,
+     "COBOL006": 4
+    },
+    "app/cbl/COACTUPC.cbl": {
+     "COBOL001": 1,
+     "COBOL004": 10
+    },
+    "app/cbl/COBSWAIT.cbl": {
+     "COBOL003": 1
+    },
+    "app/cbl/COCRDLIC.cbl": {
+     "COBOL001": 1
+    },
+    "app/cbl/COCRDUPC.cbl": {
+     "COBOL001": 1
+    },
+    "app/cbl/CSUTLDTC.cbl": {
+     "COBOL005": 2
+    },
+    "app/cpy/COCOM01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/COTTL01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSDAT01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSMSG01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSMSG02Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSSTRPFY.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CSUSR01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT02Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVACT03Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVCRD01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVCUS01Y.cpy": {
+     "COBOL007": 1
+    },
+    "app/cpy/CVEXPORT.cpy": {
+     "COBOL004": 5
+    },
+    "app/cpy/CVTRA05Y.cpy": {
+     "COBOL007": 1
+    },
+    "scripts/git-addSrcVersionInfo.sh": {
+     "missing-safety": 1,
+     "unquoted-var": 1
+    },
+    "scripts/remote_compile.sh": {
+     "missing-safety": 1,
+     "unquoted-var": 1
+    },
+    "scripts/remote_refresh.sh": {
+     "missing-safety": 1
+    },
+    "scripts/remote_submit.sh": {
+     "missing-safety": 1
+    },
+    "scripts/run_full_batch.sh": {
+     "missing-safety": 1
+    },
+    "scripts/run_interest_calc.sh": {
+     "missing-safety": 1
+    },
+    "scripts/run_posting.sh": {
+     "missing-safety": 1
+    },
+    "scripts/upld_module.sh": {
+     "missing-safety": 1,
+     "unquoted-var": 1
+    }
+   },
+   "findings": [
+    [
+     "COBOL001",
+     "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+     690
+    ],
+    [
+     "COBOL001",
+     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+     478
+    ],
+    [
+     "COBOL001",
+     "app/cbl/CBSTM03A.CBL",
+     301
+    ],
+    [
+     "COBOL001",
+     "app/cbl/CBSTM03B.CBL",
+     128
+    ],
+    [
+     "COBOL001",
+     "app/cbl/COACTUPC.cbl",
+     973
+    ],
+    [
+     "COBOL001",
+     "app/cbl/COCRDLIC.cbl",
+     438
+    ],
+    [
+     "COBOL001",
+     "app/cbl/COCRDUPC.cbl",
+     497
+    ],
+    [
+     "COBOL003",
+     "app/app-authorization-ims-db2-mq/cbl/CBPAUP0C.cbl",
+     189
+    ],
+    [
+     "COBOL003",
+     "app/cbl/COBSWAIT.cbl",
+     36
+    ],
+    [
+     "COBOL004",
+     "app/cbl/CBSTM03A.CBL",
+     237
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     676
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     679
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     682
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     703
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     706
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     764
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     767
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     770
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     791
+    ],
+    [
+     "COBOL004",
+     "app/cbl/COACTUPC.cbl",
+     794
+    ],
+    [
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     24
+    ],
+    [
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     47
+    ],
+    [
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     65
+    ],
+    [
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     84
+    ],
+    [
+     "COBOL004",
+     "app/cpy/CVEXPORT.cpy",
+     93
+    ],
+    [
+     "COBOL005",
+     "app/cbl/CSUTLDTC.cbl",
+     28
+    ],
+    [
+     "COBOL005",
+     "app/cbl/CSUTLDTC.cbl",
+     36
+    ],
+    [
+     "COBOL006",
+     "app/cbl/CBSTM03A.CBL",
+     486
+    ],
+    [
+     "COBOL006",
+     "app/cbl/CBSTM03B.CBL",
+     120
+    ],
+    [
+     "COBOL006",
+     "app/cbl/CBSTM03B.CBL",
+     122
+    ],
+    [
+     "COBOL006",
+     "app/cbl/CBSTM03B.CBL",
+     124
+    ],
+    [
+     "COBOL006",
+     "app/cbl/CBSTM03B.CBL",
+     126
+    ],
+    [
+     "COBOL007",
+     "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/COCOM01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/COTTL01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CSDAT01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CSMSG01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CSMSG02Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CSSTRPFY.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CSUSR01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVACT01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVACT02Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVACT03Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVCRD01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVCUS01Y.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "app/cpy/CVTRA05Y.cpy",
+     1
+    ],
+    [
+     "COBOL011",
+     "app/cbl/CBSTM03A.CBL",
+     39
+    ],
+    [
+     "missing-safety",
+     "scripts/git-addSrcVersionInfo.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/remote_compile.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/remote_refresh.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/remote_submit.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/run_full_batch.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/run_interest_calc.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/run_posting.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "scripts/upld_module.sh",
+     1
+    ],
+    [
+     "unquoted-var",
+     "scripts/git-addSrcVersionInfo.sh",
+     76
+    ],
+    [
+     "unquoted-var",
+     "scripts/remote_compile.sh",
+     43
+    ],
+    [
+     "unquoted-var",
+     "scripts/upld_module.sh",
+     29
+    ]
+   ],
+   "timing": {
+    "analyze_seconds": 0.651,
+    "wall_seconds": 1.421
+   }
+  },
+  "genapp": {
+   "url": "https://github.com/cicsdev/cics-genapp.git",
+   "commit": "f6f3f4b2580d31b7d8dcc31ce3e3676f4cceaaaa",
+   "license": "EPL-2.0",
+   "files_analyzed": 45,
+   "total_loc": 8509,
+   "total_findings": 14,
+   "cobol_findings": 13,
+   "by_rule": {
+    "COBOL001": 5,
+    "COBOL007": 2,
+    "COBOL008": 1,
+    "COBOL015": 5,
+    "missing-safety": 1
+   },
+   "by_severity": {
+    "CRITICAL": 1,
+    "HIGH": 6,
+    "LOW": 5,
+    "MEDIUM": 2
+   },
+   "per_file": {
+    "base/bin/install.sh": {
+     "missing-safety": 1
+    },
+    "base/src/lgacdb01.cbl": {
+     "COBOL008": 1
+    },
+    "base/src/lgcmarea.cpy": {
+     "COBOL007": 1
+    },
+    "base/src/lgpolicy.cpy": {
+     "COBOL007": 1
+    },
+    "base/src/lgtestc1.cbl": {
+     "COBOL001": 1,
+     "COBOL015": 1
+    },
+    "base/src/lgtestp1.cbl": {
+     "COBOL001": 1,
+     "COBOL015": 1
+    },
+    "base/src/lgtestp2.cbl": {
+     "COBOL001": 1,
+     "COBOL015": 1
+    },
+    "base/src/lgtestp3.cbl": {
+     "COBOL001": 1,
+     "COBOL015": 1
+    },
+    "base/src/lgtestp4.cbl": {
+     "COBOL001": 1,
+     "COBOL015": 1
+    }
+   },
+   "findings": [
+    [
+     "COBOL001",
+     "base/src/lgtestc1.cbl",
+     56
+    ],
+    [
+     "COBOL001",
+     "base/src/lgtestp1.cbl",
+     33
+    ],
+    [
+     "COBOL001",
+     "base/src/lgtestp2.cbl",
+     33
+    ],
+    [
+     "COBOL001",
+     "base/src/lgtestp3.cbl",
+     33
+    ],
+    [
+     "COBOL001",
+     "base/src/lgtestp4.cbl",
+     33
+    ],
+    [
+     "COBOL007",
+     "base/src/lgcmarea.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "base/src/lgpolicy.cpy",
+     1
+    ],
+    [
+     "COBOL008",
+     "base/src/lgacdb01.cbl",
+     74
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestc1.cbl",
+     44
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp1.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp2.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp3.cbl",
+     21
+    ],
+    [
+     "COBOL015",
+     "base/src/lgtestp4.cbl",
+     21
+    ],
+    [
+     "missing-safety",
+     "base/bin/install.sh",
+     1
+    ]
+   ],
+   "timing": {
+    "analyze_seconds": 0.193,
+    "wall_seconds": 0.986
+   }
+  },
+  "zopeneditor-sample": {
+   "url": "https://github.com/IBM/zopeneditor-sample.git",
+   "commit": "8f9835308de6159eb54f226041d5f81a780cb8eb",
+   "license": "Apache-2.0",
+   "files_analyzed": 20,
+   "total_loc": 2217,
+   "total_findings": 9,
+   "cobol_findings": 4,
+   "by_rule": {
+    "COBOL007": 4,
+    "YAML_INDENTATION": 2,
+    "missing-safety": 3
+   },
+   "by_severity": {
+    "LOW": 2,
+    "MEDIUM": 7
+   },
+   "per_file": {
+    "COPYBOOK/CUSTCOPY.cpy": {
+     "COBOL007": 1
+    },
+    "COPYBOOK/TRANREC.cpy": {
+     "COBOL007": 1
+    },
+    "multiroot/copybooks/cust/CUSTCOPY.cpy": {
+     "COBOL007": 1
+    },
+    "multiroot/copybooks/trans/TRANREC.cpy": {
+     "COBOL007": 1
+    },
+    "multiroot/sam/zapp.yaml": {
+     "YAML_INDENTATION": 1
+    },
+    "zapp.yaml": {
+     "YAML_INDENTATION": 1
+    },
+    "zowe/zowecli-cobol-clean.sh": {
+     "missing-safety": 1
+    },
+    "zowe/zowecli-cobol-upload-run-simple.sh": {
+     "missing-safety": 1
+    },
+    "zowe/zowecli-create-profiles.sh": {
+     "missing-safety": 1
+    }
+   },
+   "findings": [
+    [
+     "COBOL007",
+     "COPYBOOK/CUSTCOPY.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "COPYBOOK/TRANREC.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "multiroot/copybooks/cust/CUSTCOPY.cpy",
+     1
+    ],
+    [
+     "COBOL007",
+     "multiroot/copybooks/trans/TRANREC.cpy",
+     1
+    ],
+    [
+     "YAML_INDENTATION",
+     "multiroot/sam/zapp.yaml",
+     1
+    ],
+    [
+     "YAML_INDENTATION",
+     "zapp.yaml",
+     1
+    ],
+    [
+     "missing-safety",
+     "zowe/zowecli-cobol-clean.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "zowe/zowecli-cobol-upload-run-simple.sh",
+     1
+    ],
+    [
+     "missing-safety",
+     "zowe/zowecli-create-profiles.sh",
+     1
+    ]
+   ],
+   "timing": {
+    "analyze_seconds": 0.124,
+    "wall_seconds": 0.986
+   }
+  }
+ }
+}

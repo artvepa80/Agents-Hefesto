@@ -17,7 +17,7 @@ class ProFeature:
         if not self.validator.is_pro():
             raise ProFeatureError(
                 "This feature requires Hefesto PRO license.\n"
-                "Upgrade at: https://buy.stripe.com/4gMfZg4bw48N3zEgqaeAg0a"
+                "Upgrade at: https://hefestoai.narapallc.com/#pricing"
             )
 
     def execute(self):
@@ -36,7 +36,7 @@ class OmegaFeature:
         if not self.validator.is_omega():
             raise OmegaFeatureError(
                 "This feature requires OMEGA Guardian license.\n"
-                "Upgrade at: https://buy.stripe.com/omega-link"
+                "Upgrade at: https://hefestoai.narapallc.com/#pricing"
             )
 
     def execute(self):
@@ -68,10 +68,10 @@ if not validator.is_pro():
     raise ProFeatureError(
         "ML Enhancement requires Hefesto PRO license.\n\n"
         "Upgrade options:\n"
-        "• PRO: $8/month - https://buy.stripe.com/pro-link\n"
-        "• OMEGA Guardian: $19/month - https://buy.stripe.com/omega-link\n"
-        "• Details: https://hefesto.ai/pricing\n\n"
-        "Questions? support@narapa.com"
+        "• PRO: $8/month\n"
+        "• OMEGA Guardian: $19/month\n"
+        "• Plans and checkout: https://hefestoai.narapallc.com/#pricing\n\n"
+        "Questions? support@narapallc.com"
     )
 ```
 

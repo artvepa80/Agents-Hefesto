@@ -21,6 +21,14 @@ hefesto analyze <paths...> [options]
 | `--max-issues` | all | Cap displayed issues |
 | `--save-html` | (none) | Save HTML report to file path |
 | `--enable-memory-budget-gate` | false | Enable memory budget gate (EPIC 4) |
+| `--format-check` | false | Run Black in check mode on analyzed Python files; each file Black would reformat becomes a LOW `FORMAT_DRIFT` finding. Needs `pip install "hefesto-ai[format]"` (warns and skips if Black is missing) |
+| `--config` | (auto) | Use this `.hefesto.yaml` instead of the nearest one found from the first path up to the repo root |
+| `--no-config` | false | Ignore `.hefesto.yaml` / `.hefesto.yml` files |
+
+**Config file:** `.hefesto.yaml` keys `severity`, `fail_on`, `output`,
+`exclude`, `exclude_types`, `quiet`, `max_issues`, `format_check`,
+`enable_memory_budget_gate` set the same options. Explicit flags win over the
+file; an invalid file exits 2.
 
 **Scope gating (PRO):**
 `--include-third-party`, `--include-generated`, `--include-fixtures`,
@@ -50,6 +58,9 @@ hefesto analyze . --fail-on HIGH --exclude-types VERY_HIGH_COMPLEXITY,LONG_FUNCT
 
 # Analyze multiple paths
 hefesto analyze src/ lib/ types/
+
+# Also report Black formatting drift (opt-in); gate on it with --fail-on LOW
+hefesto analyze . --format-check --fail-on LOW
 ```
 
 ## install-hooks
@@ -114,13 +125,18 @@ but different expected outputs. Exits 1 if contradictions found.
 
 ## telemetry
 
-Local-only, privacy-first telemetry management.
+Shows what telemetry is active and manages the local telemetry log.
 
 ```bash
-hefesto telemetry status     # Show telemetry config and file info
+hefesto telemetry status     # Usage ping on/off + endpoint, local log on/off + file info
 hefesto telemetry clear      # Delete local telemetry data
 hefesto telemetry clear --yes  # Skip confirmation
 ```
+
+The anonymous usage ping sent after `hefesto analyze` is on by default;
+disable it with `HEFESTO_TELEMETRY=0`. The local log is opt-in
+(`HEFESTO_TELEMETRY=1`) and never uploaded. In the GitHub Action, telemetry is
+off unless the `telemetry` input is `1` or `true`.
 
 ## License Management (PRO)
 
@@ -151,3 +167,4 @@ Requires PRO. Starts a uvicorn server with MCP, REST, and OpenAPI endpoints.
 | 1 | Gate failure: issues at or above `--fail-on` severity found |
 | 1 | Installation/runtime error |
 | 2 | Drift detection: findings at or above threshold (`drift` command) |
+| 2 | `analyze`: invalid command-line usage or invalid `.hefesto.yaml` |

@@ -171,4 +171,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print("\n💡 For Pro features (semantic analysis), see:")
     print("   examples/pro_semantic_analysis.py")
-    print("\n🛒 Purchase Pro: https://buy.stripe.com/hefesto-pro")
+    print("\n🛒 Purchase Pro: https://hefestoai.narapallc.com/#pricing")

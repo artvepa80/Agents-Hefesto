@@ -24,6 +24,30 @@ def _env_truthy(v: Optional[str]) -> bool:
     return v.strip().lower() in {"1", "true", "yes", "on"}
 
 
+_OPT_OUT_VALUES = {"0", "false", "no", "off"}
+
+
+def remote_ping_enabled() -> bool:
+    """Return True if the CLI sends the anonymous usage ping.
+
+    The ping (see ``_ping_remote``) is sent after ``hefesto analyze`` and is
+    **on by default** (opt-out): only ``HEFESTO_TELEMETRY`` set to ``0``,
+    ``false``, ``no`` or ``off`` (any case) disables it. This is the single
+    check used by ``_ping_remote`` and ``hefesto telemetry status``.
+    """
+    return os.getenv("HEFESTO_TELEMETRY", "").strip().lower() not in _OPT_OUT_VALUES
+
+
+def local_log_enabled() -> bool:
+    """Return True if the local JSONL event log is written.
+
+    The local log (``TelemetryClient``) is **off by default** (opt-in): only
+    ``HEFESTO_TELEMETRY`` set to ``1``, ``true``, ``yes`` or ``on`` enables
+    it. It is never uploaded.
+    """
+    return _env_truthy(os.getenv("HEFESTO_TELEMETRY"))
+
+
 def _utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -94,7 +118,7 @@ class TelemetryClient:
         return max(min_v, min(v, max_v))
 
     def _refresh_config(self) -> None:
-        self.enabled = _env_truthy(os.getenv("HEFESTO_TELEMETRY"))
+        self.enabled = local_log_enabled()
         self.path = Path(os.getenv("HEFESTO_TELEMETRY_PATH", str(DEFAULT_PATH)))
 
         # Clamp settings to safe ranges
@@ -214,7 +238,12 @@ class TelemetryClient:
                 pass
 
         return {
+            # Local JSONL log (opt-in).
             "enabled": self.enabled,
+            # Anonymous remote usage ping (opt-out); reported so that
+            # ``hefesto telemetry status`` does not hide it.
+            "remote_ping_enabled": remote_ping_enabled(),
+            "remote_endpoint": TELEMETRY_ENDPOINT,
             "path": str(self.path),
             "size_bytes": size,
             "max_bytes": self.max_bytes,
@@ -267,6 +296,10 @@ def _get_environment_flags() -> list:
 
     A GitHub Actions run produces ['ci', 'github_actions'].
     A Docker container in CI produces ['ci', 'docker'].
+    Owner dogfood: set ``HEFESTO_TELEMETRY_ENV=dogfood`` (or ``HEFESTO_DOGFOOD=1``)
+    to append ``dogfood`` so Neon analytics can exclude internal pings.
+    Editable installs also get ``dogfood`` (src already reports editable; env
+    makes filtering by env[] alone reliable).
     Default: ['user'] if none match.
     """
     try:
@@ -285,6 +318,17 @@ def _get_environment_flags() -> list:
             flags.append("docker")
         if os.getenv("KUBERNETES_SERVICE_HOST"):
             flags.append("kubernetes")
+
+        # Separate dogfood / internal pings from end-user analytics (env text[]).
+        telemetry_env = os.getenv("HEFESTO_TELEMETRY_ENV", "").strip().lower()
+        if telemetry_env in {"dogfood", "internal", "dev"} or _env_truthy(
+            os.getenv("HEFESTO_DOGFOOD")
+        ):
+            flags.append("dogfood")
+        elif _get_install_source() == "editable":
+            # Local ``pip install -e .`` is almost never an end-user install.
+            flags.append("dogfood")
+
         return flags or ["user"]
     except Exception:
         return ["user"]
@@ -305,7 +349,7 @@ def _get_install_source() -> str:
 
 def _ping_remote(payload: dict) -> None:
     """Anonymous ping. Caches ``latest_version`` from server response for upgrade notices."""
-    if os.getenv("HEFESTO_TELEMETRY", "").lower() in ("0", "false", "no", "off"):
+    if not remote_ping_enabled():
         return
 
     # First-run notice (once per machine)

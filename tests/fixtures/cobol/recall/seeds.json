@@ -1,0 +1,213 @@
+{
+ "schema_version": 1,
+ "description": "Seeded COBOL issues for measuring recall. Each seed is one issue planted on purpose at file:line in tests/fixtures/cobol/recall/; a seed counts as found when the analyzer reports the same rule in the same file within 'tolerance' lines of it. Scan the whole directory so the COPY index (COBOL007/COBOL015) sees every program and copybook.",
+ "tolerance": 2,
+ "seeds": [
+  {
+   "rule": "COBOL011",
+   "file": "RCL01.cbl",
+   "line": 6,
+   "seed": "SELECT without FILE STATUS"
+  },
+  {
+   "rule": "COBOL002",
+   "file": "RCL01.cbl",
+   "line": 21,
+   "seed": "MOVE literal to password"
+  },
+  {
+   "rule": "COBOL003",
+   "file": "RCL01.cbl",
+   "line": 22,
+   "seed": "ACCEPT from SYSIN, unvalidated"
+  },
+  {
+   "rule": "COBOL001",
+   "file": "RCL01.cbl",
+   "line": 23,
+   "seed": "first of 11 GO TO"
+  },
+  {
+   "rule": "COBOL012",
+   "file": "RCL02.cbl",
+   "line": 6,
+   "seed": "status field never checked"
+  },
+  {
+   "rule": "COBOL004",
+   "file": "RCL02.cbl",
+   "line": 17,
+   "seed": "COMP-3 overlaid by PIC X"
+  },
+  {
+   "rule": "COBOL004",
+   "file": "RCL02.cbl",
+   "line": 20,
+   "seed": "signed binary split into bytes (not the unsigned idiom)"
+  },
+  {
+   "rule": "COBOL005",
+   "file": "RCL02.cbl",
+   "line": 25,
+   "seed": "single-line ODO"
+  },
+  {
+   "rule": "COBOL005",
+   "file": "RCL02.cbl",
+   "line": 28,
+   "seed": "ODO split over three lines"
+  },
+  {
+   "rule": "COBOL008",
+   "file": "RCL03.cbl",
+   "line": 7,
+   "seed": "VALUE secret on password field"
+  },
+  {
+   "rule": "COBOL009",
+   "file": "RCL03.cbl",
+   "line": 8,
+   "seed": "connection string with PWD="
+  },
+  {
+   "rule": "COBOL006",
+   "file": "RCL03.cbl",
+   "line": 13,
+   "seed": "PERFORM THRU over 6 paragraphs"
+  },
+  {
+   "rule": "COBOL013",
+   "file": "RCL03.cbl",
+   "line": 15,
+   "seed": "statement after STOP RUN"
+  },
+  {
+   "rule": "COBOL014",
+   "file": "RCL03.cbl",
+   "line": 29,
+   "seed": "paragraph never performed or reached"
+  },
+  {
+   "rule": "COBOL011",
+   "file": "RCL04.cbl",
+   "line": 6,
+   "seed": "SELECT without FILE STATUS"
+  },
+  {
+   "rule": "COBOL015",
+   "file": "RCL04.cbl",
+   "line": 14,
+   "seed": "COPY of a copybook not in the tree"
+  },
+  {
+   "rule": "COBOL015",
+   "file": "RCL04.cbl",
+   "line": 17,
+   "seed": "EXEC SQL INCLUDE of a member not in the tree"
+  },
+  {
+   "rule": "COBOL010",
+   "file": "RCL04.cbl",
+   "line": 21,
+   "seed": "CONNECT ... IDENTIFIED BY literal"
+  },
+  {
+   "rule": "COBOL010",
+   "file": "RCL04.cbl",
+   "line": 23,
+   "seed": "CONNECT TO ... USER ... USING literal, multi-line"
+  },
+  {
+   "rule": "COBOL013",
+   "file": "RCL04.cbl",
+   "line": 29,
+   "seed": "statement after GOBACK"
+  },
+  {
+   "rule": "COBOL014",
+   "file": "RCL04.cbl",
+   "line": 30,
+   "seed": "paragraph never referenced"
+  },
+  {
+   "rule": "COBOL012",
+   "file": "RCL05.cbl",
+   "line": 6,
+   "seed": "lowercase, status never checked"
+  },
+  {
+   "rule": "COBOL002",
+   "file": "RCL05.cbl",
+   "line": 22,
+   "seed": "lowercase MOVE to token"
+  },
+  {
+   "rule": "COBOL003",
+   "file": "RCL05.cbl",
+   "line": 23,
+   "seed": "ACCEPT FROM CONSOLE"
+  },
+  {
+   "rule": "COBOL006",
+   "file": "RCL05.cbl",
+   "line": 24,
+   "seed": "lowercase PERFORM THRU, 6 paragraphs"
+  },
+  {
+   "rule": "COBOL008",
+   "file": "RCL06.cbl",
+   "line": 6,
+   "seed": "free format (no directive), VALUE secret"
+  },
+  {
+   "rule": "COBOL001",
+   "file": "RCL06.cbl",
+   "line": 10,
+   "seed": "free format (no directive), 11 GO TO"
+  },
+  {
+   "rule": "COBOL008",
+   "file": "RCL07.cbl",
+   "line": 5,
+   "seed": "known limit: credential word inside the value (skipped to avoid placeholder FPs)",
+   "known_limit": true
+  },
+  {
+   "rule": "COBOL009",
+   "file": "RCL07.cbl",
+   "line": 8,
+   "seed": "connection string split by a continuation line"
+  },
+  {
+   "rule": "COBOL002",
+   "file": "RCL07.cbl",
+   "line": 12,
+   "seed": "known limit: literal reaches the password through another field (no data flow)",
+   "known_limit": true
+  },
+  {
+   "rule": "COBOL007",
+   "file": "copy/RECSHARE.cpy",
+   "line": 1,
+   "seed": "copybook used by 6 programs"
+  },
+  {
+   "rule": "COBOL008",
+   "file": "copy/RECSHARE.cpy",
+   "line": 4,
+   "seed": "VALUE secret inside a copybook"
+  },
+  {
+   "rule": "COBOL007",
+   "file": "copylib/CUSTLAYOUT",
+   "line": 1,
+   "seed": "extension-less copybook used by 5 programs"
+  },
+  {
+   "rule": "COBOL009",
+   "file": "copylib/CUSTLAYOUT",
+   "line": 4,
+   "seed": "PASSWORD= inside a literal in a copybook"
+  }
+ ]
+}

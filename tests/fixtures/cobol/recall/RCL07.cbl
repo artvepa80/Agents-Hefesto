@@ -1,0 +1,13 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. RCL07.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  WS-ADMIN-PASSWORD       PIC X(16) VALUE 'secretAdmin2024'.
+       01  WS-K1                   PIC X(8)  VALUE 'Zx81!qTe'.
+       01  WS-DB-PASSWORD          PIC X(8).
+       01  WS-CONN PIC X(80) VALUE 'SERVER=DBPROD01;DB=CARDS;UID=APPS;PW
+      -    'D=Kq7#mZ2;'.
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           MOVE WS-K1 TO WS-DB-PASSWORD
+           GOBACK.

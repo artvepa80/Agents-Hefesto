@@ -69,9 +69,9 @@ jobs:
 |-------|---------|-------------|
 | target | . | Path to analyze |
 | fail_on | CRITICAL | Gate severity threshold |
-| min_severity | LOW | Minimum severity to report |
+| min_severity | LOW | Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW; INFO is treated as LOW) |
 | format | text | Output format: text, json, html |
-| telemetry | 0 | Opt-in anonymous telemetry (1 or 0) |
+| telemetry | 0 | Opt-in anonymous telemetry: only `1`/`true` sends the per-run ping; anything else sends nothing |
 
 ### As a pip Install Step
 

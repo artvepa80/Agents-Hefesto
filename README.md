@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.13.1)
+## Operational Truth Analyzers (v4.14.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.13.1
+    uses: artvepa80/Agents-Hefesto@v4.14.1
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -112,7 +112,7 @@ steps:
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format (`text`, `json`, `html`) | `text` |
-| `telemetry` | `1` also enables the CLI's anonymous telemetry inside the Action. In v4.13.1 the Action itself still sends one anonymous ping per run even when this is `0`; see [Telemetry](#telemetry) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [Telemetry](#telemetry) | `0` |
 
 **Outputs**:
 
@@ -144,7 +144,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ---
 
-## PR Review (v4.13.1)
+## PR Review (v4.14.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -211,7 +211,7 @@ pointing to the install command (also exposed via
 | **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL007 | v4.12.0 | Yes |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL015 (15 free rules)³ | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
@@ -222,9 +222,21 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.13.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.14.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
+
+³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009 and COBOL007; the other rules are not applied to them).
+- **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt; the files read as free format this way are listed under **Notes** in the text report and in `meta.cobol_format_notices` (JSON).
+- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays, CICS BMS symbolic maps and the byte view of an unsigned binary integer (`PIC 9(4) BINARY` redefined as `PIC X` bytes of exactly its storage size, as CardDemo does to decode a VSAM file status) are skipped; a signed binary or a size mismatch is still flagged. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
+- **COBOL006 / COBOL011 / COBOL015** report repeated findings once (per `PERFORM X THRU Y` pair, per program, per missing copybook), with the occurrence count and lines in the finding metadata.
+- **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree; it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` members count like `COPY`. Copybooks kept outside the scanned tree resolve with `--copybook-path DIR` (repeatable) or `copybook_paths:` in `.hefesto.yaml`; files there are only used to resolve names, not analyzed.
+- **COBOL002 (credentials)** skips fields whose name ends in a flag/status/length/label suffix (for example `WS-PASSWORD-OK-FLAG`, `PWD-LEN`).
+- **COBOL008-COBOL010 (secrets, CRITICAL)**: a `VALUE` literal on a credential-named field (same suffix exclusions as COBOL002; placeholders such as `SPACES`, `XXXX`, `UNDEFINED` and key names such as `'APP-Token-Password'` are skipped), `PASS=`/`PWD=`/`PASSWORD=` with a value inside any string literal, and `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a literal password.
+- **COBOL011 (LOW)** flags `SELECT`s without a `FILE STATUS` clause, one finding per program with the file names in the metadata (sort files declared with `SD` are skipped). **COBOL012 (LOW)** flags an OPENed file whose status field, its subordinates and its 88-levels are never referenced in the PROCEDURE DIVISION (skipped when the status field is defined in a copybook or the PROCEDURE DIVISION has a `COPY`).
+- **COBOL013 (MEDIUM)** flags statements after an unconditional `STOP RUN`/`GOBACK`/`EXIT PROGRAM` in the same paragraph (`EXIT PROGRAM. STOP RUN.` and alternate `ENTRY` points are not flagged). **COBOL014 (LOW)** flags paragraphs and sections that are never referenced (PERFORM, GO TO, THRU ranges, SORT/ALTER) and cannot be reached by fall-through; the entry paragraph, DECLARATIVES, empty `EXIT` paragraphs and programs with a `COPY` in the PROCEDURE DIVISION are skipped.
+- **Measured recall:** 32 of 34 seeded issues (every rule at least twice) are found; the 2 misses are documented limits: a secret whose value contains a credential word (skipped to avoid placeholder false positives) and a literal that reaches a password field through another field (no data-flow analysis). Run `python scripts/cobol_recall.py`; precision on real corpora is in [docs/cobol-corpus-baseline.md](docs/cobol-corpus-baseline.md).
+- Output is text, JSON or HTML. SARIF is not available yet.
 
 ---
 
@@ -236,19 +248,26 @@ pip install hefesto-ai
 
 # Required for TypeScript, JavaScript, Java, Go, Rust, and C# analysis
 pip install "hefesto-ai[multilang]"
+
+# Optional: Black, for `hefesto analyze --format-check`
+pip install "hefesto-ai[format]"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
 
 ---
 
-## CLI Reference (v4.13.1)
+## CLI Reference (v4.14.1)
 
 ```bash
 # Analyze code
 hefesto analyze <path>
 hefesto analyze . --severity HIGH
 hefesto analyze . --output json
+hefesto analyze . --format-check   # opt-in: also report Black formatting drift
+hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
+hefesto analyze . --no-config                 # ignore .hefesto.yaml
+hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks outside the scan
 
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
@@ -276,12 +295,39 @@ hefesto analyze . --output json          # stdout = pure JSON, banners -> stderr
 hefesto analyze . --output json 2>/dev/null | jq .  # pipe-safe
 ```
 
+### Formatting Drift (opt-in)
+
+`hefesto analyze` does not check formatting by default. With `--format-check`
+it also runs [Black](https://github.com/psf/black) in check mode (in-process,
+files are never modified) on the Python files it analyzed:
+
+```bash
+pip install "hefesto-ai[format]"                    # or: pip install black
+hefesto analyze . --format-check                    # report drift
+hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
+```
+
+- Each file Black would reformat is one `FORMAT_DRIFT` finding, severity LOW.
+  Because the check is opt-in, these findings are shown even when
+  `--severity` is above LOW. `--fail-on` and `--exclude-types` apply to them
+  like any other finding, so `--fail-on MEDIUM` (or higher) does not trip on drift.
+- Black settings come from your `pyproject.toml` `[tool.black]` table, found
+  the same way the `black` CLI finds it (line-length, target-version,
+  skip-string-normalization, preview, `extend-exclude` / `force-exclude`, ...).
+  If `required-version` does not match the installed Black, Hefesto warns.
+- JSON output carries a unified diff (first 60 lines) in `code_snippet` and
+  `lines_added` / `lines_removed` in `metadata`.
+- If Black is not installed, Hefesto prints a one-line warning and continues;
+  the exit code is unaffected.
+- Only Black is covered; isort and flake8 are not run.
+
 ### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
 | `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+| `2`  | Invalid command-line usage or invalid `.hefesto.yaml` |
 
 ### Gate Examples
 ```bash
@@ -330,9 +376,7 @@ The hook runs two gates:
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
-- **PRO**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **OMEGA**: [Start Free Trial](https://hefestoai.narapallc.com/trial) - 14 days, no credit card
-- **Founding Members**: [40% off forever](https://hefestoai.narapallc.com/founding) (first 25 customers)
+- **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/#pricing), both with a 14-day free trial
 
 ### Hefesto PRO Optional Features
 
@@ -414,7 +458,7 @@ jobs:
         run: hefesto analyze . --severity HIGH
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.13.1)
+### GitHub Actions — PR Review with Inline Comments (v4.14.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -451,7 +495,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.13.1
+    rev: v4.14.1
     hooks:
       - id: hefesto-analyze
 ```
@@ -470,41 +514,75 @@ hefesto:
 
 ## Configuration
 
+`hefesto analyze` takes its options from command-line flags (see CLI
+Reference above) and, optionally, from a `.hefesto.yaml` file (below). There
+is no environment variable for analysis options such as severity or output
+format.
+
 ### Environment Variables
 
 ```bash
-# Core
-export HEFESTO_LICENSE_KEY="your-key"
-export HEFESTO_SEVERITY="MEDIUM"
-export HEFESTO_OUTPUT="json"
+# Telemetry (see Telemetry below)
+export HEFESTO_TELEMETRY=0                            # Disable anonymous usage ping
 
-# API Security (v4.7.0)
+# PRO/OMEGA only (read by the private distribution, ignored by the FREE tier)
+export HEFESTO_LICENSE_KEY="your-key"
+
+# API Security (PRO, v4.7.0) -- used by `hefesto serve`
 export HEFESTO_API_KEY="your-api-key"                # Enable API key auth
 export HEFESTO_RATE_LIMIT_PER_MINUTE=60               # Enable rate limiting
 export HEFESTO_CORS_ORIGINS="https://app.example.com" # Restrict CORS
 export HEFESTO_EXPOSE_DOCS=true                       # Enable /docs, /redoc
 export HEFESTO_WORKSPACE_ROOT="/srv/code"              # Path sandbox root
-export HEFESTO_CACHE_MAX_ITEMS=256                     # Cache size limit
+export HEFESTO_CACHE_MAX_SIZE=1000                     # Cache size limit
 export HEFESTO_CACHE_TTL_SECONDS=300                   # Cache entry TTL
 ```
 
-### Config File (.hefesto.yaml)
+### Config File (`.hefesto.yaml`)
+
+Put the `hefesto analyze` options you would otherwise repeat on every run in a
+`.hefesto.yaml` (or `.hefesto.yml`) file, usually at the repository root:
 
 ```yaml
-severity: HIGH
-exclude:
+# .hefesto.yaml -- every key is optional and maps to a `hefesto analyze` flag
+severity: MEDIUM            # --severity      LOW | MEDIUM | HIGH | CRITICAL
+fail_on: HIGH               # --fail-on       LOW | MEDIUM | HIGH | CRITICAL
+output: text                # --output        text | json | html
+exclude:                    # --exclude       list or "a/,b/" string
   - tests/
   - node_modules/
-  - .venv/
-
-rules:
-  complexity:
-    max_cyclomatic: 10
-    max_cognitive: 15
-  security:
-    check_secrets: true
-    check_injections: true
+exclude_types:              # --exclude-types list or comma-separated string
+  - VERY_HIGH_COMPLEXITY
+  - LONG_FUNCTION
+quiet: false                # --quiet
+max_issues: 50              # --max-issues
+format_check: true          # --format-check  (needs: pip install "hefesto-ai[format]")
+enable_memory_budget_gate: false  # --enable-memory-budget-gate
+copybook_paths:             # --copybook-path (COBOL copybook directories outside the scan)
+  - ../copylib              # relative paths are resolved from this file's directory
 ```
+
+- **Discovery:** Hefesto starts at the first path given to `hefesto analyze`
+  (its directory if it is a file) and walks up to the repository root (the
+  first directory containing `.git`), or to the filesystem root outside a
+  repo. The nearest file wins. Both `.hefesto.yaml` and `.hefesto.yml` in one
+  directory is an error. With several paths, the first path's config applies
+  to the whole run (Hefesto warns if another path would pick a different file).
+- **Precedence:** explicit flag > config file > built-in default. A flag
+  counts as explicit even when it repeats the default (`--severity MEDIUM`
+  overrides `severity: LOW`). Lists are replaced, not merged:
+  `--exclude docs/` ignores the file's `exclude`.
+- **Flags:** `--config PATH` uses that file instead of searching;
+  `--no-config` ignores config files. They cannot be combined.
+- **Validation:** unknown keys, bad values and invalid YAML stop the run with
+  exit code 2 and a message naming the problem, e.g.
+  `Error: invalid Hefesto config in /repo/.hefesto.yaml: 'severity' must be one of LOW, MEDIUM, HIGH, CRITICAL (got 'urgent')`.
+  Keys may use `-` or `_` (`fail-on` or `fail_on`); `null` means "not set".
+- The file in use is printed as `Config: <path>` (to stderr with
+  `--output json`; hidden with `--quiet`).
+- Only `hefesto analyze` reads it (not `pr-review` or the GitHub Action
+  inputs). Rule thresholds (cyclomatic complexity, etc.), `--save-html` and
+  the PRO scope/enrichment flags are not configurable through the file.
 
 ---
 
@@ -599,6 +677,17 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
+### v4.14.1 (2026-10-06)
+- **Security (SEC-03)**: secret detection skips test/example code by whole path segment and file-name convention, not by any path that merely contains `test` or `example`
+- **Security (SEC-05)**: the HTML report escapes every interpolated value (stored XSS via crafted file names)
+- **Security (SEC-06)**: the GitHub Action sends telemetry only when the `telemetry` input is `1` or `true`; `hefesto telemetry status` now reports the CLI usage ping
+- **Fix (BUG-13)**: Action `min_severity: INFO` maps to `LOW` instead of failing the run
+
+### v4.14.0 (2026-10-06)
+- **`.hefesto.yaml` project config** for `hefesto analyze`, with `--config PATH` / `--no-config`; explicit flags win over the file, and an invalid file exits 2
+- **Opt-in `--format-check`**: reports files Black would reformat as LOW `FORMAT_DRIFT` findings (`pip install "hefesto-ai[format]"`)
+- PyYAML is now a core dependency
+
 ### v4.13.1 (2026-05-08)
 - **Fix**: R3 (`RELIABILITY_SESSION_LIFECYCLE`) no longer flags a connection stored on `self` when a sibling method closes it
 
@@ -607,7 +696,7 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 - **CI smoke test** for the `[multilang]` extra on Python 3.10–3.13
 
 ### v4.12.0 (2026-04-25)
-- **COBOL governance analysis**: 7 rules for COBOL-85 and IBM Enterprise COBOL (3 FREE, 4 PRO)
+- **COBOL governance analysis**: 7 free rules for COBOL-85 and IBM Enterprise COBOL
 
 ### v4.11.2 (2026-04-12)
 - **Phase 4 — Narrow Semantic Analyzer**: `ATTRIBUTE_NAME_MISMATCH` (typo detection via difflib) and `SILENT_EXCEPTION_SWALLOW` (broad except with trivially silent body)
@@ -667,8 +756,8 @@ Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
 
 HefestoAI collects anonymous usage data by default to help improve the tool.
 
-**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions` or `docker`, and the install source (`pypi` or `editable`).
-**What's sent (GitHub Action):** version, file count, issue count and exit code, once per run. In v4.13.1 this ping is sent even when the `telemetry` input is `0`; setting the input to `1` adds the CLI ping described above.
+**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
+**What's sent (GitHub Action):** nothing by default. The Action's telemetry is opt-in: only with the `telemetry` input set to `1` or `true` does it send version, file count, issue count and exit code once per run, and it turns on the CLI ping described above. With `telemetry: 0` (the default) or any other value, the Action sends no ping and runs the CLI with `HEFESTO_TELEMETRY=0`. (Up to v4.14.0 the Action sent its ping even with `telemetry: 0`.)
 **What's NOT sent:** code, file paths, file contents, project names, or any PII.
 
 The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:
@@ -676,7 +765,14 @@ The CLI prints a one-time notice to stderr the first time it sends a ping, and i
 export HEFESTO_TELEMETRY=0
 ```
 
-`hefesto telemetry status` and `hefesto telemetry clear` manage a separate local telemetry log; they do not show or control the remote ping.
+Tag owner/dogfood runs so they do not mix with end-user analytics (`env` includes `dogfood`; also auto-tagged for editable installs):
+```bash
+export HEFESTO_TELEMETRY_ENV=dogfood
+# or: export HEFESTO_DOGFOOD=1
+```
+Filter in Neon: `WHERE NOT ('dogfood' = ANY(env))`.
+
+`hefesto telemetry status` shows whether the CLI ping is enabled and where it goes, plus the state of a separate local telemetry log (opt-in with `HEFESTO_TELEMETRY=1`, never uploaded). `hefesto telemetry clear` deletes that local log; it does not affect the remote ping.
 
 ---
 

@@ -13,6 +13,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -32,6 +33,12 @@ logger = logging.getLogger(__name__)
 
 # Directories excluded by default to avoid noise from vendored/generated code.
 # Users can add more via --exclude; these are always applied unless --no-default-excludes.
+COBOL_INFERRED_FREE_NOTICE = (
+    "Read as free-format COBOL because a division header or level-01/77 entry starts "
+    "before column 8 and there is no >>SOURCE FORMAT directive. Add the directive "
+    "if this is wrong."
+)
+
 DEFAULT_EXCLUDES = [
     ".venv/",
     "venv/",
@@ -84,6 +91,14 @@ class AnalyzerEngine:
         self._tsjs_parser: Any = None
         self._all_file_results: list = []  # EPIC 4: accumulated for _build_meta
         self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
+        # COBOL COPY index (COBOL007/COBOL015). Set for the whole run by
+        # prepare_cobol_index(); otherwise built per analyze_path() call.
+        self._cobol_index: Any = None
+        self._cobol_index_pinned = False
+        # Copybook directories outside the scan (copybook_paths / --copybook-path)
+        self._copybook_paths: List[Path] = []
+        # COBOL files whose source format was inferred as free (no directive)
+        self._cobol_inferred_free: List[str] = []
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -99,6 +114,80 @@ class AnalyzerEngine:
             self._tsjs_parser = TsJsParser()
         if HAS_MULTILANG and SkipReport is not None:
             self._multilang_skip_report = SkipReport()
+
+    def set_copybook_paths(self, paths: List[str]) -> None:
+        """Extra copybook directories for COBOL015 (names there resolve COPY).
+
+        Their files are not analyzed; they only tell the index which copybook
+        names exist outside the scanned tree.
+        """
+        self._copybook_paths = [Path(p).resolve() for p in paths]
+
+    def prepare_cobol_index(self, paths: List[str], exclude_patterns: List[str]) -> None:
+        """Index COPY statements across every path of the run (COBOL007/COBOL015)."""
+        files: List[Path] = []
+        roots: List[Path] = []
+        for path in paths:
+            root = Path(path).resolve()
+            roots.append(root)
+            files.extend(self._find_files(root, exclude_patterns))
+        index = self._build_cobol_index(files, roots, exclude_patterns)
+        if index is not None:
+            self._cobol_index = index
+            self._cobol_index_pinned = True
+
+    def _build_cobol_index(
+        self, files: List[Path], roots: List[Path], exclude_patterns: List[str]
+    ) -> Any:
+        """COPY index for the COBOL files in ``files`` (None if there are none)."""
+        cobol = [f for f in files if self._is_cobol_path(f)]
+        if not cobol:
+            return None
+        from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
+
+        extra: List[Path] = []
+        for root in roots:
+            extra.extend(self._extra_copybook_candidates(root, exclude_patterns))
+        return CobolProjectIndex.from_paths(cobol, extra, self._copybook_paths)
+
+    @staticmethod
+    def _extra_copybook_candidates(root: Path, exclude_patterns: List[str]) -> List[Path]:
+        """Files under ``root`` that may be copybooks without a COBOL extension."""
+        from hefesto.analyzers.devops.cobol_project_index import is_extra_copybook_candidate
+
+        if not root.is_dir():
+            return []
+        excludes = list(DEFAULT_EXCLUDES) + list(exclude_patterns)
+        found: List[Path] = []
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [
+                d
+                for d in dirnames
+                if not d.startswith(".") and not any(p in f"{dirpath}/{d}/" for p in excludes)
+            ]
+            for name in filenames:
+                candidate = Path(dirpath) / name
+                if is_extra_copybook_candidate(candidate) and not any(
+                    p in str(candidate) for p in excludes
+                ):
+                    found.append(candidate)
+        return found
+
+    def _with_indexed_copybooks(self, source_files: List[Path], root: Path) -> List[Path]:
+        """Add copybooks the index found without a COBOL extension (under ``root``)."""
+        if self._cobol_index is None or not self._cobol_index.copybook_files:
+            return source_files
+        known = {str(f) for f in source_files}
+        extra = sorted(
+            Path(p)
+            for p in self._cobol_index.copybook_files
+            if p not in known and (Path(p) == root or root in Path(p).parents)
+        )
+        return source_files + extra
+
+    @staticmethod
+    def _is_cobol_path(path: Path) -> bool:
+        return path.suffix.lower() in (".cbl", ".cob", ".cobol", ".cpy", ".pco")
 
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
@@ -158,6 +247,12 @@ class AnalyzerEngine:
 
         file_results = []
         all_issues = []
+
+        if not self._cobol_index_pinned:
+            self._cobol_index = self._build_cobol_index(
+                source_files, [path_obj], exclude_patterns or []
+            )
+        source_files = self._with_indexed_copybooks(source_files, path_obj)
 
         for py_file in source_files:
             file_result = self._analyze_file(py_file)
@@ -326,8 +421,10 @@ class AnalyzerEngine:
             # Cache source for ML semantic analysis (Phase 1)
             self.source_cache[str(file_path)] = code
 
-            # Detect language
+            # Detect language (copybooks without a COBOL extension come from the index)
             language = LanguageDetector.detect(file_path, code)
+            if self._cobol_index is not None and str(file_path) in self._cobol_index.copybook_files:
+                language = Language.COBOL
             if language == Language.UNKNOWN:
                 return None
 
@@ -412,15 +509,21 @@ class AnalyzerEngine:
                     CobolGovernanceAnalyzer,
                 )
 
-                cobol_issues = CobolGovernanceAnalyzer().analyze(str(file_path), code)
+                cobol_analyzer = CobolGovernanceAnalyzer(index=self._cobol_index)
+                cobol_issues = cobol_analyzer.analyze(str(file_path), code)
                 filtered_issues = self._filter_by_severity(cobol_issues)
                 duration_ms = (time.time() - start_time) * 1000
+                cobol_meta: Dict[str, Any] = {}
+                if cobol_analyzer.last_format_reason == "inferred-free":
+                    self._cobol_inferred_free.append(str(file_path))
+                    cobol_meta["cobol_source_format"] = "inferred-free"
                 return FileAnalysisResult(
                     file_path=str(file_path),
                     issues=filtered_issues,
                     lines_of_code=loc,
                     analysis_duration_ms=duration_ms,
                     language=language.value,
+                    metadata=cobol_meta,
                 )
 
             try:
@@ -732,7 +835,14 @@ class AnalyzerEngine:
         if self._parser_failures:
             meta["parser_failures"] = list(self._parser_failures)
 
+        # COBOL sources read as free format because of the layout, not a directive
+        if self._cobol_inferred_free:
+            meta["cobol_format_notices"] = {
+                "inferred_free": list(dict.fromkeys(self._cobol_inferred_free)),
+                "message": COBOL_INFERRED_FREE_NOTICE,
+            }
+
         return meta
 
 
-__all__ = ["AnalyzerEngine", "DEFAULT_EXCLUDES"]
+__all__ = ["AnalyzerEngine", "COBOL_INFERRED_FREE_NOTICE", "DEFAULT_EXCLUDES"]

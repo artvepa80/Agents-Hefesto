@@ -7,6 +7,7 @@ Provides commands for running Hefesto API server and analyzing code.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
+import functools
 import sys
 from typing import Optional, Tuple
 
@@ -14,6 +15,14 @@ import click
 
 from hefesto.__version__ import __version__
 from hefesto.telemetry.client import TelemetryClient
+
+PRICING_URL = "https://hefestoai.narapallc.com/#pricing"
+PRO_REQUIRED_MESSAGE = (
+    "This feature requires Hefesto PRO ($8/month) or OMEGA ($19/month), "
+    "both with a 14-day free trial.\n"
+    f"Plans and checkout: {PRICING_URL}\n"
+    "Already licensed? Install Hefesto PRO from the private distribution."
+)
 
 # Initialize telemetry
 telemetry = TelemetryClient()
@@ -110,7 +119,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 
     if not HAS_API_HARDENING:
         click.echo(
-            "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+            PRO_REQUIRED_MESSAGE,
             err=True,
         )
         _exit(1)
@@ -147,6 +156,85 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         reload=reload,
         log_level="info",
     )
+
+
+def _with_project_config(command):
+    """Apply .hefesto.yaml/.hefesto.yml values to ``hefesto analyze`` options.
+
+    Precedence: explicit CLI flag > config file > built-in default. Consumes
+    the ``--config`` / ``--no-config`` options. Only keys naming a parameter
+    of the command are accepted, and a value is applied only when click
+    reports that parameter as not given on the command line, so this works
+    for any option the command has without per-option wiring.
+    """
+
+    @functools.wraps(command)
+    def wrapper(**kwargs):
+        config_path = kwargs.pop("config_path", None)
+        no_config = kwargs.pop("no_config", False)
+        project_config = _resolve_project_config(kwargs["paths"], config_path, no_config)
+        kwargs.update(project_config.values)
+        if project_config.path is not None and not kwargs.get("quiet"):
+            click.echo(f"Config: {project_config.path}", err=kwargs.get("output") == "json")
+        return command(**kwargs)
+
+    return wrapper
+
+
+def _resolve_project_config(paths, config_path, no_config):
+    """Load the project config, keeping only keys not given explicitly on the CLI.
+
+    Returns a ProjectConfig whose ``path`` is None when no config applies.
+    Invalid or ambiguous config is a usage error (exit 2).
+    """
+    from click.core import ParameterSource
+
+    from hefesto.config.project_config import ProjectConfig
+
+    if config_path and no_config:
+        click.echo("Error: --config and --no-config cannot be used together", err=True)
+        _exit(2)
+    if no_config:
+        return ProjectConfig()
+
+    ctx = click.get_current_context()
+    option_names = {param.name for param in ctx.command.params if param.name}
+    loaded = _load_project_config(paths, config_path, option_names)
+    implicit = (ParameterSource.DEFAULT, ParameterSource.DEFAULT_MAP, None)
+    loaded.values = {
+        key: value
+        for key, value in loaded.values.items()
+        if ctx.get_parameter_source(key) in implicit
+    }
+    return loaded
+
+
+def _load_project_config(paths, config_path, option_names):
+    from pathlib import Path
+
+    from hefesto.config.project_config import (
+        ConfigError,
+        ProjectConfig,
+        discover_config,
+        load_config,
+    )
+
+    source = None
+    try:
+        if config_path:
+            source = Path(config_path)
+        else:
+            source, warnings = discover_config(paths)
+            for warning in warnings:
+                click.echo(f"Warning: {warning}", err=True)
+        if source is None:
+            return ProjectConfig()
+        return load_config(source, allowed_keys=option_names)
+    except ConfigError as e:
+        where = f" in {source}" if source else ""
+        click.echo(f"Error: invalid Hefesto config{where}: {e}", err=True)
+        _exit(2)
+        return ProjectConfig()  # unreachable; _exit raises
 
 
 @cli.command()
@@ -194,6 +282,28 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
         " (e.g., VERY_HIGH_COMPLEXITY,LONG_FUNCTION)"
     ),
 )
+@click.option(
+    "--copybook-path",
+    "copybook_paths",
+    multiple=True,
+    type=click.Path(exists=True, file_okay=False),
+    help=(
+        "COBOL: directory with copybooks outside the analyzed paths (repeatable). "
+        "COPY names found there are not reported as missing (COBOL015)."
+    ),
+)
+# -- Project config file (.hefesto.yaml) --
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help=(
+        "Config file to use instead of the nearest .hefesto.yaml/.hefesto.yml"
+        " (searched from the first PATH up to the repo root)"
+    ),
+)
+@click.option("--no-config", is_flag=True, help="Ignore .hefesto.yaml/.hefesto.yml files")
 # -- Scope gating flags (PRO EPIC 1) --
 @click.option("--include-third-party", is_flag=True, help="Include third-party files in analysis")
 @click.option("--include-generated", is_flag=True, help="Include generated files in analysis")
@@ -205,6 +315,16 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     "--enable-memory-budget-gate",
     is_flag=True,
     help="Enable opt-in memory budget gate (EPIC 4). Threshold via env var.",
+)
+# -- Formatting drift (opt-in) --
+@click.option(
+    "--format-check",
+    is_flag=True,
+    help=(
+        "Also run Black in check mode on analyzed Python files and report each file"
+        " Black would reformat as a LOW FORMAT_DRIFT finding (needs: pip install"
+        ' "hefesto-ai[format]")'
+    ),
 )
 # -- Enrichment flags (PRO EPIC 3) --
 @click.option(
@@ -219,6 +339,7 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
 )
 @click.option("--enrich-cache-ttl", type=int, default=300, help="Enrichment cache TTL in seconds")
 @click.option("--enrich-cache-max", type=int, default=500, help="Enrichment cache max entries")
+@_with_project_config
 def analyze(
     paths: Tuple[str, ...],
     severity: str,
@@ -229,12 +350,14 @@ def analyze(
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
+    copybook_paths: Tuple[str, ...],
     enable_memory_budget_gate: bool,
     include_third_party: bool,
     include_generated: bool,
     include_fixtures: bool,
     scope_allow: Tuple[str, ...],
     scope_deny: Tuple[str, ...],
+    format_check: bool,
     enrich: str,
     enrich_provider: Tuple[str, ...],
     enrich_timeout: int,
@@ -253,6 +376,12 @@ def analyze(
         hefesto analyze . --output json
         hefesto analyze . --fail-on HIGH  # CI gate
         hefesto analyze . --quiet  # Summary only
+        hefesto analyze . --format-check  # also report Black formatting drift
+        hefesto analyze . --config ci/hefesto.yaml  # explicit config file
+        hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks elsewhere
+
+    Options can also be set in a .hefesto.yaml/.hefesto.yml file (nearest one
+    from the first PATH up to the repo root); explicit flags win.
     """
     # When --output json, all non-JSON text goes to stderr so stdout is pure JSON.
     json_mode = output == "json"
@@ -285,6 +414,8 @@ def analyze(
         engine = _setup_analyzer_engine(severity, quiet, json_mode, scope_config, enrich_config)
         if not engine:
             _exit(1)
+        if copybook_paths and hasattr(engine, "set_copybook_paths"):
+            engine.set_copybook_paths(list(copybook_paths))
 
         # Memory budget gate (EPIC 4, opt-in)
         budget_result = None
@@ -303,6 +434,7 @@ def analyze(
             )
 
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
+        _run_format_check(format_check, all_file_results, source_cache, quiet, json_mode)
 
         meta = engine._build_meta() if hasattr(engine, "_build_meta") else {}
         if budget_result is not None:
@@ -364,7 +496,7 @@ def _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode=False)
 def info():
     """Show Hefesto configuration and license info."""
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -420,7 +552,7 @@ def activate(license_key: str):
         hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -434,7 +566,7 @@ def deactivate():
     This will remove your license key and revert to free tier.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -446,7 +578,7 @@ def status():
     Show current license status and tier information.
     """
     click.echo(
-        "This feature requires Hefesto PRO/OMEGA. " "Install from the private distribution.",
+        PRO_REQUIRED_MESSAGE,
         err=True,
     )
     _exit(1)
@@ -648,21 +780,32 @@ def install_hooks(force: bool):
 
 @cli.group()
 def telemetry_cmd():
-    """Telemetry utilities (local-only, privacy-first)."""
+    """Telemetry utilities: show what is sent and manage the local log."""
     pass
 
 
 @telemetry_cmd.command("status")
 def telemetry_status():
-    """Show telemetry config and local file status."""
+    """Show the anonymous usage ping and the local telemetry log status."""
     s = telemetry.get_status()
+    ping_on = bool(s.get("remote_ping_enabled"))
+    log_on = bool(s.get("enabled"))
     click.echo("Telemetry Status:")
-    click.echo(f"  Enabled:   {bool(s.get('enabled'))}")
-    click.echo(f"  Path:      {s.get('path')}")
-    click.echo(f"  Size:      {s.get('size_bytes')} bytes")
-    click.echo(f"  Max Bytes: {s.get('max_bytes')}")
-    click.echo(f"  Max Files: {s.get('max_files')}")
-    click.echo(f"  Schema:    v{s.get('schema_version')}")
+    click.echo(
+        f"  Usage ping:  {'enabled' if ping_on else 'disabled'}"
+        " (anonymous, sent after `hefesto analyze`; on by default,"
+        " disable with HEFESTO_TELEMETRY=0)"
+    )
+    click.echo(f"  Endpoint:    {s.get('remote_endpoint')}")
+    click.echo(
+        f"  Local log:   {'enabled' if log_on else 'disabled'}"
+        " (opt-in with HEFESTO_TELEMETRY=1; never uploaded)"
+    )
+    click.echo(f"  Path:        {s.get('path')}")
+    click.echo(f"  Size:        {s.get('size_bytes')} bytes")
+    click.echo(f"  Max Bytes:   {s.get('max_bytes')}")
+    click.echo(f"  Max Files:   {s.get('max_files')}")
+    click.echo(f"  Schema:      v{s.get('schema_version')}")
 
 
 @telemetry_cmd.command("clear")
@@ -867,6 +1010,10 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
     total_loc = 0
     total_duration = 0.0
 
+    # One COPY index for all paths, so `analyze a.cbl b.cpy` sees both (COBOL007/015).
+    if len(paths_list) > 1 and hasattr(engine, "prepare_cobol_index"):
+        engine.prepare_cobol_index(list(paths_list), exclude_patterns or [])
+
     for path in paths_list:
         report = engine.analyze_path(path, exclude_patterns)
         all_file_results.extend(report.file_results)
@@ -915,6 +1062,40 @@ def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
         import logging
 
         logging.getLogger(__name__).debug("ML analysis skipped: %s", e)
+
+
+def _run_format_check(enabled, all_file_results, source_cache, quiet, json_mode):
+    """Opt-in Black check (--format-check). A missing Black never fails the run.
+
+    Like the ML pass above, findings are appended after the engine's
+    ``--severity`` filter: the user explicitly asked for them, so they are
+    shown even though they are LOW. ``--fail-on`` / ``--exclude-types``
+    still apply to them as to any other finding.
+    """
+    if not enabled:
+        return
+    stats = _collect_format_drift(all_file_results, source_cache)
+    if stats is not None and not (quiet or json_mode):
+        click.echo(stats.summary_line())
+
+
+def _collect_format_drift(all_file_results, source_cache):
+    """Run Black in check mode; warnings go to stderr. Returns stats, or None if skipped."""
+    from hefesto.analyzers import format_drift
+
+    if not format_drift.is_black_available():
+        click.echo(format_drift.BLACK_MISSING_WARNING, err=True)
+        return None
+
+    try:
+        _, stats = format_drift.run_format_check(all_file_results, source_cache)
+    except Exception as e:
+        click.echo(f"Warning: --format-check failed and was skipped: {e}", err=True)
+        return None
+
+    for warning in stats.warnings:
+        click.echo(f"Warning: {warning}", err=True)
+    return stats
 
 
 def _generate_report(all_file_results, total_loc, total_duration, output, save_html, meta=None):
