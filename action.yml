@@ -1,5 +1,5 @@
 name: 'Hefesto Code Guardian'
-description: 'AI-powered static analysis for AI-generated code. Catches security flaws and semantic drift in 22 formats.'
+description: 'AI-powered static analysis for AI-generated code. Catches security flaws and semantic drift in 22 formats. Optional SARIF upload to GitHub code scanning.'
 author: 'Narapa LLC'
 branding:
   icon: 'shield'
@@ -19,17 +19,76 @@ inputs:
     required: false
     default: 'LOW'
   format:
-    description: 'Output format (text, json, html)'
+    description: 'Output format printed to the log (text, json, html, sarif)'
     required: false
     default: 'text'
+  sarif:
+    description: 'true: also write a SARIF 2.1.0 file (see sarif_file) and, unless upload_sarif is false, upload it to GitHub code scanning. Uploading needs "permissions: security-events: write".'
+    required: false
+    default: 'false'
+  sarif_file:
+    description: 'Path of the SARIF file written when sarif is true (relative to the workspace)'
+    required: false
+    default: 'hefesto.sarif'
+  upload_sarif:
+    description: 'With sarif: true, upload the SARIF file with github/codeql-action/upload-sarif (set to false to only write the file, e.g. to upload it yourself or keep it as an artifact)'
+    required: false
+    default: 'true'
+  sarif_category:
+    description: 'Code scanning category of the upload (distinguishes several Hefesto runs in one repository)'
+    required: false
+    default: 'hefesto'
   telemetry:
     description: 'Opt-in anonymous telemetry. Only 1 or true enables it: one anonymous ping per run (version, file count, issue count, exit code) plus the CLI usage ping. Any other value, including the default 0, sends nothing.'
     required: false
     default: '0'
 
-runs:
-  using: 'docker'
-  image: 'Dockerfile.action'
-  # Inputs are automatically passed as INPUT_<NAME> environment variables
-  # args: []  <-- We use env vars for structured input handling
+outputs:
+  exit_code:
+    description: 'Exit code of hefesto analyze (0 = gate passed, 1 = gate failed or error, 2 = usage error)'
+    value: ${{ steps.analyze.outputs.exit_code }}
+  sarif_file:
+    description: 'Path of the SARIF file, when sarif is true and the file was written'
+    value: ${{ steps.analyze.outputs.sarif_file }}
 
+runs:
+  using: 'composite'
+  steps:
+    # Install HefestoAI from this action's own checkout (the package is not
+    # pulled from PyPI) into a private virtualenv, so the job's Python is
+    # left untouched. Needs python3 >= 3.10 on the runner (ubuntu-latest has it).
+    - name: Install HefestoAI
+      shell: bash
+      run: |
+        python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' || {
+          echo "::error::HefestoAI needs python3 >= 3.10 on the runner (found $(python3 --version 2>&1)). Add actions/setup-python before this step."
+          exit 1
+        }
+        python3 -m venv "$RUNNER_TEMP/hefesto-venv"
+        "$RUNNER_TEMP/hefesto-venv/bin/python" -m pip install --quiet --disable-pip-version-check "$GITHUB_ACTION_PATH"
+
+    - name: Run HefestoAI
+      id: analyze
+      shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_FAIL_ON: ${{ inputs.fail_on }}
+        INPUT_MIN_SEVERITY: ${{ inputs.min_severity }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_SARIF: ${{ inputs.sarif }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif_file }}
+        INPUT_UPLOAD_SARIF: ${{ inputs.upload_sarif }}
+        INPUT_SARIF_CATEGORY: ${{ inputs.sarif_category }}
+        INPUT_TELEMETRY: ${{ inputs.telemetry }}
+      # The virtualenv is put on PATH for this step only (not via GITHUB_PATH),
+      # so later steps of the job keep their own python.
+      run: PATH="$RUNNER_TEMP/hefesto-venv/bin:$PATH" bash "$GITHUB_ACTION_PATH/scripts/action_entrypoint.sh"
+
+    # Runs even when the gate failed, so the findings that failed it show up
+    # in Security > Code scanning. Skipped when no SARIF file was written.
+    - name: Upload SARIF to GitHub code scanning
+      if: ${{ always() && steps.analyze.outputs.sarif_file != '' && steps.analyze.outputs.upload_sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ steps.analyze.outputs.sarif_file }}
+        category: ${{ inputs.sarif_category }}

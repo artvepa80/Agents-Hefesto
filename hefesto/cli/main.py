@@ -11,6 +11,7 @@ import functools
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Optional, Tuple
 
 import click
@@ -39,6 +40,9 @@ def _pro_installed() -> bool:
         for flag in ("HAS_SCOPE_GATING", "HAS_MULTILANG", "HAS_ENRICHMENT", "HAS_API_HARDENING")
     )
 
+
+# Outputs that are a document on stdout (everything else goes to stderr)
+MACHINE_OUTPUTS = ("json", "sarif")
 
 # Initialize telemetry
 telemetry = TelemetryClient()
@@ -191,7 +195,9 @@ def _with_project_config(command):
         project_config = _resolve_project_config(kwargs["paths"], config_path, no_config)
         kwargs.update(project_config.values)
         if project_config.path is not None and not kwargs.get("quiet"):
-            click.echo(f"Config: {project_config.path}", err=kwargs.get("output") == "json")
+            click.echo(
+                f"Config: {project_config.path}", err=kwargs.get("output") in MACHINE_OUTPUTS
+            )
         return command(**kwargs)
 
     return wrapper
@@ -263,9 +269,17 @@ def _load_project_config(paths, config_path, option_names):
 )
 @click.option(
     "--output",
-    type=click.Choice(["text", "json", "html"]),
+    "--format",
+    "output",
+    type=click.Choice(["text", "json", "html", "sarif"]),
     default="text",
-    help="Output format (default: text)",
+    help="Output format (default: text). sarif: SARIF 2.1.0 for GitHub code scanning",
+)
+@click.option(
+    "--sarif-file",
+    type=click.Path(dir_okay=False, writable=True),
+    default=None,
+    help="Also write a SARIF 2.1.0 log to this file (any --output)",
 )
 @click.option(
     "--exclude",
@@ -360,6 +374,7 @@ def analyze(
     paths: Tuple[str, ...],
     severity: str,
     output: str,
+    sarif_file: Optional[str],
     exclude: str,
     save_html: Optional[str],
     fail_on: Optional[str],
@@ -399,8 +414,8 @@ def analyze(
     Options can also be set in a .hefesto.yaml/.hefesto.yml file (nearest one
     from the first PATH up to the repo root); explicit flags win.
     """
-    # When --output json, all non-JSON text goes to stderr so stdout is pure JSON.
-    json_mode = output == "json"
+    # With --output json/sarif, all other text goes to stderr so stdout is pure JSON.
+    json_mode = output in MACHINE_OUTPUTS
 
     paths_list = list(paths)
     _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode)
@@ -466,6 +481,8 @@ def analyze(
         )
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
+        if sarif_file:
+            _write_sarif(combined_report, sarif_file, quiet, json_mode)
 
         exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
 
@@ -1161,9 +1178,9 @@ def _generate_report(all_file_results, total_loc, total_duration, output, save_h
 def _print_report(combined_report, output, save_html, quiet, max_issues):
     import click
 
-    from hefesto.reports import HTMLReporter, JSONReporter, TextReporter
+    from hefesto.reports import HTMLReporter, JSONReporter, SARIFReporter, TextReporter
 
-    json_mode = output == "json"
+    json_mode = output in MACHINE_OUTPUTS
 
     # Apply max_issues limit if specified (affects display only)
     display_issues = combined_report.get_all_issues()
@@ -1175,24 +1192,29 @@ def _print_report(combined_report, output, save_html, quiet, max_issues):
             )
 
     # Generate output
-    if output == "text":
-        reporter = TextReporter()
-        result = reporter.generate(combined_report)
+    reporters = {
+        "text": TextReporter,
+        "json": JSONReporter,
+        "sarif": SARIFReporter,
+        "html": HTMLReporter,
+    }
+    result = reporters[output]().generate(combined_report)
+    if output == "html" and save_html:
+        with open(save_html, "w", encoding="utf-8") as f:
+            f.write(result)
+        click.echo(f"HTML report saved to: {save_html}")
+    else:
         click.echo(result)
-    elif output == "json":
-        reporter = JSONReporter()
-        result = reporter.generate(combined_report)
-        click.echo(result)
-    elif output == "html":
-        reporter = HTMLReporter()
-        result = reporter.generate(combined_report)
 
-        if save_html:
-            with open(save_html, "w", encoding="utf-8") as f:
-                f.write(result)
-            click.echo(f"HTML report saved to: {save_html}")
-        else:
-            click.echo(result)
+
+def _write_sarif(combined_report, sarif_file, quiet, json_mode):
+    """--sarif-file: write the SARIF log next to the normal output."""
+    from hefesto.reports.sarif_reporter import SARIFReporter
+
+    Path(sarif_file).parent.mkdir(parents=True, exist_ok=True)
+    Path(sarif_file).write_text(SARIFReporter().generate(combined_report), encoding="utf-8")
+    if not quiet:
+        click.echo(f"SARIF report saved to: {sarif_file}", err=json_mode)
 
 
 def _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode=False):

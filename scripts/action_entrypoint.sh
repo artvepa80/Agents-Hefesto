@@ -16,6 +16,22 @@ SEVERITY="${INPUT_MIN_SEVERITY:-LOW}"
 SEVERITY="${SEVERITY^^}" # Force uppercase
 FORMAT="${INPUT_FORMAT:-text}"
 TELEMETRY_INPUT="${INPUT_TELEMETRY:-0}"
+SARIF_FILE="${INPUT_SARIF_FILE:-hefesto.sarif}"
+SARIF_CATEGORY="${INPUT_SARIF_CATEGORY:-hefesto}"
+
+# true/1/yes (any case, surrounding spaces ignored) -> 1, anything else -> 0
+is_true() {
+    local value="${1//[[:space:]]/}"
+    case "${value,,}" in
+        1|true|yes) echo 1 ;;
+        *) echo 0 ;;
+    esac
+}
+SARIF_ENABLED=$(is_true "${INPUT_SARIF:-false}")
+UPLOAD_SARIF=$(is_true "${INPUT_UPLOAD_SARIF:-true}")
+if [ "$SARIF_ENABLED" != "1" ]; then
+    UPLOAD_SARIF=0
+fi
 
 # The CLI has no INFO level (its --severity accepts LOW..CRITICAL), so INFO
 # used to make the Action exit 2. Treat it as LOW, the lowest level (BUG-13).
@@ -41,15 +57,15 @@ echo "Fail On: ${FAIL_ON}"
 echo "Min Severity: ${SEVERITY}"
 echo "Format: ${FORMAT}"
 echo "Telemetry: ${HEFESTO_TELEMETRY}"
+if [ "$SARIF_ENABLED" = "1" ]; then
+    echo "SARIF file: ${SARIF_FILE} (upload: $([ "$UPLOAD_SARIF" = "1" ] && echo yes || echo no), category: ${SARIF_CATEGORY})"
+else
+    echo "SARIF file: off"
+fi
 echo "::endgroup::"
 
-# Run Analysis
-# We pipe output to a file if format is JSON/SARIF to allow artifact upload if needed,
-# but hefesto CLI usually prints to stdout. 
-# We'll rely on the CLI's standard behavior.
-# If an output file is requested, we might need CLI support for --output.
-# Checking CLI args: hefesto analyze [TARGET] --fail-on ... 
-# Assuming standard usage.
+# Run Analysis: the report goes to the log in FORMAT; with `sarif: true` a
+# SARIF 2.1.0 file is written too (--sarif-file) for upload-sarif.
 
 echo "::group::Running Analysis"
 set +e # Allow failure to capture exit code
@@ -60,6 +76,10 @@ CMD=("hefesto" "analyze" "$TARGET" "--severity" "$SEVERITY" "--fail-on" "$FAIL_O
 # Add format if specified (default logic handled in CLI or verified here)
 if [ -n "$FORMAT" ]; then
     CMD+=("--output" "$FORMAT")
+fi
+if [ "$SARIF_ENABLED" = "1" ]; then
+    rm -f "$SARIF_FILE"
+    CMD+=("--sarif-file" "$SARIF_FILE")
 fi
 
 # Execute (tee to temp file for telemetry parsing)
@@ -85,15 +105,14 @@ rm -f "$TMPOUT"
 
 # Set Outputs
 echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
-
-# If format is JSON or SARIF, we might want to expose the output file.
-# Since the CLI prints to stdout by default, users can redirect it if they run manually,
-# but in an Action, capturing stdout to a file requires wrapper logic.
-# For now, we rely on the user viewing the logs or using the CLI's --output flag if added in future.
-
-
-# Determine path for report if generated (placeholder logic if CLI supports file output)
-# For now, we just pass the exit code.
+if [ "$SARIF_ENABLED" = "1" ]; then
+    if [ -s "$SARIF_FILE" ]; then
+        echo "sarif_file=${SARIF_FILE}" >> "$GITHUB_OUTPUT"
+        echo "upload_sarif=$([ "$UPLOAD_SARIF" = "1" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+    else
+        echo "::warning::sarif is enabled but ${SARIF_FILE} was not written (hefesto exit code ${EXIT_CODE}); nothing to upload."
+    fi
+fi
 
 # Exit with the code from hefesto to fail the workflow step if needed
 exit $EXIT_CODE

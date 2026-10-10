@@ -26,7 +26,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 CONFIG_FILENAMES = (".hefesto.yaml", ".hefesto.yml")
 
 _SEVERITIES = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
-_OUTPUTS = ("text", "json", "html")
+_OUTPUTS = ("text", "json", "html", "sarif")
 
 
 class ConfigError(ValueError):
