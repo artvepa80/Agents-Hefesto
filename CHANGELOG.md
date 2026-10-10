@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Pending (next minor release)
+
+- **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
+
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).
