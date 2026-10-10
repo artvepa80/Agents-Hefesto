@@ -123,6 +123,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to paste through the GitHub web UI.
 
 ### Security
+- **Revoked license keys removed from the docs.** `CHANGELOG.md` (the
+  OMEGA fix entry) and `scripts/README.md` (fulfillment example) still showed
+  two internal license keys that were revoked on 2026-10-06. They now show the
+  placeholder `HFST-XXXX-XXXX-XXXX-XXXX-XXXX`. The CHANGELOG ships in the
+  sdist, so the next release no longer carries them; older sdists on PyPI
+  still do (the keys are revoked). History is not rewritten. New test
+  `tests/test_no_license_keys_in_repo.py` fails if a non-placeholder key
+  appears in a tracked text file.
 - **`hefesto.security.path_sandbox.resolve_under_root`** (API server path
   guard) now normalizes with `os.path.realpath` and checks the root prefix,
   rejecting siblings that share it (`/work/app-evil` for root `/work/app`)
@@ -1956,7 +1964,7 @@ This blocked OMEGA (tier=2) from PRO (tier=1) features.
 
 #### Testing & Verification
 - ✅ 17/17 unit tests passed
-- ✅ Verified with real OMEGA license (HFST-6F06-4D54-6402-B3B1-CF72)
+- ✅ Verified with real OMEGA license (HFST-XXXX-XXXX-XXXX-XXXX-XXXX)
 - ✅ OMEGA users can now access PRO features (CRITICAL)
 - ✅ PRO users can access FREE features
 - ✅ Backward compatibility maintained

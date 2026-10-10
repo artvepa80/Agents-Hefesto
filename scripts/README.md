@@ -180,7 +180,7 @@ $ python scripts/fulfill_order.py john@acme.com sub_1SKNC8ABC true
 ═══════════════════════════════════════
 
 📝 Step 1/3: Generating license key...
-✅ License key: HFST-A2F4-8B91-C3D7-E5F6-1234
+✅ License key: HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 
 🔗 Step 2/3: Generating download URL...
 ✅ Download URL generated (expires in 7 days)
@@ -189,7 +189,7 @@ $ python scripts/fulfill_order.py john@acme.com sub_1SKNC8ABC true
 
 ✅ FULFILLMENT COMPLETE
 Customer:           john@acme.com
-License Key:        HFST-A2F4-8B91-C3D7-E5F6-1234
+License Key:        HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 Founding Member:    Yes
 Price:              $8/month (PRO) or $19/month (OMEGA), founding price
 Email saved to:     email_john_at_acme_com_20251020_183045.txt
