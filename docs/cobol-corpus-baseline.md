@@ -191,3 +191,16 @@ starts being found, so the docs get updated):
 The seeds were written by the same team that wrote the rules, against the
 documented rule definitions, so this measures that each rule does what it
 says on typical code, not recall on unknown real-world code.
+
+## Phase 4 (performance)
+
+No finding changed on any pinned corpus or on NIST (7,307), so the labels
+are unchanged; the baseline was regenerated for the analyzer commit and the
+timings. Analyzer time with `compare`: CardDemo 0.65 s → 0.42 s, GenApp
+0.19 s → 0.10 s, zopeneditor-sample 0.12 s → 0.11 s. Nested `COPY` now
+counts transitively for COBOL007 (none of the pinned corpora crosses the
+5-program threshold through a nested copybook), and COBOL015 also checks a
+copybook's own `COPY` statements (none missing on the pinned corpora).
+
+Synthetic scale numbers come from `scripts/cobol_perf_bench.py` (see the
+README, COBOL section): about 8 s per million lines.
