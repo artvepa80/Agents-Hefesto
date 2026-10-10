@@ -127,6 +127,7 @@ class TestValidation:
                 "max_issues": 5,
                 "format_check": True,
                 "enable_memory_budget_gate": False,
+                "copybook_paths": ["copylib", " ../shared "],
             }
         )
         assert values == {
@@ -139,6 +140,7 @@ class TestValidation:
             "max_issues": 5,
             "format_check": True,
             "enable_memory_budget_gate": False,
+            "copybook_paths": ["copylib", "../shared"],
         }
         assert set(values) == set(SUPPORTED_KEYS)
 

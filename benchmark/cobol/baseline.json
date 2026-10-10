@@ -1,23 +1,25 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-10T01:42:29+00:00",
+ "generated_at": "2026-10-10T13:09:58+00:00",
  "hefesto": {
   "version": "4.14.1",
-  "commit": "43a777e45fb396c33a69b04b522d13668d9c3a47"
+  "commit": "8d58c55b92cc6c9785ff27ce32d6d96ebbbff79d",
+  "analyzer_tree": "a03a8de834833c63dba2442a3981fae2cac912ed",
+  "dirty": false
  },
  "corpora": {
   "carddemo": {
    "url": "https://github.com/aws-samples/aws-mainframe-modernization-carddemo.git",
    "commit": "59cc6c2fd7ebd7ef7925cad552a01a4b8b6e4d5e",
    "license": "Apache-2.0",
-   "files_analyzed": 115,
-   "total_loc": 38409,
-   "total_findings": 67,
-   "cobol_findings": 56,
+   "files_analyzed": 118,
+   "total_loc": 38600,
+   "total_findings": 59,
+   "cobol_findings": 48,
    "by_rule": {
     "COBOL001": 7,
     "COBOL003": 2,
-    "COBOL004": 24,
+    "COBOL004": 16,
     "COBOL005": 2,
     "COBOL006": 5,
     "COBOL007": 15,
@@ -26,7 +28,7 @@
     "unquoted-var": 3
    },
    "by_severity": {
-    "HIGH": 40,
+    "HIGH": 32,
     "LOW": 1,
     "MEDIUM": 26
    },
@@ -46,21 +48,6 @@
     "app/app-transaction-type-db2/cbl/COTRTUPC.cbl": {
      "COBOL001": 1
     },
-    "app/cbl/CBACT01C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBACT02C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBACT03C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBACT04C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBCUS01C.cbl": {
-     "COBOL004": 1
-    },
     "app/cbl/CBSTM03A.CBL": {
      "COBOL001": 1,
      "COBOL004": 1,
@@ -70,15 +57,6 @@
     "app/cbl/CBSTM03B.CBL": {
      "COBOL001": 1,
      "COBOL006": 4
-    },
-    "app/cbl/CBTRN01C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBTRN02C.cbl": {
-     "COBOL004": 1
-    },
-    "app/cbl/CBTRN03C.cbl": {
-     "COBOL004": 1
     },
     "app/cbl/COACTUPC.cbl": {
      "COBOL001": 1,
@@ -214,48 +192,8 @@
     ],
     [
      "COBOL004",
-     "app/cbl/CBACT01C.cbl",
-     108
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBACT02C.cbl",
-     54
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBACT03C.cbl",
-     54
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBACT04C.cbl",
-     126
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBCUS01C.cbl",
-     54
-    ],
-    [
-     "COBOL004",
      "app/cbl/CBSTM03A.CBL",
      237
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBTRN01C.cbl",
-     134
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBTRN02C.cbl",
-     135
-    ],
-    [
-     "COBOL004",
-     "app/cbl/CBTRN03C.cbl",
-     143
     ],
     [
      "COBOL004",
@@ -504,8 +442,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.585,
-    "wall_seconds": 1.184
+    "analyze_seconds": 0.651,
+    "wall_seconds": 1.421
    }
   },
   "genapp": {
@@ -636,8 +574,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.158,
-    "wall_seconds": 0.832
+    "analyze_seconds": 0.193,
+    "wall_seconds": 0.986
    }
   },
   "zopeneditor-sample": {
@@ -734,8 +672,8 @@
     ]
    ],
    "timing": {
-    "analyze_seconds": 0.125,
-    "wall_seconds": 0.846
+    "analyze_seconds": 0.124,
+    "wall_seconds": 0.986
    }
   }
  }

@@ -163,6 +163,7 @@ _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
     "max_issues": _positive_int,
     "format_check": _bool,
     "enable_memory_budget_gate": _bool,
+    "copybook_paths": _string_list,
 }
 
 SUPPORTED_KEYS = tuple(_VALIDATORS)
@@ -239,7 +240,23 @@ def load_config(path: Path, allowed_keys: Optional[Iterable[str]] = None) -> Pro
         data = yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise ConfigError(f"invalid YAML: {exc}") from exc
-    return ProjectConfig(path=path, values=validate_config(data, allowed_keys))
+    values = validate_config(data, allowed_keys)
+    if "copybook_paths" in values:
+        values["copybook_paths"] = _resolve_dirs(values["copybook_paths"], path.parent)
+    return ProjectConfig(path=path, values=values)
+
+
+def _resolve_dirs(entries: List[str], base: Path) -> Tuple[str, ...]:
+    """``copybook_paths`` entries resolved against the config file's directory."""
+    resolved = []
+    for entry in entries:
+        directory = Path(entry).expanduser()
+        if not directory.is_absolute():
+            directory = base / directory
+        if not directory.is_dir():
+            raise ConfigError(f"'copybook_paths' entry {entry!r} is not a directory")
+        resolved.append(str(directory.resolve()))
+    return tuple(resolved)
 
 
 __all__ = [

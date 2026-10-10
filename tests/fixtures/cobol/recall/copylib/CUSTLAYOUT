@@ -1,0 +1,5 @@
+      * CUSTOMER LAYOUT, NO FILE EXTENSION (COPYLIB MEMBER)
+       01  CUST-LAYOUT.
+           05  CL-NAME                 PIC X(30).
+           05  CL-JDBC                 PIC X(60) VALUE
+               'jdbc:db2://h:50000/DB;user=a;password=Zq9!x;'.

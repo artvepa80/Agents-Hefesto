@@ -226,15 +226,16 @@ pointing to the install command (also exposed via
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
-³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case) (copybooks get only the data rules COBOL004/COBOL008/COBOL009 and COBOL007; the other rules are not applied to them).
-- **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt.
-- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays and CICS BMS symbolic maps are skipped. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
+³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009 and COBOL007; the other rules are not applied to them).
+- **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt; the files read as free format this way are listed under **Notes** in the text report and in `meta.cobol_format_notices` (JSON).
+- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays, CICS BMS symbolic maps and the byte view of an unsigned binary integer (`PIC 9(4) BINARY` redefined as `PIC X` bytes of exactly its storage size, as CardDemo does to decode a VSAM file status) are skipped; a signed binary or a size mismatch is still flagged. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
 - **COBOL006 / COBOL011 / COBOL015** report repeated findings once (per `PERFORM X THRU Y` pair, per program, per missing copybook), with the occurrence count and lines in the finding metadata.
-- **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree; it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` and copybooks without an extension are not indexed yet.
+- **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree; it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` members count like `COPY`. Copybooks kept outside the scanned tree resolve with `--copybook-path DIR` (repeatable) or `copybook_paths:` in `.hefesto.yaml`; files there are only used to resolve names, not analyzed.
 - **COBOL002 (credentials)** skips fields whose name ends in a flag/status/length/label suffix (for example `WS-PASSWORD-OK-FLAG`, `PWD-LEN`).
 - **COBOL008-COBOL010 (secrets, CRITICAL)**: a `VALUE` literal on a credential-named field (same suffix exclusions as COBOL002; placeholders such as `SPACES`, `XXXX`, `UNDEFINED` and key names such as `'APP-Token-Password'` are skipped), `PASS=`/`PWD=`/`PASSWORD=` with a value inside any string literal, and `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a literal password.
 - **COBOL011 (LOW)** flags `SELECT`s without a `FILE STATUS` clause, one finding per program with the file names in the metadata (sort files declared with `SD` are skipped). **COBOL012 (LOW)** flags an OPENed file whose status field, its subordinates and its 88-levels are never referenced in the PROCEDURE DIVISION (skipped when the status field is defined in a copybook or the PROCEDURE DIVISION has a `COPY`).
 - **COBOL013 (MEDIUM)** flags statements after an unconditional `STOP RUN`/`GOBACK`/`EXIT PROGRAM` in the same paragraph (`EXIT PROGRAM. STOP RUN.` and alternate `ENTRY` points are not flagged). **COBOL014 (LOW)** flags paragraphs and sections that are never referenced (PERFORM, GO TO, THRU ranges, SORT/ALTER) and cannot be reached by fall-through; the entry paragraph, DECLARATIVES, empty `EXIT` paragraphs and programs with a `COPY` in the PROCEDURE DIVISION are skipped.
+- **Measured recall:** 32 of 34 seeded issues (every rule at least twice) are found; the 2 misses are documented limits: a secret whose value contains a credential word (skipped to avoid placeholder false positives) and a literal that reaches a password field through another field (no data-flow analysis). Run `python scripts/cobol_recall.py`; precision on real corpora is in [docs/cobol-corpus-baseline.md](docs/cobol-corpus-baseline.md).
 - Output is text, JSON or HTML. SARIF is not available yet.
 
 ---
@@ -266,6 +267,7 @@ hefesto analyze . --output json
 hefesto analyze . --format-check   # opt-in: also report Black formatting drift
 hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
 hefesto analyze . --no-config                 # ignore .hefesto.yaml
+hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks outside the scan
 
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
@@ -556,6 +558,8 @@ quiet: false                # --quiet
 max_issues: 50              # --max-issues
 format_check: true          # --format-check  (needs: pip install "hefesto-ai[format]")
 enable_memory_budget_gate: false  # --enable-memory-budget-gate
+copybook_paths:             # --copybook-path (COBOL copybook directories outside the scan)
+  - ../copylib              # relative paths are resolved from this file's directory
 ```
 
 - **Discovery:** Hefesto starts at the first path given to `hefesto analyze`

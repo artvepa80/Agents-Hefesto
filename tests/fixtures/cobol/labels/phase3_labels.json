@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "description": "Labelled sample of COBOL findings (Phase 3). Each label applies the per-rule criteria below to the source at the reported line; the criteria were applied with a helper script and every category was spot-checked by hand. verdict TP = the finding is a real instance of what the rule describes; FP = it is not. sets = which run produced it (before = main 43a777e, v4.14.1; after = Phase 3 branch). duplicate = n-th identical finding at the same place.",
+ "description": "Labelled sample of COBOL findings (Phase 3). Each label applies the per-rule criteria below to the source at the reported line; the criteria were applied with a helper script and every category was spot-checked by hand. verdict TP = the finding is a real instance of what the rule describes; FP = it is not. sets = which run produced it (before = main 43a777e, v4.14.1; after = Phase 3 branch; leftovers = Phase 3 leftovers branch, same labels re-applied to the findings that remain). duplicate = n-th identical finding at the same place.",
  "corpora": {
   "carddemo": "aws-samples/aws-mainframe-modernization-carddemo@59cc6c2fd7ebd7ef7925cad552a01a4b8b6e4d5e",
   "genapp": "cicsdev/cics-genapp@f6f3f4b2580d31b7d8dcc31ce3e3676f4cceaaaa",
@@ -28,7 +28,8 @@
    "line": 690,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "28 GO TO statements (> 10)"
@@ -40,7 +41,8 @@
    "line": 478,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "23 GO TO statements (> 10)"
@@ -52,7 +54,8 @@
    "line": 301,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "14 GO TO statements (> 10)"
@@ -64,7 +67,8 @@
    "line": 128,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "13 GO TO statements (> 10)"
@@ -76,7 +80,8 @@
    "line": 973,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "51 GO TO statements (> 10)"
@@ -88,7 +93,8 @@
    "line": 438,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "16 GO TO statements (> 10)"
@@ -100,7 +106,8 @@
    "line": 497,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "21 GO TO statements (> 10)"
@@ -112,7 +119,8 @@
    "line": 189,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -124,7 +132,8 @@
    "line": 36,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -383,7 +392,8 @@
    "line": 237,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "POINTER overlaid on a binary field (pointer arithmetic, fragile)"
@@ -463,7 +473,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 676,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -474,7 +485,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 679,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -485,7 +497,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 682,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -496,7 +509,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 703,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -507,7 +521,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 706,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -518,7 +533,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 764,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -529,7 +545,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 767,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -540,7 +557,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 770,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -551,7 +569,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 791,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -562,7 +581,8 @@
    "file": "app/cbl/COACTUPC.cbl",
    "line": 794,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PIC X input overlaid with signed zoned numeric: S0C7 if not validated"
@@ -738,7 +758,8 @@
    "file": "app/cpy/CVEXPORT.cpy",
    "line": 24,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
@@ -749,7 +770,8 @@
    "file": "app/cpy/CVEXPORT.cpy",
    "line": 47,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
@@ -760,7 +782,8 @@
    "file": "app/cpy/CVEXPORT.cpy",
    "line": 65,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
@@ -771,7 +794,8 @@
    "file": "app/cpy/CVEXPORT.cpy",
    "line": 84,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
@@ -782,7 +806,8 @@
    "file": "app/cpy/CVEXPORT.cpy",
    "line": 93,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "record variant overlays COMP/COMP-3 fields with a different layout"
@@ -1035,7 +1060,8 @@
    "file": "app/cbl/CSUTLDTC.cbl",
    "line": 28,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON Vstring-length"
@@ -1069,7 +1095,8 @@
    "file": "app/cbl/CSUTLDTC.cbl",
    "line": 36,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON Vstring-length"
@@ -1081,7 +1108,8 @@
    "line": 486,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -1093,7 +1121,8 @@
    "line": 120,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -1105,7 +1134,8 @@
    "line": 122,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -1117,7 +1147,8 @@
    "line": 124,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -1129,7 +1160,8 @@
    "line": 126,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -1228,7 +1260,8 @@
    "file": "app/app-authorization-ims-db2-mq/cpy/CIPAUDTY.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CIPAUDTY is COPYed by 8 programs in the corpus"
@@ -1239,7 +1272,8 @@
    "file": "app/app-authorization-ims-db2-mq/cpy/CIPAUSMY.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CIPAUSMY is COPYed by 7 programs in the corpus"
@@ -1822,7 +1856,8 @@
    "file": "app/cpy/COCOM01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "COCOM01Y is COPYed by 21 programs in the corpus"
@@ -1833,7 +1868,8 @@
    "file": "app/cpy/COTTL01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "COTTL01Y is COPYed by 21 programs in the corpus"
@@ -1844,7 +1880,8 @@
    "file": "app/cpy/CSDAT01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CSDAT01Y is COPYed by 21 programs in the corpus"
@@ -1855,7 +1892,8 @@
    "file": "app/cpy/CSMSG01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CSMSG01Y is COPYed by 21 programs in the corpus"
@@ -1866,7 +1904,8 @@
    "file": "app/cpy/CSMSG02Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CSMSG02Y is COPYed by 7 programs in the corpus"
@@ -1877,7 +1916,8 @@
    "file": "app/cpy/CSSTRPFY.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CSSTRPFY is COPYed by 7 programs in the corpus"
@@ -1888,7 +1928,8 @@
    "file": "app/cpy/CSUSR01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CSUSR01Y is COPYed by 14 programs in the corpus"
@@ -1899,7 +1940,8 @@
    "file": "app/cpy/CVACT01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVACT01Y is COPYed by 14 programs in the corpus"
@@ -1910,7 +1952,8 @@
    "file": "app/cpy/CVACT02Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVACT02Y is COPYed by 10 programs in the corpus"
@@ -1921,7 +1964,8 @@
    "file": "app/cpy/CVACT03Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVACT03Y is COPYed by 14 programs in the corpus"
@@ -1932,7 +1976,8 @@
    "file": "app/cpy/CVCRD01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVCRD01Y is COPYed by 7 programs in the corpus"
@@ -1943,7 +1988,8 @@
    "file": "app/cpy/CVCUS01Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVCUS01Y is COPYed by 10 programs in the corpus"
@@ -1954,7 +2000,8 @@
    "file": "app/cpy/CVTRA05Y.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CVTRA05Y is COPYed by 11 programs in the corpus"
@@ -1966,7 +2013,8 @@
    "line": 39,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -1989,7 +2037,8 @@
    "line": 56,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "13 GO TO statements (> 10)"
@@ -2001,7 +2050,8 @@
    "line": 33,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "17 GO TO statements (> 10)"
@@ -2013,7 +2063,8 @@
    "line": 33,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "17 GO TO statements (> 10)"
@@ -2025,7 +2076,8 @@
    "line": 33,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "17 GO TO statements (> 10)"
@@ -2037,7 +2089,8 @@
    "line": 33,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "14 GO TO statements (> 10)"
@@ -2323,7 +2376,8 @@
    "file": "base/src/lgcmarea.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "LGCMAREA is COPYed by 18 programs in the corpus"
@@ -2411,7 +2465,8 @@
    "file": "base/src/lgpolicy.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "LGPOLICY is COPYed by 6 programs in the corpus"
@@ -2577,7 +2632,8 @@
    "line": 74,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "literal password in VALUE clause"
@@ -2588,7 +2644,8 @@
    "file": "base/src/lgtestc1.cbl",
    "line": 44,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
@@ -2599,7 +2656,8 @@
    "file": "base/src/lgtestp1.cbl",
    "line": 21,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
@@ -2610,7 +2668,8 @@
    "file": "base/src/lgtestp2.cbl",
    "line": 21,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
@@ -2621,7 +2680,8 @@
    "file": "base/src/lgtestp3.cbl",
    "line": 21,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
@@ -2632,7 +2692,8 @@
    "file": "base/src/lgtestp4.cbl",
    "line": 21,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SSMAP is not in the repository (BMS-generated map copybook, built at deploy time)"
@@ -2665,7 +2726,8 @@
    "file": "IF136A.CBL",
    "line": 223,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "59 GO TO statements (> 10)"
@@ -2676,7 +2738,8 @@
    "file": "IF138A.CBL",
    "line": 230,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "39 GO TO statements (> 10)"
@@ -2709,7 +2772,8 @@
    "file": "NC102A.CBL",
    "line": 277,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "144 GO TO statements (> 10)"
@@ -2753,7 +2817,8 @@
    "file": "RW101A.CBL",
    "line": 245,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "20 GO TO statements (> 10)"
@@ -2764,7 +2829,8 @@
    "file": "SG106A.CBL",
    "line": 243,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "43 GO TO statements (> 10)"
@@ -2786,7 +2852,8 @@
    "file": "SQ112A.CBL",
    "line": 270,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "54 GO TO statements (> 10)"
@@ -2797,7 +2864,8 @@
    "file": "SQ131A.CBL",
    "line": 318,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "13 GO TO statements (> 10)"
@@ -2808,7 +2876,8 @@
    "file": "SQ135A.CBL",
    "line": 281,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "14 GO TO statements (> 10)"
@@ -2819,7 +2888,8 @@
    "file": "SQ138A.CBL",
    "line": 338,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "36 GO TO statements (> 10)"
@@ -2852,7 +2922,8 @@
    "file": "ST124A.CBL",
    "line": 258,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "18 GO TO statements (> 10)"
@@ -2863,7 +2934,8 @@
    "file": "CM104M.CBL",
    "line": 269,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2874,7 +2946,8 @@
    "file": "CM105M.CBL",
    "line": 335,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2885,7 +2958,8 @@
    "file": "CM105M.CBL",
    "line": 353,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2918,7 +2992,8 @@
    "file": "DB205A.CBL",
    "line": 396,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2929,7 +3004,8 @@
    "file": "NC109M.CBL",
    "line": 451,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2951,7 +3027,8 @@
    "file": "NC109M.CBL",
    "line": 591,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -2996,7 +3073,8 @@
    "line": 869,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -3018,7 +3096,8 @@
    "file": "NC204M.CBL",
    "line": 962,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -3029,7 +3108,8 @@
    "file": "NC204M.CBL",
    "line": 980,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -3051,7 +3131,8 @@
    "file": "NC204M.CBL",
    "line": 1149,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "ACCEPT reads external input (SYSIN/console)"
@@ -3075,8 +3156,8 @@
    "sets": [
     "after"
    ],
-   "verdict": "TP",
-   "reason": "signed numeric item overlaid with a different PIC/sign layout"
+   "verdict": "FP",
+   "reason": "relabelled: 'INDEXED BY STATIC-INDEX' was read as USAGE INDEX; both views are PIC X(25) display"
   },
   {
    "corpus": "nist",
@@ -3128,7 +3209,8 @@
    "file": "NC101A.CBL",
    "line": 52,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3139,7 +3221,8 @@
    "file": "NC106A.CBL",
    "line": 144,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3150,7 +3233,8 @@
    "file": "NC106A.CBL",
    "line": 227,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3161,7 +3245,8 @@
    "file": "NC116A.CBL",
    "line": 69,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3172,7 +3257,8 @@
    "file": "NC116A.CBL",
    "line": 101,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3183,7 +3269,8 @@
    "file": "NC116A.CBL",
    "line": 124,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3194,7 +3281,8 @@
    "file": "NC116A.CBL",
    "line": 128,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3205,7 +3293,8 @@
    "file": "NC117A.CBL",
    "line": 67,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3216,7 +3305,8 @@
    "file": "NC118A.CBL",
    "line": 156,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3227,7 +3317,8 @@
    "file": "NC119A.CBL",
    "line": 63,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3238,7 +3329,8 @@
    "file": "NC119A.CBL",
    "line": 156,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3249,7 +3341,8 @@
    "file": "NC171A.CBL",
    "line": 68,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3260,7 +3353,8 @@
    "file": "NC173A.CBL",
    "line": 61,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3271,7 +3365,8 @@
    "file": "NC174A.CBL",
    "line": 135,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3282,7 +3377,8 @@
    "file": "NC175A.CBL",
    "line": 111,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3293,7 +3389,8 @@
    "file": "NC176A.CBL",
    "line": 119,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3304,7 +3401,8 @@
    "file": "NC177A.CBL",
    "line": 58,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3326,7 +3424,8 @@
    "file": "NC211A.CBL",
    "line": 56,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3359,7 +3458,8 @@
    "file": "NC254A.CBL",
    "line": 133,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "signed numeric item overlaid with a different PIC/sign layout"
@@ -3546,7 +3646,8 @@
    "file": "IC207A.CBL",
    "line": 50,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON DN3"
@@ -3568,7 +3669,8 @@
    "file": "IC208A.CBL",
    "line": 40,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON DN3"
@@ -3668,7 +3770,8 @@
    "line": 51,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
@@ -3680,7 +3783,8 @@
    "line": 60,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON NEW-DU-01V00"
@@ -3692,7 +3796,8 @@
    "line": 54,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON TEST-AR-NUMBER-INVOICES"
@@ -3748,7 +3853,8 @@
    "line": 66,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON RL-VS1R2-F-G-121-124"
@@ -3760,7 +3866,8 @@
    "line": 68,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON RL-VS1R1-F-G-117-119"
@@ -3772,7 +3879,8 @@
    "line": 87,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
@@ -3784,7 +3892,8 @@
    "line": 139,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON LENGTH-1"
@@ -3796,7 +3905,8 @@
    "line": 164,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON LENGTH-100"
@@ -3819,7 +3929,8 @@
    "file": "ST137A.CBL",
    "line": 181,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON LENGTH-100"
@@ -3831,7 +3942,8 @@
    "line": 100,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "OCCURS ... DEPENDING ON DOI-DU-01V00"
@@ -3842,7 +3954,8 @@
    "file": "DB104A.CBL",
    "line": 688,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3875,7 +3988,8 @@
    "file": "IF113A.CBL",
    "line": 206,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3886,7 +4000,8 @@
    "file": "IF135A.CBL",
    "line": 239,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3897,7 +4012,8 @@
    "file": "IX114A.CBL",
    "line": 526,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3930,7 +4046,8 @@
    "file": "NC209A.CBL",
    "line": 307,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3941,7 +4058,8 @@
    "file": "NC218A.CBL",
    "line": 256,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3952,7 +4070,8 @@
    "file": "NC218A.CBL",
    "line": 257,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3963,7 +4082,8 @@
    "file": "NC234A.CBL",
    "line": 272,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -3996,7 +4116,8 @@
    "file": "RL201A.CBL",
    "line": 291,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -4018,7 +4139,8 @@
    "file": "RL208A.CBL",
    "line": 302,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "PERFORM THRU range spans more than 5 paragraphs (counted)"
@@ -4282,7 +4404,8 @@
    "file": "CM102M.CBL",
    "line": 30,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4293,7 +4416,8 @@
    "file": "IC102A.CBL",
    "line": 31,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4304,7 +4428,8 @@
    "file": "IC213A.CBL",
    "line": 31,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4315,7 +4440,8 @@
    "file": "IF102A.CBL",
    "line": 20,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4326,7 +4452,8 @@
    "file": "IF120A.CBL",
    "line": 19,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4337,7 +4464,8 @@
    "file": "IF142A.CBL",
    "line": 20,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4359,7 +4487,8 @@
    "file": "IX204A.CBL",
    "line": 77,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4370,7 +4499,8 @@
    "file": "IX215A.CBL",
    "line": 124,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4382,7 +4512,8 @@
    "line": 36,
    "sets": [
     "after",
-    "before"
+    "before",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4393,7 +4524,8 @@
    "file": "NC171A.CBL",
    "line": 40,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4426,7 +4558,8 @@
    "file": "RW101A.CBL",
    "line": 76,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4459,7 +4592,8 @@
    "file": "SQ106A.CBL",
    "line": 60,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4481,7 +4615,8 @@
    "file": "SQ111A.CBL",
    "line": 43,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4514,7 +4649,8 @@
    "file": "SQ122A.CBL",
    "line": 44,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4536,7 +4672,8 @@
    "file": "SQ137A.CBL",
    "line": 41,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4547,7 +4684,8 @@
    "file": "SQ139A.CBL",
    "line": 43,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4591,7 +4729,8 @@
    "file": "SQ226A.CBL",
    "line": 51,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4602,7 +4741,8 @@
    "file": "SQ229A.CBL",
    "line": 43,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4635,7 +4775,8 @@
    "file": "ST115A.CBL",
    "line": 71,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4690,7 +4831,8 @@
    "file": "ST144A.CBL",
    "line": 123,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "SELECT without FILE STATUS"
@@ -4800,7 +4942,8 @@
    "file": "COPYBOOK/CUSTCOPY.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
@@ -4811,7 +4954,8 @@
    "file": "COPYBOOK/TRANREC.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "TRANREC is COPYed by 5 programs in the corpus"
@@ -4822,7 +4966,8 @@
    "file": "multiroot/copybooks/cust/CUSTCOPY.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "CUSTCOPY is COPYed by 5 programs in the corpus"
@@ -4833,7 +4978,8 @@
    "file": "multiroot/copybooks/trans/TRANREC.cpy",
    "line": 1,
    "sets": [
-    "after"
+    "after",
+    "leftovers"
    ],
    "verdict": "TP",
    "reason": "TRANREC is COPYed by 5 programs in the corpus"

@@ -579,10 +579,13 @@ def _procedure_text(unit: _ProgramUnit) -> str:
 
 _REDEFINES = re.compile(rf"\bREDEFINES\s+({_WORD})", re.I)
 _PIC = re.compile(r"\bPIC(?:TURE)?\s+(?:IS\s+)?(\S+)", re.I)
-_USAGE_PACKED = re.compile(r"\b(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)\b", re.I)
-_USAGE_FLOAT = re.compile(r"\bCOMP(?:UTATIONAL)?-[12]\b", re.I)
-_USAGE_BINARY = re.compile(r"\b(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)\b(?!-)", re.I)
-_USAGE_OTHER = re.compile(r"\b(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)\b", re.I)
+# USAGE words, not parts of data names (``REDEFINES TWO-BYTES-BINARY``, ``WS-COMP-3``).
+_USAGE_PACKED = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)(?![\w-])", re.I)
+_USAGE_FLOAT = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-[12](?![\w-])", re.I)
+_USAGE_BINARY = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)(?![\w-])", re.I)
+_USAGE_OTHER = re.compile(
+    r"(?<![\w-])(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)(?![\w-])", re.I
+)
 _NUMERIC_PIC = re.compile(r"^[S9VP()0-9]+$", re.I)
 _SENSITIVE = {"packed", "binary", "signed", "float", "pointer"}
 _CLASS_LABEL = {
@@ -661,6 +664,48 @@ def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
     return tuple(out)
 
 
+_PIC_SYMBOL_RUN = re.compile(r"([9X])(?:\((\d+)\))?", re.IGNORECASE)
+
+
+def _pic_count(pic: str, symbol: str) -> Optional[int]:
+    """Number of ``symbol`` positions in a PIC made only of that symbol, else None."""
+    text = pic.upper()
+    total, pos = 0, 0
+    for match in _PIC_SYMBOL_RUN.finditer(text):
+        if match.start() != pos or match.group(1) != symbol:
+            return None
+        total += int(match.group(2) or 1)
+        pos = match.end()
+    return total if pos == len(text) and total else None
+
+
+def _binary_bytes(digits: int) -> Optional[int]:
+    """Storage of an unsigned binary PIC 9(n) (COMP/BINARY/COMP-4/COMP-5)."""
+    for limit, size in ((4, 2), (9, 4), (18, 8)):
+        if digits <= limit:
+            return size
+    return None
+
+
+def _is_byte_view(one: Tuple[Tuple[str, str], ...], other: Tuple[Tuple[str, str], ...]) -> bool:
+    """Unsigned binary integer overlaid by PIC X bytes of exactly its storage size.
+
+    The CardDemo idiom ``01 TWO-BYTES-BINARY PIC 9(4) BINARY`` +
+    ``01 TWO-BYTES-ALPHA REDEFINES ... 05 PIC X. 05 PIC X.`` reads the bytes of
+    a binary field (e.g. to decode a VSAM file status). No digit is ever
+    reinterpreted, so it is not the corruption risk COBOL004 is about. Signed
+    binary, a size mismatch, or any non-PIC X byte still counts as a finding.
+    """
+    if len(one) != 1 or one[0][0] != "binary":
+        return False
+    digits = _pic_count(one[0][1], "9")
+    size = _binary_bytes(digits) if digits else None
+    if size is None or not other:
+        return False
+    widths = [_pic_count(pic, "X") if cls == "alphanumeric" else None for cls, pic in other]
+    return all(widths) and sum(w for w in widths if w) == size
+
+
 def _is_bms_output_map(name: str, target: str) -> bool:
     """CICS BMS symbolic map: ``01 xxxO REDEFINES xxxI`` is generated, not user code."""
     return (
@@ -701,6 +746,8 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
         original, redefined = _layout(items, orig_idx), _layout(items, idx)
         sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})
         if not sensitive or original == redefined:
+            continue
+        if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
             continue
         kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
         issues.append(

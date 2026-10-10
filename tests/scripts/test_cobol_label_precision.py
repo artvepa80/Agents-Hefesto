@@ -46,23 +46,30 @@ class TestFixture:
         rules = {label["rule"] for label in DOC["labels"]}
         assert rules <= set(DOC["criteria"])
 
-    def test_after_labels_match_the_committed_baseline(self):
-        """Every 'after' label on a pinned corpus is a finding in baseline.json."""
+    def test_latest_labels_match_the_committed_baseline(self):
+        """On pinned corpora the latest run's labels are exactly the COBOL findings
+        in baseline.json (every finding labelled, no stale label)."""
         baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
         for corpus, data in baseline["corpora"].items():
-            findings = {tuple(f) for f in data["findings"]}
-            for label in DOC["labels"]:
-                if label["corpus"] == corpus and "after" in label["sets"]:
-                    assert (label["rule"], label["file"], label["line"]) in findings, label
+            findings = {tuple(f) for f in data["findings"] if f[0].startswith("COBOL")}
+            labelled = {
+                (label["rule"], label["file"], label["line"])
+                for label in DOC["labels"]
+                if label["corpus"] == corpus and mod.LATEST_RUN in label["sets"]
+            }
+            assert labelled == findings, corpus
 
-    def test_phase3_precision_did_not_regress(self):
+    def test_precision_did_not_regress(self):
         table = mod.precision(DOC)
         for rule, runs in table.items():
-            if "before" in runs and "after" in runs:
-                before = runs["before"][0] / runs["before"][1]
-                after = runs["after"][0] / runs["after"][1]
-                assert after >= before, rule
-        assert table["COBOL004"]["after"][0] / table["COBOL004"]["after"][1] >= 0.8
+            for older, newer in zip(mod.RUNS, mod.RUNS[1:]):
+                if older in runs and newer in runs:
+                    assert runs[newer][0] / runs[newer][1] >= runs[older][0] / runs[older][1], (
+                        rule,
+                        newer,
+                    )
+        cobol004 = table["COBOL004"]["leftovers"]
+        assert cobol004[0] / cobol004[1] >= 0.9
 
 
 class TestValidate:

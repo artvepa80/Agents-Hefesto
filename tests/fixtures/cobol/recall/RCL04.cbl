@@ -1,0 +1,31 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. RCL04.
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT RPT-FILE ASSIGN TO RPTOUT.
+       DATA DIVISION.
+       FILE SECTION.
+       FD  RPT-FILE.
+       01  RPT-REC                 PIC X(132).
+       WORKING-STORAGE SECTION.
+           COPY RECSHARE.
+           COPY CUSTLAYOUT.
+           COPY NOSUCHBK.
+           EXEC SQL INCLUDE SQLCA END-EXEC.
+           EXEC SQL INCLUDE DCLACCT END-EXEC.
+           EXEC SQL INCLUDE DCLGONE END-EXEC.
+       01  WS-USER                 PIC X(8) VALUE 'BATCH'.
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           EXEC SQL CONNECT :WS-USER IDENTIFIED BY 'Db2Pass!'
+           END-EXEC
+           EXEC SQL
+               CONNECT TO PRODDB USER :WS-USER USING 'S3cond!'
+           END-EXEC
+           OPEN OUTPUT RPT-FILE
+           CLOSE RPT-FILE
+           GOBACK.
+           MOVE 0 TO RETURN-CODE.
+       UNUSED-CLEANUP.
+           DISPLAY 'CLEANUP'.

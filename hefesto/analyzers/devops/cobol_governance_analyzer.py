@@ -157,8 +157,10 @@ class _CobolStructuralExtractor:
             self._extract_credential_move(logical_line, line_num, structure)
             self._extract_accept(logical_line, line_num, structure)
             self._extract_perform_thru(logical_line, line_num, structure)
-            self._extract_copy(logical_line, line_num, structure)
             self._extract_paragraph(logical_line, line_num, structure)
+
+        # COPY and EXEC SQL INCLUDE (INCLUDE can span lines inside EXEC SQL)
+        structure.copy_statements = copy_names(code, is_fixed_format)
 
         # OCCURS DEPENDING ON can span lines: read it per data-division entry
         structure.occurs_depending = occurs_depending(structure.logical_lines)
@@ -232,8 +234,7 @@ class _CobolStructuralExtractor:
                 code_part = line[6:72] if len(line) > 72 else line[6:]
 
                 if indicator == self.CONTINUATION_INDICATOR:
-                    # Continuation line
-                    current_line += " " + code_part.strip()
+                    current_line = _join_continuation(current_line, code_part[1:].strip())
                 else:
                     # New logical line
                     if current_line:
@@ -290,11 +291,6 @@ class _CobolStructuralExtractor:
             end_para = match.group(2)
             structure.perform_thru.append((line_num, start_para, end_para))
 
-    def _extract_copy(self, line: str, line_num: int, structure: _CobolStructure):
-        """Extract COPY statements (outside literals; quoted names allowed)."""
-        for _, name in copy_names(line):
-            structure.copy_statements.append((line_num, name))
-
     def _extract_paragraph(self, line: str, line_num: int, structure: _CobolStructure):
         """Extract paragraph names (Area A identifiers ending with period)."""
         # Paragraph names typically start at column 8 (Area A) and end with period
@@ -304,6 +300,18 @@ class _CobolStructuralExtractor:
         if match:
             para_name = match.group(1).upper()
             structure.paragraphs.append((para_name, line_num))
+
+
+def _join_continuation(current: str, text: str) -> str:
+    """Append a fixed-format continuation line (indicator '-') to a logical line.
+
+    A continued alphanumeric literal resumes after the quote that opens the
+    continuation line, so ``'...PW`` + ``'D=x'`` reads ``'...PWD=x'``. Anything
+    else is joined with a space.
+    """
+    if text[:1] in ("'", '"') and current.count(text[0]) % 2 == 1:
+        return current + text[1:]
+    return f"{current} {text}" if current else text
 
 
 class CobolGovernanceAnalyzer:
@@ -333,7 +341,11 @@ class CobolGovernanceAnalyzer:
 
         # Copybooks (.cpy files) contain data definitions, not procedure code:
         # only the data rules (COBOL004, COBOL008, COBOL009) and COBOL007 apply.
-        is_copybook = is_copybook_path(file_path)
+        is_copybook = (
+            self._index.is_copybook_file(file_path)
+            if self._index is not None
+            else is_copybook_path(file_path)
+        )
 
         if not is_copybook:
             # COBOL001-COBOL006 (FREE; procedural rules, not applied to copybooks)

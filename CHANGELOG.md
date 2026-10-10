@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **COBOL Phase 3 leftovers.** CardDemo COBOL findings 56 → 48
+  (`benchmark/cobol/baseline.json` regenerated); recall on seeded issues
+  28/34 → 32/34.
+  - **COBOL004** skips the byte view of an unsigned binary integer
+    (`PIC 9(4) BINARY` redefined as `PIC X` bytes of exactly its storage
+    size, CardDemo's VSAM file-status idiom); signed binary or a size
+    mismatch is still flagged. USAGE words are no longer matched inside data
+    names (`REDEFINES TWO-BYTES-BINARY`, `INDEXED BY STATIC-INDEX`).
+    Precision on the labelled sample 80% → 100% (35/35).
+  - **COBOL007/COBOL015** index `EXEC SQL INCLUDE` members and `.dcl`,
+    `.copy`, `.cbk` and extension-less copybooks (only when a scanned program
+    COPYs or INCLUDEs them and they hold COBOL data definitions; such files
+    are analyzed as copybooks too). In fixed format a COPY name stops at
+    column 72, so an identification area in 73-80 is not glued to it.
+  - Fixed-format continuation of an alphanumeric literal is joined without
+    the continuation line's opening quote, so a connection string split
+    over two lines is checked as one (COBOL009).
+  - `benchmark/cobol/baseline.json` records `dirty` and `analyzer_tree`
+    next to `commit`; the committed baseline must come from a clean tree.
 - **COBOL Phase 3, precision tuning.** Precision measured on 440 labelled
   findings (`tests/fixtures/cobol/labels/phase3_labels.json`,
   `scripts/cobol_label_precision.py`); COBOL findings on CardDemo go from 341
@@ -17,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     packed, binary, float, pointer or signed numeric data and the layouts
     differ; it now also runs on copybooks and handles REDEFINES split across
     lines. Plain `PIC X` overlays and CICS BMS symbolic maps are skipped.
-    Precision 1% → 82%.
+    Precision 1% → 80% (first published as 82%; one NIST finding was
+    relabelled FP, see the leftovers entry).
   - **COBOL005 (OCCURS DEPENDING ON)** is checked per data entry, reported on
     the right line, without duplicates, and skips GO TO DEPENDING, RECORD
     VARYING and the CICS `DEPENDING ON EIBCALEN` commarea idiom. Precision
@@ -31,6 +51,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     per program, with the file names in `metadata.files`.
 
 ### Added
+- **`--copybook-path DIR` / `copybook_paths:`** (`.hefesto.yaml`, relative to
+  the file) for COBOL copybook directories outside the scanned tree: names
+  found there resolve COPY/INCLUDE for COBOL015; the files are not analyzed.
+- The text report lists COBOL files read as free format by inference (no
+  `>>SOURCE` directive) under **Notes**; JSON has them in
+  `meta.cobol_format_notices` and per file in `metadata.cobol_source_format`.
+- **COBOL recall fixture:** 34 seeded issues across all 15 rules
+  (`tests/fixtures/cobol/recall/`) and `scripts/cobol_recall.py`, which
+  prints recall per rule; 2 seeds are documented known limits.
 - **COBOL015 COPYBOOK_NOT_FOUND (LOW):** a COPY whose copybook is not in the
   scanned tree, grouped per copybook name. It needs a project-wide COPY index
   (built for each scan, across all CLI paths) and stays silent when nothing in

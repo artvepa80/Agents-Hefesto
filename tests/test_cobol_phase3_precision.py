@@ -43,7 +43,9 @@ class TestCobol004Redefines:
             ["@01  AMT      PIC S9(7)V99 COMP-3.", "@01  AMT-X    REDEFINES AMT PIC X(5)."],
             ["@01  AMT      PIC S9(7)V99 PACKED-DECIMAL.", "@01  AMT-X REDEFINES AMT PIC X(5)."],
             ["@01  CNT      PIC S9(4) COMP.", "@01  CNT-X    REDEFINES CNT PIC XX."],
-            ["@01  CNT      PIC 9(4) BINARY.", "@01  CNT-X    REDEFINES CNT PIC XX."],
+            # unsigned PIC 9(4) BINARY viewed as PIC XX is the byte-view idiom:
+            # see tests/test_cobol_phase3_leftovers.py::test_byte_view_idiom
+            ["@01  CNT      PIC 9(4) BINARY.", "@01  CNT-X    REDEFINES CNT PIC XXX."],
             ["@01  BAL      PIC X(12).", "@01  BAL-N    REDEFINES BAL PIC S9(10)V99."],
             ["@01  P        PIC S9(8) BINARY.", "@01  P-PTR    REDEFINES P POINTER."],
             [
