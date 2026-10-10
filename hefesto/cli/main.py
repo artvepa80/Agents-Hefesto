@@ -1065,6 +1065,13 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
 
     for path in paths_list:
         report = engine.analyze_path(path, exclude_patterns)
+        if not report.file_results:
+            # Always on stderr, even with --quiet: an empty run is never a pass.
+            click.echo(
+                f"Warning: no files were analyzed in {path} "
+                "(no supported source files, or every file was excluded)",
+                err=True,
+            )
         all_file_results.extend(report.file_results)
         total_loc += report.summary.total_loc
         total_duration += report.summary.duration_seconds
@@ -1218,6 +1225,15 @@ def _write_sarif(combined_report, sarif_file, quiet, json_mode):
 
 
 def _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode=False):
+    if fail_on and combined_report.summary.files_analyzed == 0:
+        # A gate that checked nothing must not pass.
+        if not quiet:
+            click.echo("\nGate failure: no files were analyzed (exit 1)", err=json_mode)
+        return 1
+    return _severity_gate_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
+
+
+def _severity_gate_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode):
     import click
 
     use_stderr = json_mode

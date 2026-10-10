@@ -190,7 +190,9 @@ class TextReporter:
 
         lines = ["========================"]
 
-        if report.summary.total_issues == 0:
+        if report.summary.files_analyzed == 0:
+            lines.append(f"⚠️  No files were analyzed. Analysis complete in {duration}")
+        elif report.summary.total_issues == 0:
             lines.append(f"✅ No issues found! Analysis complete in {duration}")
         else:
             lines.append(f"✅ Analysis complete in {duration}")

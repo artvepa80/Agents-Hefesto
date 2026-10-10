@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A run that analyzes no files is no longer reported as a pass (zero-files invariant; minor release).** When `hefesto analyze` finds nothing to analyze (empty directory, only unsupported files, or every file excluded), the text report says "No files were analyzed" instead of "No issues found!", a warning naming the path goes to stderr (also with `--quiet` and `--output json`, whose stdout stays valid JSON), and with `--fail-on` the gate fails with "Gate failure: no files were analyzed" and exit code 1. Without `--fail-on` the exit code stays 0. With several paths, a path that yields no files only warns as long as another path was analyzed. **GitHub Action:** its `fail_on` input defaults to `CRITICAL`, so a workflow whose `path` contains no supported files now fails instead of passing silently.
+
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).
