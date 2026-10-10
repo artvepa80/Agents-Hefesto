@@ -261,7 +261,11 @@ def _redefines(binary_pic, *byte_pics):
         ("9(4)", ("X(2)",), False),
         ("9(9)", ("X(2)", "XX"), False),
         ("9(18)", ("X(8)",), False),
-        ("S9(4)", ("X", "X"), True),  # signed: sign handling, still flagged
+        # signed binary read byte by byte (e.g. to print it in hex): the sign is a
+        # bit of those bytes, so this is the same idiom as the unsigned form
+        ("S9(4)", ("X", "X"), False),
+        ("S9(4)", ("X", "9"), True),  # a digit view over signed binary
+        ("S9(4)", ("X", "X", "X"), True),  # size mismatch
         ("9(4)", ("X", "X", "X"), True),  # size mismatch
         ("9(4)", ("X", "9"), True),  # a digit view, not bytes
         ("9(5)", ("X", "X"), True),  # 9(5) BINARY is 4 bytes
