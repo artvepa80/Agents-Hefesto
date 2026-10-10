@@ -55,6 +55,25 @@ class PrReviewResult:
 # ---------------------------------------------------------------- git helpers
 
 
+# Variables git sets for hooks (and users can export) that pin the repository.
+# When they are present git ignores ``cwd``, so a review started from inside a
+# git hook (pre-push) would read the hook's repository instead of ``cwd``.
+_REPO_LOCATING_GIT_VARS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_PREFIX",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+)
+
+
+def _git_env() -> Dict[str, str]:
+    """os.environ without the variables that override the repository location."""
+    return {k: v for k, v in os.environ.items() if k not in _REPO_LOCATING_GIT_VARS}
+
+
 def _run_git(args: List[str], cwd: Path) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -62,6 +81,7 @@ def _run_git(args: List[str], cwd: Path) -> str:
         capture_output=True,
         text=True,
         check=False,
+        env=_git_env(),
     )
     if result.returncode != 0:
         raise RuntimeError(

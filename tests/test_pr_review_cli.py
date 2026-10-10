@@ -204,3 +204,23 @@ def test_pr_review_cli_post_shells_out_to_gh(tmp_path: Path) -> None:
     assert in_hunk_findings, "expected at least one in-hunk finding to post"
     # Every posted finding carries a stable dedup marker
     assert all(f["dedup_key"].startswith("sha256:") for f in in_hunk_findings)
+
+
+def test_pr_review_ignores_inherited_git_dir(tmp_path: Path, monkeypatch) -> None:
+    """Regression: with GIT_DIR pointing at another repo (as inside a git
+    hook), the review must still read --project-root."""
+    target = tmp_path / "target"
+    other = tmp_path / "other"
+    target.mkdir()
+    other.mkdir()
+    base, head = _tiny_repo(target)
+    _git(["init", "-q"], other)
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    result = CliRunner().invoke(
+        cli,
+        ["pr-review", "--project-root", str(target), "--base", base, "--head", head],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["base_sha"] == base and payload["head_sha"] == head
+    assert payload["changed_files"] == ["app.py"]

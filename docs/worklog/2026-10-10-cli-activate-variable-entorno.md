@@ -20,3 +20,14 @@ La activación real es la variable de entorno `HEFESTO_LICENSE_KEY`, que lee `he
 - Tests nuevos en `tests/test_cli_pro_required_message.py` (activate con y sin Pro, formato inválido, deactivate, status con y sin licencia, la clave nunca se imprime entera).
 - Prueba manual con el wheel 3.9.1 instalado: `status` muestra "Pro package: installed".
 - Va junto con el PR privado de entrega manual (#115), que ya no menciona `hefesto activate`.
+
+## Agregado: `GIT_DIR` en el hook pre-push
+
+Al actualizar este PR con `main`, el hook pre-push corrió los tests y 2 de `tests/test_pr_review_cli.py` fallaron. Corridos directamente, pasaban.
+
+- **Causa:** git exporta `GIT_DIR` a los hooks. Los `git rev-parse` del test y los `git` de `hefesto/pr_review/orchestrator.py` lo heredaban y miraban el repo del hook en vez del repo temporal. No era solo un problema del test: `hefesto pr-review` lanzado desde un hook leía el repo equivocado.
+- **Arreglo:**
+  - `_run_git` ahora corre git sin las variables que fijan el repo (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`).
+  - `tests/conftest.py` tiene un fixture autouse que borra esas variables para todos los tests (también fallaban, dentro del hook, los de `test_pr_review_orchestrator.py`, `test_patch_f_install_hooks.py` y `tests/scripts/test_cobol_corpus_baseline.py`).
+  - Test de regresión nuevo: con `GIT_DIR` apuntando a otro repo, `pr-review` sigue leyendo `--project-root`. Sin el arreglo falla; con el arreglo pasa.
+- No se usó `--no-verify`.
