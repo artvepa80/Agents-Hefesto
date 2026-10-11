@@ -67,3 +67,32 @@ Los tags exactos (`v4.15.1`, ...) siguen anotados y no se mueven nunca.
 - Las notas de 4.16.0 (CHANGELOG, highlights del README y GitHub Release) deben ABRIR con el
   cambio de exit code de #85 (una corrida con cero archivos ya no pasa con `--fail-on`).
   Los usuarios de `@v4` lo reciben automáticamente.
+
+## Resultado (2026-10-11)
+
+- #92 squash-merge `34549fad7dd1c5156742fbca357e4e35dc63a7c5` (15 checks verdes). CI de
+  `main` verde en ese SHA: CI, CodeQL, Action Smoke Test, Multilang Extra Smoke, README Parity
+  y Capabilities Parity.
+- Tag liviano `v4` → `579544fe945974443a6323780b043244d6e920bb` (v4.15.1).
+  `git/ref/tags/v4` es de tipo `commit`. `v4.15.1` sigue anotado (objeto `639e675`) y no se
+  tocó.
+- Resolución verificada:
+  - `commits/v4` devuelve `579544f`.
+  - El tarball que baja el runner (`codeload .../tar.gz/v4`) trae `action.yml` composite y
+    `version = "4.15.1"`.
+  - Emulé los pasos de la Action desde ese tarball sobre el ejemplo COBOL: instala
+    hefesto 4.15.1, analiza 5 archivos y encuentra 7 hallazgos.
+  - Con `fail_on: CRITICAL` el gate falla a propósito (`exit_code=1`) y escribe SARIF 2.1.0
+    con 7 resultados.
+- Efecto conocido del primer push de `v4`:
+  - GitHub corrió los workflows de `579544f`, cuyo `release.yml` todavía no tenía el filtro
+    `!v4`.
+  - "Release (PyPI)" falló en "Verify release tag" (`4` != `4.15.1`), antes de build, PyPI y
+    GitHub Release: no se publicó nada y no existe una release `v4`.
+  - "CI" sobre `v4` pasó.
+  - Los movimientos futuros salen del workflow con `GITHUB_TOKEN`, que no dispara
+    workflows, y `!v4` los filtra igual.
+- Repo de ejemplo COBOL: `@v4`, con un comentario que remite a `@v4.15.1` para estabilidad
+  exacta (commit local `c5f7b7b`, sin remoto).
+- #91: head `b97107c`, 16 checks verdes (confirmado el 11 oct). Pendiente para mañana: la
+  línea "N files skipped as vendored (use --include-vendored)".
