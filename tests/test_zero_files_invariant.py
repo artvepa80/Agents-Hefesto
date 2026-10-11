@@ -11,6 +11,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from hefesto.cli.main import _run_analysis_loop
 from hefesto.core.analysis_models import AnalysisReport, AnalysisSummary
 from hefesto.reports.text_reporter import TextReporter
 
@@ -106,6 +109,170 @@ class TestPartialAndRegression:
         result = _run(str(_clean_project(tmp_path)), "--fail-on", "HIGH")
         assert result.returncode == 0
         assert "No issues found" in result.stdout
+        assert "no files were analyzed" not in result.stderr
+
+
+class TestAllowNoFiles:
+    """--allow-no-files / allow_no_files: an intentionally empty run keeps exit 0."""
+
+    def test_flag_keeps_exit_zero_under_fail_on(self, tmp_path):
+        root = _no_supported_files(tmp_path)
+        result = _run(str(root), "--fail-on", "HIGH", "--allow-no-files")
+        assert result.returncode == 0
+        assert "Gate failure" not in result.stdout
+        assert "Gate skipped: no files were analyzed (--allow-no-files)" in result.stdout
+        # The warning is still printed: allowed, but never silent.
+        assert "No files were analyzed" in result.stdout
+        assert "no files were analyzed" in result.stderr
+        assert str(root) in result.stderr
+
+    def test_flag_with_quiet_still_warns(self, tmp_path):
+        result = _run(
+            str(_no_supported_files(tmp_path)), "--fail-on", "HIGH", "--quiet", "--allow-no-files"
+        )
+        assert result.returncode == 0
+        assert "no files were analyzed" in result.stderr
+
+    def test_flag_with_json_keeps_stdout_valid(self, tmp_path):
+        result = _run(
+            str(_only_excluded_files(tmp_path)),
+            "--output",
+            "json",
+            "--fail-on",
+            "LOW",
+            "--allow-no-files",
+        )
+        assert result.returncode == 0
+        assert json.loads(result.stdout)["summary"]["files_analyzed"] == 0
+        assert "no files were analyzed" in result.stderr
+        assert "Gate skipped" in result.stderr
+
+    def test_flag_does_not_hide_findings(self, tmp_path):
+        root = tmp_path / "bad"
+        root.mkdir()
+        (root / "x.py").write_text("password = 'hunter2hunter2'\neval(input())\n")
+        without = _run(str(root), "--fail-on", "LOW")
+        with_flag = _run(str(root), "--fail-on", "LOW", "--allow-no-files")
+        assert without.returncode == 1
+        assert with_flag.returncode == without.returncode
+
+    def test_config_key(self, tmp_path):
+        root = _no_supported_files(tmp_path)
+        (root / ".hefesto.yaml").write_text("fail_on: HIGH\nallow_no_files: true\n")
+        env = dict(os.environ, HEFESTO_TELEMETRY="0")
+        result = subprocess.run(
+            [sys.executable, "-m", "hefesto.cli.main", "analyze", str(root)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            env=env,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "Gate skipped" in result.stdout
+        assert "no files were analyzed" in result.stderr
+
+    def test_config_key_false_keeps_the_gate(self, tmp_path):
+        root = _no_supported_files(tmp_path)
+        (root / ".hefesto.yaml").write_text("fail_on: HIGH\nallow_no_files: false\n")
+        env = dict(os.environ, HEFESTO_TELEMETRY="0")
+        result = subprocess.run(
+            [sys.executable, "-m", "hefesto.cli.main", "analyze", str(root)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            env=env,
+        )
+        assert result.returncode == 1
+        assert "Gate failure: no files were analyzed" in result.stdout
+
+
+class _EmptyReport:
+    file_results: list = []
+
+    class summary:
+        total_loc = 0
+        duration_seconds = 0.0
+
+
+class _FakeEngine:
+    """Engine whose paths analyze nothing; each path skips some vendored files."""
+
+    def __init__(self, skipped_per_path):
+        self._skipped = list(skipped_per_path)
+        self._count = 0
+
+    def analyze_path(self, path, exclude_patterns):
+        self._count += self._skipped.pop(0)
+        return _EmptyReport()
+
+    def _build_meta(self):
+        if not self._count:
+            return {}
+        return {"vendored_skipped": {"count": self._count, "examples": []}}
+
+
+class TestVendoredHint:
+    """The zero-files warning names the vendored skip count and --include-vendored."""
+
+    def test_hint_names_count_and_flag(self, capsys):
+        _run_analysis_loop(_FakeEngine([3]), ["site"], [])
+        err = capsys.readouterr().err
+        assert "no files were analyzed in site" in err
+        assert "3 files skipped as vendored (use --include-vendored)" in err
+
+    def test_hint_singular(self, capsys):
+        _run_analysis_loop(_FakeEngine([1]), ["site"], [])
+        assert "1 file skipped as vendored (use --include-vendored)" in capsys.readouterr().err
+
+    def test_no_hint_without_vendored_skips(self, capsys):
+        _run_analysis_loop(_FakeEngine([0]), ["site"], [])
+        err = capsys.readouterr().err
+        assert "no files were analyzed in site" in err
+        assert "vendored" not in err
+
+    def test_hint_counts_only_the_empty_path(self, capsys):
+        _run_analysis_loop(_FakeEngine([2, 5]), ["a", "b"], [])
+        lines = [ln for ln in capsys.readouterr().err.splitlines() if ln.startswith("Warning")]
+        assert "in a " in lines[0] and "2 files skipped as vendored" in lines[0]
+        assert "in b " in lines[1] and "5 files skipped as vendored" in lines[1]
+
+    def test_engine_without_meta(self, capsys):
+        class _Bare:
+            def analyze_path(self, path, exclude_patterns):
+                return _EmptyReport()
+
+        _run_analysis_loop(_Bare(), ["site"], [])
+        err = capsys.readouterr().err
+        assert "no files were analyzed in site" in err
+        assert "vendored" not in err
+
+
+def _has_vendored_skip():
+    from hefesto.core import analyzer_engine
+
+    return hasattr(analyzer_engine, "is_vendored_js")
+
+
+@pytest.mark.skipif(
+    not _has_vendored_skip(),
+    reason="vendored JS skip (PR #91) not on this branch yet; runs once both PRs are merged",
+)
+class TestVendoredHintIntegration:
+    def test_only_vendored_js_names_the_count(self, tmp_path):
+        root = tmp_path / "site"
+        (root / "vendor").mkdir(parents=True)
+        (root / "vendor" / "jquery.js").write_text("var a = 1;\n")
+        (root / "app.min.js").write_text("var b=2;\n")
+        result = _run(str(root), "--fail-on", "HIGH")
+        assert result.returncode == 1
+        assert "2 files skipped as vendored (use --include-vendored)" in result.stderr
+        assert str(root) in result.stderr
+
+    def test_include_vendored_analyzes_them(self, tmp_path):
+        root = tmp_path / "site"
+        (root / "vendor").mkdir(parents=True)
+        (root / "vendor" / "jquery.js").write_text("var a = 1;\n")
+        result = _run(str(root), "--fail-on", "HIGH", "--include-vendored")
         assert "no files were analyzed" not in result.stderr
 
 
