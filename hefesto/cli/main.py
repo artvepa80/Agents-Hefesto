@@ -322,6 +322,14 @@ def _load_project_config(paths, config_path, option_names):
         "COPY names found there are not reported as missing (COBOL015)."
     ),
 )
+@click.option(
+    "--include-vendored",
+    is_flag=True,
+    help=(
+        "Also analyze vendored and minified JavaScript (*.min.js, vendor/,"
+        " static/**/libs/ ...), which is skipped by default"
+    ),
+)
 # -- Project config file (.hefesto.yaml) --
 @click.option(
     "--config",
@@ -382,6 +390,7 @@ def analyze(
     max_issues: Optional[int],
     exclude_types: str,
     copybook_paths: Tuple[str, ...],
+    include_vendored: bool,
     enable_memory_budget_gate: bool,
     include_third_party: bool,
     include_generated: bool,
@@ -447,6 +456,8 @@ def analyze(
             _exit(1)
         if copybook_paths and hasattr(engine, "set_copybook_paths"):
             engine.set_copybook_paths(list(copybook_paths))
+        if include_vendored and hasattr(engine, "set_include_vendored"):
+            engine.set_include_vendored(True)
 
         # Memory budget gate (EPIC 4, opt-in)
         budget_result = None

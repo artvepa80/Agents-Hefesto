@@ -32,7 +32,7 @@ from hefesto.core.parsers.parser_factory import ParserFactory
 logger = logging.getLogger(__name__)
 
 # Directories excluded by default to avoid noise from vendored/generated code.
-# Users can add more via --exclude; these are always applied unless --no-default-excludes.
+# Users can add more via --exclude; these are always applied.
 COBOL_INFERRED_FREE_NOTICE = (
     "Read as free-format COBOL because a division header or level-01/77 entry starts "
     "before column 8 and there is no >>SOURCE FORMAT directive. Add the directive "
@@ -101,6 +101,58 @@ def _component_matches(name: str, wanted: str) -> bool:
 _SUFFIX_EXCLUDES = frozenset({".egg-info"})
 
 
+# Vendored and minified JavaScript, skipped by default (``--include-vendored``
+# analyzes it). Only JavaScript files are affected; a Go or PHP ``vendor/``
+# tree stays in scope.
+_JS_SUFFIXES = (".js", ".mjs", ".cjs")
+# Directories that only ever hold copied or installed third-party packages.
+_VENDOR_DIRS = frozenset({"vendor", "vendors", "bower_components", "jspm_packages"})
+# Web static-asset roots, and the library directories that hold copied
+# libraries when they sit below one (``static/js/libs/``, ``public/lib/``).
+_STATIC_DIRS = frozenset({"static", "assets", "public", "wwwroot"})
+_STATIC_LIB_DIRS = frozenset({"lib", "libs", "plugins", "third_party", "thirdparty"})
+
+
+def is_vendored_js(rel_parts: Sequence[str]) -> bool:
+    """True for a JavaScript file that is minified or copied in from a library.
+
+    ``rel_parts`` are the components of the file path relative to the
+    analysis root, so directories above the root never count. Matched,
+    case-insensitively:
+
+    - a minified file name: ``*.min.js`` or ``*-min.js`` (also ``.mjs``/``.cjs``);
+    - a file inside a ``vendor``, ``vendors``, ``bower_components`` or
+      ``jspm_packages`` directory, at any depth;
+    - a file inside a ``lib``, ``libs``, ``plugins``, ``third_party`` or
+      ``thirdparty`` directory that is itself below a ``static``, ``assets``,
+      ``public`` or ``wwwroot`` directory (``static/js/libs/ace.js``).
+
+    A top-level ``lib/`` or ``plugins/`` (a package's own code) is not matched.
+    """
+    if not rel_parts:
+        return False
+    name = rel_parts[-1].lower()
+    stem = None
+    for suffix in _JS_SUFFIXES:
+        if name.endswith(suffix):
+            stem = name[: -len(suffix)]
+            break
+    if not stem:
+        return False
+    if stem.endswith(".min") or stem.endswith("-min"):
+        return True
+    dirs = [part.lower() for part in rel_parts[:-1]]
+    if any(part in _VENDOR_DIRS for part in dirs):
+        return True
+    seen_static = False
+    for part in dirs:
+        if seen_static and part in _STATIC_LIB_DIRS:
+            return True
+        if part in _STATIC_DIRS:
+            seen_static = True
+    return False
+
+
 def _relative_parts(path: Path, root: Path) -> Tuple[str, ...]:
     try:
         return path.relative_to(root).parts
@@ -153,6 +205,8 @@ class AnalyzerEngine:
         self._copybook_library_names: Optional[Dict[str, str]] = None
         # COBOL files whose source format was inferred as free (no directive)
         self._cobol_inferred_free: List[str] = []
+        # Analyze vendored/minified JavaScript too (--include-vendored)
+        self._include_vendored = False
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -168,6 +222,10 @@ class AnalyzerEngine:
             self._tsjs_parser = TsJsParser()
         if HAS_MULTILANG and SkipReport is not None:
             self._multilang_skip_report = SkipReport()
+
+    def set_include_vendored(self, include: bool) -> None:
+        """Also analyze vendored and minified JavaScript (see ``is_vendored_js``)."""
+        self._include_vendored = bool(include)
 
     def set_copybook_paths(self, paths: List[str]) -> None:
         """Extra copybook directories for COBOL015 (names there resolve COPY).
@@ -443,8 +501,13 @@ class AnalyzerEngine:
         # Merge default excludes with user-provided patterns
         all_excludes = list(DEFAULT_EXCLUDES) + list(exclude_patterns)
 
+        include_vendored = self._include_vendored
+
         def excluded(p: Path) -> bool:
-            return path_is_excluded(_relative_parts(p, path), all_excludes)
+            rel = _relative_parts(p, path)
+            if not include_vendored and is_vendored_js(rel):
+                return True
+            return path_is_excluded(rel, all_excludes)
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():
@@ -911,4 +974,10 @@ class AnalyzerEngine:
         return meta
 
 
-__all__ = ["AnalyzerEngine", "COBOL_INFERRED_FREE_NOTICE", "DEFAULT_EXCLUDES"]
+__all__ = [
+    "AnalyzerEngine",
+    "COBOL_INFERRED_FREE_NOTICE",
+    "DEFAULT_EXCLUDES",
+    "is_vendored_js",
+    "path_is_excluded",
+]

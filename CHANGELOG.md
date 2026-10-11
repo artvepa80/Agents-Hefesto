@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Vendored and minified JavaScript is skipped by default.** File discovery now leaves out JavaScript files (`.js`, `.mjs`, `.cjs`) that are minified or copied in from a library: names ending in `.min.js` or `-min.js`; files under a `vendor`, `vendors`, `bower_components` or `jspm_packages` directory at any depth; and files under a `lib`, `libs`, `plugins`, `third_party` or `thirdparty` directory that sits inside a `static`, `assets`, `public` or `wwwroot` directory (`static/js/libs/ace.js`, `public/js/lib/moment.js`). Matching is case-insensitive and uses path components below the analyzed path, like the other default excludes, so a project checked out under such a directory is still analyzed. A top-level `lib/` or `plugins/` (a package's own code), non-JavaScript files under `vendor/` (Go modules, PHP) and minified TypeScript stay in scope, and a single file given on the command line is always analyzed. On a Java web application that ships jQuery, jQuery UI, Ace, RequireJS and Bootstrap under `static/`, these libraries produced most of the findings, including an EVAL_USAGE on RequireJS's own `eval`. New `--include-vendored` flag and `include_vendored:` config key analyze them again. New helper: `hefesto.core.analyzer_engine.is_vendored_js`.
+
 ### Pending (next minor release)
 
 - **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
