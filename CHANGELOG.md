@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Exclude patterns now match whole path components below the analyzed path, never the path itself.** Before this fix, the default excludes (`build/`, `dist/`, `venv/`, `.venv/`, `node_modules/`, `.tox/`, `.eggs/`, `.egg-info/`, ...) and `--exclude` / `exclude:` patterns were matched as substrings of the absolute path of every file. Analyzing a directory whose own name or whose parents contained an exclude name (`app-build`, `cobol-dist`, `~/venv/project`, `/ci/build/repo`, or `cd app-build && hefesto analyze .`) analyzed 0 files and reported success; names that merely contained an exclude (`rebuild/`, `distro/`, `myvenv/`) were skipped as well. Matching is now relative to each analyzed path and by component: `build/` excludes a nested `build` directory at any depth, not `rebuild/`; `src/legacy/` matches those two consecutive directories; `evil.py` matches a file or directory with that exact name. Fixed in all three places that applied excludes: file discovery (`AnalyzerEngine._find_files`), extensionless COBOL copybook discovery (`_extra_copybook_candidates`) and the `ImportsVsDeps` source walk (`EXCLUDED_DIRS`, which also matched directories above the project root, such as a checkout under `~/docs/` or `~/build/`). New helper: `hefesto.core.analyzer_engine.path_is_excluded`.
+
 - **YAML_SYNTAX_ERROR no longer flags valid multi-document files or Helm chart templates.** The syntax check loaded files with a single-document loader, so every stream with `---` between documents (the usual form of Kubernetes manifests) was reported as "expected a single document in the stream". All documents are now parsed, and an error in any of them is still reported on its own line. Files under a Helm chart's `templates/` directory (a `templates` directory next to `Chart.yaml`, at any depth) that contain `{{ ... }}` actions are Go templates, not YAML until Helm renders them, and are no longer syntax-checked; the other YAML rules (secrets, tabs, Kubernetes and GitHub Actions risks) still run on them. The same template syntax outside a chart, chart metadata such as `values.yaml`, and chart templates without actions are still checked.
+
+### Changed
+
+- **`--exclude` patterns are whole names, not substrings.** `--exclude test` used to skip anything whose path contained `test` (`tests/`, `latest.py`, `contest/`); it now skips only files or directories named `test`. Use `tests/` (or several patterns) for the old intent. Single-file targets (`hefesto analyze path/to/file.py`) are still never excluded.
+
+### Pending (next minor release)
+
+- **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
 
 ### Docs
 
