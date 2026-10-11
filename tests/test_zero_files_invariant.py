@@ -158,10 +158,20 @@ class TestAllowNoFiles:
 
     def test_config_key(self, tmp_path):
         root = _no_supported_files(tmp_path)
-        (root / ".hefesto.yaml").write_text("fail_on: HIGH\nallow_no_files: true\n")
+        # Outside the target: a .hefesto.yaml inside it would itself be analyzed.
+        config = tmp_path / "hefesto.yaml"
+        config.write_text("fail_on: HIGH\nallow_no_files: true\n")
         env = dict(os.environ, HEFESTO_TELEMETRY="0")
         result = subprocess.run(
-            [sys.executable, "-m", "hefesto.cli.main", "analyze", str(root)],
+            [
+                sys.executable,
+                "-m",
+                "hefesto.cli.main",
+                "analyze",
+                str(root),
+                "--config",
+                str(config),
+            ],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
@@ -173,10 +183,20 @@ class TestAllowNoFiles:
 
     def test_config_key_false_keeps_the_gate(self, tmp_path):
         root = _no_supported_files(tmp_path)
-        (root / ".hefesto.yaml").write_text("fail_on: HIGH\nallow_no_files: false\n")
+        # Outside the target: a .hefesto.yaml inside it would itself be analyzed.
+        config = tmp_path / "hefesto.yaml"
+        config.write_text("fail_on: HIGH\nallow_no_files: false\n")
         env = dict(os.environ, HEFESTO_TELEMETRY="0")
         result = subprocess.run(
-            [sys.executable, "-m", "hefesto.cli.main", "analyze", str(root)],
+            [
+                sys.executable,
+                "-m",
+                "hefesto.cli.main",
+                "analyze",
+                str(root),
+                "--config",
+                str(config),
+            ],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,

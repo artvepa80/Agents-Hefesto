@@ -29,6 +29,7 @@ is_true() {
 }
 SARIF_ENABLED=$(is_true "${INPUT_SARIF:-false}")
 UPLOAD_SARIF=$(is_true "${INPUT_UPLOAD_SARIF:-true}")
+ALLOW_NO_FILES=$(is_true "${INPUT_ALLOW_NO_FILES:-false}")
 if [ "$SARIF_ENABLED" != "1" ]; then
     UPLOAD_SARIF=0
 fi
@@ -54,6 +55,7 @@ echo "::group::Hefesto Configuration"
 echo "Workspace: $(pwd)"
 echo "Target: ${TARGET}"
 echo "Fail On: ${FAIL_ON}"
+echo "Allow no files: $([ "$ALLOW_NO_FILES" = "1" ] && echo yes || echo no)"
 echo "Min Severity: ${SEVERITY}"
 echo "Format: ${FORMAT}"
 echo "Telemetry: ${HEFESTO_TELEMETRY}"
@@ -72,6 +74,9 @@ set +e # Allow failure to capture exit code
 
 # Construct command array (safe, no eval)
 CMD=("hefesto" "analyze" "$TARGET" "--severity" "$SEVERITY" "--fail-on" "$FAIL_ON")
+if [ "$ALLOW_NO_FILES" = "1" ]; then
+    CMD+=("--allow-no-files")
+fi
 
 # Add format if specified (default logic handled in CLI or verified here)
 if [ -n "$FORMAT" ]; then

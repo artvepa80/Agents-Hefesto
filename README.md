@@ -133,6 +133,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 |-------|-------------|---------|
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
+| `allow_no_files` | `true`: a run that analyzes no files keeps exit 0 under `fail_on` (intentionally empty target); the warning is still printed | `false` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format printed to the log (`text`, `json`, `html`, `sarif`) | `text` |
 | `sarif` | `true`: also write a SARIF 2.1.0 file and upload it to code scanning (needs `security-events: write`) | `false` |
@@ -376,7 +377,7 @@ hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
 | Code | Meaning |
 |------|---------|
 | `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
-| `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+| `1`  | Gate failure (`--fail-on` threshold breached, or no file was analyzed under `--fail-on`) or runtime error |
 | `2`  | Invalid command-line usage or invalid `.hefesto.yaml` |
 
 ### Gate Examples
@@ -384,7 +385,17 @@ hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
 hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
 hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
 hefesto analyze .                        # always exit 0 (report only)
+hefesto analyze . --fail-on high --allow-no-files   # an empty run keeps exit 0
 ```
+
+A run that analyzes no files (empty directory, only unsupported files, or every
+file excluded) is never reported as a pass: the report says "No files were
+analyzed", a warning naming the path goes to stderr, and with `--fail-on` the
+gate fails with exit 1. When files were left out as vendored JavaScript, the
+warning names how many and suggests `--include-vendored`. For a target that is
+empty on purpose, `--allow-no-files` (or `allow_no_files: true` in
+`.hefesto.yaml`, or the Action's `allow_no_files` input) keeps exit 0; the
+warning is still printed.
 
 ---
 
@@ -617,6 +628,7 @@ Put the `hefesto analyze` options you would otherwise repeat on every run in a
 # .hefesto.yaml -- every key is optional and maps to a `hefesto analyze` flag
 severity: MEDIUM            # --severity      LOW | MEDIUM | HIGH | CRITICAL
 fail_on: HIGH               # --fail-on       LOW | MEDIUM | HIGH | CRITICAL
+allow_no_files: false       # --allow-no-files (an empty run keeps exit 0 under fail_on)
 output: text                # --output        text | json | html
 exclude:                    # --exclude       list or "a/,b/" string
   - tests/
