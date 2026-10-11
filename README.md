@@ -646,6 +646,9 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
   non-JavaScript files under `vendor/` (Go, PHP). `--include-vendored` (or
   `include_vendored: true`) analyzes the JavaScript ones again; a single file
   given on the command line is always analyzed.
+  The summary says how many were left out (`N files skipped as vendored (use
+  --include-vendored)`; `meta.vendored_skipped` in JSON, a tool notification in
+  SARIF).
 
 - **Discovery:** Hefesto starts at the first path given to `hefesto analyze`
   (its directory if it is a file) and walks up to the repository root (the
