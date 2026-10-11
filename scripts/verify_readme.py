@@ -15,6 +15,11 @@ context (``Agents-Hefesto@v``, ``CLI Reference (v``, ``rev: v``,
 references in README prose (e.g., migration notes, analyzer tables,
 embedded changelog excerpts).
 
+Action refs (``Agents-Hefesto@v...``) may use the floating major tag
+(``@v4``) or the exact release tag (``@v4.15.1``): the major must equal the
+pyproject major, an exact tag must equal the pyproject version. ``@v4`` is
+moved to every new v4.x.y release by ``release.yml``.
+
 Known limitations:
 
 1. Historical prose collision: a future line like ``upgrading from
@@ -49,16 +54,21 @@ from pathlib import Path
 #   to reject malformed suffixes like 4.11.4.5 or 4.11.4.dev0. Without the
 #   lookahead, \d+\.\d+\.\d+ is greedy but not anchored right, so 4.11.4.5
 #   would silently capture 4.11.4 and pass validation.
+# Action ref: floating major tag (@v4) or exact release tag (@v4.15.1).
+# "@v4.11" and "@v4.11.4.5" are rejected by the lookahead.
+ACTION_REF = r"Agents-Hefesto@v(\d+(?:\.\d+\.\d+)?)(?![\d.])"
+ALLOW_MAJOR = "allow-major"
+
 VERSION_REFERENCES = [
     (
         "README.md",
         [
-            (r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref"),
+            (ACTION_REF, "action ref", ALLOW_MAJOR),
             (r"CLI Reference \(v(\d+\.\d+\.\d+)(?![\d.])\)", "CLI ref"),
             (r"rev: v(\d+\.\d+\.\d+)(?![\d.])", "pre-commit rev"),
         ],
     ),
-    ("llms.txt", [(r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref")]),
+    ("llms.txt", [(ACTION_REF, "action ref", ALLOW_MAJOR)]),
     ("server.json", [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "MCP metadata")]),
     (
         ".well-known/agent-card.json",
@@ -69,7 +79,7 @@ VERSION_REFERENCES = [
         ".github/copilot-instructions.md",
         [
             (r"\*\*Version:\*\* (\d+\.\d+\.\d+)(?![\d.])", "version header"),
-            (r"Agents-Hefesto@v(\d+\.\d+\.\d+)(?![\d.])", "action ref"),
+            (ACTION_REF, "action ref", ALLOW_MAJOR),
         ],
     ),
 ]
@@ -88,14 +98,17 @@ def check_version_parity(repo_root, source_version):
             print(f"   ⚠ {rel_path}: file missing, skipping")
             continue
         content = file_path.read_text()
-        for pattern, description in patterns:
+        for pattern, description, *flags in patterns:
+            accepted = {source_version}
+            if ALLOW_MAJOR in flags:
+                accepted.add(source_version.split(".")[0])
             found_any = False
             for match in re.finditer(pattern, content):
                 found_any = True
                 ref_version = match.group(1)
                 line_num = content[: match.start()].count("\n") + 1
                 location = f"{rel_path}:{line_num}"
-                if ref_version != source_version:
+                if ref_version not in accepted:
                     msg = (
                         f"{location} ({description}): {ref_version} " f"(expected {source_version})"
                     )
