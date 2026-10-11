@@ -56,7 +56,7 @@ After completing ANY non-trivial work:
 - [ ] Update impacted docs (at minimum `CHANGELOG.md`; `README.md` if version/features changed).
 - [ ] Run repo verification: `source venv/bin/activate && black --check hefesto/ tests/ && isort --check hefesto/ tests/ && flake8 hefesto/ tests/ && pytest tests/ -q`
 - [ ] Commit with Conventional Commits format, then push the branch.
-- [ ] Never move/delete tags without explicit user approval.
+- [ ] Never move/delete tags without explicit user approval. Single exception: the tag `v4`, the floating alias of the 4.x line used as `artvepa80/Agents-Hefesto@v4`, which `release.yml` force-moves to each new v4.x.y release. No other tag moves: not exact version tags (`v4.15.1`, ...), and no other alias exists or may be created without explicit approval.
 - [ ] Update `MEMORY.md` if project status changed (new blockers, resolved items, version bumps).
 
 ### PyPI Publishing Rule
@@ -478,6 +478,17 @@ Releases are automated via GitHub Actions:
     - The hardened `release.yml` now creates GitHub Releases automatically on tag push.
     - Build artifacts (wheel + sdist) are attached to the release.
     - If PyPI publish fails (e.g., email verification pending), the release is still created.
+
+4.  **Tag `v4`, floating alias of the 4.x line** (automatic)
+    - The last step of `release.yml` force-moves the lightweight tag `v4` to the commit of a
+      new `v4.x.y` tag, only when it is the highest `v4.x.y` tag (an older patch never moves it
+      back). Users write `uses: artvepa80/Agents-Hefesto@v4`.
+    - `v4` is the ONLY tag that moves. Never retag or delete an exact version tag.
+    - `v4` follows minors too, so `@v4` users get behaviour changes (e.g. exit codes) on the
+      next release: open those release notes with the change.
+    - `release.yml` does not run for `v4` itself (`!v4` filter).
+    - Manual fallback if that step fails:
+      `git tag -f v4 v4.X.Y^{commit} && git push -f origin refs/tags/v4`.
 
 ---
 

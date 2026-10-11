@@ -6,6 +6,7 @@ on:
       - "v*"
       - "!v*rc*"
       - "!v*-rc.*"
+      - "!v4" # floating alias of the 4.x line, moved by the last step below
 
 permissions:
   contents: write
@@ -81,3 +82,27 @@ jobs:
             --title "Hefesto ${{ github.ref_name }}" \
             --generate-notes \
             --verify-tag
+
+      # The GitHub Action is used as @v4: move that floating alias of the 4.x
+      # line to this release. v4 is the only tag that ever moves (see
+      # CLAUDE.md); a future v5 alias needs its own decision. Lightweight, like
+      # actions/checkout's major tags. An older patch never moves v4 back.
+      - name: Move floating v4 tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          MAJOR="v4"
+          if [[ ! "$TAG" =~ ^v4\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::notice::$TAG is not a v4.x.y release; v4 not moved."
+            exit 0
+          fi
+          LATEST=$(git ls-remote --tags --refs origin "refs/tags/${MAJOR}.*" \
+            | sed 's#.*refs/tags/##' | grep -E "^${MAJOR}\.[0-9]+\.[0-9]+$" | sort -V | tail -n1)
+          if [ "$LATEST" != "$TAG" ]; then
+            echo "::notice::$TAG is not the newest ${MAJOR}.x.y ($LATEST); $MAJOR not moved."
+            exit 0
+          fi
+          git tag -f "$MAJOR" "$GITHUB_SHA"
+          git push -f origin "refs/tags/${MAJOR}"
+          echo "::notice::$MAJOR now points to $TAG ($GITHUB_SHA)."

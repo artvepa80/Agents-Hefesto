@@ -174,6 +174,9 @@ def test_multiple_drifts_in_same_file_all_reported(tmp_path):
         ("Agents-Hefesto@v4.11", False),  # two-component, rejected
         ("Agents-Hefesto@v4.11.4.5", False),  # four-component, rejected by lookahead
         ("Agents-Hefesto@v4.11.4.dev0", False),  # dev suffix, rejected by lookahead
+        ("Agents-Hefesto@v4", True),  # floating major tag
+        ("Agents-Hefesto@v4 ", True),
+        ("Agents-Hefesto@v4.", False),
     ],
 )
 def test_action_ref_regex_rejects_malformed(ver_str, should_match):
@@ -245,3 +248,46 @@ def test_script_ignores_files_not_in_version_references(tmp_path):
     )
     errors = mod.check_version_parity(repo, "4.11.4")
     assert errors == []
+
+
+def _files_with_action_ref(ref: str) -> dict:
+    return {
+        "README.md": (
+            f"uses: artvepa80/Agents-Hefesto@{ref}\n"
+            "## CLI Reference (v4.11.4)\n"
+            "rev: v4.11.4\n"
+        ),
+        "llms.txt": f"- uses: artvepa80/Agents-Hefesto@{ref}\n",
+        "server.json": '{"version": "4.11.4"}\n',
+        ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
+        "skill/SKILL.md": "Version: 4.11.4\n",
+        ".github/copilot-instructions.md": (
+            "- **Version:** 4.11.4\n" f"- uses: artvepa80/Agents-Hefesto@{ref}\n"
+        ),
+    }
+
+
+def test_floating_major_action_ref_passes(tmp_path):
+    """@v4 is the floating major tag, moved to every v4.x.y release."""
+    mod = _load_module()
+    repo = _setup_repo(tmp_path, "4.11.4", _files_with_action_ref("v4"))
+    assert mod.check_version_parity(repo, "4.11.4") == []
+
+
+@pytest.mark.parametrize("ref", ["v3", "v5"])
+def test_wrong_major_action_ref_is_drift(tmp_path, ref):
+    mod = _load_module()
+    repo = _setup_repo(tmp_path, "4.11.4", _files_with_action_ref(ref))
+    errors = mod.check_version_parity(repo, "4.11.4")
+    assert len(errors) == 3
+    assert all("action ref" in e and ref[1:] in e for e in errors)
+
+
+def test_major_is_not_accepted_for_non_action_refs(tmp_path):
+    """Only action refs may use the major tag; server.json etc. stay exact."""
+    mod = _load_module()
+    files = _files_with_action_ref("v4")
+    files["server.json"] = '{"version": "4"}\n'
+    repo = _setup_repo(tmp_path, "4.11.4", files)
+    errors = mod.check_version_parity(repo, "4.11.4")
+    assert errors == ["server.json (MCP metadata): pattern not found"]
