@@ -1,5 +1,7 @@
 # 2026-10-10: correcciones de precisión y de exclusiones (PRs #84-#88)
 
+> Actualización 2026-10-11: #84, #86, #87 y #88 se mergearon (squash) para 4.15.1; #85 sigue abierto para la próxima minor. Ver `2026-10-11-release-4.15.1.md`.
+
 Cinco PRs abiertos contra `main`. **Ninguno está mergeado**: por la regla de no mergear el mismo día los cambios de código con riesgo de regresión, el merge queda para otra jornada, después de revisarlos. Tampoco hay tags ni publicación en PyPI.
 
 | PR | Rama | Qué arregla | Semver |
