@@ -15,9 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **COBOL004 skips four REDEFINES idioms that never reinterpret a value.** (1) A signed zoned number split into digit groups with the sign on the last group (`PIC S9(10)` redefined as `9(9)` + `S9`): same digits in the same bytes, sign in the same byte. (2) A pointer and one address-sized view of it (`USAGE POINTER`/`PROCEDURE-POINTER`/`FUNCTION-POINTER` against `PIC X(4)`, `PIC X(8)` or an unsigned 4- or 8-byte binary such as `PIC 9(9) COMP`), in either direction. (3) Two views with the same storage layout once fixed `OCCURS` are expanded, PICs are spelled out (`S9(02)` = `S99`) and adjacent `PIC X` fields are merged, which covers tables of constants (FILLERs with VALUE) redefined as an `OCCURS` table. (4) The `PIC X` byte view of a *signed* binary field (`PIC S9(4) COMP` read as two bytes), which was only skipped for unsigned binary. Still reported: a SIGN clause, a different digit count or sign position, a signed, display, group or other-sized view of a pointer, `INDEX` items, `OCCURS ... DEPENDING ON`, a different per-entry layout, and any byte view whose size does not match. The recall fixture seed in `RCL02.cbl` that encoded the signed byte view as a finding now overlays the signed binary with a byte and a digit, which is still reported.
 
+- **EVAL_USAGE on JavaScript, TypeScript and Java reads calls from the syntax tree instead of matching `eval(` / `exec(` in the text.** The non-Python detector reported every line containing those characters: `RegExp.prototype.exec` (`/re/.exec(s)`), a project's own method named `exec` (an ESQL API's `exec(sqlca, query)`), and the words in comments, Javadoc and strings. New module `hefesto.analyzers.eval_calls` walks the tree-sitter tree. JavaScript/TypeScript: `eval(...)` and `window`/`globalThis`/`self.eval(...)`; `exec` only when it is the `child_process` function (a name bound by `require("child_process")` or `import ... from "child_process"`, a member call on such a binding or on `require("child_process")` itself) or Cypress `cy.exec`. Java: `exec` on a `Runtime` (`Runtime.getRuntime().exec`, or a variable, field or parameter declared `Runtime`) and `eval` on a `ScriptEngine`. Go, Rust and C# have no eval/exec builtin and no longer report one. Node text is read from byte positions, so non-ASCII text earlier in a file does not shift it. Python detection (the `ast` module) is unchanged.
+
 ### Changed
 
 - **`--exclude` patterns are whole names, not substrings.** `--exclude test` used to skip anything whose path contained `test` (`tests/`, `latest.py`, `contest/`); it now skips only files or directories named `test`. Use `tests/` (or several patterns) for the old intent. Single-file targets (`hefesto analyze path/to/file.py`) are still never excluded.
+
+### CI
+
+- The multilang smoke job also runs the unit tests that need real tree-sitter grammars (`tests/test_eval_usage_ast.py`); `lint-and-test` installs only `[dev,lint]` and skips them.
 
 ### Pending (next minor release)
 
