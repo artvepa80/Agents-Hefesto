@@ -16,7 +16,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -113,6 +113,16 @@ _STATIC_DIRS = frozenset({"static", "assets", "public", "wwwroot"})
 _STATIC_LIB_DIRS = frozenset({"lib", "libs", "plugins", "third_party", "thirdparty"})
 
 
+# How many example paths ``meta.vendored_skipped`` lists.
+VENDORED_EXAMPLES = 20
+
+
+def vendored_skip_message(count: int) -> str:
+    """One-line report of the files left out as vendored or minified JavaScript."""
+    noun = "file" if count == 1 else "files"
+    return f"{count} {noun} skipped as vendored (use --include-vendored)"
+
+
 def is_vendored_js(rel_parts: Sequence[str]) -> bool:
     """True for a JavaScript file that is minified or copied in from a library.
 
@@ -207,6 +217,8 @@ class AnalyzerEngine:
         self._cobol_inferred_free: List[str] = []
         # Analyze vendored/minified JavaScript too (--include-vendored)
         self._include_vendored = False
+        # Files left out as vendored/minified JavaScript, for the skip report
+        self._vendored_skipped: Set[str] = set()
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
@@ -505,9 +517,14 @@ class AnalyzerEngine:
 
         def excluded(p: Path) -> bool:
             rel = _relative_parts(p, path)
-            if not include_vendored and is_vendored_js(rel):
+            if path_is_excluded(rel, all_excludes):
                 return True
-            return path_is_excluded(rel, all_excludes)
+            if not include_vendored and is_vendored_js(rel):
+                # counted only when no exclude pattern already drops the file
+                if p.is_file():
+                    self._vendored_skipped.add(str(p))
+                return True
+            return False
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():
@@ -964,6 +981,13 @@ class AnalyzerEngine:
         if self._parser_failures:
             meta["parser_failures"] = list(self._parser_failures)
 
+        # Vendored/minified JavaScript left out of the run (--include-vendored)
+        if self._vendored_skipped:
+            meta["vendored_skipped"] = {
+                "count": len(self._vendored_skipped),
+                "examples": sorted(self._vendored_skipped)[:VENDORED_EXAMPLES],
+            }
+
         # COBOL sources read as free format because of the layout, not a directive
         if self._cobol_inferred_free:
             meta["cobol_format_notices"] = {
@@ -979,5 +1003,6 @@ __all__ = [
     "COBOL_INFERRED_FREE_NOTICE",
     "DEFAULT_EXCLUDES",
     "is_vendored_js",
+    "vendored_skip_message",
     "path_is_excluded",
 ]

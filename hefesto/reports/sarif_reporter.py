@@ -19,7 +19,9 @@ Produces a SARIF log that GitHub code scanning accepts
 * GitHub upload limits are respected: at most 25,000 results per run
   (highest severity kept), 1,000 related locations per result, 20 tags per
   rule, and the serialized log is kept under 10 MB once gzipped. What was
-  dropped is reported in ``invocations[0].toolExecutionNotifications``.
+  dropped is reported in ``invocations[0].toolExecutionNotifications``
+  (level ``warning``), as are files left out as vendored JavaScript (level
+  ``note``).
 
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
@@ -92,13 +94,14 @@ class SARIFReporter:
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
         )
         notes: List[str] = []
+        info = _info_notes(report)
         if len(issues) > self.max_results:
             notes.append(
                 f"{len(issues) - self.max_results} lower-severity results were dropped to stay "
                 f"within the {self.max_results:,}-results limit of GitHub code scanning."
             )
             issues = issues[: self.max_results]
-        log = self._log(issues, notes)
+        log = self._log(issues, notes, info)
         while issues and _gzip_size(log) > MAX_GZIP_BYTES:
             keep = len(issues) * 3 // 4
             notes.append(
@@ -106,12 +109,14 @@ class SARIFReporter:
                 "gzipped SARIF under 10 MB."
             )
             issues = issues[:keep]
-            log = self._log(issues, notes)
+            log = self._log(issues, notes, info)
         return log
 
     # ------------------------------------------------------------- building
 
-    def _log(self, issues: List[AnalysisIssue], notes: List[str]) -> Dict[str, Any]:
+    def _log(
+        self, issues: List[AnalysisIssue], notes: List[str], info: List[str]
+    ) -> Dict[str, Any]:
         by_rule: Dict[str, List[AnalysisIssue]] = {}
         for issue in issues:
             by_rule.setdefault(_rule_id(issue), []).append(issue)
@@ -120,10 +125,10 @@ class SARIFReporter:
         seen: Dict[str, int] = {}
         results = [self._result(issue, index, seen) for issue in self._stable_order(issues)]
         invocation: Dict[str, Any] = {"executionSuccessful": True}
-        if notes:
-            invocation["toolExecutionNotifications"] = [
-                {"level": "warning", "message": {"text": text}} for text in notes
-            ]
+        notifications = [{"level": "warning", "message": {"text": text}} for text in notes]
+        notifications += [{"level": "note", "message": {"text": text}} for text in info]
+        if notifications:
+            invocation["toolExecutionNotifications"] = notifications
         return {
             "$schema": SARIF_SCHEMA,
             "version": SARIF_VERSION,
@@ -326,3 +331,13 @@ def _default_root() -> Path:
             return candidate
     workspace = os.environ.get("GITHUB_WORKSPACE")
     return Path(workspace).resolve() if workspace else here
+
+
+def _info_notes(report: AnalysisReport) -> List[str]:
+    """Run-level notes that are not findings (``level: note``)."""
+    vendored = (getattr(report, "meta", None) or {}).get("vendored_skipped") or {}
+    if not vendored.get("count"):
+        return []
+    from hefesto.core.analyzer_engine import vendored_skip_message
+
+    return [vendored_skip_message(vendored["count"])]

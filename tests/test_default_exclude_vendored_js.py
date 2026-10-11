@@ -208,3 +208,114 @@ class TestCli:
         assert res.returncode == 0, res.stderr
         files = [f["file"] for f in json.loads(res.stdout)["files"]]
         assert any(f.endswith("jquery.min.js") for f in files), files
+
+
+# -- Skip report: how many files were left out as vendored --------------------
+
+SKIP_LINE = "skipped as vendored (use --include-vendored)"
+
+
+def _vendored_tree(root: Path) -> None:
+    _write(root / "src" / "app.py", "import os\n")
+    _write(root / "static" / "js" / "libs" / "jquery.min.js")
+    _write(root / "static" / "js" / "libs" / "ace.js")
+    _write(root / "assets" / "vendor" / "chart.js")
+    # already excluded by a default exclude: not counted as vendored
+    _write(root / "node_modules" / "lib" / "index.min.js")
+
+
+class TestSkipReportEngine:
+    def test_counts_vendored_files_once(self, tmp_path):
+        _vendored_tree(tmp_path)
+        engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+        engine._find_files(tmp_path, [])
+        engine._find_files(tmp_path, [])  # same path again: no double count
+        skipped = engine._build_meta()["vendored_skipped"]
+        assert skipped["count"] == 3
+        assert [Path(p).name for p in skipped["examples"]] == [
+            "chart.js",
+            "ace.js",
+            "jquery.min.js",
+        ]
+
+    def test_user_excluded_files_are_not_counted(self, tmp_path):
+        _vendored_tree(tmp_path)
+        engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+        engine._find_files(tmp_path, ["static/"])
+        assert engine._build_meta()["vendored_skipped"]["count"] == 1
+
+    def test_no_entry_without_vendored_files(self, tmp_path):
+        _write(tmp_path / "app.js")
+        _write(tmp_path / "lib" / "own.js")
+        engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+        engine._find_files(tmp_path, [])
+        assert "vendored_skipped" not in engine._build_meta()
+
+    def test_no_entry_with_include_vendored(self, tmp_path):
+        _vendored_tree(tmp_path)
+        engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+        engine.set_include_vendored(True)
+        engine._find_files(tmp_path, [])
+        assert "vendored_skipped" not in engine._build_meta()
+
+    def test_examples_are_capped(self, tmp_path):
+        for n in range(30):
+            _write(tmp_path / "vendor" / f"lib{n:02d}.js")
+        engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+        engine._find_files(tmp_path, [])
+        skipped = engine._build_meta()["vendored_skipped"]
+        assert skipped["count"] == 30
+        assert len(skipped["examples"]) == 20
+
+
+class TestSkipReportOutput:
+    def test_text_reports_the_count(self, tmp_path):
+        _vendored_tree(tmp_path)
+        res = _run(".", "--no-config", cwd=tmp_path)
+        assert res.returncode == 0, res.stderr
+        assert f"3 files {SKIP_LINE}" in res.stdout
+
+    def test_text_singular(self, tmp_path):
+        _write(tmp_path / "app.py", "import os\n")
+        _write(tmp_path / "vendor" / "one.js")
+        res = _run(".", "--no-config", cwd=tmp_path)
+        assert f"1 file {SKIP_LINE}" in res.stdout
+
+    def test_text_has_no_line_when_nothing_was_skipped(self, tmp_path):
+        _write(tmp_path / "app.py", "import os\n")
+        res = _run(".", "--no-config", cwd=tmp_path)
+        assert res.returncode == 0, res.stderr
+        assert "skipped as vendored" not in res.stdout + res.stderr
+
+    def test_text_has_no_line_with_include_vendored(self, tmp_path):
+        _vendored_tree(tmp_path)
+        res = _run(".", "--no-config", "--include-vendored", cwd=tmp_path)
+        assert "skipped as vendored" not in res.stdout + res.stderr
+
+    def test_json_meta_field(self, tmp_path):
+        _vendored_tree(tmp_path)
+        res = _run(".", "--no-config", "--output", "json", cwd=tmp_path)
+        assert res.returncode == 0, res.stderr
+        report = json.loads(res.stdout)
+        assert report["meta"]["vendored_skipped"]["count"] == 3
+        assert len(report["meta"]["vendored_skipped"]["examples"]) == 3
+
+    def test_json_has_no_field_when_nothing_was_skipped(self, tmp_path):
+        _write(tmp_path / "app.py", "import os\n")
+        res = _run(".", "--no-config", "--output", "json", cwd=tmp_path)
+        assert "vendored_skipped" not in json.loads(res.stdout).get("meta", {})
+
+    def test_sarif_tool_notification(self, tmp_path):
+        _vendored_tree(tmp_path)
+        res = _run(".", "--no-config", "--output", "sarif", cwd=tmp_path)
+        assert res.returncode == 0, res.stderr
+        invocation = json.loads(res.stdout)["runs"][0]["invocations"][0]
+        texts = [n["message"]["text"] for n in invocation["toolExecutionNotifications"]]
+        assert any(f"3 files {SKIP_LINE}" in t for t in texts), texts
+        assert invocation["executionSuccessful"] is True
+
+    def test_sarif_has_no_notification_when_nothing_was_skipped(self, tmp_path):
+        _write(tmp_path / "app.py", "import os\n")
+        res = _run(".", "--no-config", "--output", "sarif", cwd=tmp_path)
+        invocation = json.loads(res.stdout)["runs"][0]["invocations"][0]
+        assert "toolExecutionNotifications" not in invocation
