@@ -11,6 +11,7 @@ analysis root; ``--include-vendored`` (or ``include_vendored: true`` in
 ``.hefesto.yaml``) analyzes them again.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -169,6 +170,16 @@ def _analyzed(stdout: str) -> int:
     return json.loads(stdout)["summary"]["files_analyzed"]
 
 
+# A JavaScript file only counts as analyzed when its tree-sitter grammar is
+# installed (the [multilang] extra). Without it the CLI reports the file as
+# parser_unavailable, so the tests that count analyzed JS files run in the
+# multilang-smoke workflow, not in lint-and-test.
+needs_js_parser = pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="needs the [multilang] extra (tree_sitter_language_pack)",
+)
+
+
 class TestCli:
     def _tree(self, root: Path):
         _write(root / "app.py", "import os\n")
@@ -181,6 +192,7 @@ class TestCli:
         files = [f["file"] for f in json.loads(res.stdout)["files"]]
         assert not any(f.endswith("jquery.min.js") for f in files)
 
+    @needs_js_parser
     def test_flag_includes_vendored(self, tmp_path):
         self._tree(tmp_path)
         default = _run(".", "--no-config", "--output", "json", cwd=tmp_path)
@@ -188,6 +200,7 @@ class TestCli:
         assert res.returncode == 0, res.stderr
         assert _analyzed(res.stdout) == _analyzed(default.stdout) + 1
 
+    @needs_js_parser
     def test_config_key_includes_vendored(self, tmp_path):
         self._tree(tmp_path)
         _write(tmp_path / ".hefesto.yaml", "include_vendored: true\n")

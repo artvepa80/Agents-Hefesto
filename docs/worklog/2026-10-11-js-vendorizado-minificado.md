@@ -60,3 +60,12 @@ por uno). Dogfood en este repo: 276 archivos y 400 hallazgos con o sin la opció
 - Un `public/js/lib/` con código propio queda excluido; se recupera con
   `--include-vendored`.
 - Sin heurística de contenido (líneas largas): las reglas son solo de ruta y deterministas.
+
+## CI (seguimiento)
+
+- `lint-and-test` instala `.[dev,lint]` sin las gramáticas tree-sitter, así que un `.js` sale
+  como `parser_unavailable` y no cuenta como analizado. Los dos tests de CLI que cuentan
+  archivos JS analizados (`test_flag_includes_vendored`, `test_config_key_includes_vendored`)
+  ahora se saltan sin `tree_sitter_language_pack`, y `multilang-smoke.yml` corre este archivo
+  de tests junto a `test_eval_usage_ast.py`, donde sí están las gramáticas.
+- Local: 70 passed con gramáticas; 46 passed + 2 skipped sin gramáticas; Black limpio.
