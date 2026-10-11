@@ -23,6 +23,7 @@ import pytest
 from hefesto.core.analyzer_engine import AnalyzerEngine, is_vendored_js
 
 JS = "function f(a) { return a + 1; }\n"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write(path: Path, text: str = JS) -> Path:
@@ -161,7 +162,14 @@ def _run(*args: str, cwd: Path):
         capture_output=True,
         text=True,
         cwd=cwd,
-        env=dict(os.environ, HEFESTO_TELEMETRY="0"),
+        env=dict(
+            os.environ,
+            HEFESTO_TELEMETRY="0",
+            # run this checkout, not whatever hefesto the interpreter has installed
+            PYTHONPATH=os.pathsep.join(
+                filter(None, [str(REPO_ROOT), os.environ.get("PYTHONPATH")])
+            ),
+        ),
         timeout=120,
     )
 
