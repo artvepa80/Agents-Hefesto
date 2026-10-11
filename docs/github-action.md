@@ -69,7 +69,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4.15.0   # SARIF needs v4.15.0 or later
+      - uses: artvepa80/Agents-Hefesto@v4.15.1   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'
