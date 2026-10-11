@@ -19,7 +19,7 @@
        01  WS-RET-CODE             PIC S9(4) COMP.
        01  WS-RET-BYTES            REDEFINES WS-RET-CODE.
            05  WS-RET-HI               PIC X.
-           05  WS-RET-LO               PIC X.
+           05  WS-RET-LO               PIC 9.
        01  WS-COUNT                PIC 9(3) VALUE 0.
        01  WS-TABLE.
            05  WS-ENTRY OCCURS 1 TO 50 TIMES DEPENDING ON WS-COUNT

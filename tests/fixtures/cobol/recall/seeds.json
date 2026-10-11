@@ -43,7 +43,7 @@
    "rule": "COBOL004",
    "file": "RCL02.cbl",
    "line": 20,
-   "seed": "signed binary split into bytes (not the unsigned idiom)"
+   "seed": "signed binary read as a byte and a digit (not the byte-view idiom)"
   },
   {
    "rule": "COBOL005",
