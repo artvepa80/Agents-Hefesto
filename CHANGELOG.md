@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A run that analyzes no files is no longer reported as a pass (zero-files invariant; minor release).** When `hefesto analyze` finds nothing to analyze (empty directory, only unsupported files, or every file excluded), the text report says "No files were analyzed" instead of "No issues found!", a warning naming the path goes to stderr (also with `--quiet` and `--output json`, whose stdout stays valid JSON), and with `--fail-on` the gate fails with "Gate failure: no files were analyzed" and exit code 1. Without `--fail-on` the exit code stays 0. With several paths, a path that yields no files only warns as long as another path was analyzed. **GitHub Action:** its `fail_on` input defaults to `CRITICAL`, so a workflow whose `path` contains no supported files now fails instead of passing silently.
 
+### GitHub Action
+
+- **Floating tag `v4`.** `uses: artvepa80/Agents-Hefesto@v4` now runs the latest v4.x.y release: `release.yml` moves the `v4` tag to each new 4.x release (only forward, never for an older patch). `v4` starts at v4.15.1. It follows the whole 4.x line, minors included, so it also receives behaviour changes such as the upcoming zero-files exit-code change; if you need exact stability, pin an exact tag such as `@v4.15.1` (exact tags never move). The Action installs HefestoAI from its own ref, so **workflows pinned to `@v4.15.0` keep the exclusion bug until they move to `@v4`** (or to `@v4.15.1`). README, `docs/github-action.md`, `skill/integration.md`, `llms.txt` and the Copilot instructions use `@v4`; `scripts/verify_readme.py` accepts the major tag for Action refs (it must match the package major) as well as the exact version.
+
+
 ## [4.15.1] - 2026-10-11
 
 ### Fixed
