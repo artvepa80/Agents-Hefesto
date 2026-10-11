@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Pending (next minor release)
+
+- **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
+
+## [4.15.1] - 2026-10-11
+
 ### Fixed
 
 - **Exclude patterns now match whole path components below the analyzed path, never the path itself.** Before this fix, the default excludes (`build/`, `dist/`, `venv/`, `.venv/`, `node_modules/`, `.tox/`, `.eggs/`, `.egg-info/`, ...) and `--exclude` / `exclude:` patterns were matched as substrings of the absolute path of every file. Analyzing a directory whose own name or whose parents contained an exclude name (`app-build`, `cobol-dist`, `~/venv/project`, `/ci/build/repo`, or `cd app-build && hefesto analyze .`) analyzed 0 files and reported success; names that merely contained an exclude (`rebuild/`, `distro/`, `myvenv/`) were skipped as well. Matching is now relative to each analyzed path and by component: `build/` excludes a nested `build` directory at any depth, not `rebuild/`; `src/legacy/` matches those two consecutive directories; `evil.py` matches a file or directory with that exact name. Fixed in all three places that applied excludes: file discovery (`AnalyzerEngine._find_files`), extensionless COBOL copybook discovery (`_extra_copybook_candidates`) and the `ImportsVsDeps` source walk (`EXCLUDED_DIRS`, which also matched directories above the project root, such as a checkout under `~/docs/` or `~/build/`). New helper: `hefesto.core.analyzer_engine.path_is_excluded`.
@@ -25,13 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The multilang smoke job also runs the unit tests that need real tree-sitter grammars (`tests/test_eval_usage_ast.py`); `lint-and-test` installs only `[dev,lint]` and skips them.
 
-### Pending (next minor release)
-
-- **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
-
 ### Docs
 
 - README, `docs/ai-discovery.md` and `skill/integration.md` describe the hosted `analyze` tool (`/api/analyze`, COBOL plan Phase 6). It runs `hefesto analyze --no-config` with hefesto-ai 4.15.0 on submitted files (20 files, 100 KB each, 256 KB total, 20 s), returns rule ids and SARIF fingerprints, covers TypeScript/JavaScript/Java/Go/Rust/C# through the `multilang` grammars, and stores nothing. The endpoint itself lives in the private landing repo (Pro-Private #122, merge `14f62e5`, live in production since 2026-10-10).
+
+### GitHub Action
+
+- **Pinned workflows keep the exclusion bug until they move to `@v4.15.1`.** `action.yml` installs hefesto-ai from the Action's own checkout (`pip install "$GITHUB_ACTION_PATH"`), not from PyPI, so `uses: artvepa80/Agents-Hefesto@v4.15.0` still analyzes 0 files when the checkout path or one of its parents contains `build`, `dist`, `venv`, `node_modules` and the like. The README, `docs/github-action.md`, `skill/integration.md`, `llms.txt` and the Copilot instructions now use `@v4.15.1`.
 
 ## [4.15.0] - 2026-10-10
 

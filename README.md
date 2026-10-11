@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.15.0)
+## Operational Truth Analyzers (v4.15.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.15.0
+    uses: artvepa80/Agents-Hefesto@v4.15.1
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -116,7 +116,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4.15.0   # SARIF needs v4.15.0 or later
+      - uses: artvepa80/Agents-Hefesto@v4.15.1   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'
@@ -169,11 +169,11 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Changelog | JSON | `/api/changelog.json` |
 | FAQ | JSON | `/api/faq.json` |
 
-The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.15.0) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
+The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.15.1) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
 ---
 
-## PR Review (v4.15.0)
+## PR Review (v4.15.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -251,7 +251,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -288,7 +288,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.15.0)
+## CLI Reference (v4.15.1)
 
 ```bash
 # Analyze code
@@ -526,7 +526,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.15.0)
+### GitHub Actions — PR Review with Inline Comments (v4.15.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -563,7 +563,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.15.0
+    rev: v4.15.1
     hooks:
       - id: hefesto-analyze
 ```
@@ -744,6 +744,13 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Changelog
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.15.1 (2026-10-11)
+- **Fix**: exclude patterns (`build/`, `dist/`, `venv/`, `--exclude`) match whole path components below the analyzed path; a project in `app-build/` or under `~/venv/` is analyzed again instead of reporting 0 files as a pass
+- **Fix**: YAML_SYNTAX_ERROR accepts multi-document files and skips Helm chart templates
+- **Fix**: COBOL004 skips four REDEFINES idioms that never reinterpret a value (zoned sign split, pointer views, constant tables, signed byte view)
+- **Fix**: EVAL_USAGE in JavaScript/TypeScript/Java comes from the syntax tree (no more `RegExp.exec`, own `exec` methods, comments or strings)
+- **GitHub Action**: it installs from its own ref, so workflows pinned to `@v4.15.0` keep the exclusion bug until they move to `@v4.15.1`
 
 ### v4.15.0 (2026-10-10)
 - **SARIF 2.1.0 output for every analyzer** (`--format sarif`, `--sarif-file`): rule metadata, security-severity, stable fingerprints, repo-relative paths; validated against the OASIS schema
