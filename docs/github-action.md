@@ -4,6 +4,21 @@
 repository, fails the job when findings reach `fail_on`, and can upload the
 findings to GitHub code scanning as SARIF 2.1.0.
 
+## Versions
+
+- `@v4` is a floating tag that follows the whole 4.x line, minor releases
+  included. Each v4.x.y release moves it to that release's commit
+  (`release.yml` does it after publishing), so `@v4` always runs the latest
+  4.x release. It is the only tag that ever moves.
+- Because it follows minors, `@v4` also receives behaviour changes, such as
+  the upcoming change that makes a run with no analyzed files fail the gate
+  instead of passing.
+- If you need exact stability, pin an exact release tag such as `@v4.15.1`
+  (exact tags never move) or a commit SHA, and bump it yourself.
+- The Action installs HefestoAI from its own checkout, not from PyPI, so a fix
+  reaches a workflow only through a ref that contains it: `@v4.15.0` keeps the
+  exclusion bug fixed in 4.15.1, `@v4` gets the fix.
+
 ## How it runs
 
 The Action is a composite action with three steps:
@@ -69,7 +84,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4.15.1   # SARIF needs v4.15.0 or later
+      - uses: artvepa80/Agents-Hefesto@v4   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'
