@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.15.0)
+## Operational Truth Analyzers (v4.15.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -98,7 +98,7 @@ subprocess.run(["rm", user_input], check=True)
 steps:
   - uses: actions/checkout@v4
   - name: Run Hefesto Guardian
-    uses: artvepa80/Agents-Hefesto@v4.15.0
+    uses: artvepa80/Agents-Hefesto@v4.15.1
     with:
       target: '.'
       fail_on: 'CRITICAL'
@@ -116,7 +116,7 @@ jobs:
       actions: read            # private repositories only
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4.15.0   # SARIF needs v4.15.0 or later
+      - uses: artvepa80/Agents-Hefesto@v4.15.1   # SARIF needs v4.15.0 or later
         with:
           target: '.'
           fail_on: 'CRITICAL'
@@ -169,11 +169,11 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Changelog | JSON | `/api/changelog.json` |
 | FAQ | JSON | `/api/faq.json` |
 
-The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.15.0) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
+The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.15.1) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
 ---
 
-## PR Review (v4.15.0)
+## PR Review (v4.15.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -251,13 +251,13 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
 ³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 - **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt; the files read as free format this way are listed under **Notes** in the text report and in `meta.cobol_format_notices` (JSON).
-- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays, CICS BMS symbolic maps (and program overlays of a BMS input map, such as CardDemo's `01 FILLER REDEFINES CTRTLIAI`) and the byte view of an unsigned binary integer (`PIC 9(4) BINARY` redefined as `PIC X` bytes of exactly its storage size, as CardDemo does to decode a VSAM file status) are skipped; a signed binary or a size mismatch is still flagged. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
+- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays, CICS BMS symbolic maps (and program overlays of a BMS input map, such as CardDemo's `01 FILLER REDEFINES CTRTLIAI`) the byte view of a binary integer (`PIC 9(4) BINARY` or `PIC S9(4) COMP` redefined as `PIC X` bytes of exactly its storage size, as CardDemo does to decode a VSAM file status), a signed zoned number split into digit groups with the sign on the last group (`PIC S9(10)` as `9(9)` + `S9`), a pointer viewed as one address-sized field (`USAGE POINTER` as `PIC X(4)`/`X(8)` or an unsigned 4- or 8-byte binary), and a table of constants redefined as an `OCCURS` table with the same layout per entry are skipped; a size mismatch, a SIGN clause, a signed or display view of a pointer, or a different per-entry layout is still flagged. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
 - **COBOL006 / COBOL011 / COBOL015** report repeated findings once (per `PERFORM X THRU Y` pair, per program, per missing copybook), with the occurrence count and lines in the finding metadata.
 - **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it, directly or through nested copybooks (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree (also a nested `COPY` inside a copybook); it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` members count like `COPY`. Copybooks kept outside the scanned tree resolve with `--copybook-path DIR` (repeatable) or `copybook_paths:` in `.hefesto.yaml`; files there are expanded into the programs that `COPY` them but not analyzed on their own. The search below each copybook path is recursive but bounded: 8 directory levels and 50,000 files (a warning is logged when it stops), hidden directories skipped, and it runs once per run.
 - **COPY expansion:** programs are analyzed with each `COPY` (and `EXEC SQL INCLUDE`) replaced by the copybook text, the way the compiler sees it, so every rule sees copybook data definitions, `SELECT`s and procedure code in the context of the program. `COPY ... REPLACING` is applied: `==pseudo-text==` (including an empty replacement), literals, words and identifiers (`A OF B`, `T(1)`), `LEADING`/`TRAILING` partial words, and the `==:TAG:==` / `==(TAG)==` idioms inside words; matching is by text word (case-insensitive words, exact literals, first pair wins, no rescan). A REPLACING also applies to copybooks nested under it. Guards: a copybook already open in the chain is not expanded again (recursion), nesting stops at 16 levels and a program stops expanding after 250,000 copybook lines; a `COPY` that is not expanded stays as written. A finding on copybook text is reported at the program's `COPY` line with the copybook file and line in `metadata.expanded_from`; COBOL004/008/009 on an unchanged line of a scanned copybook stay on the copybook file (not repeated per program), but are reported in the program when `REPLACING` changed that line or the copybook comes from `copybook_paths`. Not supported: the `REPLACE` statement, and `OF library` does not pick between copybooks of the same name (the one closest to the program wins). Copybook files themselves are analyzed as written.
@@ -288,7 +288,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.15.0)
+## CLI Reference (v4.15.1)
 
 ```bash
 # Analyze code
@@ -526,7 +526,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.15.0)
+### GitHub Actions — PR Review with Inline Comments (v4.15.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -563,7 +563,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.15.0
+    rev: v4.15.1
     hooks:
       - id: hefesto-analyze
 ```
@@ -744,6 +744,13 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Changelog
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.15.1 (2026-10-11)
+- **Fix**: exclude patterns (`build/`, `dist/`, `venv/`, `--exclude`) match whole path components below the analyzed path; a project in `app-build/` or under `~/venv/` is analyzed again instead of reporting 0 files as a pass
+- **Fix**: YAML_SYNTAX_ERROR accepts multi-document files and skips Helm chart templates
+- **Fix**: COBOL004 skips four REDEFINES idioms that never reinterpret a value (zoned sign split, pointer views, constant tables, signed byte view)
+- **Fix**: EVAL_USAGE in JavaScript/TypeScript/Java comes from the syntax tree (no more `RegExp.exec`, own `exec` methods, comments or strings)
+- **GitHub Action**: it installs from its own ref, so workflows pinned to `@v4.15.0` keep the exclusion bug until they move to `@v4.15.1`
 
 ### v4.15.0 (2026-10-10)
 - **SARIF 2.1.0 output for every analyzer** (`--format sarif`, `--sarif-file`): rule metadata, security-severity, stable fingerprints, repo-relative paths; validated against the OASIS schema
