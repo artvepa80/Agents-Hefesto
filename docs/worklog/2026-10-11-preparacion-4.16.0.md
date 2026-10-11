@@ -181,15 +181,15 @@ f) `release.yml`:
   code. No 5.0.0, porque el cambio de exit code solo toca corridas que no analizaron nada y
   arregla una violación del contrato documentado del gate.
 
-**Preguntas bloqueantes (máximo 2):**
+**Preguntas bloqueantes (máximo 2), ya respondidas por Arturo (16:05):**
 1. ¿Se agrega en 4.16.0 una salida explícita para corridas vacías intencionales? Por
    ejemplo `--allow-no-files` o `allow_no_files: true`, que mantenga exit 0 con
    `--fail-on`. Recomendación: sí, pequeña y testeada.
-   - Supuesto si no se responde: no se agrega; las salidas documentadas son quitar
-     `fail_on` o fijar `@v4.15.1`.
+   - Respuesta: sí. `--allow-no-files`, `allow_no_files: true` en `.hefesto.yaml` e input
+     `allow_no_files` de la Action; implementado en #85 (ver 5B).
 2. ¿Se publican cifras de corpus en las notas? Requeriría agregar al repo un manifiesto
    (repos públicos + SHAs + comando + etiquetas de EVAL_USAGE), no el corpus.
-   - Supuesto si no se responde: las notas no llevan cifras de corpus.
+   - Respuesta: no. Las notas no llevan cifras de corpus y no se agrega manifiesto.
 
 ## 5A. Implementado hoy (pusheado a #91)
 
@@ -213,12 +213,45 @@ f) `release.yml`:
 - WebGoat: "22 files skipped as vendored (use --include-vendored)". NodeGoat: 6. Los otros
   12 repos: 0, sin línea.
 
+## 5B/5C. `--allow-no-files` y pista de vendorizados (pusheado a #85)
+
+- `--allow-no-files` / `allow_no_files: true` / input `allow_no_files` de la Action
+  (default `false`; el entrypoint agrega `--allow-no-files` con `true`, `1` o `yes`).
+- Con `--fail-on` y cero archivos: exit 0 y "Gate skipped: no files were analyzed
+  (--allow-no-files)". El reporte "No files were analyzed" y el aviso por stderr se
+  imprimen igual (también con `--quiet` y `--output json`). No cambia nada si hubo
+  archivos: los hallazgos siguen fallando el gate.
+- Pista 5C: si una ruta termina con cero archivos y el motor omitió vendorizados en esa
+  ruta, el aviso agrega "; N files skipped as vendored (use --include-vendored)".
+  - #85 lee `meta.vendored_skipped.count` (el campo que agrega #91) antes y después de
+    cada ruta, de forma defensiva: sin #91 el campo no existe y el aviso queda igual.
+  - Tests unitarios con un motor falso (corren en #85 solo). Tests de integración con
+    `skipif` mientras `is_vendored_js` no exista; se activan en cuanto ambos PR están en
+    la misma rama.
+- Verificado con un merge local de prueba de #85 en #91 (no pusheado): solo choca
+  CHANGELOG.md; los tests de integración corren y pasan.
+
 ## 6. Borrador de notas de release 4.16.0 (sin cifras de corpus)
 
 > **Breaking for CI gates that analyze nothing: a run with no analyzed files no longer passes `--fail-on`.**
 > Until 4.15.1, when `hefesto analyze` found no files to analyze (empty or wrong path, only unsupported files, or everything excluded), it printed "No issues found!" and `--fail-on` reported "Gate passed" with exit code 0. From 4.16.0 it prints "No files were analyzed", writes a warning naming the path to stderr (also with `--quiet` and `--output json`, whose stdout stays valid JSON), and with `--fail-on` fails with "Gate failure: no files were analyzed" and **exit code 1**. Without `--fail-on` the exit code stays 0. With several paths, a path with no files only warns while another path was analyzed.
-> **GitHub Action:** `fail_on` defaults to `CRITICAL`, so a workflow whose `target` has no supported files now fails. `@v4` follows the whole 4.x line, minor releases included, so workflows on `@v4` get this change without editing anything. To stay on the old behaviour, pin an exact tag such as `@v4.15.1`.
+> **Intentionally empty runs:** add `--allow-no-files` (or `allow_no_files: true` in `.hefesto.yaml`, or `allow_no_files: 'true'` on the GitHub Action) to keep exit code 0 when nothing is analyzed under `--fail-on`. The run then prints "Gate skipped: no files were analyzed (--allow-no-files)", and the "No files were analyzed" warning is still printed. Findings still fail the gate as before.
+> **GitHub Action:** `fail_on` defaults to `CRITICAL`, so a workflow whose `target` has no supported files now fails unless it sets `allow_no_files: 'true'`. `@v4` follows the whole 4.x line, minor releases included, so workflows on `@v4` get this change without editing anything. To stay on the old behaviour, pin an exact tag such as `@v4.15.1`.
 >
-> **Vendored and minified JavaScript is skipped by default.** `*.min.js` / `*-min.js`, JavaScript under `vendor/`, `vendors/`, `bower_components/`, `jspm_packages/`, and JavaScript under `lib/`, `libs/`, `plugins/`, `third_party/` or `thirdparty/` inside `static/`, `assets/`, `public/` or `wwwroot/` are no longer analyzed. On codebases that bundle libraries this way, the number of findings drops, and so do alerts on those files in code scanning. The summary says how many files were left out (`N files skipped as vendored (use --include-vendored)`; `meta.vendored_skipped` in JSON; a tool notification in SARIF). `--include-vendored` or `include_vendored: true` restores the old behaviour. A top-level `lib/`, non-JavaScript files under `vendor/` and a single file given on the command line are still analyzed.
+> **Vendored and minified JavaScript is skipped by default.** `*.min.js` / `*-min.js`, JavaScript under `vendor/`, `vendors/`, `bower_components/`, `jspm_packages/`, and JavaScript under `lib/`, `libs/`, `plugins/`, `third_party/` or `thirdparty/` inside `static/`, `assets/`, `public/` or `wwwroot/` are no longer analyzed. On codebases that bundle libraries this way, the number of findings drops, and so do alerts on those files in code scanning. The summary says how many files were left out (`N files skipped as vendored (use --include-vendored)`; `meta.vendored_skipped` in JSON; a tool notification in SARIF). `--include-vendored` or `include_vendored: true` restores the old behaviour. If every candidate file of a path was vendored, the zero-files warning says how many were skipped and names `--include-vendored`. A top-level `lib/`, non-JavaScript files under `vendor/` and a single file given on the command line are still analyzed.
 
-(Si 5C agrega la pista de vendorizados al aviso de cero archivos, sumar: "If every candidate file was vendored, the zero-files warning says so and names `--include-vendored`.")
+## 7. Orden de merge (mañana, no hoy)
+
+1. Mergear #91 (squash) con CI verde.
+2. Actualizar #85 desde `main` (merge, sin force-push). Conflicto esperado solo en
+   CHANGELOG.md: en `[Unreleased]`, `### Changed` abre con la entrada de cero archivos,
+   luego la de vendorizados; después `### Added` y `### GitHub Action`. Con push que
+   incluya el token de workflows si el merge trae cambios en `.github/workflows`.
+3. Verificar en el CI de #85 que `TestVendoredHintIntegration` ya no se salta y pasa.
+4. Mergear #85 (squash) con CI verde.
+5. Cortar 4.16.0 con las notas de la sección 6 (abren con el cambio de exit code).
+
+El orden inverso también funciona (el código de la pista es defensivo y los tests de
+integración se activarían en el CI de #91 al actualizarlo desde `main`), pero se prefiere
+#91 primero para que el último CI antes del release sea el de #85, que valida la
+combinación.
