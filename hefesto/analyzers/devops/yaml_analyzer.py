@@ -8,6 +8,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
+from pathlib import Path
 from typing import List, Tuple
 
 from hefesto.core.analysis_models import (
@@ -97,9 +98,12 @@ class YamlAnalyzer:
         """Check for basic YAML syntax issues."""
         issues = []
 
-        if YAML_AVAILABLE and yaml is not None:
+        if YAML_AVAILABLE and yaml is not None and not self._is_helm_template(file_path, content):
             try:
-                yaml.safe_load(content)
+                # A file may hold several documents separated by ``---``
+                # (the usual form of Kubernetes manifests): parse them all.
+                for _ in yaml.safe_load_all(content):
+                    pass
             except Exception as e:
                 line_num = 1
                 if hasattr(e, "problem_mark") and e.problem_mark:
@@ -133,6 +137,23 @@ class YamlAnalyzer:
                 )
 
         return issues
+
+    @staticmethod
+    def _is_helm_template(file_path: str, content: str) -> bool:
+        """True for a Helm chart template that uses template actions.
+
+        Files under ``<chart>/templates/`` (a directory next to ``Chart.yaml``)
+        are Go templates that Helm renders into YAML; ``{{ ... }}`` actions such
+        as ``{{- if }}`` or ``{{ include ... | nindent 4 }}`` make them invalid
+        YAML until rendered, so they cannot be syntax-checked as YAML. Files
+        with the same syntax outside a chart are still checked.
+        """
+        if "{{" not in content:
+            return False
+        for parent in Path(file_path).parents:
+            if parent.name == "templates" and (parent.parent / "Chart.yaml").is_file():
+                return True
+        return False
 
     def _check_secrets(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check for potential hardcoded secrets with tiered severity."""

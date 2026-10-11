@@ -42,7 +42,9 @@ class TestCobol004Redefines:
         [
             ["@01  AMT      PIC S9(7)V99 COMP-3.", "@01  AMT-X    REDEFINES AMT PIC X(5)."],
             ["@01  AMT      PIC S9(7)V99 PACKED-DECIMAL.", "@01  AMT-X REDEFINES AMT PIC X(5)."],
-            ["@01  CNT      PIC S9(4) COMP.", "@01  CNT-X    REDEFINES CNT PIC XX."],
+            # (PIC XX over S9(4) COMP is the byte-view idiom, signed or not:
+            # see tests/test_cobol004_intended_redefines.py::TestSignedByteView)
+            ["@01  CNT      PIC S9(4) COMP.", "@01  CNT-X    REDEFINES CNT PIC 99."],
             # unsigned PIC 9(4) BINARY viewed as PIC XX is the byte-view idiom:
             # see tests/test_cobol_phase3_leftovers.py::test_byte_view_idiom
             ["@01  CNT      PIC 9(4) BINARY.", "@01  CNT-X    REDEFINES CNT PIC XXX."],
@@ -309,8 +311,13 @@ class TestEngineIntegration:
         """prepare_cobol_index walks paths like analyze_path: excludes and missing paths."""
         self._tree(tmp_path)
         engine = AnalyzerEngine(severity_threshold="LOW")
-        engine.prepare_cobol_index([str(tmp_path / "missing"), str(tmp_path / "cbl")], ["cbl"])
+        # Excludes apply below the analyzed path ...
+        engine.prepare_cobol_index([str(tmp_path / "missing"), str(tmp_path)], ["cbl/", "cpy/"])
         assert engine._cobol_index is None
+        # ... never to the path itself: a pattern equal to the root's name
+        # (here ``cbl``) used to drop the whole root and every ``.cbl`` file.
+        engine.prepare_cobol_index([str(tmp_path / "cbl")], ["cbl"])
+        assert len(engine._cobol_index.dependent_programs("SHAREDREC")) == 5
         engine.prepare_cobol_index([str(tmp_path / "cbl"), str(tmp_path / "cpy")], [])
         assert "SHAREDREC" in engine._cobol_index.available
         assert len(engine._cobol_index.dependent_programs("SHAREDREC")) == 5
