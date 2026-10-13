@@ -708,7 +708,14 @@ def check_test_contradictions(test_directory: str):
     click.echo("")
 
     detector = TestContradictionDetector(test_directory)
-    contradictions = detector.find_contradictions()
+    try:
+        contradictions = detector.find_contradictions()
+    except Exception as exc:  # internal error: never report PASS
+        click.echo(
+            f"Test Contradiction Check: internal error: {type(exc).__name__}: {exc}", err=True
+        )
+        _exit(2)
+        return
     detector.print_report(contradictions)
 
     # Exit with error if contradictions found

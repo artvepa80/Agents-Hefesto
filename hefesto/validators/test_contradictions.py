@@ -64,20 +64,27 @@ class TestContradictionDetector:
         """
         self.test_dir = Path(test_directory)
         self.assertions: List[TestAssertion] = []
+        # (path, reason) for files that could not be read or parsed
+        self.skipped_files: List[Tuple[Path, str]] = []
 
     def _parse_test_file(self, file_path: Path) -> None:
-        """Parse a test file and extract assertions."""
+        """Parse a test file and extract assertions.
+
+        Only a file that cannot be decoded or parsed is skipped, and it is
+        recorded in ``skipped_files``. Any other exception is a bug in this
+        detector and propagates, so the check never reports PASS without
+        having checked anything.
+        """
         try:
-            with open(file_path) as f:
-                tree = ast.parse(f.read(), filename=str(file_path))
+            source = file_path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(file_path))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            self.skipped_files.append((file_path, f"{type(exc).__name__}: {exc}"))
+            return
 
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                    self._extract_assertions(node, str(file_path))
-
-        except Exception:
-            # Skip files that can't be parsed
-            pass
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                self._extract_assertions(node, str(file_path))
 
     def _extract_assertions(self, func_node: ast.FunctionDef, file_path: str) -> None:
         """Extract assertion statements from a test function."""
@@ -270,13 +277,10 @@ class TestContradictionDetector:
 
     def _extract_value(self, node: ast.AST) -> str:
         """Extract value as string."""
-        # AST structure varies by Python version, simplifying check
-        if isinstance(node, ast.Constant):  # Python 3.8+
+        # Literals are ast.Constant on every supported Python (>= 3.10);
+        # ast.Num/Str/NameConstant were removed in 3.14.
+        if isinstance(node, ast.Constant):
             return repr(node.value)
-        elif isinstance(node, ast.Num):  # Python < 3.8
-            return str(node.n)
-        elif isinstance(node, ast.Str):  # Python < 3.8
-            return repr(node.s)
         elif isinstance(node, ast.List):
             elements = [self._extract_value(e) for e in node.elts]
             return f"[{', '.join(elements)}]"
@@ -288,8 +292,6 @@ class TestContradictionDetector:
             if hasattr(node.value, "id"):
                 return f"{node.value.id}.{node.attr}"
             return node.attr
-        elif isinstance(node, ast.NameConstant):
-            return str(node.value)
         else:
             return "?"
 
@@ -345,6 +347,10 @@ class TestContradictionDetector:
 
     def print_report(self, contradictions: List[Contradiction]) -> None:
         """Print formatted report of contradictions."""
+        if self.skipped_files:
+            print(f"\n⚠️  Skipped {len(self.skipped_files)} file(s) that could not be parsed:")
+            for path, reason in self.skipped_files:
+                print(f"  - {path}: {reason}")
         if not contradictions:
             print("\n✅ Test Contradiction Check: PASS")
             print("No contradictory test assertions found.")
@@ -383,7 +389,11 @@ def main():
     test_dir = sys.argv[1] if len(sys.argv) > 1 else "tests"
 
     detector = TestContradictionDetector(test_dir)
-    contradictions = detector.find_contradictions()
+    try:
+        contradictions = detector.find_contradictions()
+    except Exception as exc:  # internal error: never report PASS
+        print(f"Test Contradiction Check: internal error: {type(exc).__name__}: {exc}")
+        sys.exit(2)
     detector.print_report(contradictions)
 
     # Exit with error code if contradictions found

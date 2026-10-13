@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`check-test-contradictions` no longer reports PASS on Python 3.14 without checking anything.** `_extract_value` fell through to `ast.Num`/`ast.Str`/`ast.NameConstant` for any non-literal argument; those were removed in Python 3.14, the AttributeError was swallowed by a blanket `except Exception: pass` per file, and the command printed PASS with exit 0 (the same suite gives 1 contradiction, exit 1, on 3.13). Literals are now read only through `ast.Constant` (requires-python is >= 3.10). Only files that cannot be decoded or parsed (`SyntaxError`, `UnicodeDecodeError`) are skipped, and they are listed in the report ("Skipped N file(s)"). Any other exception is an internal error: the command prints it and exits 2, never PASS.
+
+### CI
+
+- **Python 3.14** added to the `lint-and-test` and `multilang-smoke` matrices.
+
 ### Documentation
 
 - **CLAUDE.md: branch deletion after merge.** PR head branches are deleted by the repository's auto-delete setting when a PR is merged, and Arturo's merge OK covers that; deleting a branch by hand still needs explicit OK. The destructive-operations rule no longer lists "a PR branch after merge", which contradicted the auto-delete setting.
