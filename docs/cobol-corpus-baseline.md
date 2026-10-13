@@ -206,7 +206,7 @@ counts transitively for COBOL007 (none of the pinned corpora crosses the
 copybook's own `COPY` statements (none missing on the pinned corpora).
 
 Synthetic scale numbers come from `scripts/cobol_perf_bench.py` (see the
-README, COBOL section): about 8 s per million lines.
+README, COBOL section): about 9 s per million lines.
 
 ## COPY ... REPLACING expansion
 
