@@ -649,6 +649,13 @@ _FIXED_BINARY_BYTES = {
 _USAGE_OTHER = re.compile(
     r"(?<![\w-])(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)(?![\w-])", re.I
 )
+_USAGE_CLASSES = (
+    (_FIXED_BINARY, "binary"),
+    (_USAGE_PACKED, "packed"),
+    (_USAGE_FLOAT, "float"),
+    (_USAGE_BINARY, "binary"),
+    (_USAGE_OTHER, "pointer"),
+)
 _NUMERIC_PIC = re.compile(r"^[S9VP()0-9]+$", re.I)
 _SENSITIVE = {"packed", "binary", "signed", "float", "pointer"}
 _CLASS_LABEL = {
@@ -682,17 +689,8 @@ def _data_items(unit: _ProgramUnit) -> List[_DataItem]:
 
 
 def _usage_class(clause: str) -> Optional[str]:
-    if _FIXED_BINARY.search(clause):
-        return "binary"
-    if _USAGE_PACKED.search(clause):
-        return "packed"
-    if _USAGE_FLOAT.search(clause):
-        return "float"
-    if _USAGE_BINARY.search(clause):
-        return "binary"
-    if _USAGE_OTHER.search(clause):
-        return "pointer"
-    return None
+    """Storage class named by the USAGE clause, first match in _USAGE_CLASSES order."""
+    return next((cls for pattern, cls in _USAGE_CLASSES if pattern.search(clause)), None)
 
 
 def _pic_text(clause: str) -> str:
