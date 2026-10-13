@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **COBOL demo script:** removed "SARIF output (not available yet...)" from the "Next Steps" of `docs/demo/cobol_investor_demo.sh`; SARIF has shipped since 4.15.0.
-- **COBOL performance figure:** the README (and `docs/cobol-corpus-baseline.md`) now say about 9 s per million lines instead of 8. `scripts/cobol_perf_bench.py --scenario project-1m`, 3 runs on 4.16.0 on an 8-vCPU Linux VM with Python 3.13 (the setup the README names): 8.83, 8.82 and 8.71 s per million lines (9.30, 9.29, 9.17 s for 1,053,200 lines), median 8.82.
+- **COBOL performance figure:** the README (and `docs/cobol-corpus-baseline.md`) now say about 9 s per million lines instead of 8. `scripts/cobol_perf_bench.py --scenario project-1m`, 3 runs on 4.16.0 on an 8-vCPU Linux VM with Python 3.13 (the setup the README names): 8.83, 8.82 and 8.71 s per million lines (9.30, 9.29, 9.17 s for 1,053,200 lines), median 8.82. The single 500,000-line program goes from about 4.5 s to about 4.8 s (`--scenario big-500k`, 3 runs: 5.25, 4.71, 4.78 s, median 4.78; peak memory 243 MB, so "250 MB" stays).
 
 ## [4.16.0] - 2026-10-12
 
