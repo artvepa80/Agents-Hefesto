@@ -139,6 +139,20 @@ def test_min_severity_passthrough(tmp_path: Path) -> None:
     assert args[args.index("--severity") + 1] == "HIGH"
 
 
+@pytest.mark.parametrize("value", [None, "", "false", "0", "no"])
+def test_allow_no_files_off_by_default(tmp_path: Path, value: Optional[str]) -> None:
+    r = _run(tmp_path, {"allow_no_files": value})
+    assert "--allow-no-files" not in r["hefesto_args"]
+    assert "Allow no files: no" in r["proc"].stdout
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", " yes "])
+def test_allow_no_files_passed_to_the_cli(tmp_path: Path, value: str) -> None:
+    r = _run(tmp_path, {"allow_no_files": value})
+    assert "--allow-no-files" in r["hefesto_args"]
+    assert "Allow no files: yes (--allow-no-files)" in r["proc"].stdout
+
+
 # ------------------------------------------------------------ SARIF (Phase 5)
 
 

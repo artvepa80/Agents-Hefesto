@@ -294,6 +294,14 @@ def _load_project_config(paths, config_path, option_names):
     help="Exit with code 1 if issues at this severity or higher are found",
 )
 @click.option(
+    "--allow-no-files",
+    is_flag=True,
+    help=(
+        "With --fail-on, keep exit 0 when no file was analyzed (an intentionally"
+        " empty run); the 'no files were analyzed' warning is still printed"
+    ),
+)
+@click.option(
     "--quiet",
     is_flag=True,
     help="Minimal output (summary only, no pipeline details)",
@@ -386,6 +394,7 @@ def analyze(
     exclude: str,
     save_html: Optional[str],
     fail_on: Optional[str],
+    allow_no_files: bool,
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
@@ -495,7 +504,9 @@ def analyze(
         if sarif_file:
             _write_sarif(combined_report, sarif_file, quiet, json_mode)
 
-        exit_code = _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
+        exit_code = _determine_exit_code(
+            combined_report, fail_on, exclude_types, quiet, json_mode, allow_no_files
+        )
 
         # Anonymous usage ping — also caches latest_version for upgrade notice
         from hefesto.telemetry.client import _ping_remote, get_upgrade_notice
@@ -1065,6 +1076,14 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
         return None
 
 
+def _vendored_skipped_count(engine) -> int:
+    """Files the engine has left out as vendored JavaScript so far (0 if unsupported)."""
+    if not hasattr(engine, "_build_meta"):
+        return 0
+    skipped = engine._build_meta().get("vendored_skipped") or {}
+    return int(skipped.get("count", 0))
+
+
 def _run_analysis_loop(engine, paths_list, exclude_patterns):
     all_file_results = []
     total_loc = 0
@@ -1075,7 +1094,20 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
         engine.prepare_cobol_index(list(paths_list), exclude_patterns or [])
 
     for path in paths_list:
+        vendored_before = _vendored_skipped_count(engine)
         report = engine.analyze_path(path, exclude_patterns)
+        if not report.file_results:
+            # Always on stderr, even with --quiet: an empty run is never a pass.
+            hint = ""
+            vendored = _vendored_skipped_count(engine) - vendored_before
+            if vendored > 0:
+                noun = "file" if vendored == 1 else "files"
+                hint = f"; {vendored} {noun} skipped as vendored (use --include-vendored)"
+            click.echo(
+                f"Warning: no files were analyzed in {path} "
+                f"(no supported source files, or every file was excluded){hint}",
+                err=True,
+            )
         all_file_results.extend(report.file_results)
         total_loc += report.summary.total_loc
         total_duration += report.summary.duration_seconds
@@ -1228,7 +1260,26 @@ def _write_sarif(combined_report, sarif_file, quiet, json_mode):
         click.echo(f"SARIF report saved to: {sarif_file}", err=json_mode)
 
 
-def _determine_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode=False):
+def _determine_exit_code(
+    combined_report, fail_on, exclude_types, quiet, json_mode=False, allow_no_files=False
+):
+    if fail_on and combined_report.summary.files_analyzed == 0:
+        if allow_no_files:
+            # Opted out (--allow-no-files): an intentionally empty run keeps exit 0.
+            # The "no files were analyzed" warning has already been printed.
+            if not quiet:
+                click.echo(
+                    "\nGate skipped: no files were analyzed (--allow-no-files)", err=json_mode
+                )
+            return 0
+        # A gate that checked nothing must not pass.
+        if not quiet:
+            click.echo("\nGate failure: no files were analyzed (exit 1)", err=json_mode)
+        return 1
+    return _severity_gate_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode)
+
+
+def _severity_gate_exit_code(combined_report, fail_on, exclude_types, quiet, json_mode):
     import click
 
     use_stderr = json_mode

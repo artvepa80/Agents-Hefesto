@@ -104,7 +104,7 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
-`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the upcoming change to the exit code when no files are analyzed. If you need exact stability, pin an exact release tag such as `@v4.15.1` (exact tags never move) or a commit SHA, and bump it yourself.
+`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `@v4.15.1` (exact tags never move) or a commit SHA, and bump it yourself.
 
 With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
 
@@ -133,6 +133,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 |-------|-------------|---------|
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
+| `allow_no_files` | `true`: passes `--allow-no-files`, so a run that analyzes no files keeps exit 0 under `fail_on` (intentionally empty target); the warning is still printed | `false` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format printed to the log (`text`, `json`, `html`, `sarif`) | `text` |
 | `sarif` | `true`: also write a SARIF 2.1.0 file and upload it to code scanning (needs `security-events: write`) | `false` |
@@ -377,7 +378,7 @@ hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
 | Code | Meaning |
 |------|---------|
 | `0`  | Analysis complete (no `--fail-on`, or threshold not breached) |
-| `1`  | Gate failure (`--fail-on` threshold breached) or runtime error |
+| `1`  | Gate failure (`--fail-on` threshold breached, or no file was analyzed under `--fail-on`) or runtime error |
 | `2`  | Invalid command-line usage or invalid `.hefesto.yaml` |
 
 ### Gate Examples
@@ -385,7 +386,23 @@ hefesto analyze . --format-check --fail-on LOW      # fail the gate on drift
 hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
 hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
 hefesto analyze .                        # always exit 0 (report only)
+hefesto analyze . --fail-on high --allow-no-files   # an empty run keeps exit 0
 ```
+
+A run that analyzes no files (empty directory, only unsupported files, or every
+file excluded) is never reported as a pass: the report says "No files were
+analyzed", a warning naming the path goes to stderr, and with `--fail-on` the
+gate fails with exit 1. When files were left out as vendored JavaScript, the
+warning names how many and suggests `--include-vendored`.
+
+For runs that are empty on purpose (a changed-files-only job on a PR that
+touches only Markdown, a monorepo matrix entry with no supported sources), pass
+`--allow-no-files` (the Action's `allow_no_files: 'true'` input passes it for
+you). Only the exit code changes: the run keeps exit 0 and prints "Gate
+skipped: no files were analyzed (--allow-no-files)", while "Files analyzed: 0",
+"No files were analyzed" and the stderr warning are still printed. It is a
+command-line flag only: `.hefesto.yaml` cannot set it (an `allow_no_files` key
+is rejected as unknown, exit 2), so a shared config never turns this check off.
 
 ---
 

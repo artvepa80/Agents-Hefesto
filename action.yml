@@ -14,6 +14,10 @@ inputs:
     description: 'Exit with error if issues found at or above this severity (CRITICAL, HIGH, MEDIUM, LOW)'
     required: false
     default: 'CRITICAL'
+  allow_no_files:
+    description: 'true: pass --allow-no-files to hefesto analyze, so a run that analyzes no files keeps exit 0 under fail_on (for intentionally empty targets). The "no files were analyzed" warning is still printed. Default false: an empty run fails the gate.'
+    required: false
+    default: 'false'
   min_severity:
     description: 'Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW). INFO is accepted for backward compatibility and treated as LOW.'
     required: false
@@ -73,6 +77,7 @@ runs:
       env:
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_FAIL_ON: ${{ inputs.fail_on }}
+        INPUT_ALLOW_NO_FILES: ${{ inputs.allow_no_files }}
         INPUT_MIN_SEVERITY: ${{ inputs.min_severity }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_SARIF: ${{ inputs.sarif }}
