@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI
+
+- **COBOL corpus baseline runs on every PR and on push to main.** `cobol-corpus-baseline.yml` had a `paths` filter (COBOL analyzers, the engine, the script, the baseline), but the baseline also records the corpora's non-COBOL findings, so the YAML_INDENTATION fix changed it while the check was skipped: main failed `scripts/cobol_corpus_baseline.py compare` (zopeneditor-sample `YAML_INDENTATION: +0 -2`, `zapp.yaml:1` and `multiroot/sam/zapp.yaml:1`). The filter is removed and the 2 stale entries are dropped from `benchmark/cobol/baseline.json` (zopeneditor-sample 9 → 7 findings); CardDemo and GenApp are unchanged.
+
 ### Fixed
 
 - **COBOL013 cites the line of the STOP RUN/GOBACK/EXIT PROGRAM.** A COBOL sentence runs to the next period, so `MOVE ... ACCEPT ... DISPLAY ... STOP RUN.` spread over four lines is one sentence, and the message cited the line where that sentence started (line 18 instead of 21 in a payroll demo). The reported line of the dead code was already right. The terminator's own line is now cited; a separate helper returns the terminator's offset, and `ends_unconditionally()` (also used by COBOL014) still returns a bool, derived from that helper.
