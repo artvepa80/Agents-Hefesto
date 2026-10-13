@@ -28,3 +28,16 @@ had `except Exception: pass` and dropped the whole file.
 ## Not merged
 Arturo decides tomorrow; otherwise it goes out in 4.17.1. Once merged, apply
 `/workspace/ruleset-15985908-py314.json` (adds lint-and-test (3.14) and multilang-smoke (3.14)).
+
+## Addition (16:5x Lima): zero checked files is never PASS
+- Reproduced on main (b6bdc4e…25177d5) and on the previous head eb100a5, Python 3.13 and 3.14:
+  an empty directory → PASS exit 0; a directory whose only file is unparseable → PASS exit 0
+  (eb100a5 already listed "Skipped 1").
+- Tests first (7253959): empty directory and all-skipped → "No test files were checked",
+  "N skipped", exit 2; one good file + one bad → PASS exit 0, `checked_files == 1`.
+- `test_print_report_no_contradictions` asserted PASS with nothing checked; it now sets
+  `checked_files = 1` (it tests the PASS text, not the zero case).
+- Classifiers 3.13 and 3.14 in pyproject.toml.
+- Results: tests/validators 42 passed on 3.13 and 3.14; CLI on both: exit 2 in both cases.
+- Note: `hefesto check-test-contradictions tests` on this repo reports 100 contradictions
+  (exit 1), which a 3.14 run used to hide behind the false PASS. Not addressed in this PR.

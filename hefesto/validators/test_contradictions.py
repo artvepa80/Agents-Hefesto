@@ -66,6 +66,8 @@ class TestContradictionDetector:
         self.assertions: List[TestAssertion] = []
         # (path, reason) for files that could not be read or parsed
         self.skipped_files: List[Tuple[Path, str]] = []
+        # number of test files actually parsed and checked
+        self.checked_files = 0
 
     def _parse_test_file(self, file_path: Path) -> None:
         """Parse a test file and extract assertions.
@@ -81,6 +83,7 @@ class TestContradictionDetector:
         except (SyntaxError, UnicodeDecodeError) as exc:
             self.skipped_files.append((file_path, f"{type(exc).__name__}: {exc}"))
             return
+        self.checked_files += 1
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
@@ -351,6 +354,10 @@ class TestContradictionDetector:
             print(f"\n⚠️  Skipped {len(self.skipped_files)} file(s) that could not be parsed:")
             for path, reason in self.skipped_files:
                 print(f"  - {path}: {reason}")
+        if self.checked_files == 0:
+            print("\n❌ Test Contradiction Check: No test files were checked")
+            print(f"0 test files checked, {len(self.skipped_files)} skipped.")
+            return
         if not contradictions:
             print("\n✅ Test Contradiction Check: PASS")
             print("No contradictory test assertions found.")
@@ -396,6 +403,8 @@ def main():
         sys.exit(2)
     detector.print_report(contradictions)
 
+    if detector.checked_files == 0:
+        sys.exit(2)
     # Exit with error code if contradictions found
     if contradictions:
         sys.exit(1)

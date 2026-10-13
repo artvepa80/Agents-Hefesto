@@ -718,6 +718,10 @@ def check_test_contradictions(test_directory: str):
         return
     detector.print_report(contradictions)
 
+    # Nothing checked is never a PASS (empty directory, or every file skipped)
+    if detector.checked_files == 0:
+        _exit(2)
+        return
     # Exit with error if contradictions found
     if contradictions:
         _exit(1)
