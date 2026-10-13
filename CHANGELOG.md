@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **COBOL004 now flags PIC X byte views of COMP-5 fields.** The byte-view exemption (a binary integer overlaid by PIC X bytes of exactly its size, e.g. reading a VSAM file status) covered every binary usage. COMP-5 is native binary: its byte order follows the platform, so the same PIC X view reads different bytes on z/OS (big-endian) and x86 (little-endian). The exemption now applies only to COMP, COMPUTATIONAL, BINARY and COMP-4; a byte view of COMP-5/COMPUTATIONAL-5 (signed or not, declared on the item or inherited from its group, in either REDEFINES direction) is reported. No change on CardDemo, GenApp or the zopeneditor sample.
+- **COBOL004 now flags PIC X byte views of COMP-5 fields.** The byte-view exemption (a binary integer overlaid by PIC X bytes of exactly its size, e.g. reading a VSAM file status) covered every binary usage. COMP-5 is native binary: its byte order follows the platform, so the same PIC X view reads different bytes on z/OS (big-endian) and x86 (little-endian). The exemption now applies only to COMP, COMPUTATIONAL, BINARY and COMP-4; a byte view of COMP-5/COMPUTATIONAL-5 (signed or not, declared on the item or inherited from its group, in either REDEFINES direction) is reported, with its own message: it names COMP-5's native byte order (big-endian on z/OS, little-endian on x86 with GnuCOBOL or Micro Focus) instead of the generic "can corrupt values" text, and suggests BINARY/COMP when the byte layout must be portable, or dropping the byte view. Every other COBOL004 finding keeps its message. No change on CardDemo, GenApp or the zopeneditor sample.
 
 ## [4.16.0] - 2026-10-12
 

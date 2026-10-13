@@ -873,6 +873,14 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
     return tuple(merged)
 
 
+def _is_native_byte_view(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
+    """A same-size PIC X byte view of COMP-5 (native byte order) data."""
+    original, redefined = _layout(items, orig_idx), _layout(items, idx)
+    members = _members(items, orig_idx) + _members(items, idx)
+    native = any(_USAGE_NATIVE_BINARY.search(m.clause) for m in members)
+    return native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original))
+
+
 def _is_intended_overlay(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
     """REDEFINES idioms that keep every value's bytes and meaning (not reported)."""
     original, redefined = _layout(items, orig_idx), _layout(items, idx)
@@ -959,23 +967,44 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
             continue
         if _is_intended_overlay(items, orig_idx, idx):
             continue
-        kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
+        message, suggestion = _redefines_text(items, orig_idx, idx, sensitive)
         issues.append(
             _issue(
                 file_path,
                 item.line,
                 AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
                 AnalysisIssueSeverity.HIGH,
-                f"'{item.name}' REDEFINES '{target}' with a different layout over "
-                f"{kinds} data. Reading or moving through the other view can corrupt "
-                "values or raise data exceptions (S0C7).",
-                "Use a single numeric view, or convert explicitly (MOVE to a display "
-                "field) instead of overlaying the storage.",
+                message,
+                suggestion,
                 "COBOL004",
                 0.85,
             )
         )
     return issues
+
+
+def _redefines_text(
+    items: List[_DataItem], orig_idx: int, idx: int, sensitive: List[str]
+) -> Tuple[str, str]:
+    """COBOL004 message and suggestion: COMP-5 byte views get their own."""
+    name, target = items[idx].name, items[orig_idx].name
+    if _is_native_byte_view(items, orig_idx, idx):
+        return (
+            f"'{name}' REDEFINES '{target}' as PIC X bytes of a COMP-5 field. COMP-5 "
+            "uses the platform's native byte order: big-endian on z/OS, little-endian "
+            "on x86 (GnuCOBOL, Micro Focus), so the byte view reads the same value as "
+            "different bytes on each platform.",
+            "Declare the field BINARY (or COMP) if its byte layout must be portable, "
+            "or drop the byte view and work with the numeric value.",
+        )
+    kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
+    return (
+        f"'{name}' REDEFINES '{target}' with a different layout over "
+        f"{kinds} data. Reading or moving through the other view can corrupt "
+        "values or raise data exceptions (S0C7).",
+        "Use a single numeric view, or convert explicitly (MOVE to a display "
+        "field) instead of overlaying the storage.",
+    )
 
 
 def _file_status_missing(file_path: str, missing: List[Tuple[int, str]]) -> AnalysisIssue:
