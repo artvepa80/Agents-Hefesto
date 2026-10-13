@@ -164,6 +164,7 @@ _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
     "format_check": _bool,
     "enable_memory_budget_gate": _bool,
     "copybook_paths": _string_list,
+    "include_vendored": _bool,
 }
 
 SUPPORTED_KEYS = tuple(_VALIDATORS)

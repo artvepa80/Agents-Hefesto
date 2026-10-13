@@ -61,7 +61,10 @@ class TestRootPathIsNotMatched:
     def test_cli_cd_into_root_and_analyze_dot(self, tmp_path):
         root = tmp_path / "app-build"
         _write(root / "src" / "app.py", PY_SOURCE)
-        env = dict(os.environ, HEFESTO_TELEMETRY="0")
+        # run this checkout, not whatever hefesto the interpreter has installed
+        repo_root = str(Path(__file__).resolve().parents[1])
+        pythonpath = os.pathsep.join(filter(None, [repo_root, os.environ.get("PYTHONPATH")]))
+        env = dict(os.environ, HEFESTO_TELEMETRY="0", PYTHONPATH=pythonpath)
         result = subprocess.run(
             [sys.executable, "-m", "hefesto.cli.main", "analyze", ".", "--fail-on", "HIGH"],
             cwd=root,

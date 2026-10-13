@@ -304,6 +304,7 @@ hefesto analyze . --format-check   # opt-in: also report Black formatting drift
 hefesto analyze . --config ci/hefesto.yaml    # explicit config file (see Configuration)
 hefesto analyze . --no-config                 # ignore .hefesto.yaml
 hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks outside the scan
+hefesto analyze . --include-vendored  # also analyze vendored/minified JS (skipped by default)
 
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
@@ -647,7 +648,24 @@ format_check: true          # --format-check  (needs: pip install "hefesto-ai[fo
 enable_memory_budget_gate: false  # --enable-memory-budget-gate
 copybook_paths:             # --copybook-path (COBOL copybook directories outside the scan)
   - ../copylib              # relative paths are resolved from this file's directory
+include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
 ```
+
+- **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,
+  `.git/`, `__pycache__/`, `dist/`, `build/`, `.mypy_cache/`,
+  `.pytest_cache/`, `.eggs/`, `*.egg-info/` (whole path components below the
+  analyzed path), plus vendored and minified JavaScript (`.js`, `.mjs`,
+  `.cjs`): `*.min.js` / `*-min.js` files, files under `vendor/`, `vendors/`,
+  `bower_components/` or `jspm_packages/`, and files under a `lib/`, `libs/`,
+  `plugins/`, `third_party/` or `thirdparty/` directory inside `static/`,
+  `assets/`, `public/` or `wwwroot/` (for example `static/js/libs/jquery.js`).
+  A top-level `lib/` is the project's own code and stays in scope, as do
+  non-JavaScript files under `vendor/` (Go, PHP). `--include-vendored` (or
+  `include_vendored: true`) analyzes the JavaScript ones again; a single file
+  given on the command line is always analyzed.
+  The summary says how many were left out (`N files skipped as vendored (use
+  --include-vendored)`; `meta.vendored_skipped` in JSON, a tool notification in
+  SARIF).
 
 - **Discovery:** Hefesto starts at the first path given to `hefesto analyze`
   (its directory if it is a file) and walks up to the repository root (the
