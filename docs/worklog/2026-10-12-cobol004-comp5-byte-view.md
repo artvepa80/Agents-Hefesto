@@ -1,0 +1,115 @@
+# 2026-10-12 — COBOL004: las vistas de bytes de COMP-5 ya no se eximen
+
+## Problema
+
+`_is_byte_view()` exime de COBOL004 un entero binario redefinido como bytes PIC X del
+mismo tamaño (idioma de CardDemo para leer el file status). La clase de uso venía de
+`_USAGE_BINARY`, que agrupa COMP/BINARY/COMP-4/COMP-5. COMP-5 es binario nativo: el
+orden de bytes depende de la plataforma (big-endian en z/OS, little-endian en x86), así
+que la misma vista PIC X lee bytes distintos en cada una. Eso sí es un riesgo de
+portabilidad y debe reportarse.
+
+## Cambio
+
+- Nuevo regex `_USAGE_NATIVE_BINARY` (`COMP-5` / `COMPUTATIONAL-5`).
+- `_is_intended_overlay()` calcula las cláusulas de los miembros de ambos lados antes del
+  chequeo de vista de bytes; si alguna declara COMP-5 (en el ítem o en su grupo), no
+  aplica la exención. `_is_byte_view()` no cambia de firma.
+- COMP, COMPUTATIONAL, BINARY y COMP-4 (big-endian en todas partes) mantienen la exención.
+
+## Tests (primero en rojo: 14 fallaban)
+
+`tests/test_cobol_phase3_leftovers.py`:
+- `test_comp5_byte_view_is_flagged`: COMP-5 / COMPUTATIONAL-5 / USAGE COMP-5 ×
+  9(4), S9(4), 9(9), S9(18) → reportado (con y sin signo).
+- `test_portable_binary_byte_view_still_skipped`: BINARY, COMP, COMP-4, COMPUTATIONAL,
+  USAGE BINARY × 9(4), S9(4) → no reportado.
+- `test_comp5_group_usage_is_flagged` (uso heredado del grupo) y
+  `test_comp5_reverse_direction_is_flagged` (PIC X redefinido como COMP-5).
+
+## Validación
+
+- Suite completa verde; recall 39/41 sin cambios.
+- CardDemo, cics-genapp, zopeneditor-sample: salida de `hefesto analyze --severity LOW`
+  idéntica antes y después (diff vacío).
+- extval: 7 repos con COMP-5 (Bank-of-Z, COBOL-Examples, cobol-on-wheelchair,
+  dbb-zappbuild, gcblunit, gnucobol, zapp-copy): COBOL004 idéntico antes y después.
+
+Riesgo de regresión: nuevos hallazgos COBOL004 en código con vistas de bytes de COMP-5.
+No se mergea el mismo día.
+
+## Mensaje propio (2026-10-13)
+
+La vista de bytes de COMP-5 recibía el mensaje genérico ("a different layout over binary
+(COMP) data ... can corrupt values"), que es incorrecto: mismo tamaño, mismos bytes, es
+COMP-5 y no COMP, y el riesgo es leer bytes distintos en z/OS y en x86, no corrupción en
+la misma plataforma.
+
+- `_is_native_byte_view()` detecta el caso; `_redefines_text()` elige mensaje y sugerencia.
+  Severidad y regla sin cambios (COBOL004, HIGH).
+- Mensaje: "'X' REDEFINES 'Y' as PIC X bytes of a COMP-5 field. COMP-5 uses the platform's
+  native byte order: big-endian on z/OS, little-endian on x86 (GnuCOBOL, Micro Focus), so
+  the byte view reads the same value as different bytes on each platform."
+- Sugerencia: "Declare the field BINARY (or COMP) if its byte layout must be portable, or
+  drop the byte view and work with the numeric value."
+- Tests primero (2 en rojo): el mensaje cita byte order, COMP-5, z/OS, x86 y big-endian,
+  en ambas direcciones; BINARY con tamaño distinto o vista de dígitos, y COMP-5 que no es
+  vista de bytes del mismo tamaño, conservan el mensaje genérico.
+- CardDemo, cics-genapp, zopeneditor-sample y los 7 repos de extval con COMP-5: hallazgos
+  COBOL (línea, regla, mensaje) idénticos a 4.16.0. Recall 39/41.
+
+## Sugerencia: truncamiento (2026-10-13)
+
+"Declare the field BINARY (or COMP)" podía truncar en silencio: con TRUNC(STD) (default de
+IBM) BINARY/COMP truncan a los dígitos del PIC, mientras COMP-5 usa todo el rango binario
+(PIC 9(4) COMP-5 llega a 65535, BINARY solo a 9999). Ensanchar el PIC cambia el tamaño
+(9(5) = 4 bytes) y rompe la vista de bytes. Nueva sugerencia: BINARY solo si todos los
+valores caben en los dígitos del PIC, o compilar con TRUNC(BIN); si no, quitar la vista de
+bytes. Test primero (`test_comp5_suggestion_warns_about_truncation`, rojo → verde).
+
+## Regla de release
+
+Release rule: no release until the COBOL016 PR lands (avoid the COBOL004->COBOL016
+rule-id change in code scanning).
+
+## Sugerencia: dígitos reales, -fnotrunc, llamadas C/SQL (2026-10-13)
+
+- El límite de BINARY usa los dígitos reales del campo (10^dígitos − 1 bajo TRUNC(STD)):
+  9(4) → 9,999; 9(9) → 999,999,999. No se imprime capacidad de COMP-5 ("COMP-5 uses the
+  full binary capacity of the field"): depende del compilador.
+- Se nombra `-fnotrunc` (GnuCOBOL) junto a `TRUNC(BIN)` (IBM).
+- Una frase: si el campo se pasa a llamadas C, SQL u OS (p. ej. SQLCA), no cambiar su
+  USAGE; quitar la vista de bytes. Sin lógica de detección; los hallazgos no cambian.
+- "widening the PIC changes the size" → "can change the size".
+- Verificado con GnuCOBOL 3.2.0 (Debian `gnucobol3`, x86_64), `FUNCTION BYTE-LENGTH`:
+
+  | Opciones | PIC 99 COMP-5 | PIC 99 BINARY | PIC 9(4) COMP-5 |
+  |---|---|---|---|
+  | (default) | 1 | 1 | 2 |
+  | `-std=ibm` | 1 | 2 | 2 |
+  | `-std=mf` | 1 | 1 | 2 |
+
+  También medido: MOVE/ADD 50000 a `9(4) BINARY` → 0000 por defecto, 50000 con `-fnotrunc`.
+- Tests primero (4 en rojo): truncamiento, TRUNC(STD), TRUNC(BIN), -fnotrunc, la nota
+  C/SQL/SQLCA, el límite real (9(4), S9(4), 9(9), S9(18)) y que no aparezca ningún número
+  de capacidad COMP-5.
+
+## Notas para el PR de COBOL016 (no en este PR)
+
+- Tratar BINARY-CHAR/SHORT/LONG/LONG-LONG/DOUBLE/C-LONG (SIGNED/UNSIGNED) como binario
+  nativo. Hoy `_USAGE_BINARY` no los reconoce (el lookahead `(?![\w-])` falla en el guion),
+  `_usage_class()` da `None` y, sin PIC, `_elementary_class(None, None)` los manda a
+  "alphanumeric": invisibles para COBOL004 (ni vista de bytes ni reinterpretación, p. ej.
+  `BINARY-LONG` redefinido como `PIC 9(4)` no se reporta). Medido en GnuCOBOL 3.2 x86_64:
+  tamaños 1/2/4/8/8; BINARY-SHORT 258 → `02 01`, BINARY-DOUBLE 258 → `02 01 00 …`.
+- Mensaje: "native byte order (platform-dependent)"; no son tipos de IBM Enterprise COBOL,
+  así que no encuadrar como z/OS vs x86.
+- `_binary_bytes()` asume tamaños IBM (1-4 dígitos = 2 bytes). En GnuCOBOL, COMP-5 de 1-2
+  dígitos ocupa 1 byte incluso con `-std=ibm` (z/OS: 2); BINARY 1-2 dígitos ocupa 1 byte
+  por defecto y 2 con `-std=ibm`.
+- CobolCraft (extval, `e8c420d`) como control de falsos positivos: 2,328 líneas con
+  BINARY-* (1,804 LONG, 402 CHAR, 81 LONG-LONG, 41 SHORT), ningún COMP-5, sin vistas
+  PIC X sobre ellos.
+- Bank-of-Z `src/base/cics/cobol/INQACC.cbl:164-166` como fixture del PR de POINTER: un
+  POINTER (8 bytes en GnuCOBOL x86_64) redefinido como `PIC X(8)` y como `PIC 9(8) BINARY`
+  (4 bytes, big-endian); hoy sin hallazgo COBOL004.
