@@ -373,7 +373,7 @@ class TestFormatNotice:
 
 # COMP-5 is native binary: byte order follows the platform (big-endian on z/OS,
 # little-endian on x86), so a PIC X view reads different bytes on each one.
-# COMP, BINARY and COMP-4 are big-endian everywhere and keep the exemption.
+# COMP, BINARY and COMP-4 are big-endian by default on every compiler and keep the exemption.
 def _usage_view(usage, binary_pic, *byte_pics):
     data = [("A", f"01  TWO-BYTES-BIN           PIC {binary_pic} {usage}.")]
     data.append(("A", "01  TWO-BYTES-ALPHA         REDEFINES TWO-BYTES-BIN."))

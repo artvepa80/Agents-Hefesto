@@ -33,7 +33,7 @@ test para caber en la columna 72 del programa de prueba (CobolCraft es formato l
 
 ## Delta de COBOL004 (solo este PR, contra 4.16.0)
 
-CardDemo 16 → 16, GenApp 0 → 0, zopeneditor 0 → 0 y 20 repos COBOL de extval (Bank-of-Z 6,
+CardDemo 16 → 16, GenApp 0 → 0, zopeneditor 0 → 0 y 20 repos COBOL de un corpus local de 34 repos públicos (Bank-of-Z 6,
 COBOL-Examples 1, cobol-programming-course 1, opensourcecobol4j 77, el resto 0, CobolCraft
 incluido): **delta 0, ningún hallazgo nuevo ni perdido**. CobolCraft (272 archivos) solo
 tiene REDEFINES BINARY-xxx de la misma especie con y sin signo. Recall 39/41.

@@ -5,7 +5,7 @@ Three patterns, each with its own message and suggestion:
 * native byte view: PIC X bytes over COMP-5 or BINARY-SHORT/LONG/LONG-LONG/
   DOUBLE (native byte order: big-endian on z/OS, little-endian on x86);
 * BINARY over POINTER: a POINTER is stored in native byte order, BINARY/COMP
-  is big-endian everywhere, so on x86 the number is the address byte-swapped
+  is big-endian by default on every compiler, so on x86 the number is the address byte-swapped
   (here COMP-5 is the portable view, BINARY the dangerous one);
 * 4-byte POINTER view: a POINTER is 4 bytes on z/OS (31-bit) and 8 bytes on
   64-bit platforms.

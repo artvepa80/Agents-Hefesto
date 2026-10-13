@@ -32,7 +32,7 @@ portabilidad y debe reportarse.
 - Suite completa verde; recall 39/41 sin cambios.
 - CardDemo, cics-genapp, zopeneditor-sample: salida de `hefesto analyze --severity LOW`
   idéntica antes y después (diff vacío).
-- extval: 7 repos con COMP-5 (Bank-of-Z, COBOL-Examples, cobol-on-wheelchair,
+- Corpus local de 34 repos públicos: 7 repos con COMP-5 (Bank-of-Z, COBOL-Examples, cobol-on-wheelchair,
   dbb-zappbuild, gcblunit, gnucobol, zapp-copy): COBOL004 idéntico antes y después.
 
 Riesgo de regresión: nuevos hallazgos COBOL004 en código con vistas de bytes de COMP-5.
@@ -55,7 +55,7 @@ la misma plataforma.
 - Tests primero (2 en rojo): el mensaje cita byte order, COMP-5, z/OS, x86 y big-endian,
   en ambas direcciones; BINARY con tamaño distinto o vista de dígitos, y COMP-5 que no es
   vista de bytes del mismo tamaño, conservan el mensaje genérico.
-- CardDemo, cics-genapp, zopeneditor-sample y los 7 repos de extval con COMP-5: hallazgos
+- CardDemo, cics-genapp, zopeneditor-sample y 7 repos de un corpus local de 34 repos públicos con COMP-5: hallazgos
   COBOL (línea, regla, mensaje) idénticos a 4.16.0. Recall 39/41.
 
 ## Sugerencia: truncamiento (2026-10-13)
@@ -107,7 +107,7 @@ rule-id change in code scanning).
 - `_binary_bytes()` asume tamaños IBM (1-4 dígitos = 2 bytes). En GnuCOBOL, COMP-5 de 1-2
   dígitos ocupa 1 byte incluso con `-std=ibm` (z/OS: 2); BINARY 1-2 dígitos ocupa 1 byte
   por defecto y 2 con `-std=ibm`.
-- CobolCraft (extval, `e8c420d`) como control de falsos positivos: 2,328 líneas con
+- CobolCraft (corpus local de 34 repos públicos, `e8c420d`) como control de falsos positivos: 2,328 líneas con
   BINARY-* (1,804 LONG, 402 CHAR, 81 LONG-LONG, 41 SHORT), ningún COMP-5, sin vistas
   PIC X sobre ellos.
 - Bank-of-Z `src/base/cics/cobol/INQACC.cbl:164-166` como fixture del PR de POINTER: un

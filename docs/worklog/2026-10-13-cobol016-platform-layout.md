@@ -41,7 +41,7 @@ nativas limpias; vista con signo sigue en COBOL004. Los tests de COMP-5 de #101 
 ## Corpus (contra 4.16.0)
 
 COBOL004 sin cambios en CardDemo (16), GenApp (0), zopeneditor (0) y los 20 repos COBOL de
-extval. COBOL016: 4 lugares (6 hallazgos contando la copia zapp-copy), todos BINARY sobre
+un corpus local de 34 repos públicos. COBOL016: 4 lugares (6 hallazgos contando la copia zapp-copy), todos BINARY sobre
 POINTER, todos reales como patrón; en la práctica es código solo para z/OS:
 
 | Archivo:línea | Vista | Nota |
@@ -71,3 +71,16 @@ COBOL016 y nota de BINARY-xxx en COBOL004. Docstring del analizador y
    diff restante es solo COBOL016.
 4. Release después de B: así code scanning nunca ve el cambio de rule-id COBOL004 →
    COBOL016 para las vistas de COMP-5.
+
+## Correcciones (2026-10-13, revisión de Arturo)
+
+- Sugerencia BINARY sobre POINTER: la anterior ("COMP-5 del tamaño del puntero") llevaba a
+  `PIC 9(9) COMP-5` en 31 bits, que COBOL016 marca como vista de 4 bytes (test
+  `test_comp5_of_four_bytes_over_pointer_is_a_four_byte_view`). Texto nuevo: aritmética de
+  direcciones sobre el POINTER (portable); vista numérica = dependiente de plataforma,
+  `PIC 9(18) COMP-5` en 64 bits. Test: esa vista no dispara COBOL016.
+- "big-endian everywhere" → "big-endian by default on every compiler". Verificado con
+  cobc 3.2.0: los 13 `config/*.conf` traen `binary-byteorder: big-endian`; con
+  `-fbinary-byteorder=native`, `PIC 9(4) BINARY` = 258 se guarda como `0201` (x86).
+- README COBOL016: por qué `PIC X(8)` sobre POINTER es limpio (los bytes del puntero nunca
+  se serializan; X(8) cabe en toda plataforma, X(4) trunca en 64 bits).

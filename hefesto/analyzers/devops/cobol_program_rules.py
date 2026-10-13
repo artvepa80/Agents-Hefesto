@@ -1149,12 +1149,13 @@ def _platform_text(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[
         extra = f" The view is also {size} bytes. {_POINTER_SIZES}." if size == 4 else ""
         return (
             f"'{name}' REDEFINES pointer '{target}' as a BINARY/COMP number. A POINTER "
-            "is stored in native byte order, but BINARY/COMP is big-endian everywhere: on "
+            "is stored in native byte order, but BINARY/COMP is big-endian by default on "
+            "every compiler (GnuCOBOL: unless -fbinary-byteorder=native): on "
             "little-endian platforms (x86 with GnuCOBOL or Micro Focus) the number is the "
             f"address with its bytes reversed.{extra}",
-            "View the pointer as COMP-5 of the pointer's size (PIC 9(18) COMP-5 for 8 "
-            "bytes; native byte order, like the pointer itself) or as PIC X bytes; use "
-            "SET ... TO ADDRESS OF / SET pointer UP BY to work with addresses.",
+            "Do address arithmetic on the POINTER itself (SET ptr UP BY/DOWN BY n, SET ptr "
+            "TO ADDRESS OF ..., IF ptr = ...); that is portable. A numeric view of an "
+            "address is platform-dependent; on a 64-bit platform use PIC 9(18) COMP-5.",
         )
     return (
         f"'{name}' REDEFINES pointer '{target}' with a 4-byte view. {_POINTER_SIZES}, "
