@@ -95,8 +95,8 @@ class TestContradictionDetector:
             # Handle assert statements (direct assert)
             if isinstance(node, ast.Assert):
                 assertion = self._parse_assert_statement(node, func_node.name, file_path)
-                if assertion:
-                    self.assertions.append(assertion)
+                call = node.test.left if isinstance(node.test, ast.Compare) else node.test
+                self._keep(assertion, call)
 
             # Handle assertEqual, assertTrue, assertFalse, etc.
             elif isinstance(node, ast.Call):
@@ -106,8 +106,7 @@ class TestContradictionDetector:
                         assertion = self._parse_unittest_assertion(
                             node, func_node.name, file_path, method_name
                         )
-                        if assertion:
-                            self.assertions.append(assertion)
+                        self._keep(assertion, self._unittest_call(node))
 
     def _parse_assert_statement(
         self, node: ast.Assert, test_func: str, file_path: str
@@ -254,6 +253,36 @@ class TestContradictionDetector:
 
         return None
 
+    @staticmethod
+    def _unittest_call(node: ast.Call) -> Optional[ast.AST]:
+        """The call under test in assertEqual(call, x) / assertTrue(call == x)."""
+        if not node.args:
+            return None
+        first = node.args[0]
+        return first.left if isinstance(first, ast.Compare) else first
+
+    @staticmethod
+    def _is_literal(node: ast.AST) -> bool:
+        """A Constant, or a list/tuple whose elements are all Constants."""
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, (ast.List, ast.Tuple)):
+            return all(isinstance(e, ast.Constant) for e in node.elts)
+        return False
+
+    def _is_comparable_call(self, node: ast.AST) -> bool:
+        """Only calls whose result depends on nothing but the call itself are compared.
+
+        The target must be a plain function name (``add(...)``, not ``obj.add(...)``)
+        and every argument a literal. ``len(issues)`` in two tests reads two different
+        local ``issues``, so equal text does not mean equal input.
+        """
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            return False
+        if any(not self._is_literal(a) for a in node.args):
+            return False
+        return all(k.arg is not None and self._is_literal(k.value) for k in node.keywords)
+
     def _extract_function_name(self, call_node: ast.Call) -> str:
         """Extract function name from call node."""
         if hasattr(call_node.func, "id"):
@@ -297,6 +326,10 @@ class TestContradictionDetector:
             return node.attr
         else:
             return "?"
+
+    def _keep(self, assertion: Optional[TestAssertion], call: ast.AST) -> None:
+        if assertion is not None and self._is_comparable_call(call):
+            self.assertions.append(assertion)
 
     def find_contradictions(self) -> List[Contradiction]:
         """Find all contradictions in test suite."""

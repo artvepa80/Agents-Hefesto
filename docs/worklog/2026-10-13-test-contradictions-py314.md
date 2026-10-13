@@ -39,5 +39,19 @@ Arturo decides tomorrow; otherwise it goes out in 4.17.1. Once merged, apply
   `checked_files = 1` (it tests the PASS text, not the zero case).
 - Classifiers 3.13 and 3.14 in pyproject.toml.
 - Results: tests/validators 42 passed on 3.13 and 3.14; CLI on both: exit 2 in both cases.
-- Note: `hefesto check-test-contradictions tests` on this repo reports 100 contradictions
-  (exit 1), which a 3.14 run used to hide behind the false PASS. Not addressed in this PR.
+- ~~Note: the 100 contradictions were hidden by the 3.14 bug.~~ **Correction:** that's wrong.
+  `check-test-contradictions tests` gives "Total: 100 contradiction(s)" on Python 3.13
+  with main and with PyPI 4.16.0 (Python 3.13.5). They were never hidden: they are false
+  positives from comparing calls whose arguments are local names (e.g. `len(issues) == 1` vs
+  `len(issues) == 3` in different tests).
+
+## Addition (17:5x Lima): conservative comparison
+- Rule: compare only when the call target is an `ast.Name` (plain function) and every argument
+  (positional and keyword) is a literal: `ast.Constant` or a List/Tuple of Constants. Not
+  compared: names, attributes, calls, `*args`/`**kw`, dicts, methods (`obj.f`, `self.f`).
+  Applied the same way to `assert f(...) == x` and to unittest `assertEqual/assertTrue/assertFalse`.
+- Tests first: add(1, 2) == 3 vs == 4 still reported (also with kwargs and list/tuple
+  literals); len(issues), len(result.issues), len(get()), obj.add/self.add, *args, **kw,
+  [1, x], {1: 2} not reported; assertEqual follows the same rule; our own tests/ → 0.
+- Results: tests/validators 56 passed on 3.13 and 3.14; full suite on 3.13: 1272 passed;
+  `hefesto check-test-contradictions tests` → PASS, exit 0 (was 100, exit 1).

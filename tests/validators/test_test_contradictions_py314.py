@@ -13,8 +13,7 @@ from hefesto.cli.main import cli
 from hefesto.validators.test_contradictions import TestContradictionDetector
 
 CONTRADICTORY = (
-    "def test_a():\n    assert add(1, 2) == 3\n\n"
-    "def test_b():\n    assert add(1, 2) == 4\n"
+    "def test_a():\n    assert add(1, 2) == 3\n\n" "def test_b():\n    assert add(1, 2) == 4\n"
 )
 # Same call shape, but a name argument: what `issues` holds differs per test.
 NON_LITERAL = (
@@ -99,7 +98,6 @@ def test_one_good_file_is_checked(tmp_path):
     result = CliRunner().invoke(cli, ["check-test-contradictions", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "PASS" in result.output
-
 
 
 # ------------------------------------- conservative: plain function + literal args
