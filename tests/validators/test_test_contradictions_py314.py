@@ -63,3 +63,35 @@ def test_internal_error_exits_non_zero(tmp_path, monkeypatch):
     assert result.exit_code not in (0, 1), result.output
     assert "PASS" not in result.output
     assert "internal error" in result.output.lower()
+
+
+# --------------------------------------------- zero checked files is never PASS
+
+
+def test_empty_directory_is_not_pass(tmp_path):
+    result = CliRunner().invoke(cli, ["check-test-contradictions", str(tmp_path)])
+    assert result.exit_code not in (0, 1), result.output
+    assert "PASS" not in result.output
+    assert "No test files were checked" in result.output
+    assert "0 skipped" in result.output
+
+
+def test_every_file_skipped_is_not_pass(tmp_path):
+    (tmp_path / "test_bad.py").write_text("def test_(:\n")
+    (tmp_path / "test_bad2.py").write_text("class (:\n")
+    result = CliRunner().invoke(cli, ["check-test-contradictions", str(tmp_path)])
+    assert result.exit_code not in (0, 1), result.output
+    assert "PASS" not in result.output
+    assert "No test files were checked" in result.output
+    assert "2 skipped" in result.output
+
+
+def test_one_good_file_is_checked(tmp_path):
+    (tmp_path / "test_bad.py").write_text("def test_(:\n")
+    (tmp_path / "test_ok.py").write_text("def test_a():\n    assert f(1) == 1\n")
+    detector = TestContradictionDetector(str(tmp_path))
+    assert detector.find_contradictions() == []
+    assert detector.checked_files == 1
+    result = CliRunner().invoke(cli, ["check-test-contradictions", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert "PASS" in result.output
