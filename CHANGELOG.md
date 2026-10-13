@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### CI
 
 - **Python 3.14** added to the `lint-and-test` and `multilang-smoke` matrices.
+- **multilang-smoke prefetches the 6 grammars** before the smoke and the unit tests that need them: `tree_sitter_language_pack.download([...])` with 3 attempts and exponential backoff, into `TREE_SITTER_LANGUAGE_PACK_CACHE_DIR` under `$RUNNER_TEMP`. A download failure fails that step with `::error::` instead of a mid-test PASS/FAIL. The smoke and the unit-test steps reuse the same cache dir.
 
 ### Documentation
 
