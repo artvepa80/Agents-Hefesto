@@ -421,3 +421,40 @@ def test_comp5_reverse_direction_is_flagged():
         ),
     )
     assert _cobol004(src)
+
+
+def test_comp5_byte_view_message_names_byte_order():
+    (issue,) = _cobol004(_usage_view("COMP-5", "S9(4)", "X", "X"))
+    text = issue.message.lower()
+    assert "byte order" in text and "comp-5" in text
+    assert "z/os" in text and "x86" in text and "big-endian" in text
+    assert "corrupt" not in text and "(comp) data" not in text
+    assert "BINARY" in issue.suggestion and "byte view" in issue.suggestion
+
+
+def test_comp5_reverse_byte_view_message_names_byte_order():
+    src = _program(
+        "RDF",
+        data=(
+            ("A", "01  BYTES-VIEW."),
+            ("B", "05  B1   PIC X."),
+            ("B", "05  B2   PIC X."),
+            ("A", "01  BIN-VIEW REDEFINES BYTES-VIEW PIC 9(4) COMP-5."),
+        ),
+    )
+    (issue,) = _cobol004(src)
+    assert "byte order" in issue.message
+
+
+@pytest.mark.parametrize(
+    "usage, pics",
+    [
+        ("BINARY", ("X", "X", "X")),  # size mismatch over portable binary
+        ("BINARY", ("X", "9")),  # digit view
+        ("COMP-5", ("X", "X", "X")),  # COMP-5 but not a same-size byte view
+        ("COMP-5", ("X", "9")),
+    ],
+)
+def test_other_cases_keep_the_generic_message(usage, pics):
+    (issue,) = _cobol004(_usage_view(usage, "9(4)", *pics))
+    assert "can corrupt" in issue.message and "byte order" not in issue.message
