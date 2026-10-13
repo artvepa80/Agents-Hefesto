@@ -56,7 +56,7 @@ After completing ANY non-trivial work:
 - [ ] Update impacted docs (at minimum `CHANGELOG.md`; `README.md` if version/features changed).
 - [ ] Run repo verification: `source venv/bin/activate && black --check hefesto/ tests/ && isort --check hefesto/ tests/ && flake8 hefesto/ tests/ && pytest tests/ -q`
 - [ ] Commit with Conventional Commits format, then push the branch.
-- [ ] Never move/delete tags without explicit user approval. Single exception: the tag `v4`, the floating alias of the 4.x line used as `artvepa80/Agents-Hefesto@v4`, which `release.yml` force-moves to each new v4.x.y release. No other tag moves: not exact version tags (`v4.15.1`, ...), and no other alias exists or may be created without explicit approval.
+- [ ] Never run a destructive or irreversible operation without Arturo's explicit OK first, every time: moving or deleting tags; deleting or archiving repositories, branches (including a PR branch after merge), releases or tags; changing repository visibility. Do not request broader token scopes (e.g. `delete_repo`) to get around a refusal; stop and ask. For tags, the single exception is the tag `v4`, the floating alias of the 4.x line used as `artvepa80/Agents-Hefesto@v4`, which `release.yml` force-moves to each new v4.x.y release. No other tag moves: not exact version tags (`v4.15.1`, ...), and no other alias exists or may be created without explicit approval.
 - [ ] Update `MEMORY.md` if project status changed (new blockers, resolved items, version bumps).
 
 ### PyPI Publishing Rule
