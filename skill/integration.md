@@ -193,4 +193,11 @@ The analyzer always excludes these directories:
 `.venv/`, `venv/`, `.tox/`, `node_modules/`, `.git/`, `__pycache__/`,
 `dist/`, `build/`, `.mypy_cache/`, `.pytest_cache/`, `.eggs/`, `.egg-info/`
 
+It also skips vendored and minified JavaScript (`.js`, `.mjs`, `.cjs`):
+`*.min.js` / `*-min.js`, files under `vendor/`, `vendors/`, `bower_components/`
+or `jspm_packages/`, and files under `lib/`, `libs/`, `plugins/`,
+`third_party/` or `thirdparty/` inside `static/`, `assets/`, `public/` or
+`wwwroot/`. `--include-vendored` (or `include_vendored: true` in
+`.hefesto.yaml`) analyzes them.
+
 Additional excludes via `--exclude` flag.

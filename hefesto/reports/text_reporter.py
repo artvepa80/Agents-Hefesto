@@ -6,7 +6,7 @@ Generates formatted text output for the terminal with colors and structure.
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -53,7 +53,7 @@ class TextReporter:
         lines.append("")
 
         # Summary
-        lines.append(self._format_summary(report.summary))
+        lines.append(self._format_summary(report.summary, report.meta))
         lines.append("")
 
         # Issues by severity
@@ -89,12 +89,17 @@ class TextReporter:
         reset = self.COLORS["RESET"]
         return f"{bold}🔨 HEFESTO CODE ANALYSIS{reset}\n" "========================"
 
-    def _format_summary(self, summary) -> str:
+    def _format_summary(self, summary, meta: Optional[Dict[str, Any]] = None) -> str:
         """Format summary section."""
         bold = self.COLORS["BOLD"]
         reset = self.COLORS["RESET"]
         lines = [f"{bold}📊 Summary:{reset}"]
         lines.append(f"   Files analyzed: {summary.files_analyzed}")
+        vendored = (meta or {}).get("vendored_skipped") or {}
+        if vendored.get("count"):
+            from hefesto.core.analyzer_engine import vendored_skip_message
+
+            lines.append(f"   {vendored_skip_message(vendored['count'])}")
         lines.append(f"   Issues found: {summary.total_issues}")
 
         if summary.total_issues > 0:
