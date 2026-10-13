@@ -1,5 +1,5 @@
 name: 'Hefesto Code Guardian'
-description: 'Deterministic pass/fail check for agent-written code: declared-vs-real drift, secrets, IaC and COBOL, with SARIF.'
+description: 'Deterministic pass/fail gate for Python, IaC, SQL and COBOL: declared-vs-real drift, secrets and risky code, with SARIF.'
 author: 'Narapa LLC'
 branding:
   icon: 'check-circle'

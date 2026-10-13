@@ -33,7 +33,7 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `@v4.16.0` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.16.0` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/#pricing).
 
@@ -165,7 +165,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
-| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [docs/telemetry.md](docs/telemetry.md) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:
 
@@ -285,7 +285,7 @@ pointing to the install command (also exposed via
 
 ³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 
-COBOL details (source format, per-rule behaviour, COPY expansion, measured recall, performance, SARIF): [docs/cobol.md](docs/cobol.md).
+COBOL details (source format, per-rule behaviour, COPY expansion, measured recall, performance, SARIF): [docs/cobol.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/cobol.md).
 
 ---
 
@@ -472,7 +472,7 @@ See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
 
 ## REST API (PRO), OMEGA Guardian and IRIS
 
-`hefesto serve` (PRO) exposes the analyzer over HTTP: [docs/rest-api.md](docs/rest-api.md). OMEGA Guardian and the IRIS production-monitoring agent: [docs/omega-iris.md](docs/omega-iris.md).
+`hefesto serve` (PRO) exposes the analyzer over HTTP: [docs/rest-api.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/rest-api.md). OMEGA Guardian and the IRIS production-monitoring agent: [docs/omega-iris.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/omega-iris.md).
 
 ---
 
@@ -691,11 +691,11 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 ## Telemetry
 
-Off by default; opt-in only. What is sent and how to turn it on or off: [docs/telemetry.md](docs/telemetry.md).
+The CLI sends one anonymous usage ping per run by default (no code, file paths or PII); turn it off with HEFESTO_TELEMETRY=0. The GitHub Action sends nothing unless you set telemetry: 1. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
 
 ## Changelog
 
-Release history: [CHANGELOG.md](CHANGELOG.md).
+Release history: [CHANGELOG.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/CHANGELOG.md).
 
 ---
 

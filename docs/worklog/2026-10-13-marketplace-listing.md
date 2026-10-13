@@ -1,6 +1,6 @@
 # 2026-10-13 — Listing del Marketplace (hefesto-code-guardian)
 
-Auditoría de Hefesto Growth (`/workspace/marketplace-audit.md`), verificada punto por punto.
+Auditoría de Hefesto Growth (documento interno de auditoría), verificada punto por punto.
 
 ## Verificado y aplicado
 
@@ -52,3 +52,25 @@ Auditoría de Hefesto Growth (`/workspace/marketplace-audit.md`), verificada pun
 
 pytest 1255 passed, 8 skipped (1 error local conocido); dogfood 279 archivos / 389
 hallazgos, igual que main; README Parity y Capabilities Parity OK.
+
+## Correcciones (2026-10-13, revisión de Arturo)
+
+- **Telemetría (bloqueante)**: el README decía "Off by default; opt-in only", falso.
+  `hefesto/telemetry/client.py::remote_ping_enabled()` devuelve True salvo
+  `HEFESTO_TELEMETRY` en 0/false/no/off (opt-out); el Action tiene `telemetry: '0'` por
+  defecto; `docs/telemetry.md` ya decía "collects anonymous usage data by default". Frase
+  nueva en el README: "The CLI sends one anonymous usage ping per run by default (no code,
+  file paths or PII); turn it off with HEFESTO_TELEMETRY=0. The GitHub Action sends nothing
+  unless you set telemetry: 1." `tests/test_readme_telemetry_claim.py` ata la frase a
+  `remote_ping_enabled()` (por defecto True, False con 0) y al default `'0'` del input.
+- **Quick start**: "Public repositories work as shown; private repositories without GitHub
+  Code Security set `upload_sarif: 'false'` (the SARIF file is still written)". El input se
+  llama `upload_sarif` en `action.yml` (verificado).
+- **Pin**: `artvepa80/Agents-Hefesto@v4.16.0`; `scripts/verify_readme.py` (ACTION_REF
+  `Agents-Hefesto@v(\d+(?:\.\d+\.\d+)?)`) acepta solo la versión de `pyproject.toml` o `4`,
+  así que el pin se valida en cada release.
+- **action.yml**: "Deterministic pass/fail gate for Python, IaC, SQL and COBOL:
+  declared-vs-real drift, secrets and risky code, with SARIF." (120 caracteres).
+- Enlaces del README a docs/ y CHANGELOG con URL absoluta de GitHub (el README es la página
+  de PyPI y del Marketplace, donde los relativos no resuelven).
+- Worklogs públicos: "a local corpus of N public repos" en lugar de la ruta local.
