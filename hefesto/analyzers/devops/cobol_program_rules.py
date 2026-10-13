@@ -612,6 +612,9 @@ _PIC = re.compile(r"\bPIC(?:TURE)?\s+(?:IS\s+)?(\S+)", re.I)
 _USAGE_PACKED = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)(?![\w-])", re.I)
 _USAGE_FLOAT = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-[12](?![\w-])", re.I)
 _USAGE_BINARY = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)(?![\w-])", re.I)
+# COMP-5 is native binary: its byte order follows the platform, so a PIC X view of
+# it reads different bytes on z/OS (big-endian) and x86 (little-endian)
+_USAGE_NATIVE_BINARY = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-5(?![\w-])", re.I)
 _USAGE_OTHER = re.compile(
     r"(?<![\w-])(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)(?![\w-])", re.I
 )
@@ -731,7 +734,9 @@ def _is_byte_view(one: Tuple[Tuple[str, str], ...], other: Tuple[Tuple[str, str]
     reinterpreted, so it is not the corruption risk COBOL004 is about. The same
     holds for signed binary (``PIC S9(4) COMP`` read byte by byte to print it in
     hex): the sign is a bit of those bytes, not a separate encoding. A size
-    mismatch or any non-PIC X byte still counts as a finding.
+    mismatch or any non-PIC X byte still counts as a finding. COMP-5 (native
+    byte order) is not exempt: the caller checks it, since the bytes differ
+    between z/OS and x86.
     """
     if len(one) != 1 or one[0][0] != "binary":
         return False
@@ -871,10 +876,11 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
 def _is_intended_overlay(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
     """REDEFINES idioms that keep every value's bytes and meaning (not reported)."""
     original, redefined = _layout(items, orig_idx), _layout(items, idx)
-    if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
-        return True
     orig_members, redef_members = _members(items, orig_idx), _members(items, idx)
     clauses = [m.clause for m in orig_members + redef_members]
+    native = any(_USAGE_NATIVE_BINARY.search(c) for c in clauses)
+    if not native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original)):
+        return True
     if _is_zoned_split(original, redefined, clauses) or _is_zoned_split(
         redefined, original, clauses
     ):
