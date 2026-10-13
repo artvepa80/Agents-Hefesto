@@ -132,3 +132,27 @@ def test_eight_byte_native_pointer_view_is_clean(view):
 def test_signed_pointer_view_stays_cobol004():
     issues = _issues("01  WS-PTR USAGE POINTER.", "01  WS-V REDEFINES WS-PTR PIC S9(9) COMP.")
     assert [i.rule_id for i in issues] == ["COBOL004"]
+
+
+# ------------------------------------------- suggestion for BINARY over POINTER
+
+
+def test_binary_over_pointer_suggestion_is_portable_and_clean():
+    import re
+
+    issue = _one_cobol016("01  WS-PTR USAGE POINTER.", "01  WS-NUM REDEFINES WS-PTR PIC 9(9) COMP.")
+    text = issue.suggestion
+    assert "SET ptr UP BY/DOWN BY n" in text and "SET ptr TO ADDRESS OF" in text
+    assert "IF ptr =" in text and "portable" in text
+    assert "platform-dependent" in text
+    assert "pointer's size" not in text  # a 4-byte COMP-5 view is itself COBOL016
+    assert "big-endian by default on every compiler" in issue.message
+    assert "big-endian everywhere" not in issue.message
+    # the numeric view the suggestion names does not trigger COBOL016
+    view = re.search(r"PIC 9\(18\) COMP-5", text).group(0)
+    assert not _issues("01  WS-PTR USAGE POINTER.", f"01  WS-ADDR REDEFINES WS-PTR {view}.")
+
+
+def test_comp5_of_four_bytes_over_pointer_is_a_four_byte_view():
+    issue = _one_cobol016("01  WS-PTR USAGE POINTER.", "01  WS-A REDEFINES WS-PTR PIC 9(9) COMP-5.")
+    assert "4-byte view" in issue.message
