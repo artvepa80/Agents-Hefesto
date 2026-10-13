@@ -13,7 +13,7 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 
 ---
 
-## Operational Truth Analyzers (v4.15.1)
+## Operational Truth Analyzers (v4.16.0)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -172,11 +172,11 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Changelog | JSON | `/api/changelog.json` |
 | FAQ | JSON | `/api/faq.json` |
 
-The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.15.1) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
+The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.16.0) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
 ---
 
-## PR Review (v4.15.1)
+## PR Review (v4.16.0)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -254,7 +254,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.15.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.16.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -291,7 +291,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.15.1)
+## CLI Reference (v4.16.0)
 
 ```bash
 # Analyze code
@@ -546,7 +546,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.15.1)
+### GitHub Actions — PR Review with Inline Comments (v4.16.0)
 
 ```yaml
 name: Hefesto PR Review
@@ -583,7 +583,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.15.1
+    rev: v4.16.0
     hooks:
       - id: hefesto-analyze
 ```
@@ -781,6 +781,11 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Changelog
 
 Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
+
+### v4.16.0 (2026-10-12)
+- **Breaking for CI gates that analyze nothing**: a run with no analyzed files no longer passes `--fail-on` (exit 1, "Gate failure: no files were analyzed"); the report says "No files were analyzed" and stderr names the path. `--allow-no-files` keeps exit 0 for runs that are empty on purpose. `@v4` gets this; pin `@v4.15.1` to keep the old behaviour
+- **Vendored and minified JavaScript is skipped by default** (`*.min.js`, `vendor/`, `static/**/libs/` ...); the summary, JSON `meta.vendored_skipped` and SARIF say how many; `--include-vendored` restores it
+- **The zero-files warning names vendored skips** and suggests `--include-vendored`
 
 ### v4.15.1 (2026-10-11)
 - **Fix**: exclude patterns (`build/`, `dist/`, `venv/`, `--exclude`) match whole path components below the analyzed path; a project in `app-build/` or under `~/venv/` is analyzed again instead of reporting 0 files as a pass

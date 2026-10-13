@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.16.0] - 2026-10-12
+
 ### Changed
 
 - **A run that analyzes no files is no longer reported as a pass (zero-files invariant; minor release).** When `hefesto analyze` finds nothing to analyze (empty directory, only unsupported files, or every file excluded), the text report says "No files were analyzed" instead of "No issues found!", a warning naming the path goes to stderr (also with `--quiet` and `--output json`, whose stdout stays valid JSON), and with `--fail-on` the gate fails with "Gate failure: no files were analyzed" and exit code 1. Without `--fail-on` the exit code stays 0. With several paths, a path that yields no files only warns as long as another path was analyzed. **GitHub Action:** its `fail_on` input defaults to `CRITICAL`, so a workflow whose `target` contains no supported files now fails instead of passing silently; set the new `allow_no_files: 'true'` input when that is intended.
