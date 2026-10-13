@@ -12,8 +12,10 @@ no el `STOP RUN`. No tiene que ver con la expansión de COPY ni con los comentar
 - `_Sentence` gana `line_starts` (default vacío): offset en `text` donde empieza cada línea
   unida, y `line_at(offset)`.
 - `unconditional_end_offset()` devuelve el offset del terminador o `None`.
-  `ends_unconditionally()` sigue devolviendo bool: `_ends_paragraph()` (COBOL014) lo usa
-  dentro de `any(...)`, y un `STOP RUN` solo coincide en el offset 0, que es falsy.
+  `ends_unconditionally()` sigue devolviendo bool y ahora es
+  `unconditional_end_offset(...) is not None`: un solo predicado para COBOL013 y COBOL014.
+  No devuelve el offset porque `_ends_paragraph()` (COBOL014) lo usa dentro de `any(...)`
+  y un `STOP RUN` solo coincide en el offset 0, que es falsy.
 - COBOL013 cita `sentence.line_at(offset)`.
 
 ## Tests (primero en rojo: 3 fallaban)

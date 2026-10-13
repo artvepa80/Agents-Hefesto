@@ -354,12 +354,7 @@ def unconditional_end_offset(sentence: str, include_goto: bool) -> Optional[int]
 def ends_unconditionally(sentence: str, include_goto: bool) -> bool:
     """True if the sentence ends with an unconditional STOP RUN/GOBACK/EXIT PROGRAM
     (or GO TO, when include_goto)."""
-    match = _UNCONDITIONAL_END.search(sentence)
-    if not match:
-        return False
-    if not include_goto and _GO_TO_START.match(match.group(0)):
-        return False
-    return not _is_conditional(sentence[: match.start()])
+    return unconditional_end_offset(sentence, include_goto) is not None
 
 
 def build_procedure(proc: List[LogicalLine]) -> List[_ProcItem]:
