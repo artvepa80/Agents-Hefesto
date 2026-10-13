@@ -5,6 +5,7 @@ analyzed (an empty directory, only unsupported files, or everything excluded),
 even with `--fail-on`. A CI gate then passes without having checked anything.
 """
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -277,6 +278,10 @@ class TestVendoredHintIntegration:
         assert "2 files skipped as vendored (use --include-vendored)" in result.stderr
         assert str(root) in result.stderr
 
+    @pytest.mark.skipif(
+        importlib.util.find_spec("tree_sitter_language_pack") is None,
+        reason="analyzing JavaScript needs the [multilang] extra (tree_sitter_language_pack)",
+    )
     def test_include_vendored_analyzes_them(self, tmp_path):
         root = tmp_path / "site"
         (root / "vendor").mkdir(parents=True)
