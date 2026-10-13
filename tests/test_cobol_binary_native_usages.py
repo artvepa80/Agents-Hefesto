@@ -101,10 +101,11 @@ def test_pointer_viewed_as_eight_byte_binary_is_not_flagged():
 @pytest.mark.parametrize(
     "lines",
     [
-        # src/world/chunk-io.cob:35, :764, :925
+        # src/world/chunk-io.cob:35, :764, :925 (free format; names shortened to fit
+        # column 72 of the fixed-format test program)
         (
-            "01 LONG-ARRAY-ENTRY         BINARY-LONG-LONG UNSIGNED.",
-            "01 LONG-ARRAY-ENTRY-SIGNED  REDEFINES LONG-ARRAY-ENTRY BINARY-LONG-LONG.",
+            "01 LONG-ENTRY BINARY-LONG-LONG UNSIGNED.",
+            "01 LONG-ENTRY-SIGNED REDEFINES LONG-ENTRY BINARY-LONG-LONG.",
         ),
         # src/encoding/encode.cob:139 and src/encoding/decode.cob:141
         (

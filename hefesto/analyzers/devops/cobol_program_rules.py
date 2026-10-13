@@ -637,6 +637,15 @@ _PIC = re.compile(r"\bPIC(?:TURE)?\s+(?:IS\s+)?(\S+)", re.I)
 _USAGE_PACKED = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)(?![\w-])", re.I)
 _USAGE_FLOAT = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-[12](?![\w-])", re.I)
 _USAGE_BINARY = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)(?![\w-])", re.I)
+# ISO 2002 / GnuCOBOL binary usages without a PIC; their size is fixed
+_FIXED_BINARY = re.compile(r"(?<![\w-])BINARY-(CHAR|SHORT|LONG-LONG|LONG|DOUBLE)(?![\w-])", re.I)
+_FIXED_BINARY_BYTES = {
+    "BINARY-CHAR": 1,
+    "BINARY-SHORT": 2,
+    "BINARY-LONG": 4,
+    "BINARY-LONG-LONG": 8,
+    "BINARY-DOUBLE": 8,
+}
 _USAGE_OTHER = re.compile(
     r"(?<![\w-])(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)(?![\w-])", re.I
 )
@@ -673,6 +682,8 @@ def _data_items(unit: _ProgramUnit) -> List[_DataItem]:
 
 
 def _usage_class(clause: str) -> Optional[str]:
+    if _FIXED_BINARY.search(clause):
+        return "binary"
     if _USAGE_PACKED.search(clause):
         return "packed"
     if _USAGE_FLOAT.search(clause):
@@ -682,6 +693,33 @@ def _usage_class(clause: str) -> Optional[str]:
     if _USAGE_OTHER.search(clause):
         return "pointer"
     return None
+
+
+def _pic_text(clause: str) -> str:
+    """The PIC string, or the type name (``BINARY-LONG``) of a fixed-size binary usage.
+
+    The type name stands in for the PIC so layouts compare and size correctly;
+    SIGNED/UNSIGNED is dropped: both views hold the same bytes.
+    """
+    pic = _PIC.search(clause)
+    if pic:
+        return pic.group(1).rstrip(".").upper()
+    fixed = _FIXED_BINARY.search(clause)
+    return f"BINARY-{fixed.group(1).upper()}" if fixed else ""
+
+
+def _fixed_binary_bytes(pic: str) -> Optional[int]:
+    """Size of a fixed-size binary usage (BINARY-CHAR ... BINARY-DOUBLE), else None."""
+    return _FIXED_BINARY_BYTES.get(pic.upper())
+
+
+def _binary_size(pic: str) -> Optional[int]:
+    """Storage of a binary item: fixed table for BINARY-xxx, PIC digits otherwise."""
+    fixed = _fixed_binary_bytes(pic)
+    if fixed:
+        return fixed
+    digits = _pic_count(pic[1:] if pic.startswith("S") else pic, "9")
+    return _binary_bytes(digits) if digits else None
 
 
 def _elementary_class(pic: Optional[str], usage: Optional[str]) -> str:
@@ -718,8 +756,7 @@ def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
         stack.append((item.level, own))
         if pos + 1 < len(members) and members[pos + 1].level > item.level:
             continue  # group item: its children carry the layout
-        pic = _PIC.search(item.clause)
-        pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+        pic_text = _pic_text(item.clause)
         out.append((_elementary_class(pic_text or None, own or inherited), pic_text))
     return tuple(out)
 
@@ -760,8 +797,7 @@ def _is_byte_view(one: Tuple[Tuple[str, str], ...], other: Tuple[Tuple[str, str]
     """
     if len(one) != 1 or one[0][0] != "binary":
         return False
-    digits = _pic_count(one[0][1][1:] if one[0][1].startswith("S") else one[0][1], "9")
-    size = _binary_bytes(digits) if digits else None
+    size = _binary_size(one[0][1])
     if size is None or not other:
         return False
     widths = [_pic_count(pic, "X") if cls == "alphanumeric" else None for cls, pic in other]
@@ -829,8 +865,9 @@ def _is_pointer_view(
     cls, pic = view_layout[0]
     if cls == "alphanumeric":
         return _pic_count(pic, "X") in _ADDRESS_SIZES
-    digits = _pic_count(pic, "9") if cls == "binary" else None
-    return digits is not None and _binary_bytes(digits) in _ADDRESS_SIZES
+    if cls != "binary" or pic.startswith("S"):
+        return False
+    return _binary_size(pic) in _ADDRESS_SIZES
 
 
 _OCCURS_FIXED = re.compile(r"(?<![\w-])OCCURS\s+(\d+)(?:\s+TIMES)?(?:\s+(TO)\b)?", re.I)
@@ -870,8 +907,7 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
             child, nxt = node(nxt, usage)
             out.extend(child)
         if nxt == pos + 1:
-            pic = _PIC.search(item.clause)
-            pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+            pic_text = _pic_text(item.clause)
             spelled = _PIC_EXPAND.sub(lambda m: m.group(1) * int(m.group(2)), pic_text)
             out = [(_elementary_class(pic_text or None, usage), spelled)]
         return out * count, nxt
