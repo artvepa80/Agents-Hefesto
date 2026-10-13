@@ -932,21 +932,12 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
     return tuple(merged)
 
 
-def _is_native_byte_view(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
-    """A same-size PIC X byte view of COMP-5 (native byte order) data."""
-    original, redefined = _layout(items, orig_idx), _layout(items, idx)
-    members = _members(items, orig_idx) + _members(items, idx)
-    native = any(_USAGE_NATIVE_BINARY.search(m.clause) for m in members)
-    return native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original))
-
-
 def _is_intended_overlay(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
     """REDEFINES idioms that keep every value's bytes and meaning (not reported)."""
     original, redefined = _layout(items, orig_idx), _layout(items, idx)
     orig_members, redef_members = _members(items, orig_idx), _members(items, idx)
     clauses = [m.clause for m in orig_members + redef_members]
-    native = any(_USAGE_NATIVE_BINARY.search(c) for c in clauses)
-    if not native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original)):
+    if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
         return True
     if _is_zoned_split(original, redefined, clauses) or _is_zoned_split(
         redefined, original, clauses
@@ -1020,26 +1011,45 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
         )
         if orig_idx is None or _is_bms_input_map(items, orig_idx):
             continue
-        original, redefined = _layout(items, orig_idx), _layout(items, idx)
-        sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})
-        if not sensitive or original == redefined:
-            continue
-        if _is_intended_overlay(items, orig_idx, idx):
-            continue
-        message, suggestion = _redefines_text(items, orig_idx, idx, sensitive)
-        issues.append(
-            _issue(
-                file_path,
-                item.line,
-                AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
-                AnalysisIssueSeverity.HIGH,
-                message,
-                suggestion,
-                "COBOL004",
-                0.85,
-            )
-        )
+        issue = _redefines_issue(file_path, items, orig_idx, idx)
+        if issue is not None:
+            issues.append(issue)
     return issues
+
+
+def _redefines_issue(
+    file_path: str, items: List[_DataItem], orig_idx: int, idx: int
+) -> Optional[AnalysisIssue]:
+    """COBOL016 for a platform-dependent overlay, else COBOL004, else None."""
+    original, redefined = _layout(items, orig_idx), _layout(items, idx)
+    sensitive = sorted({c for c, _ in original + redefined if c in _SENSITIVE})
+    if not sensitive or original == redefined:
+        return None
+    platform = _platform_text(items, orig_idx, idx)
+    if platform is not None:
+        return _issue(
+            file_path,
+            items[idx].line,
+            AnalysisIssueType.COBOL_PLATFORM_DEPENDENT_LAYOUT,
+            AnalysisIssueSeverity.MEDIUM,
+            platform[0],
+            platform[1],
+            "COBOL016",
+            0.8,
+        )
+    if _is_intended_overlay(items, orig_idx, idx):
+        return None
+    message, suggestion = _redefines_text(items, orig_idx, idx, sensitive)
+    return _issue(
+        file_path,
+        items[idx].line,
+        AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
+        AnalysisIssueSeverity.HIGH,
+        message,
+        suggestion,
+        "COBOL004",
+        0.85,
+    )
 
 
 def _binary_digits(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[int]:
@@ -1066,12 +1076,53 @@ def _native_byte_view_suggestion(items: List[_DataItem], orig_idx: int, idx: int
     )
 
 
-def _redefines_text(
-    items: List[_DataItem], orig_idx: int, idx: int, sensitive: List[str]
-) -> Tuple[str, str]:
-    """COBOL004 message and suggestion: COMP-5 byte views get their own."""
+def _native_usage(members: List[_DataItem], pic: str) -> Optional[str]:
+    """Native-byte-order usage of a binary item: BINARY-xxx or COMP-5, else None."""
+    if _fixed_binary_bytes(pic):
+        return pic.upper()
+    if any(_USAGE_NATIVE_BINARY.search(m.clause) for m in members):
+        return "COMP-5"
+    return None
+
+
+def _native_byte_view(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[str]:
+    """Usage (COMP-5, BINARY-LONG ...) of a native binary seen as same-size PIC X bytes."""
+    members = _members(items, orig_idx) + _members(items, idx)
+    original, redefined = _layout(items, orig_idx), _layout(items, idx)
+    for one, other in ((original, redefined), (redefined, original)):
+        if _is_byte_view(one, other) and (_binary_size(one[0][1]) or 0) > 1:
+            return _native_usage(members, one[0][1])
+    return None
+
+
+def _pointer_view(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[Tuple[str, int]]:
+    """("binary", size) for a big-endian binary view of a POINTER, ("view", 4) for any
+    other 4-byte view; None for 8-byte native or byte views (and non-pointers)."""
+    for ptr, view in ((orig_idx, idx), (idx, orig_idx)):
+        view_layout = _layout(items, view)
+        if not _is_pointer_view(_members(items, ptr), _layout(items, ptr), view_layout):
+            continue
+        cls, pic = view_layout[0]
+        if cls != "binary":
+            return ("view", 4) if _pic_count(pic, "X") == 4 else None
+        size = _binary_size(pic) or 0
+        if _native_usage(_members(items, view), pic) is None:
+            return ("binary", size)
+        return ("view", 4) if size == 4 else None
+    return None
+
+
+_POINTER_SIZES = (
+    "A POINTER is 4 bytes on z/OS with 31-bit addressing but 8 bytes on 64-bit "
+    "platforms (GnuCOBOL, Micro Focus, LP(64))"
+)
+
+
+def _platform_text(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[Tuple[str, str]]:
+    """COBOL016 message and suggestion, one per pattern; None if not platform-dependent."""
     name, target = items[idx].name, items[orig_idx].name
-    if _is_native_byte_view(items, orig_idx, idx):
+    usage = _native_byte_view(items, orig_idx, idx)
+    if usage == "COMP-5":
         return (
             f"'{name}' REDEFINES '{target}' as PIC X bytes of a COMP-5 field. COMP-5 "
             "uses the platform's native byte order: big-endian on z/OS, little-endian "
@@ -1079,6 +1130,46 @@ def _redefines_text(
             "different bytes on each platform.",
             _native_byte_view_suggestion(items, orig_idx, idx),
         )
+    if usage:
+        return (
+            f"'{name}' REDEFINES '{target}' as PIC X bytes of a {usage} field. {usage} "
+            "is stored in native byte order (platform-dependent), so the byte view reads "
+            "the same value as different bytes on big-endian and little-endian platforms.",
+            "If the byte layout must be portable, use a PIC 9(n) BINARY field (big-endian "
+            "on IBM and GnuCOBOL), keeping in mind that BINARY truncates to the PIC digits "
+            "under TRUNC(STD) / without -fnotrunc; or compute the bytes (DIVIDE by 256) "
+            "instead of overlaying them. If the field is passed to C, SQL or OS calls, "
+            "don't change its USAGE; drop the byte view.",
+        )
+    pointer = _pointer_view(items, orig_idx, idx)
+    if pointer is None:
+        return None
+    kind, size = pointer
+    if kind == "binary":
+        extra = f" The view is also {size} bytes. {_POINTER_SIZES}." if size == 4 else ""
+        return (
+            f"'{name}' REDEFINES pointer '{target}' as a BINARY/COMP number. A POINTER "
+            "is stored in native byte order, but BINARY/COMP is big-endian everywhere: on "
+            "little-endian platforms (x86 with GnuCOBOL or Micro Focus) the number is the "
+            f"address with its bytes reversed.{extra}",
+            "View the pointer as COMP-5 of the pointer's size (PIC 9(18) COMP-5 for 8 "
+            "bytes; native byte order, like the pointer itself) or as PIC X bytes; use "
+            "SET ... TO ADDRESS OF / SET pointer UP BY to work with addresses.",
+        )
+    return (
+        f"'{name}' REDEFINES pointer '{target}' with a 4-byte view. {_POINTER_SIZES}, "
+        "so on those the view holds only half of the address.",
+        "Use an 8-byte view (PIC X(8) or PIC 9(18) COMP-5) if the program can run on a "
+        "64-bit platform, or compare and move addresses with SET and IF on the POINTER "
+        "itself.",
+    )
+
+
+def _redefines_text(
+    items: List[_DataItem], orig_idx: int, idx: int, sensitive: List[str]
+) -> Tuple[str, str]:
+    """COBOL004 message and suggestion."""
+    name, target = items[idx].name, items[orig_idx].name
     kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
     return (
         f"'{name}' REDEFINES '{target}' with a different layout over "
