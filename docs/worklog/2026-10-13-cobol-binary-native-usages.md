@@ -42,3 +42,12 @@ tiene REDEFINES BINARY-xxx de la misma especie con y sin signo. Recall 39/41.
 
 #101 toca `_is_intended_overlay()` y COBOL004 (mensaje COMP-5); este PR toca el
 clasificador, `_is_byte_view()` y `_is_pointer_view()`. Ver el PR B para el orden.
+
+## corpus-baseline (CI)
+
+El check `corpus-baseline` falló en este PR por un cambio que ya está en main: #99
+(YAML_INDENTATION) quitó los 2 hallazgos `zapp.yaml:1` y `multiroot/sam/zapp.yaml:1` de
+zopeneditor-sample ("Inconsistent indentation (N levels)", el falso positivo que corrigió),
+y `benchmark/cobol/baseline.json` no se actualizó (el check solo corre cuando cambian
+archivos COBOL). Se quitan esas 2 entradas del baseline (9 → 7 hallazgos, LOW 2 → 0);
+CardDemo y GenApp sin cambios.
