@@ -1,0 +1,7 @@
+service:
+  name: api
+  ports:
+      - 8080
+      - 8443
+  env:
+    LEVEL: info

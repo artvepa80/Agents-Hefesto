@@ -8,8 +8,9 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
+from collections import Counter
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -24,6 +25,62 @@ try:
 except ImportError:
     yaml = None  # type: ignore
     YAML_AVAILABLE = False
+
+
+# A line that opens a block scalar: "key: |", "- >-", "key: |2", "key: >+ # note"
+_BLOCK_SCALAR_START = re.compile(
+    r"(?:^-|:|\s-)\s+[|>](?:[1-9][+-]?|[+-][1-9]?)?\s*(?:#.*)?$|^[|>]$"
+)
+
+_LIST_ITEM = re.compile(r"^(?:-\s+)+")
+_TRAILING_COMMENT = re.compile(r"\s+#.*$")
+
+
+class _IndentScanner:
+    """Collects (step, line) for every line nested deeper than the line above it."""
+
+    def __init__(self) -> None:
+        self.steps: List[Tuple[int, int]] = []
+        self.prev_indent = 0
+        self.prev_opens = True  # previous line can have nested lines ("key:" or "- ...")
+        self.block_parent: Optional[int] = None  # skip deeper lines (block scalar, continuation)
+
+    def feed(self, line_num: int, line: str) -> None:
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip(" "))
+        if self._skipped(indent, stripped):
+            return
+        if indent > self.prev_indent and not self.prev_opens:
+            # continuation of a multi-line plain/quoted scalar or flow collection
+            self.block_parent = self.prev_indent
+            return
+        if indent > self.prev_indent:
+            self.steps.append((indent - self.prev_indent, line_num))
+        self._remember(indent, stripped)
+
+    def _skipped(self, indent: int, stripped: str) -> bool:
+        """Blank, comment, document marker, or inside a block being skipped."""
+        if self.block_parent is not None:
+            if not stripped or indent > self.block_parent:
+                return True  # block scalar content or scalar continuation
+            self.block_parent = None
+        return not stripped or stripped.startswith("#") or stripped in ("---", "...")
+
+    def _remember(self, indent: int, stripped: str) -> None:
+        # "- key: v": nested lines are measured from the content after "- "
+        item = _LIST_ITEM.match(stripped)
+        rest = stripped[item.end() :] if item else stripped
+        self.prev_indent = indent + (item.end() if item else 0)
+        self.prev_opens = bool(item) or _TRAILING_COMMENT.sub("", rest).endswith(":")
+        if _BLOCK_SCALAR_START.search(stripped):
+            self.block_parent = indent
+
+
+def _indentation_steps(lines: List[str]) -> List[Tuple[int, int]]:
+    scanner = _IndentScanner()
+    for line_num, line in enumerate(lines, start=1):
+        scanner.feed(line_num, line)
+    return scanner.steps
 
 
 class YamlAnalyzer:
@@ -225,32 +282,34 @@ class YamlAnalyzer:
         return issues
 
     def _check_indentation(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
-        """Check for inconsistent indentation."""
-        issues = []
-        indent_sizes = set()
+        """Flag files whose nesting step varies (e.g. 2 spaces here, 4 there).
 
-        for line in lines:
-            if not line.strip() or line.strip().startswith("#"):
-                continue
-            leading = len(line) - len(line.lstrip())
-            if leading > 0:
-                indent_sizes.add(leading)
-
-        if len(indent_sizes) > 3:
-            issues.append(
-                AnalysisIssue(
-                    file_path=file_path,
-                    line=1,
-                    column=0,
-                    issue_type=AnalysisIssueType.YAML_INDENTATION,
-                    severity=AnalysisIssueSeverity.LOW,
-                    message=f"Inconsistent indentation ({len(indent_sizes)} levels)",
-                    suggestion="Use consistent 2-space indentation",
-                    engine="internal:yaml_analyzer",
-                )
+        Only the step from one structural line to a deeper one counts, so deep
+        but consistent nesting is fine. Block scalar content (``key: |``,
+        ``>-``, ``|2`` ...) is free text and is skipped.
+        """
+        steps = _indentation_steps(lines)
+        counts = Counter(step for step, _ in steps)
+        if len(counts) <= 1:
+            return []
+        usual = min(counts, key=lambda step: (-counts[step], step))
+        odd_step, odd_line = next((step, n) for step, n in steps if step != usual)
+        sizes = " and ".join(str(step) for step in sorted(counts))
+        return [
+            AnalysisIssue(
+                file_path=file_path,
+                line=odd_line,
+                column=0,
+                issue_type=AnalysisIssueType.YAML_INDENTATION,
+                severity=AnalysisIssueSeverity.LOW,
+                message=(
+                    f"Inconsistent indentation: nesting steps of {sizes} spaces; this line"
+                    f" is {odd_step} spaces deeper than the previous one (usual step: {usual})"
+                ),
+                suggestion=f"Indent every nesting level by the same {usual} spaces",
+                engine="internal:yaml_analyzer",
             )
-
-        return issues
+        ]
 
     def _check_github_actions(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check GitHub Actions specific issues."""
