@@ -327,8 +327,8 @@ class TestContradictionDetector:
         else:
             return "?"
 
-    def _keep(self, assertion: Optional[TestAssertion], call: ast.AST) -> None:
-        if assertion is not None and self._is_comparable_call(call):
+    def _keep(self, assertion: Optional[TestAssertion], call: Optional[ast.AST]) -> None:
+        if assertion is not None and call is not None and self._is_comparable_call(call):
             self.assertions.append(assertion)
 
     def find_contradictions(self) -> List[Contradiction]:
