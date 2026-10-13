@@ -185,8 +185,9 @@ f) `release.yml`:
 1. ¿Se agrega en 4.16.0 una salida explícita para corridas vacías intencionales? Por
    ejemplo `--allow-no-files` o `allow_no_files: true`, que mantenga exit 0 con
    `--fail-on`. Recomendación: sí, pequeña y testeada.
-   - Respuesta: sí. `--allow-no-files`, `allow_no_files: true` en `.hefesto.yaml` e input
-     `allow_no_files` de la Action; implementado en #85 (ver 5B).
+   - Respuesta: sí, como flag de línea de comandos únicamente (`--allow-no-files`), más un
+     input `allow_no_files` de la Action que solo pasa el flag; implementado en #85 (ver 5B).
+     Refinamiento posterior de Arturo: sin clave en `.hefesto.yaml`.
 2. ¿Se publican cifras de corpus en las notas? Requeriría agregar al repo un manifiesto
    (repos públicos + SHAs + comando + etiquetas de EVAL_USAGE), no el corpus.
    - Respuesta: no. Las notas no llevan cifras de corpus y no se agrega manifiesto.
@@ -215,8 +216,13 @@ f) `release.yml`:
 
 ## 5B/5C. `--allow-no-files` y pista de vendorizados (pusheado a #85)
 
-- `--allow-no-files` / `allow_no_files: true` / input `allow_no_files` de la Action
-  (default `false`; el entrypoint agrega `--allow-no-files` con `true`, `1` o `yes`).
+- `--allow-no-files`, solo como flag de CLI. Una clave `allow_no_files` en
+  `.hefesto.yaml` se rechaza como desconocida (exit 2, "unknown key 'allow_no_files'"),
+  no se ignora en silencio; hay test. Input `allow_no_files` de la Action (default
+  `false`): con `true`, `1` o `yes` el entrypoint agrega `--allow-no-files` y el log
+  muestra `Allow no files: yes (--allow-no-files)`.
+- Casos de uso documentados: jobs que analizan solo archivos cambiados, PRs que solo tocan
+  Markdown.
 - Con `--fail-on` y cero archivos: exit 0 y "Gate skipped: no files were analyzed
   (--allow-no-files)". El reporte "No files were analyzed" y el aviso por stderr se
   imprimen igual (también con `--quiet` y `--output json`). No cambia nada si hubo
@@ -235,7 +241,7 @@ f) `release.yml`:
 
 > **Breaking for CI gates that analyze nothing: a run with no analyzed files no longer passes `--fail-on`.**
 > Until 4.15.1, when `hefesto analyze` found no files to analyze (empty or wrong path, only unsupported files, or everything excluded), it printed "No issues found!" and `--fail-on` reported "Gate passed" with exit code 0. From 4.16.0 it prints "No files were analyzed", writes a warning naming the path to stderr (also with `--quiet` and `--output json`, whose stdout stays valid JSON), and with `--fail-on` fails with "Gate failure: no files were analyzed" and **exit code 1**. Without `--fail-on` the exit code stays 0. With several paths, a path with no files only warns while another path was analyzed.
-> **Intentionally empty runs:** add `--allow-no-files` (or `allow_no_files: true` in `.hefesto.yaml`, or `allow_no_files: 'true'` on the GitHub Action) to keep exit code 0 when nothing is analyzed under `--fail-on`. The run then prints "Gate skipped: no files were analyzed (--allow-no-files)", and the "No files were analyzed" warning is still printed. Findings still fail the gate as before.
+> **Intentionally empty runs:** for jobs that are empty on purpose (changed-files-only jobs, PRs that touch only Markdown), pass `--allow-no-files` (on the GitHub Action, `allow_no_files: 'true'` passes it). Only the exit code changes: the run keeps exit code 0 under `--fail-on` and prints "Gate skipped: no files were analyzed (--allow-no-files)", while "Files analyzed: 0", "No files were analyzed" and the stderr warning are still printed. It is a command-line flag only; `.hefesto.yaml` cannot set it. Findings still fail the gate as before.
 > **GitHub Action:** `fail_on` defaults to `CRITICAL`, so a workflow whose `target` has no supported files now fails unless it sets `allow_no_files: 'true'`. `@v4` follows the whole 4.x line, minor releases included, so workflows on `@v4` get this change without editing anything. To stay on the old behaviour, pin an exact tag such as `@v4.15.1`.
 >
 > **Vendored and minified JavaScript is skipped by default.** `*.min.js` / `*-min.js`, JavaScript under `vendor/`, `vendors/`, `bower_components/`, `jspm_packages/`, and JavaScript under `lib/`, `libs/`, `plugins/`, `third_party/` or `thirdparty/` inside `static/`, `assets/`, `public/` or `wwwroot/` are no longer analyzed. On codebases that bundle libraries this way, the number of findings drops, and so do alerts on those files in code scanning. The summary says how many files were left out (`N files skipped as vendored (use --include-vendored)`; `meta.vendored_skipped` in JSON; a tool notification in SARIF). `--include-vendored` or `include_vendored: true` restores the old behaviour. If every candidate file of a path was vendored, the zero-files warning says how many were skipped and names `--include-vendored`. A top-level `lib/`, non-JavaScript files under `vendor/` and a single file given on the command line are still analyzed.

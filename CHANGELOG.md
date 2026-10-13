@@ -15,10 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Floating tag `v4`.** `uses: artvepa80/Agents-Hefesto@v4` now runs the latest v4.x.y release: `release.yml` moves the `v4` tag to each new 4.x release (only forward, never for an older patch). `v4` starts at v4.15.1. It follows the whole 4.x line, minors included, so it also receives behaviour changes such as the upcoming zero-files exit-code change; if you need exact stability, pin an exact tag such as `@v4.15.1` (exact tags never move). The Action installs HefestoAI from its own ref, so **workflows pinned to `@v4.15.0` keep the exclusion bug until they move to `@v4`** (or to `@v4.15.1`). README, `docs/github-action.md`, `skill/integration.md`, `llms.txt` and the Copilot instructions use `@v4`; `scripts/verify_readme.py` accepts the major tag for Action refs (it must match the package major) as well as the exact version.
 
-### Pending (next minor release)
-
-- **Zero-files invariant, deliberately split out of the 4.15.1 exclusion fix.** When an analysis finds no files to analyze, `hefesto analyze` should say that 0 files were analyzed, must not print a success message ("No issues found"), and must exit non-zero when `--fail-on` is active. Today a run that analyzes nothing reports success and exits 0. This changes exit-code behaviour that CI pipelines can depend on, so it ships in its own PR and in a minor release, not in the 4.15.1 patch.
-
 ## [4.15.1] - 2026-10-11
 
 ### Fixed
