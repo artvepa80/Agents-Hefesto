@@ -150,7 +150,7 @@ def test_allow_no_files_off_by_default(tmp_path: Path, value: Optional[str]) -> 
 def test_allow_no_files_passed_to_the_cli(tmp_path: Path, value: str) -> None:
     r = _run(tmp_path, {"allow_no_files": value})
     assert "--allow-no-files" in r["hefesto_args"]
-    assert "Allow no files: yes" in r["proc"].stdout
+    assert "Allow no files: yes (--allow-no-files)" in r["proc"].stdout
 
 
 # ------------------------------------------------------------ SARIF (Phase 5)

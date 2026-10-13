@@ -15,7 +15,7 @@ inputs:
     required: false
     default: 'CRITICAL'
   allow_no_files:
-    description: 'true: a run that analyzes no files keeps exit 0 under fail_on (for intentionally empty targets). The "no files were analyzed" warning is still printed. Default false: an empty run fails the gate.'
+    description: 'true: pass --allow-no-files to hefesto analyze, so a run that analyzes no files keeps exit 0 under fail_on (for intentionally empty targets). The "no files were analyzed" warning is still printed. Default false: an empty run fails the gate.'
     required: false
     default: 'false'
   min_severity:

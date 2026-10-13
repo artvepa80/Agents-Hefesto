@@ -133,7 +133,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 |-------|-------------|---------|
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
-| `allow_no_files` | `true`: a run that analyzes no files keeps exit 0 under `fail_on` (intentionally empty target); the warning is still printed | `false` |
+| `allow_no_files` | `true`: passes `--allow-no-files`, so a run that analyzes no files keeps exit 0 under `fail_on` (intentionally empty target); the warning is still printed | `false` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format printed to the log (`text`, `json`, `html`, `sarif`) | `text` |
 | `sarif` | `true`: also write a SARIF 2.1.0 file and upload it to code scanning (needs `security-events: write`) | `false` |
@@ -392,10 +392,16 @@ A run that analyzes no files (empty directory, only unsupported files, or every
 file excluded) is never reported as a pass: the report says "No files were
 analyzed", a warning naming the path goes to stderr, and with `--fail-on` the
 gate fails with exit 1. When files were left out as vendored JavaScript, the
-warning names how many and suggests `--include-vendored`. For a target that is
-empty on purpose, `--allow-no-files` (or `allow_no_files: true` in
-`.hefesto.yaml`, or the Action's `allow_no_files` input) keeps exit 0; the
-warning is still printed.
+warning names how many and suggests `--include-vendored`.
+
+For runs that are empty on purpose (a changed-files-only job on a PR that
+touches only Markdown, a monorepo matrix entry with no supported sources), pass
+`--allow-no-files` (the Action's `allow_no_files: 'true'` input passes it for
+you). Only the exit code changes: the run keeps exit 0 and prints "Gate
+skipped: no files were analyzed (--allow-no-files)", while "Files analyzed: 0",
+"No files were analyzed" and the stderr warning are still printed. It is a
+command-line flag only: `.hefesto.yaml` cannot set it (an `allow_no_files` key
+is rejected as unknown, exit 2), so a shared config never turns this check off.
 
 ---
 
@@ -628,7 +634,6 @@ Put the `hefesto analyze` options you would otherwise repeat on every run in a
 # .hefesto.yaml -- every key is optional and maps to a `hefesto analyze` flag
 severity: MEDIUM            # --severity      LOW | MEDIUM | HIGH | CRITICAL
 fail_on: HIGH               # --fail-on       LOW | MEDIUM | HIGH | CRITICAL
-allow_no_files: false       # --allow-no-files (an empty run keeps exit 0 under fail_on)
 output: text                # --output        text | json | html
 exclude:                    # --exclude       list or "a/,b/" string
   - tests/

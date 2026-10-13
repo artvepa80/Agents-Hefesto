@@ -159,7 +159,6 @@ _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
     "exclude": _pattern_list,
     "exclude_types": _issue_type_list,
     "fail_on": _choice(_SEVERITIES, upper=True),
-    "allow_no_files": _bool,
     "quiet": _bool,
     "max_issues": _positive_int,
     "format_check": _bool,

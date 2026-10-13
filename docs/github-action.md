@@ -32,7 +32,8 @@ The Action is a composite action with three steps:
 2. **Run HefestoAI**: `scripts/action_entrypoint.sh` builds
    `hefesto analyze <target> --severity <min_severity> --fail-on <fail_on>
    --output <format>` (plus `--sarif-file <sarif_file>` with `sarif: true`
-   and `--allow-no-files` with `allow_no_files: true`)
+   and `--allow-no-files` with `allow_no_files: true`; the log shows
+   `Allow no files: yes (--allow-no-files)`)
    from the `INPUT_*` variables and writes the outputs.
 3. **Upload SARIF** (only with `sarif: true`, `upload_sarif: true` and a
    written file): `github/codeql-action/upload-sarif@v4` with
@@ -49,7 +50,7 @@ That image is still in the repository for running the same entrypoint with
 |-------|---------|-------------|
 | `target` | `.` | File or directory to analyze |
 | `fail_on` | `CRITICAL` | Fail when a finding is at or above this severity |
-| `allow_no_files` | `false` | `true`/`1`/`yes`: a run that analyzes no files keeps exit 0 (see below) |
+| `allow_no_files` | `false` | `true`/`1`/`yes`: pass `--allow-no-files`, so a run that analyzes no files keeps exit 0 (see below) |
 | `min_severity` | `LOW` | Lowest severity reported (`INFO` is read as `LOW`) |
 | `format` | `text` | Report printed to the log: `text`, `json`, `html` or `sarif` |
 | `sarif` | `false` | `true`/`1`/`yes`: also write a SARIF file and upload it |
@@ -64,9 +65,11 @@ If `target` contains no supported source files, or every file is excluded,
 the step fails: `fail_on` always has a value (default `CRITICAL`), and a gate
 that checked nothing does not pass. The log says "No files were analyzed" and
 names the path; when files were left out as vendored JavaScript it also says
-how many and suggests `--include-vendored`. For a target that is empty on
-purpose, set `allow_no_files: 'true'` to keep exit code 0; the warning is still
-printed.
+how many and suggests `--include-vendored`. For runs that are empty on
+purpose, such as a changed-files-only job on a PR that touches only Markdown,
+set `allow_no_files: 'true'`: the Action passes `--allow-no-files`, and only the
+exit code changes (0 instead of 1); "Files analyzed: 0" and the warning are
+still printed.
 
 ## Outputs
 

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`--allow-no-files`** (`allow_no_files: true` in `.hefesto.yaml`, `allow_no_files` input of the GitHub Action): opt-out for runs that are empty on purpose. With it, a run that analyzes no files keeps exit code 0 under `--fail-on` and prints "Gate skipped: no files were analyzed (--allow-no-files)"; the "No files were analyzed" report and the stderr warning are still printed.
+- **`--allow-no-files`**: opt-out for runs that are empty on purpose (changed-files-only jobs, Markdown-only PRs). With it, a run that analyzes no files keeps exit code 0 under `--fail-on` and prints "Gate skipped: no files were analyzed (--allow-no-files)"; only the exit code changes, the "Files analyzed: 0" / "No files were analyzed" report and the stderr warning are still printed. Command-line flag only: an `allow_no_files` key in `.hefesto.yaml` is rejected as unknown (exit 2). The GitHub Action's new `allow_no_files` input passes the flag.
 - **The zero-files warning names vendored skips.** When the files of a path were all left out as vendored or minified JavaScript, the warning adds "N files skipped as vendored (use --include-vendored)".
 
 ### GitHub Action
