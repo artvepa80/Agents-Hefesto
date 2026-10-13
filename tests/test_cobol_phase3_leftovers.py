@@ -460,8 +460,24 @@ def test_other_cases_keep_the_generic_message(usage, pics):
     assert "can corrupt" in issue.message and "byte order" not in issue.message
 
 
-def test_comp5_suggestion_warns_about_truncation():
-    (issue,) = _cobol004(_usage_view("COMP-5", "9(4)", "X", "X"))
+@pytest.mark.parametrize(
+    "binary_pic, pics, limit",
+    [
+        ("9(4)", ("X", "X"), "9,999"),
+        ("S9(4)", ("X", "X"), "9,999"),
+        ("9(9)", ("X(4)",), "999,999,999"),
+        ("S9(18)", ("X(8)",), "999,999,999,999,999,999"),
+    ],
+)
+def test_comp5_suggestion_warns_about_truncation(binary_pic, pics, limit):
+    (issue,) = _cobol004(_usage_view("COMP-5", binary_pic, *pics))
     text = issue.suggestion
-    assert "trunc" in text.lower() and "TRUNC(BIN)" in text
-    assert "byte view" in text
+    assert "truncat" in text.lower() and "TRUNC(STD)" in text
+    assert "TRUNC(BIN)" in text and "-fnotrunc" in text
+    assert f"up to {limit}" in text  # the field's real digits, BINARY limit only
+    assert "COMP-5 uses the full binary capacity of the field" in text
+    for capacity in ("65535", "65,535", "4294967295", "4,294,967,295", "32767", "32,767"):
+        assert capacity not in text  # no COMP-5 number
+    assert "C, SQL or OS calls" in text and "SQLCA" in text
+    assert "don't change its USAGE" in text and "byte view" in text
+    assert "can change the size" in text
