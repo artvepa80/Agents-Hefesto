@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **COBOL013 cites the line of the STOP RUN/GOBACK/EXIT PROGRAM.** A COBOL sentence runs to the next period, so `MOVE ... ACCEPT ... DISPLAY ... STOP RUN.` spread over four lines is one sentence, and the message cited the line where that sentence started (line 18 instead of 21 in a payroll demo). The reported line of the dead code was already right. The terminator's own line is now cited; `ends_unconditionally()` is unchanged (COBOL014 still uses it), and a separate helper returns the terminator's offset.
+
 ## [4.16.0] - 2026-10-12
 
 ### Changed

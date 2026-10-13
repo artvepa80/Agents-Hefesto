@@ -171,6 +171,18 @@ def mask_literals(text: str) -> str:
 class _Sentence:
     line: int
     text: str  # literals masked
+    # (offset in ``text``, source line) where each joined line starts; empty
+    # means the whole sentence is on ``line``
+    line_starts: List[Tuple[int, int]] = field(default_factory=list)
+
+    def line_at(self, offset: int) -> int:
+        """Source line of the character at ``offset`` in ``text``."""
+        found = self.line
+        for start, line_num in self.line_starts:
+            if start > offset:
+                break
+            found = line_num
+        return found
 
 
 @dataclass
@@ -254,6 +266,8 @@ def split_sentences(lines: List[Tuple[int, str]]) -> List[_Sentence]:
     """Join lines and split on periods outside literals (literals masked)."""
     sentences: List[_Sentence] = []
     buf: List[str] = []
+    starts: List[Tuple[int, int]] = []
+    length = 0  # len(" ".join(buf))
     start: Optional[int] = None
     for line_num, raw in lines:
         masked = mask_literals(raw)
@@ -264,16 +278,19 @@ def split_sentences(lines: List[Tuple[int, str]]) -> List[_Sentence]:
             if i > 0:
                 text = " ".join(buf).strip()
                 if text and start is not None:
-                    sentences.append(_Sentence(start, text))
-                buf = []
+                    sentences.append(_Sentence(start, text, starts))
+                buf, starts, length = [], [], 0
                 start = line_num if piece.strip() else None
             if piece.strip():
                 if start is None:
                     start = line_num
+                offset = length + 1 if buf else 0
+                starts.append((offset, line_num))
                 buf.append(piece.strip())
+                length = offset + len(piece.strip())
     text = " ".join(buf).strip()
     if text and start is not None:
-        sentences.append(_Sentence(start, text))
+        sentences.append(_Sentence(start, text, starts))
     return sentences
 
 
@@ -319,6 +336,19 @@ def _is_conditional(prefix: str) -> bool:
     for last_end in _END_SCOPE.finditer(prefix):
         pass
     return last_end is None or last_end.start() < last_phrase.start()
+
+
+def unconditional_end_offset(sentence: str, include_goto: bool) -> Optional[int]:
+    """Offset of the unconditional STOP RUN/GOBACK/EXIT PROGRAM (or GO TO, when
+    include_goto) that ends the sentence, or None. 0 is a valid offset."""
+    match = _UNCONDITIONAL_END.search(sentence)
+    if not match:
+        return None
+    if not include_goto and _GO_TO_START.match(match.group(0)):
+        return None
+    if _is_conditional(sentence[: match.start()]):
+        return None
+    return match.start()
 
 
 def ends_unconditionally(sentence: str, include_goto: bool) -> bool:
@@ -1083,7 +1113,8 @@ def check_dead_code(file_path: str, items: List[_ProcItem]) -> List[AnalysisIssu
     for item in items:
         sentences = item.sentences
         for idx, sentence in enumerate(sentences[:-1]):
-            if not ends_unconditionally(sentence.text, include_goto=False):
+            end = unconditional_end_offset(sentence.text, include_goto=False)
+            if end is None:
                 continue
             rest = []
             for later in sentences[idx + 1 :]:
@@ -1100,7 +1131,7 @@ def check_dead_code(file_path: str, items: List[_ProcItem]) -> List[AnalysisIssu
                         AnalysisIssueType.COBOL_DEAD_CODE,
                         AnalysisIssueSeverity.MEDIUM,
                         f"Unreachable code in {where}: it follows an unconditional "
-                        f"STOP RUN/GOBACK/EXIT PROGRAM (line {sentence.line}).",
+                        f"STOP RUN/GOBACK/EXIT PROGRAM (line {sentence.line_at(end)}).",
                         "Remove the dead statements or move them before the terminator.",
                         "COBOL013",
                         0.85,
