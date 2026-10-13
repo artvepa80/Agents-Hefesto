@@ -113,7 +113,7 @@ class TestPartialAndRegression:
 
 
 class TestAllowNoFiles:
-    """--allow-no-files / allow_no_files: an intentionally empty run keeps exit 0."""
+    """--allow-no-files: an intentionally empty run keeps exit 0; only the exit code changes."""
 
     def test_flag_keeps_exit_zero_under_fail_on(self, tmp_path):
         root = _no_supported_files(tmp_path)
@@ -121,6 +121,7 @@ class TestAllowNoFiles:
         assert result.returncode == 0
         assert "Gate failure" not in result.stdout
         assert "Gate skipped: no files were analyzed (--allow-no-files)" in result.stdout
+        assert "Files analyzed: 0" in result.stdout
         # The warning is still printed: allowed, but never silent.
         assert "No files were analyzed" in result.stdout
         assert "no files were analyzed" in result.stderr
@@ -156,7 +157,12 @@ class TestAllowNoFiles:
         assert without.returncode == 1
         assert with_flag.returncode == without.returncode
 
-    def test_config_key(self, tmp_path):
+    def test_config_key_is_rejected(self, tmp_path):
+        """--allow-no-files is a CLI flag only: .hefesto.yaml cannot set it.
+
+        The key is rejected as unknown (exit 2), not silently ignored, so a
+        config that tries to turn the gate off never passes by accident.
+        """
         root = _no_supported_files(tmp_path)
         # Outside the target: a .hefesto.yaml inside it would itself be analyzed.
         config = tmp_path / "hefesto.yaml"
@@ -177,33 +183,16 @@ class TestAllowNoFiles:
             cwd=REPO_ROOT,
             env=env,
         )
-        assert result.returncode == 0, result.stdout + result.stderr
-        assert "Gate skipped" in result.stdout
-        assert "no files were analyzed" in result.stderr
+        assert result.returncode == 2, result.stdout + result.stderr
+        assert "allow_no_files" in result.stderr
+        assert "Gate skipped" not in result.stdout
 
-    def test_config_key_false_keeps_the_gate(self, tmp_path):
-        root = _no_supported_files(tmp_path)
-        # Outside the target: a .hefesto.yaml inside it would itself be analyzed.
-        config = tmp_path / "hefesto.yaml"
-        config.write_text("fail_on: HIGH\nallow_no_files: false\n")
-        env = dict(os.environ, HEFESTO_TELEMETRY="0")
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "hefesto.cli.main",
-                "analyze",
-                str(root),
-                "--config",
-                str(config),
-            ],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            env=env,
-        )
-        assert result.returncode == 1
-        assert "Gate failure: no files were analyzed" in result.stdout
+    def test_config_key_not_supported(self):
+        from hefesto.config.project_config import SUPPORTED_KEYS, ConfigError, validate_config
+
+        assert "allow_no_files" not in SUPPORTED_KEYS
+        with pytest.raises(ConfigError):
+            validate_config({"allow_no_files": True})
 
 
 class _EmptyReport:
