@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **YAML_INDENTATION judges the step between nesting levels.** It used to count the distinct indentation widths in a file and flag more than 3, so any normally nested YAML (a GitHub workflow at 2/4/6/8/10 spaces) got "Inconsistent indentation (5 levels)" on line 1. It now flags a file only when the step from a line to a deeper one varies (for example 2 spaces in one place, 4 in another), reports the first odd line, and says which steps it found. Block scalar content (`key: |`, `>-`, `|+`, `|2` ...), multi-line scalar continuations and the content after `- ` in list items are measured correctly. On the 34 public repositories used for validation, findings went from 142 to 12; the 5 checked by hand are real.
+
 ## [4.16.0] - 2026-10-12
 
 ### Changed

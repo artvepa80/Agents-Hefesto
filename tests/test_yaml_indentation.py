@@ -55,3 +55,28 @@ def test_list_item_block_scalar_is_skipped():
 def test_deep_nesting_alone_is_not_flagged():
     content = "".join(f"{'  ' * i}k{i}:\n" for i in range(8)) + f"{'  ' * 8}v: 1\n"
     assert _indent_issues("x.yml", content) == []
+
+
+def test_multi_line_scalar_continuation_is_not_a_step():
+    content = (
+        "with:\n"
+        "  install: autoconf automake\n"
+        "           gettext texinfo\n"
+        '  template: "a long \\\n'
+        '    value"\n'
+        "  next: 1\n"
+    )
+    assert _indent_issues("x.yml", content) == []
+
+
+def test_compact_list_items_measure_from_the_item_content():
+    content = (
+        "mappings:\n"
+        "- body:\n"
+        "    mappings:\n"
+        "    - accountId:\n"
+        "        required: true\n"
+        "    - currency:\n"
+        "        required: true\n"
+    )
+    assert _indent_issues("x.yml", content) == []
