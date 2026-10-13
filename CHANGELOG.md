@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **COBOL013 cites the line of the STOP RUN/GOBACK/EXIT PROGRAM.** A COBOL sentence runs to the next period, so `MOVE ... ACCEPT ... DISPLAY ... STOP RUN.` spread over four lines is one sentence, and the message cited the line where that sentence started (line 18 instead of 21 in a payroll demo). The reported line of the dead code was already right. The terminator's own line is now cited; a separate helper returns the terminator's offset, and `ends_unconditionally()` (also used by COBOL014) still returns a bool, derived from that helper.
+- **YAML_INDENTATION judges the step between nesting levels.** It used to count the distinct indentation widths in a file and flag more than 3, so any normally nested YAML (a GitHub workflow at 2/4/6/8/10 spaces) got "Inconsistent indentation (5 levels)" on line 1. It now flags a file only when the step from a line to a deeper one varies (for example 2 spaces in one place, 4 in another), reports the first odd line, and says which steps it found. Block scalar content (`key: |`, `>-`, `|+`, `|2` ...), multi-line scalar continuations and the content after `- ` in list items are measured correctly. On the 34 public repositories used for validation, findings went from 142 to 12; all 12 were checked by hand and are real.
+
 ### Documentation
 
 - **COBOL demo script:** removed "SARIF output (not available yet...)" from the "Next Steps" of `docs/demo/cobol_investor_demo.sh`; SARIF has shipped since 4.15.0.
