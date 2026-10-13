@@ -13,17 +13,21 @@ from hefesto.cli.main import cli
 from hefesto.validators.test_contradictions import TestContradictionDetector
 
 CONTRADICTORY = (
+    "def test_a():\n    assert add(1, 2) == 3\n\n"
+    "def test_b():\n    assert add(1, 2) == 4\n"
+)
+# Same call shape, but a name argument: what `issues` holds differs per test.
+NON_LITERAL = (
     "def test_a():\n    assert add(x, [1], None) == 3\n\n"
     "def test_b():\n    assert add(x, [1], None) == 4\n"
 )
 
 
-def test_non_constant_arguments_still_find_the_contradiction(tmp_path):
-    (tmp_path / "test_x.py").write_text(CONTRADICTORY)
+def test_non_literal_arguments_are_not_compared(tmp_path):
+    (tmp_path / "test_x.py").write_text(NON_LITERAL)
     detector = TestContradictionDetector(str(tmp_path))
-    found = detector.find_contradictions()
-    assert len(found) == 1
-    assert found[0].arguments == "x, [1], None"
+    assert detector.find_contradictions() == []
+    assert detector.checked_files == 1
 
 
 def test_extract_value_only_needs_ast_constant():
@@ -95,3 +99,64 @@ def test_one_good_file_is_checked(tmp_path):
     result = CliRunner().invoke(cli, ["check-test-contradictions", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "PASS" in result.output
+
+
+
+# ------------------------------------- conservative: plain function + literal args
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        "add(1, 2)",
+        "add(a=1, b='x')",
+        "add([1, 2], (3, None))",
+    ],
+)
+def test_literal_calls_on_a_plain_function_are_compared(tmp_path, call):
+    src = f"def test_a():\n    assert {call} == 3\n\ndef test_b():\n    assert {call} == 4\n"
+    (tmp_path / "test_x.py").write_text(src)
+    found = TestContradictionDetector(str(tmp_path)).find_contradictions()
+    assert len(found) == 1
+    assert found[0].function_called == "add"
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        "len(issues)",  # local name: different value in each test
+        "len(result.issues)",  # attribute
+        "len(get())",  # nested call
+        "obj.add(1, 2)",  # method on a local object
+        "self.add(1, 2)",
+        "add(*args)",
+        "add(**kw)",
+        "add([1, x])",  # list with a non-literal element
+        "add({1: 2})",  # dict renders as '{...}'
+    ],
+)
+def test_non_literal_or_method_calls_are_not_compared(tmp_path, call):
+    src = f"def test_a():\n    assert {call} == 1\n\ndef test_b():\n    assert {call} == 3\n"
+    (tmp_path / "test_x.py").write_text(src)
+    assert TestContradictionDetector(str(tmp_path)).find_contradictions() == []
+
+
+def test_unittest_assert_equal_follows_the_same_rule(tmp_path):
+    src = (
+        "class T:\n"
+        "    def test_a(self):\n        self.assertEqual(add(1, 2), 3)\n"
+        "    def test_b(self):\n        self.assertEqual(add(1, 2), 4)\n"
+        "    def test_c(self):\n        self.assertEqual(len(issues), 1)\n"
+        "    def test_d(self):\n        self.assertEqual(len(issues), 3)\n"
+    )
+    (tmp_path / "test_x.py").write_text(src)
+    found = TestContradictionDetector(str(tmp_path)).find_contradictions()
+    assert [(c.function_called, c.arguments) for c in found] == [("add", "1, 2")]
+
+
+def test_own_test_suite_has_no_contradictions():
+    from pathlib import Path
+
+    tests_dir = Path(__file__).resolve().parents[1]
+    found = TestContradictionDetector(str(tests_dir)).find_contradictions()
+    assert [(c.function_called, c.arguments, c.test1.test_file) for c in found] == []
