@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI
+
+- **multilang-smoke prefetches the 6 grammars** before the smoke and the unit tests that need them: `tree_sitter_language_pack.download([...])` with 3 attempts and exponential backoff, into `TREE_SITTER_LANGUAGE_PACK_CACHE_DIR` under `$RUNNER_TEMP`. A download failure fails that step with `::error::` instead of a mid-test PASS/FAIL. The smoke and the unit-test steps reuse the same cache dir.
+
 ### Documentation
 
 - **CLAUDE.md: branch deletion after merge.** PR head branches are deleted by the repository's auto-delete setting when a PR is merged, and Arturo's merge OK covers that; deleting a branch by hand still needs explicit OK. The destructive-operations rule no longer lists "a PR branch after merge", which contradicted the auto-delete setting.
