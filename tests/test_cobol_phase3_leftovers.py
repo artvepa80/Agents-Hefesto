@@ -369,3 +369,55 @@ class TestFormatNotice:
         notes = TextReporter()._format_notes(report)
         assert "13 COBOL file(s)" in notes and "F9.cbl" in notes
         assert "F10.cbl" not in notes and "3 more" in notes
+
+
+# COMP-5 is native binary: byte order follows the platform (big-endian on z/OS,
+# little-endian on x86), so a PIC X view reads different bytes on each one.
+# COMP, BINARY and COMP-4 are big-endian everywhere and keep the exemption.
+def _usage_view(usage, binary_pic, *byte_pics):
+    data = [("A", f"01  TWO-BYTES-BIN           PIC {binary_pic} {usage}.")]
+    data.append(("A", "01  TWO-BYTES-ALPHA         REDEFINES TWO-BYTES-BIN."))
+    data += [("B", f"05  BYTE-{i}   PIC {pic}.") for i, pic in enumerate(byte_pics)]
+    return _program("RDF", data=tuple(data))
+
+
+def _cobol004(src):
+    return [i for i in CobolGovernanceAnalyzer().analyze("RDF.cbl", src) if i.rule_id == "COBOL004"]
+
+
+@pytest.mark.parametrize("usage", ["COMP-5", "COMPUTATIONAL-5", "USAGE COMP-5"])
+@pytest.mark.parametrize("binary_pic", ["9(4)", "S9(4)", "9(9)", "S9(18)"])
+def test_comp5_byte_view_is_flagged(usage, binary_pic):
+    size = {"9(4)": 2, "S9(4)": 2, "9(9)": 4, "S9(18)": 8}[binary_pic]
+    assert _cobol004(_usage_view(usage, binary_pic, f"X({size})"))
+
+
+@pytest.mark.parametrize("usage", ["BINARY", "COMP", "COMP-4", "COMPUTATIONAL", "USAGE BINARY"])
+@pytest.mark.parametrize("binary_pic", ["9(4)", "S9(4)"])
+def test_portable_binary_byte_view_still_skipped(usage, binary_pic):
+    assert not _cobol004(_usage_view(usage, binary_pic, "X", "X"))
+
+
+def test_comp5_group_usage_is_flagged():
+    src = _program(
+        "RDF",
+        data=(
+            ("A", "01  NATIVE-GRP COMP-5."),
+            ("B", "05  NATIVE-NUM  PIC 9(4)."),
+            ("A", "01  NATIVE-BYTES REDEFINES NATIVE-GRP PIC X(2)."),
+        ),
+    )
+    assert _cobol004(src)
+
+
+def test_comp5_reverse_direction_is_flagged():
+    src = _program(
+        "RDF",
+        data=(
+            ("A", "01  BYTES-VIEW."),
+            ("B", "05  B1   PIC X."),
+            ("B", "05  B2   PIC X."),
+            ("A", "01  BIN-VIEW REDEFINES BYTES-VIEW PIC 9(4) COMP-5."),
+        ),
+    )
+    assert _cobol004(src)
