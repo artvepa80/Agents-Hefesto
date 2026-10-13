@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **CLAUDE.md: branch deletion after merge.** PR head branches are deleted by the repository's auto-delete setting when a PR is merged, and Arturo's merge OK covers that; deleting a branch by hand still needs explicit OK. The destructive-operations rule no longer lists "a PR branch after merge", which contradicted the auto-delete setting.
+
 ### CI
 
 - **COBOL corpus baseline runs on every PR and on push to main.** `cobol-corpus-baseline.yml` had a `paths` filter (COBOL analyzers, the engine, the script, the baseline), but the baseline also records the corpora's non-COBOL findings, so the YAML_INDENTATION fix changed it while the check was skipped: main failed `scripts/cobol_corpus_baseline.py compare` (zopeneditor-sample `YAML_INDENTATION: +0 -2`, `zapp.yaml:1` and `multiroot/sam/zapp.yaml:1`). The filter is removed and the 2 stale entries are dropped from `benchmark/cobol/baseline.json` (zopeneditor-sample 9 → 7 findings); CardDemo and GenApp are unchanged.
