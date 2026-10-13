@@ -11,8 +11,8 @@ findings to GitHub code scanning as SARIF 2.1.0.
   (`release.yml` does it after publishing), so `@v4` always runs the latest
   4.x release. It is the only tag that ever moves.
 - Because it follows minors, `@v4` also receives behaviour changes, such as
-  the upcoming change that makes a run with no analyzed files fail the gate
-  instead of passing.
+  the 4.16.0 change that makes a run with no analyzed files fail the gate
+  instead of passing (see "Runs that analyze no files" below).
 - If you need exact stability, pin an exact release tag such as `@v4.15.1`
   (exact tags never move) or a commit SHA, and bump it yourself.
 - The Action installs HefestoAI from its own checkout, not from PyPI, so a fix
