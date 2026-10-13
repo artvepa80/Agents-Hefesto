@@ -1,0 +1,28 @@
+name: ci
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: |
+          python -m pip install -e ".[dev]"
+          pytest -q \
+               --maxfail=1 \
+               --no-cov
+          cat > notes.txt <<'NOTES'
+          indented inside the heredoc
+              deeper
+          NOTES
+      - name: Folded
+        run: >-
+              echo one
+              echo two
+      - name: Explicit indent
+        env:
+          BODY: |2
+               two-space indicator, deeper content
+        run: echo "$BODY"

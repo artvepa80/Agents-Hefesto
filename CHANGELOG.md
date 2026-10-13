@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI
+
+- **COBOL corpus baseline runs on every PR and on push to main.** `cobol-corpus-baseline.yml` had a `paths` filter (COBOL analyzers, the engine, the script, the baseline), but the baseline also records the corpora's non-COBOL findings, so the YAML_INDENTATION fix changed it while the check was skipped: main failed `scripts/cobol_corpus_baseline.py compare` (zopeneditor-sample `YAML_INDENTATION: +0 -2`, `zapp.yaml:1` and `multiroot/sam/zapp.yaml:1`). The filter is removed and the 2 stale entries are dropped from `benchmark/cobol/baseline.json` (zopeneditor-sample 9 → 7 findings); CardDemo and GenApp are unchanged.
+
 ### Fixed
 
 - **COBOL004 now flags PIC X byte views of COMP-5 fields.** The byte-view exemption (a binary integer overlaid by PIC X bytes of exactly its size, e.g. reading a VSAM file status) covered every binary usage. COMP-5 is native binary: its byte order follows the platform, so the same PIC X view reads different bytes on z/OS (big-endian) and x86 (little-endian). The exemption now applies only to COMP, COMPUTATIONAL, BINARY and COMP-4; a byte view of COMP-5/COMPUTATIONAL-5 (signed or not, declared on the item or inherited from its group, in either REDEFINES direction) is reported, with its own message: it names COMP-5's native byte order (big-endian on z/OS, little-endian on x86 with GnuCOBOL or Micro Focus) instead of the generic "can corrupt values" text, and suggests switching to BINARY only if every value fits the PIC digits (under the default TRUNC(STD), BINARY/COMP truncate to the field's PIC digits, e.g. up to 9,999 for 9(4), while COMP-5 uses the full binary capacity of the field; widening the PIC can change the size), or compiling with TRUNC(BIN) (IBM) / -fnotrunc (GnuCOBOL); otherwise dropping the byte view. For a field passed to C, SQL or OS calls (e.g. SQLCA), it says not to change the USAGE and to drop the byte view. Every other COBOL004 finding keeps its message. No change on CardDemo, GenApp or the zopeneditor sample.
+- **COBOL013 cites the line of the STOP RUN/GOBACK/EXIT PROGRAM.** A COBOL sentence runs to the next period, so `MOVE ... ACCEPT ... DISPLAY ... STOP RUN.` spread over four lines is one sentence, and the message cited the line where that sentence started (line 18 instead of 21 in a payroll demo). The reported line of the dead code was already right. The terminator's own line is now cited; a separate helper returns the terminator's offset, and `ends_unconditionally()` (also used by COBOL014) still returns a bool, derived from that helper.
+- **YAML_INDENTATION judges the step between nesting levels.** It used to count the distinct indentation widths in a file and flag more than 3, so any normally nested YAML (a GitHub workflow at 2/4/6/8/10 spaces) got "Inconsistent indentation (5 levels)" on line 1. It now flags a file only when the step from a line to a deeper one varies (for example 2 spaces in one place, 4 in another), reports the first odd line, and says which steps it found. Block scalar content (`key: |`, `>-`, `|+`, `|2` ...), multi-line scalar continuations and the content after `- ` in list items are measured correctly. On the 34 public repositories used for validation, findings went from 142 to 12; all 12 were checked by hand and are real.
+
+### Documentation
+
+- **COBOL demo script:** removed "SARIF output (not available yet...)" from the "Next Steps" of `docs/demo/cobol_investor_demo.sh`; SARIF has shipped since 4.15.0.
+- **COBOL performance figure:** the README (and `docs/cobol-corpus-baseline.md`) now say about 9 s per million lines instead of 8. `scripts/cobol_perf_bench.py --scenario project-1m`, 3 runs on 4.16.0 on an 8-vCPU Linux VM with Python 3.13 (the setup the README names): 8.83, 8.82 and 8.71 s per million lines (9.30, 9.29, 9.17 s for 1,053,200 lines), median 8.82. The single 500,000-line program goes from about 4.5 s to about 4.8 s (`--scenario big-500k`, 3 runs: 5.25, 4.71, 4.78 s, median 4.78; peak memory 243 MB, so "250 MB" stays).
 
 ## [4.16.0] - 2026-10-12
 

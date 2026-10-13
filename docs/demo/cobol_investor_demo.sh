@@ -135,7 +135,6 @@ echo "  • Copybook rules (COBOL007/015) only see copybooks inside the scanned 
 echo "  • Dead-code/unused-paragraph rules do not follow procedure copybooks (COPY in PROCEDURE)"
 echo ""
 echo "Next Steps:"
-echo "  • SARIF output (not available yet; the GitHub Action already runs these rules)"
 echo "  • Phase 4: performance on large codebases"
 echo "  • Target: Banking/insurance/gov COBOL teams (300K+ active developers)"
 echo ""

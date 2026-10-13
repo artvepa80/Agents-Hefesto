@@ -313,6 +313,70 @@ class TestCobol013DeadCode:
         assert _rules(code, rule="COBOL013") == [8]
 
 
+class TestCobol013TerminatorLine:
+    """B5: the message cites the line of the STOP RUN/GOBACK, not the sentence start.
+
+    A COBOL sentence runs to the next period, so MOVE ... ACCEPT ... DISPLAY ...
+    STOP RUN. is one sentence; the message used to cite where it started.
+    """
+
+    PAYROLL = (
+        "      * PAYROLL: monthly payroll batch (demo program).\n"
+        "       IDENTIFICATION DIVISION.\n"
+        "       PROGRAM-ID. PAYROLL.\n"
+        "       DATA DIVISION.\n"
+        "       WORKING-STORAGE SECTION.\n"
+        "           COPY EMPREC.\n"
+        "       01  WS-DB-PASSWORD          PIC X(12).\n"
+        "       01  WS-RUN-MONTH            PIC X(6).\n"
+        "       01  WS-TOTAL                PIC S9(11)V99 COMP-3 VALUE 0.\n"
+        "       01  WS-TOTAL-X REDEFINES WS-TOTAL PIC X(7).\n"
+        "       01  WS-EMP-COUNT            PIC 9(4) VALUE 0.\n"
+        "       01  WS-EMP-TABLE.\n"
+        "           05  WS-EMP-ROW OCCURS 1 TO 500 TIMES\n"
+        "                   DEPENDING ON WS-EMP-COUNT.\n"
+        "               10  WS-ROW-ID       PIC 9(6).\n"
+        "       PROCEDURE DIVISION.\n"
+        "       MAIN-PARA.\n"
+        "           MOVE 'Payr0ll#2026' TO WS-DB-PASSWORD\n"
+        "           ACCEPT WS-RUN-MONTH\n"
+        "           DISPLAY 'RUN ' WS-RUN-MONTH\n"
+        "           STOP RUN.\n"
+        "           DISPLAY 'PAYROLL DONE'.\n"
+    )
+
+    def test_payroll_cites_stop_run_line(self):
+        issues = _issues(self.PAYROLL, "COBOL013", name="PAYROLL.cbl")
+        assert [i.line for i in issues] == [22]
+        assert "(line 21)" in issues[0].message
+        assert "(line 18)" not in issues[0].message
+
+    def test_long_sentence_cites_goback_line(self):
+        # 136 lines before the paragraph body: the sentence starts at 137 and
+        # its GOBACK sits on line 268.
+        head = ["@IDENTIFICATION DIVISION.", "@PROGRAM-ID. T.", "@DATA DIVISION."]
+        head += ["@WORKING-STORAGE SECTION."]
+        head += [f"@01  WS-F{i:03d} PIC X." for i in range(130)]
+        head += ["@PROCEDURE DIVISION.", "@MAIN-PARA."]
+        assert len(head) == 136
+        body = [f"DISPLAY 'L{i:03d}'" for i in range(131)] + ["GOBACK.", "DISPLAY 'DEAD'."]
+        issues = _issues(_fixed(head + body), "COBOL013")
+        assert [i.line for i in issues] == [269]
+        assert "(line 268)" in issues[0].message
+
+    def test_terminator_on_the_first_line_of_the_sentence(self):
+        code = _prog(proc=["@MAIN-PARA.", "STOP RUN.", "DISPLAY 'DEAD'."])
+        issues = _issues(code, "COBOL013")
+        assert [i.line for i in issues] == [7]
+        assert "(line 6)" in issues[0].message
+
+    def test_terminator_after_literal_with_period(self):
+        code = _prog(proc=["@MAIN-PARA.", "DISPLAY 'A. B.'", "GOBACK.", "DISPLAY 'D'."])
+        issues = _issues(code, "COBOL013")
+        assert [i.line for i in issues] == [8]
+        assert "(line 7)" in issues[0].message
+
+
 class TestCobol014UnusedParagraph:
     def test_unreferenced_after_stop_run(self):
         code = _prog(
@@ -329,6 +393,22 @@ class TestCobol014UnusedParagraph:
         issues = _issues(code, "COBOL014")
         assert [i.line for i in issues] == [10]
         assert issues[0].severity == AnalysisIssueSeverity.LOW
+
+    def test_bare_stop_run_sentence_ends_the_paragraph(self):
+        # A sentence that is only "STOP RUN." matches at offset 0: the paragraph
+        # still ends there, so the next paragraph is not reached by fall-through.
+        code = _prog(
+            proc=[
+                "@MAIN-PARA.",
+                "PERFORM USED-PARA.",
+                "STOP RUN.",
+                "@USED-PARA.",
+                "GOBACK.",
+                "@ORPHAN-PARA.",
+                "DISPLAY 'O'.",
+            ]
+        )
+        assert _rules(code, rule="COBOL014") == [10]
 
     def test_unused_section(self):
         code = _prog(

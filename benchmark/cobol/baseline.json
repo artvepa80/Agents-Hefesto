@@ -584,15 +584,13 @@
    "license": "Apache-2.0",
    "files_analyzed": 20,
    "total_loc": 2217,
-   "total_findings": 9,
+   "total_findings": 7,
    "cobol_findings": 4,
    "by_rule": {
     "COBOL007": 4,
-    "YAML_INDENTATION": 2,
     "missing-safety": 3
    },
    "by_severity": {
-    "LOW": 2,
     "MEDIUM": 7
    },
    "per_file": {
@@ -607,12 +605,6 @@
     },
     "multiroot/copybooks/trans/TRANREC.cpy": {
      "COBOL007": 1
-    },
-    "multiroot/sam/zapp.yaml": {
-     "YAML_INDENTATION": 1
-    },
-    "zapp.yaml": {
-     "YAML_INDENTATION": 1
     },
     "zowe/zowecli-cobol-clean.sh": {
      "missing-safety": 1
@@ -643,16 +635,6 @@
     [
      "COBOL007",
      "multiroot/copybooks/trans/TRANREC.cpy",
-     1
-    ],
-    [
-     "YAML_INDENTATION",
-     "multiroot/sam/zapp.yaml",
-     1
-    ],
-    [
-     "YAML_INDENTATION",
-     "zapp.yaml",
      1
     ],
     [
