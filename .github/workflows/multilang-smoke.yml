@@ -98,4 +98,4 @@ jobs:
       - name: Unit tests that need the grammars
         run: |
           pip install -e ".[multilang,dev]"
-          python -m pytest -q -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py
+          python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py
