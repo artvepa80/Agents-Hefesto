@@ -11,6 +11,32 @@ HefestoAI runs after your AI assistant writes the code and before it ships. It c
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
+### Quick start (GitHub Action)
+
+**Deterministic pass/fail check for agent-written code.** It compares what your repo declares (dependencies, README, `pyproject.toml`, CHANGELOG, `action.yml`, CI) with what it actually does, and flags secrets and risky IaC. Same input, same result.
+
+```yaml
+# .github/workflows/hefesto.yml
+name: HefestoAI
+on: [pull_request, push]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  hefesto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: artvepa80/Agents-Hefesto@v4
+        with:
+          fail_on: HIGH
+          sarif: 'true'
+```
+
+Findings show up under **Security > Code scanning** and as pull request annotations. `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `@v4.16.0` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+
+Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/#pricing).
+
 ---
 
 ## Operational Truth Analyzers (v4.16.0)
@@ -66,8 +92,7 @@ Hefesto checks for these at pre-commit, at pre-push and in CI, so they surface b
 | HARDCODED_SECRET | CRITICAL | API keys, passwords in code |
 | SQL_INJECTION_RISK | HIGH | String concatenation in queries |
 | COMMAND_INJECTION | HIGH | Unsafe shell command execution |
-| PATH_TRAVERSAL | HIGH | Unsafe file path handling |
-| UNSAFE_DESERIALIZATION | HIGH | pickle, yaml.unsafe_load |
+| PICKLE_USAGE | HIGH | `pickle` / `cPickle` imports (unsafe deserialization) |
 | UNDECLARED_DEPENDENCY | MEDIUM | Import used but not in pyproject.toml |
 | PACKAGING_VERSION_DRIFT | MEDIUM | Version mismatch across pyproject/CHANGELOG/README |
 | CI_CONFIG_DRIFT | MEDIUM-HIGH | Local env vs CI configuration mismatch |
@@ -140,7 +165,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
-| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [Telemetry](#telemetry) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI's anonymous ping is turned on. Any other value, including the default `0`, sends nothing; see [docs/telemetry.md](docs/telemetry.md) | `0` |
 
 **Outputs**:
 
@@ -259,18 +284,8 @@ pointing to the install command (also exposed via
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
 ³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
-- **Source format:** a `>>SOURCE FORMAT IS FREE`/`FIXED` directive (or `$SET SOURCEFORMAT(...)`) in the first 50 lines decides the format. Without one, free format is inferred when a division header (or, in a copybook, a level-01/77 entry) starts before column 8; otherwise fixed format (columns 7-72) is assumed. The inference is a heuristic, so declare the directive if in doubt; the files read as free format this way are listed under **Notes** in the text report and in `meta.cobol_format_notices` (JSON).
-- **COBOL004 (REDEFINES)** flags a `REDEFINES` only when one side holds packed (`COMP-3`), binary, float, pointer or signed numeric data and the two layouts differ (for example `PIC X(12)` over `PIC S9(10)V99`). Plain `PIC X`/unsigned display overlays, CICS BMS symbolic maps (and program overlays of a BMS input map, such as CardDemo's `01 FILLER REDEFINES CTRTLIAI`) the byte view of a binary integer (`PIC 9(4) BINARY` or `PIC S9(4) COMP` redefined as `PIC X` bytes of exactly its storage size, as CardDemo does to decode a VSAM file status), a signed zoned number split into digit groups with the sign on the last group (`PIC S9(10)` as `9(9)` + `S9`), a pointer viewed as one address-sized field (`USAGE POINTER` as `PIC X(4)`/`X(8)` or an unsigned 4- or 8-byte binary), and a table of constants redefined as an `OCCURS` table with the same layout per entry are skipped; a size mismatch, a SIGN clause, a signed or display view of a pointer, or a different per-entry layout is still flagged. **COBOL005** reports one finding per `OCCURS ... DEPENDING ON` entry and skips the CICS `DEPENDING ON EIBCALEN` commarea idiom.
-- **COBOL006 / COBOL011 / COBOL015** report repeated findings once (per `PERFORM X THRU Y` pair, per program, per missing copybook), with the occurrence count and lines in the finding metadata.
-- **COBOL007 (copybook blast radius)** is reported once on the copybook file when 5 or more scanned programs `COPY` it, directly or through nested copybooks (MEDIUM; HIGH at 15+ programs or for a generic name such as `COMMON`, `UTILS`, `SHARED`). It needs the copybook to be in the scan. **COBOL015 (LOW)** flags a `COPY` whose copybook is not in the scanned tree (also a nested `COPY` inside a copybook); it stays silent when no `COPY` in the scan resolves (for example a single file). Vendor copybooks (CICS `DFH*`, IBM MQ `CMQ*`, DB2 `SQLCA`/`SQLDA`) are skipped by both. `EXEC SQL INCLUDE` members count like `COPY`. Copybooks kept outside the scanned tree resolve with `--copybook-path DIR` (repeatable) or `copybook_paths:` in `.hefesto.yaml`; files there are expanded into the programs that `COPY` them but not analyzed on their own. The search below each copybook path is recursive but bounded: 8 directory levels and 50,000 files (a warning is logged when it stops), hidden directories skipped, and it runs once per run.
-- **COPY expansion:** programs are analyzed with each `COPY` (and `EXEC SQL INCLUDE`) replaced by the copybook text, the way the compiler sees it, so every rule sees copybook data definitions, `SELECT`s and procedure code in the context of the program. `COPY ... REPLACING` is applied: `==pseudo-text==` (including an empty replacement), literals, words and identifiers (`A OF B`, `T(1)`), `LEADING`/`TRAILING` partial words, and the `==:TAG:==` / `==(TAG)==` idioms inside words; matching is by text word (case-insensitive words, exact literals, first pair wins, no rescan). A REPLACING also applies to copybooks nested under it. Guards: a copybook already open in the chain is not expanded again (recursion), nesting stops at 16 levels and a program stops expanding after 250,000 copybook lines; a `COPY` that is not expanded stays as written. A finding on copybook text is reported at the program's `COPY` line with the copybook file and line in `metadata.expanded_from`; COBOL004/008/009 on an unchanged line of a scanned copybook stay on the copybook file (not repeated per program), but are reported in the program when `REPLACING` changed that line or the copybook comes from `copybook_paths`. Not supported: the `REPLACE` statement, and `OF library` does not pick between copybooks of the same name (the one closest to the program wins). Copybook files themselves are analyzed as written.
-- **COBOL002 (credentials)** skips fields whose name ends in a flag/status/length/label suffix (for example `WS-PASSWORD-OK-FLAG`, `PWD-LEN`).
-- **COBOL008-COBOL010 (secrets, CRITICAL)**: a `VALUE` literal on a credential-named field (same suffix exclusions as COBOL002; placeholders such as `SPACES`, `XXXX`, `UNDEFINED` and key names such as `'APP-Token-Password'` are skipped), `PASS=`/`PWD=`/`PASSWORD=` with a value inside any string literal, and `EXEC SQL CONNECT ... USING`/`IDENTIFIED BY` with a literal password.
-- **COBOL011 (LOW)** flags `SELECT`s without a `FILE STATUS` clause, one finding per program with the file names in the metadata (sort files declared with `SD` are skipped). **COBOL012 (LOW)** flags an OPENed file whose status field, its subordinates and its 88-levels are never referenced in the PROCEDURE DIVISION (skipped when the status field is not defined in the expanded program, for example in a copybook that was not found, or the PROCEDURE DIVISION has a `COPY` that could not be expanded).
-- **COBOL013 (MEDIUM)** flags statements after an unconditional `STOP RUN`/`GOBACK`/`EXIT PROGRAM` in the same paragraph (`EXIT PROGRAM. STOP RUN.` and alternate `ENTRY` points are not flagged). **COBOL014 (LOW)** flags paragraphs and sections that are never referenced (PERFORM, GO TO, THRU ranges, SORT/ALTER) and cannot be reached by fall-through; the entry paragraph, DECLARATIVES, empty `EXIT` paragraphs and programs with a PROCEDURE DIVISION `COPY` that could not be expanded are skipped.
-- **Measured recall:** 39 of 41 seeded issues (every rule at least twice) are found, including 7 that only fire after COPY expansion; the 2 misses are documented limits: a secret whose value contains a credential word (skipped to avoid placeholder false positives) and a literal that reaches a password field through another field (no data-flow analysis). Run `python scripts/cobol_recall.py`; precision on real corpora is in [docs/cobol-corpus-baseline.md](docs/cobol-corpus-baseline.md).
-- **Performance:** about 9 s per million lines on a synthetic 1,000-program project (1.05M lines, nested `COPY` and `COPY ... REPLACING`), about 4.8 s for a single 500,000-line program, with peak memory around 60 MB for the project and 250 MB for the 500k-line file (measured on an 8-vCPU Linux VM with Python 3.13; the analysis is single-threaded). Findings stay grouped, so a 500,000-line file yields 4 findings. Reproduce with `python scripts/cobol_perf_bench.py`.
-- Output is text, JSON, HTML or SARIF 2.1.0 (`--format sarif`). In SARIF, a finding on copybook text carries the copybook file and line as a related location. A ready-to-push example repository layout (COBOL app with planted issues and a SARIF workflow) is described in [docs/github-action.md](docs/github-action.md#example-repository).
+
+COBOL details (source format, per-rule behaviour, COPY expansion, measured recall, performance, SARIF): [docs/cobol.md](docs/cobol.md).
 
 ---
 
@@ -455,54 +470,9 @@ See [`docs/PRO_OPTIONAL_FEATURES.md`](docs/PRO_OPTIONAL_FEATURES.md).
 
 ---
 
-## REST API (PRO)
+## REST API (PRO), OMEGA Guardian and IRIS
 
-```bash
-# Start server (binds to 127.0.0.1 by default)
-hefesto serve --port 8000
-
-# Analyze code
-curl -X POST http://localhost:8000/analyze \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $HEFESTO_API_KEY" \
-  -d '{"code": "def test(): pass", "severity": "MEDIUM"}'
-```
-
-### API Security (v4.8.0)
-
-The API server starts with these defaults:
-
-| Feature | Default | Configure via |
-|---------|---------|---------------|
-| Host binding | `127.0.0.1` (loopback) | `HEFESTO_API_HOST` |
-| CORS | Localhost only | `HEFESTO_CORS_ORIGINS` |
-| API docs | **Disabled** (404) | `HEFESTO_EXPOSE_DOCS=true` |
-| Auth | Off (no key set) | `HEFESTO_API_KEY` |
-| Rate limit | 60 req/min | `HEFESTO_RATE_LIMIT_PER_MINUTE` |
-| Path sandbox | `cwd()` | `HEFESTO_WORKSPACE_ROOT` |
-
-```bash
-# Production example
-export HEFESTO_API_KEY=my-secret-key
-export HEFESTO_CORS_ORIGINS=https://app.example.com
-export HEFESTO_RATE_LIMIT_PER_MINUTE=60
-export HEFESTO_EXPOSE_DOCS=false
-hefesto serve --host 0.0.0.0 --port 8000
-```
-
-### Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/analyze` | POST | Analyze code |
-| `/health` | GET | Health check (no auth required) |
-| `/ping` | GET | Fast health ping (no auth required) |
-| `/batch` | POST | Batch analysis |
-| `/metrics` | GET | Quality metrics |
-| `/history` | GET | Analysis history |
-| `/webhook` | POST | GitHub webhook |
-| `/stats` | GET | Statistics |
-| `/validate` | POST | Validate without storing |
+`hefesto serve` (PRO) exposes the analyzer over HTTP: [docs/rest-api.md](docs/rest-api.md). OMEGA Guardian and the IRIS production-monitoring agent: [docs/omega-iris.md](docs/omega-iris.md).
 
 ---
 
@@ -691,65 +661,6 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
 
 ---
 
-## OMEGA Guardian
-
-Production monitoring that correlates code issues with production failures.
-
-### Features
-
-- **IRIS Agent**: Real-time production monitoring
-- **Auto-Correlation**: Links code changes to incidents
-- **Real-Time Alerts**: Pub/Sub notifications
-- **BigQuery Analytics**: Track correlations over time
-
-### Setup
-
-```yaml
-# iris_config.yaml
-project_id: your-gcp-project
-dataset: omega_production
-pubsub_topic: hefesto-alerts
-
-alert_rules:
-  - name: error_rate_spike
-    threshold: 10
-  - name: latency_increase
-    threshold: 1000
-```
-
-```bash
-# Run IRIS Agent
-python -m hefesto.omega.iris_agent --config iris_config.yaml
-
-# Check status
-hefesto omega status
-```
-
----
-
-## IRIS Telemetry Contract (OMEGA)
-
-IRIS labels deployments as GREEN/YELLOW/RED using post-deploy telemetry. The input format is an open contract — any observability stack can produce it:
-
-| Resource | Path | Description |
-|----------|------|-------------|
-| **Aggregates Contract v1** | [`docs/telemetry/AGGREGATES_CONTRACT.md`](docs/telemetry/AGGREGATES_CONTRACT.md) | Row schema, units, validation checklist |
-| **JSONL Validator** | [`scripts/validate_aggregates_jsonl.py`](scripts/validate_aggregates_jsonl.py) | Stdlib-only validator (no deps) |
-
-```bash
-# Validate your telemetry file
-python scripts/validate_aggregates_jsonl.py aggregates.jsonl
-
-# Feed to IRIS (OMEGA tier)
-export IRIS_TELEMETRY_SOURCE=file
-export IRIS_TELEMETRY_FILE=aggregates.jsonl
-iris label-outcomes --repo org/repo --commit abc123 --env production --window both --json
-```
-
-Enterprise collectors (Prometheus, Datadog, CloudWatch) and integration runbooks are available in the PRO distribution.
-
----
-
 ## vs. Competition
 
 | Criterion | Hefesto | Semgrep | CodeRabbit | Qodo | Snyk |
@@ -778,124 +689,13 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 ---
 
-## Changelog
-
-Highlights only. The full history is in [CHANGELOG.md](CHANGELOG.md).
-
-### v4.16.0 (2026-10-12)
-- **Breaking for CI gates that analyze nothing**: a run with no analyzed files no longer passes `--fail-on` (exit 1, "Gate failure: no files were analyzed"); the report says "No files were analyzed" and stderr names the path. `--allow-no-files` keeps exit 0 for runs that are empty on purpose. `@v4` gets this; pin `@v4.15.1` to keep the old behaviour
-- **Vendored and minified JavaScript is skipped by default** (`*.min.js`, `vendor/`, `static/**/libs/` ...); the summary, JSON `meta.vendored_skipped` and SARIF say how many; `--include-vendored` restores it
-- **The zero-files warning names vendored skips** and suggests `--include-vendored`
-
-### v4.15.1 (2026-10-11)
-- **Fix**: exclude patterns (`build/`, `dist/`, `venv/`, `--exclude`) match whole path components below the analyzed path; a project in `app-build/` or under `~/venv/` is analyzed again instead of reporting 0 files as a pass
-- **Fix**: YAML_SYNTAX_ERROR accepts multi-document files and skips Helm chart templates
-- **Fix**: COBOL004 skips four REDEFINES idioms that never reinterpret a value (zoned sign split, pointer views, constant tables, signed byte view)
-- **Fix**: EVAL_USAGE in JavaScript/TypeScript/Java comes from the syntax tree (no more `RegExp.exec`, own `exec` methods, comments or strings)
-- **GitHub Action**: it installs from its own ref, so workflows pinned to `@v4.15.0` keep the exclusion bug until they move to `@v4.15.1`
-
-### v4.15.0 (2026-10-10)
-- **SARIF 2.1.0 output for every analyzer** (`--format sarif`, `--sarif-file`): rule metadata, security-severity, stable fingerprints, repo-relative paths; validated against the OASIS schema
-- **GitHub Action**: now a composite action; `sarif: 'true'` uploads findings to GitHub code scanning (`upload-sarif@v4`), also when the gate fails
-- **COBOL**: full `COPY ... REPLACING` expansion with copybook line attribution; ~2.3x faster on large projects (Phase 4)
-- **CLI**: `hefesto activate/deactivate/status` give the environment-variable instructions; `pr-review` ignores an inherited `GIT_DIR`
-
-### v4.14.1 (2026-10-06)
-- **Security (SEC-03)**: secret detection skips test/example code by whole path segment and file-name convention, not by any path that merely contains `test` or `example`
-- **Security (SEC-05)**: the HTML report escapes every interpolated value (stored XSS via crafted file names)
-- **Security (SEC-06)**: the GitHub Action sends telemetry only when the `telemetry` input is `1` or `true`; `hefesto telemetry status` now reports the CLI usage ping
-- **Fix (BUG-13)**: Action `min_severity: INFO` maps to `LOW` instead of failing the run
-
-### v4.14.0 (2026-10-06)
-- **`.hefesto.yaml` project config** for `hefesto analyze`, with `--config PATH` / `--no-config`; explicit flags win over the file, and an invalid file exits 2
-- **Opt-in `--format-check`**: reports files Black would reformat as LOW `FORMAT_DRIFT` findings (`pip install "hefesto-ai[format]"`)
-- PyYAML is now a core dependency
-
-### v4.13.1 (2026-05-08)
-- **Fix**: R3 (`RELIABILITY_SESSION_LIFECYCLE`) no longer flags a connection stored on `self` when a sibling method closes it
-
-### v4.13.0 (2026-05-06)
-- **Parser-failure visibility**: when TypeScript, JavaScript, Java, Go, Rust or C# files are skipped (for example, because `[multilang]` is missing), Hefesto prints a warning to stderr and records the files in `report.meta.parser_failures`
-- **CI smoke test** for the `[multilang]` extra on Python 3.10–3.13
-
-### v4.12.0 (2026-04-25)
-- **COBOL governance analysis**: 7 free rules for COBOL-85 and IBM Enterprise COBOL
-
-### v4.11.2 (2026-04-12)
-- **Phase 4 — Narrow Semantic Analyzer**: `ATTRIBUTE_NAME_MISMATCH` (typo detection via difflib) and `SILENT_EXCEPTION_SWALLOW` (broad except with trivially silent body)
-- **Cross-repo schema contract test**: pins 12-key PR review finding dict between OSS and Pro
-- **`code_snippet` in PR review JSON**: field was silently dropped, now included
-- **Phase 3.1 — Enrichment rendering**: PR comments render AI enrichment summary when present
-- **Upgrade notice**: shows when a newer version is available on PyPI
-- **Fix**: `contextlib.suppress(ImportError)` recognized as optional-import guard
-- **Fix**: AST `BinOp(Mod)` catches single-char SQL injection FN (Phase 1c debt closed)
-- 474 tests (was 430), 0 regressions
-
-### v4.10.0 (2026-04-12)
-- **PR Review**: New `hefesto pr-review` command — diff-scoped analysis with inline GitHub PR comments and SHA256 dedup keys. Two workflow templates (simple + deduped) in `examples/github-actions/`
-- **Operational Truth Analyzers**: 5 project-level analyzers detect drift between imports/deps, docs/entrypoints, packaging versions, install artifacts, and CI config — all visible via `hefesto analyze`
-- **Security Precision (BP-7)**: SQL_INJECTION FP rate 43%→0% (DB-API placeholders no longer flagged), ASSERT_IN_PRODUCTION 31→0 FPs (AST rewrite), PICKLE/BARE_EXCEPT detectors rewritten with exact matching
-- **CI Parity Unification**: `check-ci-parity` findings now appear in `hefesto analyze` via adapter; legacy CLI preserved
-- 430 tests (was 346), 0 regressions
-
-### v4.9.9 (2026-03-13)
-- **Telemetry**: Anonymous usage pings enabled by default (opt-out via `HEFESTO_TELEMETRY=0`)
-- First-run notice printed once to stderr
-- No code, paths, or PII collected
-
-### v4.9.7 (2026-03-13)
-- **Telemetry**: Anonymous usage ping endpoint (CLI opt-in + GitHub Action always-on)
-
-### v4.9.3 (2026-02-24)
-- **MCP endpoint** live (JSON-RPC 2.0)
-- **AI discoverability** stack complete (llms.txt, agent.json, OpenAPI, FAQ, Changelog)
-- **Registered** in official MCP Registry and Smithery
-
-### v4.9.0 (2026-02-14)
-- **Boundary**: Public/private repo split — community edition only in public repo.
-- **Removed**: Paid modules (api, llm, licensing, omega), paid infra, paid tests.
-- **Hardened**: Packaging (packages.find exclude, MANIFEST.in prune, CI guard).
-
-### v4.8.5 (2026-02-13)
-- **GitHub Action**: Market-ready Docker-based action (bypassing PyPI).
-- **Security**: Deterministic smoke tests with clean/critical fixtures.
-- **CLI**: Verified exit code contract (2 = Issues Found). *Current CLI exits with 1 when the `--fail-on` gate fails; see [Exit Codes](#exit-codes).*
-
-### v4.7.0 (2026-02-10)
-- **Patch C: API Hardening** — `hefesto serve` is secure-by-default (local-first)
-- **Security**: API key auth, CORS allowlist, docs toggle, path sandbox
-
-### v4.3.3 (2025-12-26)
-- Fix LONG_PARAMETER_LIST: use AST formal_parameters instead of comma counting
-- Fix function naming: infer names from variable_declarator for arrow functions
-
-### v4.2.1 (2025-10-31)
-- Critical tier hierarchy bugfix
-- OMEGA Guardian release
-
----
-
 ## Telemetry
 
-HefestoAI collects anonymous usage data by default to help improve the tool.
+Off by default; opt-in only. What is sent and how to turn it on or off: [docs/telemetry.md](docs/telemetry.md).
 
-**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
-**What's sent (GitHub Action):** nothing by default. The Action's telemetry is opt-in: only with the `telemetry` input set to `1` or `true` does it send version, file count, issue count and exit code once per run, and it turns on the CLI ping described above. With `telemetry: 0` (the default) or any other value, the Action sends no ping and runs the CLI with `HEFESTO_TELEMETRY=0`. (Up to v4.14.0 the Action sent its ping even with `telemetry: 0`.)
-**What's NOT sent:** code, file paths, file contents, project names, or any PII.
+## Changelog
 
-The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:
-```bash
-export HEFESTO_TELEMETRY=0
-```
-
-Tag owner/dogfood runs so they do not mix with end-user analytics (`env` includes `dogfood`; also auto-tagged for editable installs):
-```bash
-export HEFESTO_TELEMETRY_ENV=dogfood
-# or: export HEFESTO_DOGFOOD=1
-```
-Filter in Neon: `WHERE NOT ('dogfood' = ANY(env))`.
-
-`hefesto telemetry status` shows whether the CLI ping is enabled and where it goes, plus the state of a separate local telemetry log (opt-in with `HEFESTO_TELEMETRY=1`, never uploaded). `hefesto telemetry clear` deletes that local log; it does not affect the remote ping.
+Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

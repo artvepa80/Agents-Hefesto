@@ -1,0 +1,54 @@
+# 2026-10-13 — Listing del Marketplace (hefesto-code-guardian)
+
+Auditoría de Hefesto Growth (`/workspace/marketplace-audit.md`), verificada punto por punto.
+
+## Verificado y aplicado
+
+1. **action.yml**: el Action instala `pip install "$GITHUB_ACTION_PATH"` sin extras.
+   Medido con una venv limpia sin extras sobre un directorio con un archivo por formato:
+   analiza `.py`, `.yml`, `.tf`, `.sh`, `Dockerfile`, `.sql`, `.cbl`; salta Go, Java,
+   JavaScript y TypeScript ("parser unavailable ... pip install hefesto-ai[multilang]").
+   Descripción nueva (113 caracteres, límite 125): "Deterministic pass/fail check for
+   agent-written code: declared-vs-real drift, secrets, IaC and COBOL, with SARIF."
+   Branding `check-circle` verde. Nombre sin cambios (la URL del listing depende de él).
+2. **README, Quick start arriba**: workflow con `@v4`, `fail_on: HIGH`, `sarif: 'true'` y
+   permisos; nota de fijar `@v4.16.0` o SHA (4.16.0 cambió el caso sin archivos); qué
+   formatos cubre el Action; enlace a `#pricing` (PRO $8, OMEGA $19; sin "no credit card",
+   sin cupones).
+3. **Tabla "What Hefesto Catches"**: `rg PATH_TRAVERSAL|UNSAFE_DESERIALIZATION hefesto/` no
+   encuentra nada: ningún analizador los emite. PATH_TRAVERSAL se quita. En lugar de
+   UNSAFE_DESERIALIZATION se lista PICKLE_USAGE (HIGH, `security.py`, imports de
+   pickle/cPickle), que sí se emite; `yaml.unsafe_load` no se detecta, se quita de la fila.
+4. **Copy**: `/api/analyze` alojado se mantiene (existe en producción desde la Fase 6) y ya
+   describe sus límites (20 archivos, 100 KB c/u, 256 KB, 20 s, nada se guarda). "39 of 41"
+   se mantiene (reproducible con `scripts/cobol_recall.py`), ahora en `docs/cobol.md`.
+   "about 9 s" ya estaba tras #100. "SQL_INJECTION FP rate 43%→0%": el "después" es
+   reproducible (`tests/fixtures/sqli_safe_patterns/`: 0 FP en los 4 fixtures seguros, 3/3
+   TP), el "antes" no (necesita el código viejo) y la cifra no cuadra (4 FP / 7 = 57 %).
+   Estaba en el changelog del README, que se reemplazó por un enlace a CHANGELOG.md; la
+   entrada histórica de CHANGELOG.md no se toca.
+5. **Mover a docs/**: REST API (PRO) → `docs/rest-api.md`, OMEGA/IRIS + contrato de
+   telemetría IRIS → `docs/omega-iris.md`, Telemetry → `docs/telemetry.md`, detalle COBOL
+   → `docs/cobol.md`, changelog del README → enlace. Enlaces relativos corregidos.
+   README 916 → 716 líneas. README Parity (`scripts/verify_readme.py`) y Capabilities
+   Parity pasan. No se llegó a ~150 líneas: README Parity exige en el README las tablas
+   de lenguajes (Code / DevOps / Cloud), el badge `languages-22-green` y el encabezado
+   `CLI Reference (vX.Y.Z)`; mover más (CLI reference, CI/CD, configuración) es posible
+   pero cambia el script de paridad o rompe enlaces externos: queda como propuesta.
+6. **`.pre-commit-hooks.yaml`**: descripción "Deterministic security and complexity checks
+   on staged Python files (hefesto analyze)" (`types: [python]`; no se promete drift: en una
+   prueba con archivos sueltos no aparecieron hallazgos OT) y `hefesto-ai>=4.16.0`.
+
+## No aplicado (propuestas en el cuerpo del PR)
+
+- Descripción y topics del repo (ajuste de repo; Arturo quiere revisarlo).
+- Inputs `multilang` / `format_check` del Action y verified creator (org de GitHub +
+  dominio verificado).
+- Captura real de code scanning / anotación de PR: no se puede producir desde aquí sin una
+  corrida con subida SARIF y sesión en GitHub; queda TODO.
+- Badge del Marketplace: no añadido (el badge `languages-22` se mantiene por README Parity).
+
+## Verificación
+
+pytest 1255 passed, 8 skipped (1 error local conocido); dogfood 279 archivos / 389
+hallazgos, igual que main; README Parity y Capabilities Parity OK.

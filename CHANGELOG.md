@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Marketplace listing and README.** `action.yml` description is now "Deterministic pass/fail check for agent-written code: declared-vs-real drift, secrets, IaC and COBOL, with SARIF." (it said "AI-powered" and "22 formats"; the Action installs HefestoAI without extras, so it analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks), with a green `check-circle` icon; the Action name, and so its Marketplace URL, is unchanged. The README opens with a Quick start workflow (`@v4`, `fail_on`, SARIF), the note to pin `@v4.16.0` or a SHA, what the Action covers and the pricing link. "What Hefesto Catches" drops PATH_TRAVERSAL (no analyzer emits it) and lists PICKLE_USAGE instead of UNSAFE_DESERIALIZATION (the emitted type; `yaml.unsafe_load` is not detected). The REST API, OMEGA/IRIS, telemetry and COBOL details moved to `docs/rest-api.md`, `docs/omega-iris.md`, `docs/telemetry.md` and `docs/cobol.md`, and the release history in the README was replaced by a link to this file (916 → 716 lines). `.pre-commit-hooks.yaml`: honest description (security and complexity checks on Python files) and `hefesto-ai>=4.16.0`.
+
 ### Fixed
 
 - **COBOL013 cites the line of the STOP RUN/GOBACK/EXIT PROGRAM.** A COBOL sentence runs to the next period, so `MOVE ... ACCEPT ... DISPLAY ... STOP RUN.` spread over four lines is one sentence, and the message cited the line where that sentence started (line 18 instead of 21 in a payroll demo). The reported line of the dead code was already right. The terminator's own line is now cited; a separate helper returns the terminator's offset, and `ends_unconditionally()` (also used by COBOL014) still returns a bool, derived from that helper.
