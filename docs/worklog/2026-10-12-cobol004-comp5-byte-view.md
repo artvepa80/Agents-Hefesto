@@ -71,3 +71,45 @@ bytes. Test primero (`test_comp5_suggestion_warns_about_truncation`, rojo → ve
 
 Release rule: no release until the COBOL016 PR lands (avoid the COBOL004->COBOL016
 rule-id change in code scanning).
+
+## Sugerencia: dígitos reales, -fnotrunc, llamadas C/SQL (2026-10-13)
+
+- El límite de BINARY usa los dígitos reales del campo (10^dígitos − 1 bajo TRUNC(STD)):
+  9(4) → 9,999; 9(9) → 999,999,999. No se imprime capacidad de COMP-5 ("COMP-5 uses the
+  full binary capacity of the field"): depende del compilador.
+- Se nombra `-fnotrunc` (GnuCOBOL) junto a `TRUNC(BIN)` (IBM).
+- Una frase: si el campo se pasa a llamadas C, SQL u OS (p. ej. SQLCA), no cambiar su
+  USAGE; quitar la vista de bytes. Sin lógica de detección; los hallazgos no cambian.
+- "widening the PIC changes the size" → "can change the size".
+- Verificado con GnuCOBOL 3.2.0 (Debian `gnucobol3`, x86_64), `FUNCTION BYTE-LENGTH`:
+
+  | Opciones | PIC 99 COMP-5 | PIC 99 BINARY | PIC 9(4) COMP-5 |
+  |---|---|---|---|
+  | (default) | 1 | 1 | 2 |
+  | `-std=ibm` | 1 | 2 | 2 |
+  | `-std=mf` | 1 | 1 | 2 |
+
+  También medido: MOVE/ADD 50000 a `9(4) BINARY` → 0000 por defecto, 50000 con `-fnotrunc`.
+- Tests primero (4 en rojo): truncamiento, TRUNC(STD), TRUNC(BIN), -fnotrunc, la nota
+  C/SQL/SQLCA, el límite real (9(4), S9(4), 9(9), S9(18)) y que no aparezca ningún número
+  de capacidad COMP-5.
+
+## Notas para el PR de COBOL016 (no en este PR)
+
+- Tratar BINARY-CHAR/SHORT/LONG/LONG-LONG/DOUBLE/C-LONG (SIGNED/UNSIGNED) como binario
+  nativo. Hoy `_USAGE_BINARY` no los reconoce (el lookahead `(?![\w-])` falla en el guion),
+  `_usage_class()` da `None` y, sin PIC, `_elementary_class(None, None)` los manda a
+  "alphanumeric": invisibles para COBOL004 (ni vista de bytes ni reinterpretación, p. ej.
+  `BINARY-LONG` redefinido como `PIC 9(4)` no se reporta). Medido en GnuCOBOL 3.2 x86_64:
+  tamaños 1/2/4/8/8; BINARY-SHORT 258 → `02 01`, BINARY-DOUBLE 258 → `02 01 00 …`.
+- Mensaje: "native byte order (platform-dependent)"; no son tipos de IBM Enterprise COBOL,
+  así que no encuadrar como z/OS vs x86.
+- `_binary_bytes()` asume tamaños IBM (1-4 dígitos = 2 bytes). En GnuCOBOL, COMP-5 de 1-2
+  dígitos ocupa 1 byte incluso con `-std=ibm` (z/OS: 2); BINARY 1-2 dígitos ocupa 1 byte
+  por defecto y 2 con `-std=ibm`.
+- CobolCraft (extval, `e8c420d`) como control de falsos positivos: 2,328 líneas con
+  BINARY-* (1,804 LONG, 402 CHAR, 81 LONG-LONG, 41 SHORT), ningún COMP-5, sin vistas
+  PIC X sobre ellos.
+- Bank-of-Z `src/base/cics/cobol/INQACC.cbl:164-166` como fixture del PR de POINTER: un
+  POINTER (8 bytes en GnuCOBOL x86_64) redefinido como `PIC X(8)` y como `PIC 9(8) BINARY`
+  (4 bytes, big-endian); hoy sin hallazgo COBOL004.

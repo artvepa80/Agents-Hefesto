@@ -983,6 +983,30 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
     return issues
 
 
+def _binary_digits(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[int]:
+    """PIC digits of the binary side of a byte view, if there is one."""
+    for layout in (_layout(items, orig_idx), _layout(items, idx)):
+        if len(layout) == 1 and layout[0][0] == "binary":
+            pic = layout[0][1]
+            return _pic_count(pic[1:] if pic.startswith("S") else pic, "9")
+    return None
+
+
+def _native_byte_view_suggestion(items: List[_DataItem], orig_idx: int, idx: int) -> str:
+    """COMP-5 byte view: how to make it portable without truncating values."""
+    digits = _binary_digits(items, orig_idx, idx)
+    limit = f" (up to {10 ** digits - 1:,})" if digits else ""
+    return (
+        "BINARY/COMP gives a portable byte layout, but under the default TRUNC(STD) it "
+        f"truncates values to the PIC digits{limit}, while COMP-5 uses the full binary "
+        "capacity of the field; widening the PIC can change the size and break the "
+        "byte view. Switch to BINARY only if every value fits the PIC digits, or "
+        "compile with TRUNC(BIN) (IBM) / -fnotrunc (GnuCOBOL); otherwise drop the byte "
+        "view and work with the numeric value. If the field is passed to C, SQL or OS "
+        "calls (e.g. SQLCA), don't change its USAGE; drop the byte view."
+    )
+
+
 def _redefines_text(
     items: List[_DataItem], orig_idx: int, idx: int, sensitive: List[str]
 ) -> Tuple[str, str]:
@@ -994,12 +1018,7 @@ def _redefines_text(
             "uses the platform's native byte order: big-endian on z/OS, little-endian "
             "on x86 (GnuCOBOL, Micro Focus), so the byte view reads the same value as "
             "different bytes on each platform.",
-            "Switching to BINARY/COMP makes the byte layout portable, but under the "
-            "default TRUNC(STD) it truncates values to the PIC digits (PIC 9(4) COMP-5 "
-            "holds up to 65535, BINARY only 9999) and widening the PIC changes the size "
-            "and breaks the byte view. Switch to BINARY only if every value fits the "
-            "PIC digits, or compile with TRUNC(BIN); otherwise drop the byte view and "
-            "work with the numeric value.",
+            _native_byte_view_suggestion(items, orig_idx, idx),
         )
     kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
     return (
