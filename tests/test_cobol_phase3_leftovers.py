@@ -458,3 +458,10 @@ def test_comp5_reverse_byte_view_message_names_byte_order():
 def test_other_cases_keep_the_generic_message(usage, pics):
     (issue,) = _cobol004(_usage_view(usage, "9(4)", *pics))
     assert "can corrupt" in issue.message and "byte order" not in issue.message
+
+
+def test_comp5_suggestion_warns_about_truncation():
+    (issue,) = _cobol004(_usage_view("COMP-5", "9(4)", "X", "X"))
+    text = issue.suggestion
+    assert "trunc" in text.lower() and "TRUNC(BIN)" in text
+    assert "byte view" in text
