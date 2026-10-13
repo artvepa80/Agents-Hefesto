@@ -994,8 +994,12 @@ def _redefines_text(
             "uses the platform's native byte order: big-endian on z/OS, little-endian "
             "on x86 (GnuCOBOL, Micro Focus), so the byte view reads the same value as "
             "different bytes on each platform.",
-            "Declare the field BINARY (or COMP) if its byte layout must be portable, "
-            "or drop the byte view and work with the numeric value.",
+            "Switching to BINARY/COMP makes the byte layout portable, but under the "
+            "default TRUNC(STD) it truncates values to the PIC digits (PIC 9(4) COMP-5 "
+            "holds up to 65535, BINARY only 9999) and widening the PIC changes the size "
+            "and breaks the byte view. Switch to BINARY only if every value fits the "
+            "PIC digits, or compile with TRUNC(BIN); otherwise drop the byte view and "
+            "work with the numeric value.",
         )
     kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
     return (

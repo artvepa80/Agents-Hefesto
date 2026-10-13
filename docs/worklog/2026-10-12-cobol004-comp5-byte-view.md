@@ -57,3 +57,17 @@ la misma plataforma.
   vista de bytes del mismo tamaño, conservan el mensaje genérico.
 - CardDemo, cics-genapp, zopeneditor-sample y los 7 repos de extval con COMP-5: hallazgos
   COBOL (línea, regla, mensaje) idénticos a 4.16.0. Recall 39/41.
+
+## Sugerencia: truncamiento (2026-10-13)
+
+"Declare the field BINARY (or COMP)" podía truncar en silencio: con TRUNC(STD) (default de
+IBM) BINARY/COMP truncan a los dígitos del PIC, mientras COMP-5 usa todo el rango binario
+(PIC 9(4) COMP-5 llega a 65535, BINARY solo a 9999). Ensanchar el PIC cambia el tamaño
+(9(5) = 4 bytes) y rompe la vista de bytes. Nueva sugerencia: BINARY solo si todos los
+valores caben en los dígitos del PIC, o compilar con TRUNC(BIN); si no, quitar la vista de
+bytes. Test primero (`test_comp5_suggestion_warns_about_truncation`, rojo → verde).
+
+## Regla de release
+
+Release rule: no release until the COBOL016 PR lands (avoid the COBOL004->COBOL016
+rule-id change in code scanning).
