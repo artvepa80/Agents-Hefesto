@@ -859,16 +859,37 @@ def install_hooks(force: bool):
     if not repo_root:
         _exit(1)
 
-    contributor_dir = repo_root / "scripts" / "git-hooks"
-    use_repo_templates = contributor_dir.is_dir() and any(
-        (contributor_dir / name).is_file() for name in ("pre-commit", "pre-push")
-    )
-    if not use_repo_templates:
+    hooks_path = _git_out(repo_root, ["config", "--get", "core.hooksPath"])
+    if hooks_path:
+        click.echo(
+            f"core.hooksPath is set ({hooks_path}); hooks are managed elsewhere, nothing written.",
+            err=True,
+        )
+        click.echo(
+            "Call `python -m hefesto analyze <files> --fail-on HIGH` from that hook manager, "
+            "or use the hefesto-analyze hook of the pre-commit framework "
+            "(.pre-commit-config.yaml).",
+            err=True,
+        )
+        _exit(1)
+
+    use_repo_templates = _is_hefesto_repo(repo_root)
+    if use_repo_templates:
+        click.echo("Using the Agents-Hefesto contributor hooks from scripts/git-hooks/.")
+    else:
         click.echo("Using the hooks shipped with hefesto-ai.")
+
+    git_hooks = _git_out(repo_root, ["rev-parse", "--git-path", "hooks"])
+    if git_hooks:
+        hooks_dir = Path(git_hooks)
+        if not hooks_dir.is_absolute():
+            hooks_dir = repo_root / hooks_dir
+    else:
+        hooks_dir = repo_root / ".git" / "hooks"
 
     ok = 0
     for hook_name in ("pre-commit", "pre-push"):
-        if _install_hook(repo_root, hook_name, force, use_repo_templates):
+        if _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir):
             ok += 1
 
     if ok == 0:
@@ -877,6 +898,42 @@ def install_hooks(force: bool):
             err=True,
         )
         _exit(1)
+
+
+def _git_out(repo_root, args):
+    """Return stripped stdout of a git command in repo_root, or None on failure."""
+    import subprocess
+
+    try:
+        res = subprocess.run(
+            ["git", *args], cwd=repo_root, capture_output=True, text=True, check=False
+        )
+    except FileNotFoundError:
+        return None
+    out = res.stdout.strip()
+    return out if res.returncode == 0 and out else None
+
+
+def _is_hefesto_repo(repo_root) -> bool:
+    """True only for a clone of Agents-Hefesto (root pyproject name hefesto-ai)."""
+    pyproject = repo_root / "pyproject.toml"
+    if not pyproject.is_file():
+        return False
+    try:
+        text = pyproject.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10: read the [project] table by hand
+        import re
+
+        section = re.search(r"^\[project\]\s*$(.*?)(?=^\[|\Z)", text, re.M | re.S)
+        return bool(section and re.search(r'^name\s*=\s*"hefesto-ai"\s*$', section.group(1), re.M))
+    try:
+        return bool(tomllib.loads(text).get("project", {}).get("name") == "hefesto-ai")
+    except Exception:
+        return False
 
 
 @cli.group()
@@ -973,30 +1030,28 @@ def _find_repo_root():
     return None
 
 
-def _install_hook(repo_root, hook_name, force, use_repo_templates=True) -> bool:
+def _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir) -> bool:
     """Install one hook. Return True if it was installed or is already up to date."""
     import os
     import stat
 
-    from hefesto.cli.hook_templates import TEMPLATES
+    from hefesto.cli.hook_templates import render
 
-    git_dir = repo_root / ".git"
     if use_repo_templates:
         source_hook = repo_root / "scripts" / "git-hooks" / hook_name
         if not source_hook.exists():
             click.echo(f"Skipping {hook_name}: template not found at {source_hook}", err=True)
             return False
-        content = source_hook.read_text()
+        content = source_hook.read_bytes().replace(b"\r\n", b"\n")
     else:
-        content = TEMPLATES[hook_name]
+        content = render(hook_name, sys.executable).encode("utf-8")
 
-    hooks_dir = git_dir / "hooks"
-    hooks_dir.mkdir(exist_ok=True)
+    hooks_dir.mkdir(parents=True, exist_ok=True)
     dest_hook = hooks_dir / hook_name
 
     if dest_hook.exists() and not force:
         try:
-            if dest_hook.read_text() == content:
+            if dest_hook.read_bytes() == content:
                 click.echo(f"{hook_name}: already up to date.")
                 return True
         except Exception:
@@ -1005,7 +1060,7 @@ def _install_hook(repo_root, hook_name, force, use_repo_templates=True) -> bool:
         return False
 
     try:
-        dest_hook.write_text(content)
+        dest_hook.write_bytes(content)
         st = os.stat(dest_hook)
         os.chmod(dest_hook, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         click.echo(f"{hook_name}: installed to {dest_hook}")
