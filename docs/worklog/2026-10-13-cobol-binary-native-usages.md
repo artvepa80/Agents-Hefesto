@@ -51,3 +51,19 @@ zopeneditor-sample ("Inconsistent indentation (N levels)", el falso positivo que
 y `benchmark/cobol/baseline.json` no se actualizó (el check solo corre cuando cambian
 archivos COBOL). Se quitan esas 2 entradas del baseline (9 → 7 hallazgos, LOW 2 → 0);
 CardDemo y GenApp sin cambios.
+
+## Estado 2026-10-13 09:xx (Lima) y plan para mañana
+
+- Hoy, con OK de Arturo: #105 squash → `fc8ed69` (main verde), #101 actualizado desde main
+  (CHANGELOG: se mantuvieron ambas entradas) → 16/16 verde incl. corpus-baseline → squash
+  `36c23b3`. Las ramas de #105 y #101 las borró el auto-delete del repo (no a mano).
+- **Mañana (NO hoy, cada merge con OK de Arturo):**
+  1. #102 (este): actualizar desde main (conflictos esperados: CHANGELOG y las regex de
+     `cobol_program_rules.py` que #101 insertó en el mismo sitio), todos los checks verdes,
+     squash. No borrar ramas a mano.
+  2. #103: cambiar base a main a mano, actualizar desde main, verificar que
+     `git diff origin/main...` es solo COBOL016, esperar los 16 checks.
+  3. #104 al final: portar el texto COBOL016 de #103 a `docs/cobol.md`;
+     `grep -n COBOL016 README.md docs/cobol.md`.
+  4. PR de release 4.17.0: subir pyproject y el pin del README a `@v4.17.0` juntos
+     (`verify_readme.py` ACTION_REF lo exige).
