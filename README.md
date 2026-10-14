@@ -423,7 +423,7 @@ is rejected as unknown, exit 2), so a shared config never turns this check off.
 
 ## Pre-Push Hook
 
-> **For contributors to this repository.** `hefesto install-hooks` installs the hooks kept in this repo's `scripts/git-hooks/` (a security gate plus this project's own Black, isort, Flake8 and test suite), so it only works in a clone of Agents-Hefesto. To check your own project before each commit, use the `hefesto-analyze` pre-commit hook (see [pre-commit Hook](#pre-commit-hook) below or the snippet in `skill/SKILL.md`).
+> In your own project, `hefesto install-hooks` installs the hooks shipped with the package: pre-commit analyzes the staged files (`--fail-on HIGH`), pre-push analyzes the repository (`--fail-on CRITICAL`). It exits 1 when no hook was installed (for example, existing hooks without `--force`). The `hefesto-analyze` pre-commit framework hook is an alternative (see [pre-commit Hook](#pre-commit-hook)). In a clone of Agents-Hefesto, it installs the contributor hooks from `scripts/git-hooks/` described below.
 
 Automatic validation before every `git push` in this repository:
 

@@ -845,8 +845,11 @@ def install_hooks(force: bool):
     """
     Install/update Hefesto git hooks (pre-commit + pre-push).
 
-    Copies hooks from scripts/git-hooks/ to .git/hooks/.
-    Hooks use venv-first Python resolution and are portable across platforms.
+    In your own project this installs the hooks shipped with the package:
+    pre-commit analyzes the staged files (--fail-on HIGH), pre-push analyzes the
+    repository (--fail-on CRITICAL). In a clone of Agents-Hefesto, the
+    contributor hooks in scripts/git-hooks/ are used instead.
+    Exits 1 when no hook was installed or already up to date.
 
     Example:
         hefesto install-hooks
@@ -856,8 +859,24 @@ def install_hooks(force: bool):
     if not repo_root:
         _exit(1)
 
+    contributor_dir = repo_root / "scripts" / "git-hooks"
+    use_repo_templates = contributor_dir.is_dir() and any(
+        (contributor_dir / name).is_file() for name in ("pre-commit", "pre-push")
+    )
+    if not use_repo_templates:
+        click.echo("Using the hooks shipped with hefesto-ai.")
+
+    ok = 0
     for hook_name in ("pre-commit", "pre-push"):
-        _install_hook(repo_root, hook_name, force)
+        if _install_hook(repo_root, hook_name, force, use_repo_templates):
+            ok += 1
+
+    if ok == 0:
+        click.echo(
+            "No hooks were installed. Use --force to overwrite existing hooks.",
+            err=True,
+        )
+        _exit(1)
 
 
 @cli.group()
@@ -954,17 +973,22 @@ def _find_repo_root():
     return None
 
 
-def _install_hook(repo_root, hook_name, force):
+def _install_hook(repo_root, hook_name, force, use_repo_templates=True) -> bool:
+    """Install one hook. Return True if it was installed or is already up to date."""
     import os
-    import shutil
     import stat
 
-    git_dir = repo_root / ".git"
-    source_hook = repo_root / "scripts" / "git-hooks" / hook_name
+    from hefesto.cli.hook_templates import TEMPLATES
 
-    if not source_hook.exists():
-        click.echo(f"Skipping {hook_name}: template not found at {source_hook}", err=True)
-        return
+    git_dir = repo_root / ".git"
+    if use_repo_templates:
+        source_hook = repo_root / "scripts" / "git-hooks" / hook_name
+        if not source_hook.exists():
+            click.echo(f"Skipping {hook_name}: template not found at {source_hook}", err=True)
+            return False
+        content = source_hook.read_text()
+    else:
+        content = TEMPLATES[hook_name]
 
     hooks_dir = git_dir / "hooks"
     hooks_dir.mkdir(exist_ok=True)
@@ -972,23 +996,24 @@ def _install_hook(repo_root, hook_name, force):
 
     if dest_hook.exists() and not force:
         try:
-            with open(source_hook, "r") as src, open(dest_hook, "r") as dst:
-                if src.read() == dst.read():
-                    click.echo(f"{hook_name}: already up to date.")
-                    return
+            if dest_hook.read_text() == content:
+                click.echo(f"{hook_name}: already up to date.")
+                return True
         except Exception:
             pass
         click.echo(f"{hook_name}: already exists at {dest_hook}. Use --force to overwrite.")
-        return
+        return False
 
     try:
-        shutil.copy2(source_hook, dest_hook)
+        dest_hook.write_text(content)
         st = os.stat(dest_hook)
-        os.chmod(dest_hook, st.st_mode | stat.S_IEXEC)
+        os.chmod(dest_hook, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         click.echo(f"{hook_name}: installed to {dest_hook}")
+        return True
     except Exception as e:
         click.echo(f"Error installing {hook_name}: {e}", err=True)
         _exit(1)
+        return False
 
 
 def _mount_iris_ingest(app):

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`hefesto install-hooks` works in your own project and no longer exits 0 having installed nothing.** It used to copy only from `scripts/git-hooks/`, which exists only in a clone of this repository, so elsewhere it printed "template not found" twice and exited 0. The package now ships user-facing hooks (`hefesto/cli/hook_templates.py`): pre-commit analyzes the staged files with `--fail-on HIGH`, pre-push analyzes the repository with `--fail-on CRITICAL`, both honour `SKIP_HEFESTO_HOOKS=1` and skip when `hefesto` is not in PATH. A clone of Agents-Hefesto still gets its contributor hooks from `scripts/git-hooks/`. The command exits 1 when no hook was installed or already up to date.
+
 ## [4.17.0] - 2026-10-14
 
 ### Upgrading from 4.16.0 (`@v4` users get this release automatically)

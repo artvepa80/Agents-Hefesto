@@ -30,7 +30,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.17.0 | License: MIT | Python >= 3.10
        hooks:
          - id: hefesto-analyze
    ```
-   (`hefesto install-hooks` installs the hooks for contributors to the Agents-Hefesto repository itself, not for your project.)
+   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes staged files and exits 1 if it installed nothing.
 
 Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
