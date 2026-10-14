@@ -63,7 +63,7 @@ sleep 3
 echo -e "${BOLD}${YELLOW}[STEP 2] Scanning Entire Legacy COBOL Codebase${NC}"
 echo ""
 echo "Corpus: 11 synthetic COBOL files (10 programs + 1 copybook) from tests/fixtures"
-echo "Rules: 15 free COBOL governance rules (no license needed)"
+echo "Rules: 16 free COBOL governance rules (no license needed)"
 echo ""
 sleep 2
 
@@ -125,7 +125,7 @@ echo "Summary:"
 echo "  ✓ 12 governance issues detected across 11 synthetic COBOL files"
 echo "  ✓ <1 second analysis time (production-ready)"
 echo "  ✓ No findings on the clean program (precision on ~440 labelled real-corpus findings: docs/cobol-corpus-baseline.md)"
-echo "  ✓ 15 free governance rules (credentials, spaghetti logic, copybooks,"
+echo "  ✓ 16 free governance rules (credentials, spaghetti logic, copybooks,"
 echo "    FILE STATUS, dead code; COBOL008-014 are exercised by tests/fixtures/cobol/smoke)"
 echo ""
 echo "Limits:"
