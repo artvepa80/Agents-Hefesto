@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`check-test-contradictions` no longer reports PASS on Python 3.14 without checking anything.** `_extract_value` fell through to `ast.Num`/`ast.Str`/`ast.NameConstant` for any non-literal argument; those were removed in Python 3.14, the AttributeError was swallowed by a blanket `except Exception: pass` per file, and the command printed PASS with exit 0 (the same suite gives 1 contradiction, exit 1, on 3.13). Literals are now read only through `ast.Constant` (requires-python is >= 3.10). Only files that cannot be decoded or parsed (`SyntaxError`, `UnicodeDecodeError`) are skipped, and they are listed in the report ("Skipped N file(s)"). Any other exception is an internal error: the command prints it and exits 2, never PASS. When no test file was checked (empty directory, or every file skipped as unparseable) it prints "No test files were checked" with the skipped count and exits 2, never PASS (it used to PASS with exit 0 on every Python version). The package now declares the Python 3.13 and 3.14 classifiers. It is also conservative now: two assertions are compared only when the call is a plain function (`add(...)`, not `obj.add(...)`) and every argument is a literal (a constant, or a list/tuple of constants). `len(issues) == 1` and `len(issues) == 3` in different tests read different local `issues` and are no longer reported; on this repository's own tests the count goes from 100 to 0.
+
 ### CI
 
+- **Python 3.14** added to the `lint-and-test` and `multilang-smoke` matrices.
 - **multilang-smoke prefetches the 6 grammars** before the smoke and the unit tests that need them: `tree_sitter_language_pack.download([...])` with 3 attempts and exponential backoff, into `TREE_SITTER_LANGUAGE_PACK_CACHE_DIR` under `$RUNNER_TEMP`. A download failure fails that step with `::error::` instead of a mid-test PASS/FAIL. The smoke and the unit-test steps reuse the same cache dir.
 
 ### Documentation

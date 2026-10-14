@@ -708,9 +708,20 @@ def check_test_contradictions(test_directory: str):
     click.echo("")
 
     detector = TestContradictionDetector(test_directory)
-    contradictions = detector.find_contradictions()
+    try:
+        contradictions = detector.find_contradictions()
+    except Exception as exc:  # internal error: never report PASS
+        click.echo(
+            f"Test Contradiction Check: internal error: {type(exc).__name__}: {exc}", err=True
+        )
+        _exit(2)
+        return
     detector.print_report(contradictions)
 
+    # Nothing checked is never a PASS (empty directory, or every file skipped)
+    if detector.checked_files == 0:
+        _exit(2)
+        return
     # Exit with error if contradictions found
     if contradictions:
         _exit(1)

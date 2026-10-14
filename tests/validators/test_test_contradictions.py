@@ -162,8 +162,9 @@ def test_contradiction_2():
 
 
 def test_print_report_no_contradictions(capsys):
-    """Test printing report with no contradictions."""
+    """Test printing report with no contradictions (at least one file checked)."""
     detector = TestContradictionDetector()
+    detector.checked_files = 1  # PASS needs something checked
     detector.print_report([])
 
     captured = capsys.readouterr()
