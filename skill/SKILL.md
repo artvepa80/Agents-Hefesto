@@ -12,7 +12,7 @@ description: >-
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
 code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.16.0 | License: MIT | Python >= 3.10
+Package: `hefesto-ai` (PyPI) | Version: 4.17.0 | License: MIT | Python >= 3.10
 
 ## Required workflow (do this before commit)
 
@@ -22,7 +22,15 @@ Package: `hefesto-ai` (PyPI) | Version: 4.16.0 | License: MIT | Python >= 3.10
    hefesto analyze . --fail-on HIGH
    ```
 3. If exit code is not `0`, fix the reported issues (or ask the user) before committing.
-4. Prefer hooks for every commit: `hefesto install-hooks`.
+4. Prefer a hook for every commit: add the `hefesto-analyze` pre-commit hook to the project's `.pre-commit-config.yaml` (it checks Python files only), then run `pre-commit install`:
+   ```yaml
+   repos:
+     - repo: https://github.com/artvepa80/Agents-Hefesto
+       rev: v4.17.0
+       hooks:
+         - id: hefesto-analyze
+   ```
+   (`hefesto install-hooks` installs the hooks for contributors to the Agents-Hefesto repository itself, not for your project.)
 
 Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
