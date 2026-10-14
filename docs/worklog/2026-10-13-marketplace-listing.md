@@ -84,3 +84,5 @@ hallazgos, igual que main; README Parity y Capabilities Parity OK.
 - La entrada COBOL016 del CHANGELOG aún cita "20 public COBOL repositories" y Bank-of-Z/MortgageApplication; se corrige en el PR de la release 4.17.0.
 - Sin merge: requiere los 15 checks y el OK de Arturo.
 - Tras el merge, `lint-and-test` falló: `test_own_test_suite_has_no_contradictions` (#107) leía como contradicción las dos llamadas sin argumentos a `remote_ping_enabled()` en dos tests distintos (resultado distinto por el entorno). Se unieron en un solo test (`test_cli_ping_default_and_opt_out`) que comprueba los dos estados; no se toca el validador ni se oculta nada.
+- `docs/rest-api.md`: tabla de endpoints reducida a lo que existe (`GET /health`, `POST /analyze` en `hefesto/server.py`; `/v1/ingest/*` solo con IRIS, `_mount_iris_ingest`); `HEFESTO_EXPOSE_DOCS=1` (el valor `true` no hace nada).
+- `docs/omega-iris.md`: quitado el bloque Setup (`python -m hefesto.omega.iris_agent`, `hefesto omega status`, `iris_config.yaml`), que no existen. Se mantiene el contrato de telemetría IRIS.

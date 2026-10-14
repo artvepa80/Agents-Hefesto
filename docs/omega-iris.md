@@ -13,29 +13,6 @@ Production monitoring that correlates code issues with production failures.
 - **Real-Time Alerts**: Pub/Sub notifications
 - **BigQuery Analytics**: Track correlations over time
 
-### Setup
-
-```yaml
-# iris_config.yaml
-project_id: your-gcp-project
-dataset: omega_production
-pubsub_topic: hefesto-alerts
-
-alert_rules:
-  - name: error_rate_spike
-    threshold: 10
-  - name: latency_increase
-    threshold: 1000
-```
-
-```bash
-# Run IRIS Agent
-python -m hefesto.omega.iris_agent --config iris_config.yaml
-
-# Check status
-hefesto omega status
-```
-
 ---
 
 ## IRIS Telemetry Contract (OMEGA)
