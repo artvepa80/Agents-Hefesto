@@ -24,7 +24,7 @@ consistente. Ejemplo: `.github/workflows/hefesto.yml` de hefesto-cobol-ci-exampl
 - 4 espacios consistentes, anidación profunda, block scalars con cada indicador, escalares
   multilínea y listas compactas → sin hallazgo.
 
-## Corpus de validación (34 repos públicos en /workspace/extval)
+## Corpus de validación (a local corpus of 34 public repos)
 
 - YAML_INDENTATION (sin contar el chequeo de tabs, que no cambió: 2 antes y 2 después):
   142 antes (4.16.0) → 12 después. Ningún archivo nuevo marcado.
