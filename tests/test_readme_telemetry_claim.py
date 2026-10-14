@@ -23,14 +23,14 @@ def test_readme_states_the_telemetry_defaults():
     assert CLAIM in (ROOT / "README.md").read_text(encoding="utf-8")
 
 
-def test_cli_ping_is_on_by_default(monkeypatch):
+def test_cli_ping_default_and_opt_out(monkeypatch):
+    # One test for both states: check-test-contradictions compares zero-argument
+    # calls across tests and would read two tests as a contradiction.
     monkeypatch.delenv("HEFESTO_TELEMETRY", raising=False)
-    assert remote_ping_enabled() is True
-
-
-def test_cli_ping_off_with_hefesto_telemetry_0(monkeypatch):
+    on_by_default = remote_ping_enabled()
     monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
-    assert remote_ping_enabled() is False
+    off_with_0 = remote_ping_enabled()
+    assert (on_by_default, off_with_0) == (True, False)
 
 
 def test_action_telemetry_is_off_by_default():

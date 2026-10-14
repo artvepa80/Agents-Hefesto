@@ -83,3 +83,4 @@ hallazgos, igual que main; README Parity y Capabilities Parity OK.
 - Comprobación: `grep -rn COBOL016 README.md docs/cobol.md`.
 - La entrada COBOL016 del CHANGELOG aún cita "20 public COBOL repositories" y Bank-of-Z/MortgageApplication; se corrige en el PR de la release 4.17.0.
 - Sin merge: requiere los 15 checks y el OK de Arturo.
+- Tras el merge, `lint-and-test` falló: `test_own_test_suite_has_no_contradictions` (#107) leía como contradicción las dos llamadas sin argumentos a `remote_ping_enabled()` en dos tests distintos (resultado distinto por el entorno). Se unieron en un solo test (`test_cli_ping_default_and_opt_out`) que comprueba los dos estados; no se toca el validador ni se oculta nada.
