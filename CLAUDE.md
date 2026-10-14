@@ -54,7 +54,7 @@ Do NOT skip this step. Do NOT guess project state from memory.
 After completing ANY non-trivial work:
 
 - [ ] Update impacted docs (at minimum `CHANGELOG.md`; `README.md` if version/features changed).
-- [ ] Run repo verification: `source venv/bin/activate && black --check hefesto/ tests/ && isort --check hefesto/ tests/ && flake8 hefesto/ tests/ && pytest tests/ -q`
+- [ ] Run repo verification (the same steps as CI `lint-and-test`, with `pip install -e ".[dev,lint]"`): `python -m mypy hefesto --ignore-missing-imports && python -m black --check hefesto tests && python -m isort --check-only hefesto tests && python -m flake8 hefesto tests && python scripts/verify_capabilities.py && python scripts/verify_readme.py && HEFESTO_TELEMETRY=0 python -m pytest -q -m "not integration and not slow"`
 - [ ] Commit with Conventional Commits format, then push the branch.
 - [ ] Never run a destructive or irreversible operation without Arturo's explicit OK first, every time: moving or deleting tags; deleting or archiving repositories, branches, releases or tags; changing repository visibility. Do not request broader token scopes (e.g. `delete_repo`) to get around a refusal; stop and ask. For tags, the single exception is the tag `v4`, the floating alias of the 4.x line used as `artvepa80/Agents-Hefesto@v4`, which `release.yml` force-moves to each new v4.x.y release. No other tag moves: not exact version tags (`v4.15.1`, ...), and no other alias exists or may be created without explicit approval.
 - [ ] PR head branches are deleted by the repository's auto-delete setting when a PR is merged; Arturo's merge OK covers that. Never delete a branch by hand without explicit OK.
@@ -100,7 +100,7 @@ After completing ANY non-trivial work:
 ### Estilo de Código
 - Formatter: `black` (line-length: 100)
 - Import sorting: `isort`
-- Type checking: `mypy --strict`
+- Type checking: `python -m mypy hefesto --ignore-missing-imports` (what CI runs)
 - Linting: `flake8`
 - No emojis en código (solo en docs de marketing)
 
@@ -258,7 +258,7 @@ def test_benchmark_against_known_bugs():
 ### 🔧 **Automated Validation**
 - **G-1 (MUST)** `pytest --cov=90` coverage minimum
 - **G-2 (MUST)** `black --check` and `isort --check` formatting passes
-- **G-3 (MUST)** `mypy --strict` type checking passes
+- **G-3 (MUST)** `python -m mypy hefesto --ignore-missing-imports` passes (the blocking mypy step of CI `lint-and-test`; `--strict` is not enforced)
 - **G-4 (MUST)** `flake8` linting passes
 - **G-5 (MUST)** Self-validation passes (run Hefesto on itself)
 - **G-6 (MUST)** No `exec()` or `eval()` usage without explicit security review
@@ -289,6 +289,14 @@ test(analyzers): add empirical complexity validation
 - **GH-5 (MUST)** Version bumps follow semver strictly
 - **GH-6 (MUST)** Include changelog entry for every release
 - **GH-7 (MUST)** Run dogfooding validation before publishing to PyPI
+
+### Ruleset incident procedure
+If infrastructure (not the change under review) breaks a required check of the `main` ruleset (15985908) so that a fix cannot merge:
+1. Get Arturo's explicit OK before touching the ruleset.
+2. Set the ruleset enforcement to disabled.
+3. Merge the fix PR (squash).
+4. Re-enable the ruleset right away and confirm it is active with the same required checks.
+5. Log it in the worklog: time (Lima), reason, PR, who approved, and when enforcement was restored.
 
 ---
 
@@ -397,7 +405,7 @@ The full audit and refactor history are tracked internally in our private repo. 
 ### PRO Tier ($8/month)
 - SemanticAnalyzer (AI/ML)
 - Advanced security scanning
-- REST API (8 endpoints)
+- REST API (2 endpoints: `GET /health`, `POST /analyze`; see docs/rest-api.md)
 - BigQuery integration
 - Duplicate detection
 
@@ -449,7 +457,7 @@ pytest tests/ --cov=hefesto --cov-report=html
 # Quality gates
 black --check hefesto/ tests/
 isort --check hefesto/ tests/
-mypy hefesto/ --strict
+python -m mypy hefesto --ignore-missing-imports
 flake8 hefesto/ tests/
 
 # Dogfooding
