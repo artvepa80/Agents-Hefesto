@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **CLAUDE.md matches CI.** The local verification command is the CI `lint-and-test` sequence, including `python -m mypy hefesto --ignore-missing-imports`; G-3 and the code-style section name that mypy command instead of `mypy --strict`, which CI does not run. New ruleset incident procedure: when infrastructure breaks a required check, disable the ruleset only with Arturo's explicit OK, merge the fix, re-enable it, and log it in the worklog. The PRO tier list says the REST API has 2 endpoints (`GET /health`, `POST /analyze`), not 8.
+- **4.17.0 release worklog** records the merge and tag SHAs, the `release.yml` run, PyPI and the demo status.
+
 ## [4.17.0] - 2026-10-14
 
 ### Upgrading from 4.16.0 (`@v4` users get this release automatically)
