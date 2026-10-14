@@ -637,8 +637,27 @@ _PIC = re.compile(r"\bPIC(?:TURE)?\s+(?:IS\s+)?(\S+)", re.I)
 _USAGE_PACKED = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?-3|PACKED-DECIMAL)(?![\w-])", re.I)
 _USAGE_FLOAT = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-[12](?![\w-])", re.I)
 _USAGE_BINARY = re.compile(r"(?<![\w-])(?:COMP(?:UTATIONAL)?(?:-[45])?|BINARY)(?![\w-])", re.I)
+# ISO 2002 / GnuCOBOL binary usages without a PIC; their size is fixed
+_FIXED_BINARY = re.compile(r"(?<![\w-])BINARY-(CHAR|SHORT|LONG-LONG|LONG|DOUBLE)(?![\w-])", re.I)
+_FIXED_BINARY_BYTES = {
+    "BINARY-CHAR": 1,
+    "BINARY-SHORT": 2,
+    "BINARY-LONG": 4,
+    "BINARY-LONG-LONG": 8,
+    "BINARY-DOUBLE": 8,
+}
+# COMP-5 is native binary: its byte order follows the platform, so a PIC X view of
+# it reads different bytes on z/OS (big-endian) and x86 (little-endian)
+_USAGE_NATIVE_BINARY = re.compile(r"(?<![\w-])COMP(?:UTATIONAL)?-5(?![\w-])", re.I)
 _USAGE_OTHER = re.compile(
     r"(?<![\w-])(?:INDEX|POINTER|PROCEDURE-POINTER|FUNCTION-POINTER)(?![\w-])", re.I
+)
+_USAGE_CLASSES = (
+    (_FIXED_BINARY, "binary"),
+    (_USAGE_PACKED, "packed"),
+    (_USAGE_FLOAT, "float"),
+    (_USAGE_BINARY, "binary"),
+    (_USAGE_OTHER, "pointer"),
 )
 _NUMERIC_PIC = re.compile(r"^[S9VP()0-9]+$", re.I)
 _SENSITIVE = {"packed", "binary", "signed", "float", "pointer"}
@@ -673,15 +692,35 @@ def _data_items(unit: _ProgramUnit) -> List[_DataItem]:
 
 
 def _usage_class(clause: str) -> Optional[str]:
-    if _USAGE_PACKED.search(clause):
-        return "packed"
-    if _USAGE_FLOAT.search(clause):
-        return "float"
-    if _USAGE_BINARY.search(clause):
-        return "binary"
-    if _USAGE_OTHER.search(clause):
-        return "pointer"
-    return None
+    """Storage class named by the USAGE clause, first match in _USAGE_CLASSES order."""
+    return next((cls for pattern, cls in _USAGE_CLASSES if pattern.search(clause)), None)
+
+
+def _pic_text(clause: str) -> str:
+    """The PIC string, or the type name (``BINARY-LONG``) of a fixed-size binary usage.
+
+    The type name stands in for the PIC so layouts compare and size correctly;
+    SIGNED/UNSIGNED is dropped: both views hold the same bytes.
+    """
+    pic = _PIC.search(clause)
+    if pic:
+        return pic.group(1).rstrip(".").upper()
+    fixed = _FIXED_BINARY.search(clause)
+    return f"BINARY-{fixed.group(1).upper()}" if fixed else ""
+
+
+def _fixed_binary_bytes(pic: str) -> Optional[int]:
+    """Size of a fixed-size binary usage (BINARY-CHAR ... BINARY-DOUBLE), else None."""
+    return _FIXED_BINARY_BYTES.get(pic.upper())
+
+
+def _binary_size(pic: str) -> Optional[int]:
+    """Storage of a binary item: fixed table for BINARY-xxx, PIC digits otherwise."""
+    fixed = _fixed_binary_bytes(pic)
+    if fixed:
+        return fixed
+    digits = _pic_count(pic[1:] if pic.startswith("S") else pic, "9")
+    return _binary_bytes(digits) if digits else None
 
 
 def _elementary_class(pic: Optional[str], usage: Optional[str]) -> str:
@@ -718,8 +757,7 @@ def _layout(items: List[_DataItem], idx: int) -> Tuple[Tuple[str, str], ...]:
         stack.append((item.level, own))
         if pos + 1 < len(members) and members[pos + 1].level > item.level:
             continue  # group item: its children carry the layout
-        pic = _PIC.search(item.clause)
-        pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+        pic_text = _pic_text(item.clause)
         out.append((_elementary_class(pic_text or None, own or inherited), pic_text))
     return tuple(out)
 
@@ -756,12 +794,13 @@ def _is_byte_view(one: Tuple[Tuple[str, str], ...], other: Tuple[Tuple[str, str]
     reinterpreted, so it is not the corruption risk COBOL004 is about. The same
     holds for signed binary (``PIC S9(4) COMP`` read byte by byte to print it in
     hex): the sign is a bit of those bytes, not a separate encoding. A size
-    mismatch or any non-PIC X byte still counts as a finding.
+    mismatch or any non-PIC X byte still counts as a finding. COMP-5 (native
+    byte order) is not exempt: the caller checks it, since the bytes differ
+    between z/OS and x86.
     """
     if len(one) != 1 or one[0][0] != "binary":
         return False
-    digits = _pic_count(one[0][1][1:] if one[0][1].startswith("S") else one[0][1], "9")
-    size = _binary_bytes(digits) if digits else None
+    size = _binary_size(one[0][1])
     if size is None or not other:
         return False
     widths = [_pic_count(pic, "X") if cls == "alphanumeric" else None for cls, pic in other]
@@ -829,8 +868,9 @@ def _is_pointer_view(
     cls, pic = view_layout[0]
     if cls == "alphanumeric":
         return _pic_count(pic, "X") in _ADDRESS_SIZES
-    digits = _pic_count(pic, "9") if cls == "binary" else None
-    return digits is not None and _binary_bytes(digits) in _ADDRESS_SIZES
+    if cls != "binary" or pic.startswith("S"):
+        return False
+    return _binary_size(pic) in _ADDRESS_SIZES
 
 
 _OCCURS_FIXED = re.compile(r"(?<![\w-])OCCURS\s+(\d+)(?:\s+TIMES)?(?:\s+(TO)\b)?", re.I)
@@ -870,8 +910,7 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
             child, nxt = node(nxt, usage)
             out.extend(child)
         if nxt == pos + 1:
-            pic = _PIC.search(item.clause)
-            pic_text = pic.group(1).rstrip(".").upper() if pic else ""
+            pic_text = _pic_text(item.clause)
             spelled = _PIC_EXPAND.sub(lambda m: m.group(1) * int(m.group(2)), pic_text)
             out = [(_elementary_class(pic_text or None, usage), spelled)]
         return out * count, nxt
@@ -893,13 +932,22 @@ def _storage_layout(items: List[_DataItem], idx: int) -> Optional[Tuple[Tuple[st
     return tuple(merged)
 
 
+def _is_native_byte_view(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
+    """A same-size PIC X byte view of COMP-5 (native byte order) data."""
+    original, redefined = _layout(items, orig_idx), _layout(items, idx)
+    members = _members(items, orig_idx) + _members(items, idx)
+    native = any(_USAGE_NATIVE_BINARY.search(m.clause) for m in members)
+    return native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original))
+
+
 def _is_intended_overlay(items: List[_DataItem], orig_idx: int, idx: int) -> bool:
     """REDEFINES idioms that keep every value's bytes and meaning (not reported)."""
     original, redefined = _layout(items, orig_idx), _layout(items, idx)
-    if _is_byte_view(original, redefined) or _is_byte_view(redefined, original):
-        return True
     orig_members, redef_members = _members(items, orig_idx), _members(items, idx)
     clauses = [m.clause for m in orig_members + redef_members]
+    native = any(_USAGE_NATIVE_BINARY.search(c) for c in clauses)
+    if not native and (_is_byte_view(original, redefined) or _is_byte_view(redefined, original)):
+        return True
     if _is_zoned_split(original, redefined, clauses) or _is_zoned_split(
         redefined, original, clauses
     ):
@@ -978,23 +1026,67 @@ def check_redefines(file_path: str, unit: _ProgramUnit) -> List[AnalysisIssue]:
             continue
         if _is_intended_overlay(items, orig_idx, idx):
             continue
-        kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
+        message, suggestion = _redefines_text(items, orig_idx, idx, sensitive)
         issues.append(
             _issue(
                 file_path,
                 item.line,
                 AnalysisIssueType.COBOL_REDEFINES_SENSITIVE,
                 AnalysisIssueSeverity.HIGH,
-                f"'{item.name}' REDEFINES '{target}' with a different layout over "
-                f"{kinds} data. Reading or moving through the other view can corrupt "
-                "values or raise data exceptions (S0C7).",
-                "Use a single numeric view, or convert explicitly (MOVE to a display "
-                "field) instead of overlaying the storage.",
+                message,
+                suggestion,
                 "COBOL004",
                 0.85,
             )
         )
     return issues
+
+
+def _binary_digits(items: List[_DataItem], orig_idx: int, idx: int) -> Optional[int]:
+    """PIC digits of the binary side of a byte view, if there is one."""
+    for layout in (_layout(items, orig_idx), _layout(items, idx)):
+        if len(layout) == 1 and layout[0][0] == "binary":
+            pic = layout[0][1]
+            return _pic_count(pic[1:] if pic.startswith("S") else pic, "9")
+    return None
+
+
+def _native_byte_view_suggestion(items: List[_DataItem], orig_idx: int, idx: int) -> str:
+    """COMP-5 byte view: how to make it portable without truncating values."""
+    digits = _binary_digits(items, orig_idx, idx)
+    limit = f" (up to {10 ** digits - 1:,})" if digits else ""
+    return (
+        "BINARY/COMP gives a portable byte layout, but under the default TRUNC(STD) it "
+        f"truncates values to the PIC digits{limit}, while COMP-5 uses the full binary "
+        "capacity of the field; widening the PIC can change the size and break the "
+        "byte view. Switch to BINARY only if every value fits the PIC digits, or "
+        "compile with TRUNC(BIN) (IBM) / -fnotrunc (GnuCOBOL); otherwise drop the byte "
+        "view and work with the numeric value. If the field is passed to C, SQL or OS "
+        "calls (e.g. SQLCA), don't change its USAGE; drop the byte view."
+    )
+
+
+def _redefines_text(
+    items: List[_DataItem], orig_idx: int, idx: int, sensitive: List[str]
+) -> Tuple[str, str]:
+    """COBOL004 message and suggestion: COMP-5 byte views get their own."""
+    name, target = items[idx].name, items[orig_idx].name
+    if _is_native_byte_view(items, orig_idx, idx):
+        return (
+            f"'{name}' REDEFINES '{target}' as PIC X bytes of a COMP-5 field. COMP-5 "
+            "uses the platform's native byte order: big-endian on z/OS, little-endian "
+            "on x86 (GnuCOBOL, Micro Focus), so the byte view reads the same value as "
+            "different bytes on each platform.",
+            _native_byte_view_suggestion(items, orig_idx, idx),
+        )
+    kinds = ", ".join(_CLASS_LABEL[c] for c in sensitive)
+    return (
+        f"'{name}' REDEFINES '{target}' with a different layout over "
+        f"{kinds} data. Reading or moving through the other view can corrupt "
+        "values or raise data exceptions (S0C7).",
+        "Use a single numeric view, or convert explicitly (MOVE to a display "
+        "field) instead of overlaying the storage.",
+    )
 
 
 def _file_status_missing(file_path: str, missing: List[Tuple[int, str]]) -> AnalysisIssue:

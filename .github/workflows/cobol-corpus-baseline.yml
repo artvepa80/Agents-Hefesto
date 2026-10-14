@@ -1,13 +1,14 @@
 name: COBOL corpus baseline
 
+# Runs on every PR and every push to main, without a paths filter: the
+# baseline includes non-COBOL findings (YAML, shell) of the corpora, so a change
+# to any analyzer can move it (4.16.x: the YAML_INDENTATION fix changed
+# zopeneditor-sample while this check was skipped).
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
-    paths:
-      - "hefesto/analyzers/devops/cobol_*.py"
-      - "hefesto/core/analyzer_engine.py"
-      - "scripts/cobol_corpus_baseline.py"
-      - "benchmark/cobol/**"
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:

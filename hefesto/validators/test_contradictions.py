@@ -64,20 +64,30 @@ class TestContradictionDetector:
         """
         self.test_dir = Path(test_directory)
         self.assertions: List[TestAssertion] = []
+        # (path, reason) for files that could not be read or parsed
+        self.skipped_files: List[Tuple[Path, str]] = []
+        # number of test files actually parsed and checked
+        self.checked_files = 0
 
     def _parse_test_file(self, file_path: Path) -> None:
-        """Parse a test file and extract assertions."""
+        """Parse a test file and extract assertions.
+
+        Only a file that cannot be decoded or parsed is skipped, and it is
+        recorded in ``skipped_files``. Any other exception is a bug in this
+        detector and propagates, so the check never reports PASS without
+        having checked anything.
+        """
         try:
-            with open(file_path) as f:
-                tree = ast.parse(f.read(), filename=str(file_path))
+            source = file_path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(file_path))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            self.skipped_files.append((file_path, f"{type(exc).__name__}: {exc}"))
+            return
+        self.checked_files += 1
 
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                    self._extract_assertions(node, str(file_path))
-
-        except Exception:
-            # Skip files that can't be parsed
-            pass
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                self._extract_assertions(node, str(file_path))
 
     def _extract_assertions(self, func_node: ast.FunctionDef, file_path: str) -> None:
         """Extract assertion statements from a test function."""
@@ -85,8 +95,8 @@ class TestContradictionDetector:
             # Handle assert statements (direct assert)
             if isinstance(node, ast.Assert):
                 assertion = self._parse_assert_statement(node, func_node.name, file_path)
-                if assertion:
-                    self.assertions.append(assertion)
+                call = node.test.left if isinstance(node.test, ast.Compare) else node.test
+                self._keep(assertion, call)
 
             # Handle assertEqual, assertTrue, assertFalse, etc.
             elif isinstance(node, ast.Call):
@@ -96,8 +106,7 @@ class TestContradictionDetector:
                         assertion = self._parse_unittest_assertion(
                             node, func_node.name, file_path, method_name
                         )
-                        if assertion:
-                            self.assertions.append(assertion)
+                        self._keep(assertion, self._unittest_call(node))
 
     def _parse_assert_statement(
         self, node: ast.Assert, test_func: str, file_path: str
@@ -244,6 +253,36 @@ class TestContradictionDetector:
 
         return None
 
+    @staticmethod
+    def _unittest_call(node: ast.Call) -> Optional[ast.AST]:
+        """The call under test in assertEqual(call, x) / assertTrue(call == x)."""
+        if not node.args:
+            return None
+        first = node.args[0]
+        return first.left if isinstance(first, ast.Compare) else first
+
+    @staticmethod
+    def _is_literal(node: ast.AST) -> bool:
+        """A Constant, or a list/tuple whose elements are all Constants."""
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, (ast.List, ast.Tuple)):
+            return all(isinstance(e, ast.Constant) for e in node.elts)
+        return False
+
+    def _is_comparable_call(self, node: ast.AST) -> bool:
+        """Only calls whose result depends on nothing but the call itself are compared.
+
+        The target must be a plain function name (``add(...)``, not ``obj.add(...)``)
+        and every argument a literal. ``len(issues)`` in two tests reads two different
+        local ``issues``, so equal text does not mean equal input.
+        """
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+            return False
+        if any(not self._is_literal(a) for a in node.args):
+            return False
+        return all(k.arg is not None and self._is_literal(k.value) for k in node.keywords)
+
     def _extract_function_name(self, call_node: ast.Call) -> str:
         """Extract function name from call node."""
         if hasattr(call_node.func, "id"):
@@ -270,13 +309,10 @@ class TestContradictionDetector:
 
     def _extract_value(self, node: ast.AST) -> str:
         """Extract value as string."""
-        # AST structure varies by Python version, simplifying check
-        if isinstance(node, ast.Constant):  # Python 3.8+
+        # Literals are ast.Constant on every supported Python (>= 3.10);
+        # ast.Num/Str/NameConstant were removed in 3.14.
+        if isinstance(node, ast.Constant):
             return repr(node.value)
-        elif isinstance(node, ast.Num):  # Python < 3.8
-            return str(node.n)
-        elif isinstance(node, ast.Str):  # Python < 3.8
-            return repr(node.s)
         elif isinstance(node, ast.List):
             elements = [self._extract_value(e) for e in node.elts]
             return f"[{', '.join(elements)}]"
@@ -288,10 +324,12 @@ class TestContradictionDetector:
             if hasattr(node.value, "id"):
                 return f"{node.value.id}.{node.attr}"
             return node.attr
-        elif isinstance(node, ast.NameConstant):
-            return str(node.value)
         else:
             return "?"
+
+    def _keep(self, assertion: Optional[TestAssertion], call: Optional[ast.AST]) -> None:
+        if assertion is not None and call is not None and self._is_comparable_call(call):
+            self.assertions.append(assertion)
 
     def find_contradictions(self) -> List[Contradiction]:
         """Find all contradictions in test suite."""
@@ -345,6 +383,14 @@ class TestContradictionDetector:
 
     def print_report(self, contradictions: List[Contradiction]) -> None:
         """Print formatted report of contradictions."""
+        if self.skipped_files:
+            print(f"\n⚠️  Skipped {len(self.skipped_files)} file(s) that could not be parsed:")
+            for path, reason in self.skipped_files:
+                print(f"  - {path}: {reason}")
+        if self.checked_files == 0:
+            print("\n❌ Test Contradiction Check: No test files were checked")
+            print(f"0 test files checked, {len(self.skipped_files)} skipped.")
+            return
         if not contradictions:
             print("\n✅ Test Contradiction Check: PASS")
             print("No contradictory test assertions found.")
@@ -383,9 +429,15 @@ def main():
     test_dir = sys.argv[1] if len(sys.argv) > 1 else "tests"
 
     detector = TestContradictionDetector(test_dir)
-    contradictions = detector.find_contradictions()
+    try:
+        contradictions = detector.find_contradictions()
+    except Exception as exc:  # internal error: never report PASS
+        print(f"Test Contradiction Check: internal error: {type(exc).__name__}: {exc}")
+        sys.exit(2)
     detector.print_report(contradictions)
 
+    if detector.checked_files == 0:
+        sys.exit(2)
     # Exit with error code if contradictions found
     if contradictions:
         sys.exit(1)
