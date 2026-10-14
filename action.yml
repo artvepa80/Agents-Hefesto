@@ -1,9 +1,9 @@
 name: 'Hefesto Code Guardian'
-description: 'AI-powered static analysis for AI-generated code. Catches security flaws and semantic drift in 22 formats. Optional SARIF upload to GitHub code scanning.'
+description: 'Deterministic pass/fail gate for Python, IaC, SQL and COBOL: declared-vs-real drift, secrets and risky code, with SARIF.'
 author: 'Narapa LLC'
 branding:
-  icon: 'shield'
-  color: 'blue'
+  icon: 'check-circle'
+  color: 'green'
 
 inputs:
   target:

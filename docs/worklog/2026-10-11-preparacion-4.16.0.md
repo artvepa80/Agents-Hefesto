@@ -102,7 +102,7 @@ f) `release.yml`:
 - **Reproducibilidad**:
   - Hoy se reproduce en el box: corrida `vjs2` con el código de este PR, mismos 11
     hallazgos.
-  - Pero los clones y los scripts (`/workspace/extval-ab`) no están en este repo. Con n=11,
+  - Pero los clones y los scripts (a local corpus of public repos) no están en este repo. Con n=11,
     un solo FP daría 8–9%; no se midió recall.
   - **Conclusión**: no entra en las notas de release en esa forma.
 - **Plugin de jQuery que sigue analizado** (`static/js/jquery_form/jquery.form.js` en
