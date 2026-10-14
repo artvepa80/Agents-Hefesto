@@ -373,12 +373,19 @@ class TestFormatNotice:
 
 # COMP-5 is native binary: byte order follows the platform (big-endian on z/OS,
 # little-endian on x86), so a PIC X view reads different bytes on each one.
-# COMP, BINARY and COMP-4 are big-endian everywhere and keep the exemption.
+# COMP, BINARY and COMP-4 are big-endian by default on every compiler and keep the exemption.
 def _usage_view(usage, binary_pic, *byte_pics):
     data = [("A", f"01  TWO-BYTES-BIN           PIC {binary_pic} {usage}.")]
     data.append(("A", "01  TWO-BYTES-ALPHA         REDEFINES TWO-BYTES-BIN."))
     data += [("B", f"05  BYTE-{i}   PIC {pic}.") for i, pic in enumerate(byte_pics)]
     return _program("RDF", data=tuple(data))
+
+
+def _cobol016(src):
+    # COMP-5 byte views moved from COBOL004 to COBOL016 (platform-dependent layout)
+    found = CobolGovernanceAnalyzer().analyze("RDF.cbl", src)
+    assert not [i for i in found if i.rule_id == "COBOL004"]
+    return [i for i in found if i.rule_id == "COBOL016"]
 
 
 def _cobol004(src):
@@ -389,7 +396,7 @@ def _cobol004(src):
 @pytest.mark.parametrize("binary_pic", ["9(4)", "S9(4)", "9(9)", "S9(18)"])
 def test_comp5_byte_view_is_flagged(usage, binary_pic):
     size = {"9(4)": 2, "S9(4)": 2, "9(9)": 4, "S9(18)": 8}[binary_pic]
-    assert _cobol004(_usage_view(usage, binary_pic, f"X({size})"))
+    assert _cobol016(_usage_view(usage, binary_pic, f"X({size})"))
 
 
 @pytest.mark.parametrize("usage", ["BINARY", "COMP", "COMP-4", "COMPUTATIONAL", "USAGE BINARY"])
@@ -407,7 +414,7 @@ def test_comp5_group_usage_is_flagged():
             ("A", "01  NATIVE-BYTES REDEFINES NATIVE-GRP PIC X(2)."),
         ),
     )
-    assert _cobol004(src)
+    assert _cobol016(src)
 
 
 def test_comp5_reverse_direction_is_flagged():
@@ -420,11 +427,11 @@ def test_comp5_reverse_direction_is_flagged():
             ("A", "01  BIN-VIEW REDEFINES BYTES-VIEW PIC 9(4) COMP-5."),
         ),
     )
-    assert _cobol004(src)
+    assert _cobol016(src)
 
 
 def test_comp5_byte_view_message_names_byte_order():
-    (issue,) = _cobol004(_usage_view("COMP-5", "S9(4)", "X", "X"))
+    (issue,) = _cobol016(_usage_view("COMP-5", "S9(4)", "X", "X"))
     text = issue.message.lower()
     assert "byte order" in text and "comp-5" in text
     assert "z/os" in text and "x86" in text and "big-endian" in text
@@ -442,7 +449,7 @@ def test_comp5_reverse_byte_view_message_names_byte_order():
             ("A", "01  BIN-VIEW REDEFINES BYTES-VIEW PIC 9(4) COMP-5."),
         ),
     )
-    (issue,) = _cobol004(src)
+    (issue,) = _cobol016(src)
     assert "byte order" in issue.message
 
 
@@ -470,7 +477,7 @@ def test_other_cases_keep_the_generic_message(usage, pics):
     ],
 )
 def test_comp5_suggestion_warns_about_truncation(binary_pic, pics, limit):
-    (issue,) = _cobol004(_usage_view("COMP-5", binary_pic, *pics))
+    (issue,) = _cobol016(_usage_view("COMP-5", binary_pic, *pics))
     text = issue.suggestion
     assert "truncat" in text.lower() and "TRUNC(STD)" in text
     assert "TRUNC(BIN)" in text and "-fnotrunc" in text

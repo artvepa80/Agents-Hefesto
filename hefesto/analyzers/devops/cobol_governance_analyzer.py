@@ -1,8 +1,8 @@
 """
 COBOL Governance Analyzer for Hefesto v4.12.0 — Legacy Support Phase 1.
 
-Detects 15 governance issues in COBOL-85 + IBM Enterprise COBOL code.
-All 15 rules are FREE (no license required):
+Detects 16 governance issues in COBOL-85 + IBM Enterprise COBOL code.
+All 16 rules are FREE (no license required):
 
 1. GOTO_EXCESSIVE: >10 GO TO statements (HIGH severity)
 2. HARDCODED_CREDENTIALS: literal MOVEd into a field whose name looks like a
@@ -20,6 +20,9 @@ All 15 rules are FREE (no license required):
    vendor copybooks (CICS DFH*, IBM MQ CMQ*, DB2 SQLCA/SQLDA) are skipped.
 15. COPYBOOK_NOT_FOUND: a COPY whose copybook is not in the scanned tree
    (LOW), only when the index resolves at least one COPY of the scan.
+16. PLATFORM_DEPENDENT_LAYOUT: a REDEFINES whose bytes differ between z/OS
+   and x86 (PIC X bytes of COMP-5/BINARY-xxx, BINARY over POINTER, 4-byte
+   POINTER views) (MEDIUM). Lives in ``cobol_program_rules``; runs on copybooks.
 
 COBOL008-COBOL014 (VALUE secrets, connection-string secrets, EXEC SQL CONNECT
 literal passwords, FILE STATUS missing (grouped per program, LOW)/unchecked,
@@ -777,7 +780,7 @@ _MAX_LINES_IN_METADATA = 50
 
 # Rules that also run on copybook files (see analyze): a finding on an
 # unchanged copybook line is reported there, not again in every program.
-_COPYBOOK_RULES = {"COBOL004", "COBOL008", "COBOL009"}
+_COPYBOOK_RULES = {"COBOL004", "COBOL008", "COBOL009", "COBOL016"}
 _LINE_REF = re.compile(r"\bline (\d+)\b")
 
 _K = TypeVar("_K", bound=Hashable)

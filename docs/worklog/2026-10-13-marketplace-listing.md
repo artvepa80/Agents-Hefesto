@@ -74,3 +74,12 @@ hallazgos, igual que main; README Parity y Capabilities Parity OK.
 - Enlaces del README a docs/ y CHANGELOG con URL absoluta de GitHub (el README es la página
   de PyPI y del Marketplace, donde los relativos no resuelven).
 - Worklogs públicos: "a local corpus of N public repos" en lugar de la ruta local.
+
+## 2026-10-14: actualizado desde main tras #103
+
+- Merge de `origin/main` (56258e0, #103 COBOL016) en la rama, sin force-push.
+- Conflictos: README (se conserva la versión corta de #104; nota ³ pasa a "16 rules" y COBOL016 en la lista de reglas de copybooks) y CHANGELOG (se conservan las dos entradas).
+- `docs/cobol.md`: el párrafo COBOL004 lleva el texto de COBOL016 tal como quedó mergeado (byte views COMP-5 y BINARY-xxx, vistas de POINTER, MEDIUM) y cómo excluirlo con `exclude_types: [COBOL_PLATFORM_DEPENDENT_LAYOUT]`.
+- Comprobación: `grep -rn COBOL016 README.md docs/cobol.md`.
+- La entrada COBOL016 del CHANGELOG aún cita "20 public COBOL repositories" y Bank-of-Z/MortgageApplication; se corrige en el PR de la release 4.17.0.
+- Sin merge: requiere los 15 checks y el OK de Arturo.

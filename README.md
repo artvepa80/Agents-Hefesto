@@ -268,7 +268,7 @@ pointing to the install command (also exposed via
 | **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
 | **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
 | **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL015 (15 free rules)³ | v4.12.0 | Yes |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL016 (16 free rules)³ | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
@@ -283,7 +283,7 @@ pointing to the install command (also exposed via
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
-³ COBOL: all 15 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
+³ COBOL: all 16 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009/COBOL016, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 
 COBOL details (source format, per-rule behaviour, COPY expansion, measured recall, performance, SARIF): [docs/cobol.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/cobol.md).
 
