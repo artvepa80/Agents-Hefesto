@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`hefesto install-hooks` works in your own project and no longer exits 0 having installed nothing.** It used to copy only from `scripts/git-hooks/`, which exists only in a clone of this repository, so elsewhere it printed "template not found" twice and exited 0. The package now ships user-facing hooks (`hefesto/cli/hook_templates.py`): pre-commit analyzes the staged files with `--fail-on HIGH`, pre-push analyzes the repository with `--fail-on CRITICAL`, both honour `SKIP_HEFESTO_HOOKS=1`. Each hook runs the interpreter that ran `install-hooks` (`<python> -m hefesto`), falls back to `hefesto` on PATH, and fails (exit 1, "reinstall the hooks or set SKIP_HEFESTO_HOOKS=1") when neither exists. Hooks are written to `git rev-parse --git-path hooks` (worktrees, submodules) with LF line endings on every platform. With `core.hooksPath` set, nothing is written and the command exits 1 with how to call `hefesto analyze` from that hook manager or use the `hefesto-analyze` pre-commit hook. The contributor hooks in `scripts/git-hooks/` are used only when the root `pyproject.toml` has `name = "hefesto-ai"`; the command prints which set it used. It exits 1 when no hook was installed or already up to date. Limitation: the pre-commit hook analyzes the working-tree copy of the staged files, not the index.
 
+### Documentation
+
+- **CLAUDE.md matches CI.** The local verification command is the CI `lint-and-test` sequence, including `python -m mypy hefesto --ignore-missing-imports`; G-3 and the code-style section name that mypy command instead of `mypy --strict`, which CI does not run. New ruleset incident procedure: when infrastructure breaks a required check, disable the ruleset only with Arturo's explicit OK, merge the fix, re-enable it, and log it in the worklog. The PRO tier list says the REST API has 2 endpoints (`GET /health`, `POST /analyze`), not 8.
+- **4.17.0 release worklog** records the merge and tag SHAs, the `release.yml` run, PyPI and the demo status.
+
 ## [4.17.0] - 2026-10-14
 
 ### Upgrading from 4.16.0 (`@v4` users get this release automatically)
