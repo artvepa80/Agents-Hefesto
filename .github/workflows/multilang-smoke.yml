@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +58,46 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[multilang]"
 
+      - name: Prefetch the 6 grammars (no download during the smoke)
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
+        run: |
+          python - <<'PY'
+          import os, time, traceback
+          from tree_sitter_language_pack import download, downloaded_languages
+
+          langs = ["javascript", "typescript", "java", "go", "rust", "csharp"]
+          cache = os.environ["TREE_SITTER_LANGUAGE_PACK_CACHE_DIR"]
+          os.makedirs(cache, exist_ok=True)
+          last = None
+          for attempt in range(1, 4):
+              try:
+                  print(f"download({langs}) attempt {attempt}/3 (cache={cache})")
+                  download(langs)
+                  have = set(downloaded_languages())
+                  missing = [l for l in langs if l not in have]
+                  if missing:
+                      raise RuntimeError(f"still missing after download: {missing}")
+                  print("Prefetched:", ", ".join(sorted(have & set(langs))))
+                  break
+              except Exception as e:
+                  last = e
+                  print(f"attempt {attempt} failed: {type(e).__name__}: {e}")
+                  traceback.print_exc()
+                  if attempt < 3:
+                      delay = 2 ** attempt
+                      print(f"backoff {delay}s")
+                      time.sleep(delay)
+          else:
+              raise SystemExit(
+                  f"::error::Grammar prefetch failed after 3 attempts: "
+                  f"{type(last).__name__}: {last}"
+              )
+          PY
+
       - name: Smoke — get_parser + parse for the 6 supported languages
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
         run: |
           python - <<'PY'
           from tree_sitter_language_pack import get_parser
@@ -96,6 +135,8 @@ jobs:
           PY
 
       - name: Unit tests that need the grammars
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
         run: |
           pip install -e ".[multilang,dev]"
           python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py
