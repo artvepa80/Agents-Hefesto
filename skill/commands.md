@@ -71,7 +71,7 @@ Install the git hooks (same installer as `install-hooks`) and print the plans li
 hefesto init
 ```
 
-The link is `https://hefestoai.narapallc.com/?utm_source=hefesto-cli&utm_medium=cli&utm_campaign=growth_q4_2026&utm_content=init#pricing`. Prices are PRO $8/mo and OMEGA $19/mo. Running it again leaves hooks that already match in place.
+After the hooks are installed it may print one stderr line: `Plans: PRO $8/mo · OMEGA $19/mo.` and `https://hefestoai.narapallc.com/?utm_source=hefesto-cli&utm_medium=cli&utm_campaign=growth_q4_2026&utm_content=init#pricing`. That line follows the upgrade-notice rules in `docs/telemetry.md` (TTY, not CI, at most once a week). Running it again leaves hooks that already match in place.
 
 ## install-hooks
 

@@ -19,7 +19,7 @@ Five events, listed in code (`hefesto/telemetry/client.py`):
 Each event has:
 
 - `distinct_id`: a random UUID created on the machine (`~/.hefesto/telemetry_state.json`). It is not derived from a username, hostname, or path. Delete that file to reset it.
-- `source`: `hook` (git hook), `action` (GitHub Action), `ci` (`CI=true`), or `cli` (a direct local invocation). `upgrade_cta_shown` is only sent when `source` is `hook`, `ci`, or `action`.
+- `source`: `hook` (git hook), `action` (GitHub Action), `ci` (`CI=true`), or `cli` (a direct local invocation). `upgrade_cta_shown` is only sent when `source` is `hook` or `cli`, and it includes `cta` (the notice type).
 - `$geoip_disable: true` on every event, and `$process_person_profile: false` so PostHog does not build a person profile.
 
 No code, file paths, findings, repository names, or IP address is included. `issues` and `files` are counts. PostHog still sees the TCP connection; `$geoip_disable` tells it not to turn that into a location.
@@ -65,4 +65,25 @@ Hooks installed by `hefesto install-hooks` or `hefesto init` export `HEFESTO_SOU
 
 The GitHub Action is unchanged. With `telemetry: 1` or `true` it still POSTs its own `event=action` body to `https://hefestoai.narapallc.com/api/telemetry` and exports `HEFESTO_TELEMETRY=1`, which lets the CLI send the PostHog events (`source` becomes `action` because `GITHUB_ACTIONS=true`). The default `telemetry: 0` exports `HEFESTO_TELEMETRY=0` and the Action sends nothing.
 
-`upgrade_cta_shown` is the one-time `PRO $8/mo` line printed after a git hook blocks a commit (`utm_content=hook_blocked`). It is printed once per machine. It is not printed when `CI=true` or when `GITHUB_ACTIONS` is set (`1`, `true`, `yes`, or `on`). The event is sent only when `source` is `hook`, `ci`, or `action`, and not during the process that prints the telemetry notice.
+## Upgrade notices
+
+The CLI can print one extra stderr line after the command result. Prices in that line are PRO $8/mo and OMEGA $19/mo. The link is `https://hefestoai.narapallc.com/?utm_source=hefesto-cli&utm_medium=cli&utm_campaign=growth_q4_2026&utm_content=<type>#pricing`.
+
+| `cta` | When |
+|---|---|
+| `gated_serve` | `hefesto serve` without the PRO API-hardening package |
+| `gated_enrich` | `hefesto analyze --enrich` without PRO enrichment |
+| `gated_scope` | a scope flag (`--include-third-party`, `--include-generated`, `--include-fixtures`, `--scope-allow`, `--scope-deny`) without PRO scope gating |
+| `gated_info` | `hefesto info` prints one line — PRO ($8/mo) adds the API server, enrichment, and scope gating; OMEGA ($19/mo) adds IRIS — then exits 1. The multi-line PRO message is not printed. |
+| `gated_iris` | `hefesto serve` with `IRIS_BQ_PROJECT` set and the IRIS package missing (OMEGA) |
+| `analyze_milestone` | 25 finished analyses, then every 100 (125, 225, ...) |
+| `init` | `hefesto init`, after the hooks are installed |
+| `hook_blocked` | a git hook's analyze gate failed |
+
+`analyze_milestone` names hefesto-swarm: it is HefestoAI's security analysis pipeline, it runs on a target repo, and it can return BLOCK (`swarm/cli.py` in the PRO package).
+
+The line is not printed when `CI=true`, when GitHub Actions, GitLab CI, Jenkins (`JENKINS_URL`), or CircleCI is detected, when stdout is not a TTY, with `--output json`, `--output sarif`, or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `HEFESTO_NO_UPSELL=1`. `HEFESTO_NO_UPSELL` also accepts `true`, `yes`, and `on`. `hefesto telemetry disable` hides the line as well, because usage events are off.
+
+At most one notice of any type is printed every 7 days. Each type is printed at most 3 times. The counters are in `~/.hefesto/upsell.json`. If that file cannot be read or is not valid JSON, nothing is printed and the file is left as it is.
+
+`upgrade_cta_shown` is sent only when the line is printed and telemetry can send in this process (`source` is `hook` or `cli`). The notice process prints the line and does not send the event. `cta` is the type from the table.
