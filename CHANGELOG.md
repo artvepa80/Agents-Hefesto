@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **README links to hefestoai.narapallc.com carry UTM parameters** (`utm_source=github`, `utm_medium=readme`, `utm_campaign=growth_q4_2026`), so visits from the README can be told apart in the landing's analytics. `utm_content` names the README section: `pricing_quickstart` (the plans line under the Action quick start), `pricing_features_by_tier` (Features by Tier) and `website_contact` (Contact). The query string goes before `#pricing`, so the anchor still works. Link text and destinations are unchanged. `tests/test_cli_pro_required_message.py` accepts the pricing URL with an optional query string before `#pricing`; it still requires a pricing link and still rejects the retired links and coupons.
+
 ## [4.17.1] - 2026-10-15
 
 ### Upgrading from 4.17.0 (`@v4` users get this release automatically)

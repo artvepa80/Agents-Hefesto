@@ -35,7 +35,7 @@ jobs:
 
 Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.17.1` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
-Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/#pricing).
+Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
 ---
 
@@ -463,7 +463,7 @@ The hook runs two gates:
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
-- **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/#pricing), both with a 14-day free trial
+- **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_features_by_tier#pricing), both with a 14-day free trial
 
 ### Hefesto PRO Optional Features
 
@@ -709,7 +709,7 @@ Release history: [CHANGELOG.md](https://github.com/artvepa80/Agents-Hefesto/blob
 - **Support & bug reports**: support@narapallc.com
 - **General inquiries**: contact@narapallc.com
 - **GitHub Issues**: [artvepa80/Agents-Hefesto/issues](https://github.com/artvepa80/Agents-Hefesto/issues)
-- **Website**: [hefestoai.narapallc.com](https://hefestoai.narapallc.com)
+- **Website**: [hefestoai.narapallc.com](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=website_contact)
 
 ## License
 
