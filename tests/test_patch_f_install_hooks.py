@@ -29,6 +29,7 @@ class TestInstallHooks:
         """Create both hook templates in the repo structure."""
         hooks_dir = repo_root / "scripts" / "git-hooks"
         hooks_dir.mkdir(parents=True, exist_ok=True)
+        (repo_root / "pyproject.toml").write_text('[project]\nname = "hefesto-ai"\n')
 
         pre_push = hooks_dir / "pre-push"
         pre_push.write_text("#!/bin/bash\necho pre-push\n")
@@ -82,6 +83,7 @@ class TestInstallHooks:
 
             # Only create pre-push, not pre-commit
             (repo_root / "scripts" / "git-hooks" / "pre-push").write_text("#!/bin/bash\necho ok\n")
+            (repo_root / "pyproject.toml").write_text('[project]\nname = "hefesto-ai"\n')
 
             result = subprocess.run(
                 [sys.executable, "-m", "hefesto.cli.main", "install-hooks"],
