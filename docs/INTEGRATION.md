@@ -692,7 +692,7 @@ class AnalyzerEngine:
             click.echo("      • BigQuery analytics")
             click.echo("      • Confidence boosting")
             click.echo("")
-            click.echo("   14-day free trial: https://hefestoai.narapallc.com/#pricing")
+            click.echo("   PRO $8/mo. OMEGA $19/mo: https://hefestoai.narapallc.com/#pricing")
 ```
 
 ### Graceful Degradation

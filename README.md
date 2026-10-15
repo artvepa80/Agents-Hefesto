@@ -35,7 +35,7 @@ jobs:
 
 Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.17.1` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
-Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
+Free and MIT. PRO ($8/mo) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
 ---
 
@@ -429,6 +429,9 @@ is rejected as unknown, exit 2), so a shared config never turns this check off.
 Automatic validation before every `git push` in this repository:
 
 ```bash
+# Install the same hooks and print the plans link (PRO $8/mo, OMEGA $19/mo)
+hefesto init
+
 # Install/update hook (copies scripts/git-hooks/pre-push -> .git/hooks/pre-push)
 hefesto install-hooks
 
@@ -462,7 +465,7 @@ The hook runs two gates:
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
-- **PRO** ($8/month) and **OMEGA** ($19/month): [plans and checkout](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_features_by_tier#pricing), both with a 14-day free trial
+- **PRO** ($8/mo) and **OMEGA** ($19/mo): [plans and checkout](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_features_by_tier#pricing)
 
 ### Hefesto PRO Optional Features
 

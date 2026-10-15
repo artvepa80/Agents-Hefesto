@@ -12,7 +12,7 @@ Five events, listed in code (`hefesto/telemetry/client.py`):
 |---|---|
 | `first_run` | The first run after the notice, once per install id |
 | `analyze` | `hefesto analyze` finished. Also sends `files`, `issues`, `duration_ms`, `exit_code`, `version`, `os`, `py`, `env` (`ci`, `docker`, `dogfood`, plus the same vendor labels as the old ping), and `src` (`pypi` or `editable`) |
-| `hooks_installed` | `hefesto install-hooks` wrote at least one hook |
+| `hooks_installed` | `hefesto install-hooks` or `hefesto init` wrote at least one hook |
 | `hook_blocked` | A git hook's analyze gate failed because of findings |
 | `upgrade_cta_shown` | The PRO upgrade line was printed (see below) |
 
@@ -61,8 +61,8 @@ Sending runs on a background thread with a short timeout and ignores errors. It 
 
 ## Git hooks and the GitHub Action
 
-Hooks installed by `hefesto install-hooks` export `HEFESTO_SOURCE=hook` before `hefesto analyze`.
+Hooks installed by `hefesto install-hooks` or `hefesto init` export `HEFESTO_SOURCE=hook` before `hefesto analyze`.
 
 The GitHub Action is unchanged. With `telemetry: 1` or `true` it still POSTs its own `event=action` body to `https://hefestoai.narapallc.com/api/telemetry` and exports `HEFESTO_TELEMETRY=1`, which lets the CLI send the PostHog events (`source` becomes `action` because `GITHUB_ACTIONS=true`). The default `telemetry: 0` exports `HEFESTO_TELEMETRY=0` and the Action sends nothing.
 
-`upgrade_cta_shown` is reserved for the one-time PRO line printed after a hook blocks a commit. It is not printed when `CI=true` or when `GITHUB_ACTIONS` is set.
+`upgrade_cta_shown` is the one-time `PRO $8/mo` line printed after a git hook blocks a commit (`utm_content=hook_blocked`). It is printed once per machine. It is not printed when `CI=true` or when `GITHUB_ACTIONS` is set (`1`, `true`, `yes`, or `on`). The event is sent only when `source` is `hook`, `ci`, or `action`, and not during the process that prints the telemetry notice.

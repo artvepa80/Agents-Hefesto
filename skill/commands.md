@@ -63,6 +63,16 @@ hefesto analyze src/ lib/ types/
 hefesto analyze . --format-check --fail-on LOW
 ```
 
+## init
+
+Install the git hooks (same installer as `install-hooks`) and print the plans link.
+
+```bash
+hefesto init
+```
+
+The link is `https://hefestoai.narapallc.com/?utm_source=hefesto-cli&utm_medium=cli&utm_campaign=growth_q4_2026&utm_content=init#pricing`. Prices are PRO $8/mo and OMEGA $19/mo. Running it again leaves hooks that already match in place.
+
 ## install-hooks
 
 Install pre-commit and pre-push git hooks.

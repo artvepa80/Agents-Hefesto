@@ -44,10 +44,10 @@ python scripts/generate_key.py customer@email.com sub_ABC123 true
 
 **Examples:**
 ```bash
-# Founding Member (PRO $8/month or OMEGA $19/month, founding price)
+# PRO $8/mo or OMEGA $19/mo
 python scripts/generate_key.py john@acme.com sub_1SKN true
 
-# Regular subscription (PRO $8/month or OMEGA $19/month)
+# PRO $8/mo or OMEGA $19/mo
 python scripts/generate_key.py jane@startup.io sub_1SKP false
 ```
 
@@ -143,10 +143,10 @@ Combines license key generation, S3 presigned URL creation, and email template g
 
 **Usage:**
 ```bash
-# Founding Member (PRO $8/month or OMEGA $19/month, founding price)
+# PRO $8/mo or OMEGA $19/mo
 python scripts/fulfill_order.py john@acme.com sub_1ABC123XYZ true
 
-# Regular subscription (PRO $8/month or OMEGA $19/month)
+# PRO $8/mo or OMEGA $19/mo
 python scripts/fulfill_order.py jane@startup.io sub_1XYZ789ABC false
 ```
 
@@ -161,14 +161,14 @@ python scripts/fulfill_order.py jane@startup.io sub_1XYZ789ABC false
 ```
 WHEN STRIPE PAYMENT ARRIVES:
 1. Extract: customer email + subscription ID + amount
-2. Determine tier from the Stripe price: PRO $8/month, OMEGA $19/month
+2. Determine tier from the Stripe price: PRO $8/mo, OMEGA $19/mo
 3. Run: python scripts/fulfill_order.py EMAIL SUB_ID TIER
 4. Open: cat email_*.txt
 5. Copy and send from support@narapallc.com
 6. Log in tracking spreadsheet
 ```
 
-**Note:** Current pricing: PRO $8/mo, OMEGA $19/mo. Old pricing ($59/$99) fully deprecated.
+**Note:** Current pricing: PRO $8/mo, OMEGA $19/mo. Older prices are deprecated.
 
 **Time per customer:** ~2 minutes (fully automated key + URL + email)
 
@@ -191,7 +191,7 @@ $ python scripts/fulfill_order.py john@acme.com sub_1SKNC8ABC true
 Customer:           john@acme.com
 License Key:        HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 Founding Member:    Yes
-Price:              $8/month (PRO) or $19/month (OMEGA), founding price
+Price:              $8/mo (PRO) or $19/mo (OMEGA)
 Email saved to:     email_john_at_acme_com_20251020_183045.txt
 ```
 

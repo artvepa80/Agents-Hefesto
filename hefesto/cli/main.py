@@ -20,8 +20,7 @@ from hefesto.__version__ import __version__
 
 PRICING_URL = "https://hefestoai.narapallc.com/#pricing"
 PRO_REQUIRED_MESSAGE = (
-    "This feature requires Hefesto PRO ($8/month) or OMEGA ($19/month), "
-    "both with a 14-day free trial.\n"
+    "This feature requires Hefesto PRO ($8/mo) or OMEGA ($19/mo).\n"
     f"Plans and checkout: {PRICING_URL}\n"
     "Already licensed? Install the Pro package from your HefestoAI download email\n"
     "and set HEFESTO_LICENSE_KEY (see `hefesto activate --help`)."
@@ -475,6 +474,9 @@ def analyze(
             and resolve_source() == "hook"
         ):
             capture("hook_blocked")
+            from hefesto.cli.growth import show_upgrade_cta
+
+            show_upgrade_cta()
 
         _exit(exit_code)
 
@@ -854,6 +856,20 @@ def install_hooks(force: bool):
         from hefesto.telemetry.client import capture
 
         capture("hooks_installed")
+
+
+@cli.command("init")
+@click.pass_context
+def init_cmd(ctx: click.Context) -> None:
+    """Install the git hooks and print the plans link.
+
+    Uses the same installer as ``install-hooks``. Running it again leaves
+    hooks that already match in place.
+    """
+    from hefesto.cli.growth import INIT_PRICING_URL
+
+    ctx.invoke(install_hooks)
+    click.echo(f"PRO $8/mo. OMEGA $19/mo. {INIT_PRICING_URL}")
 
 
 def _git_out(repo_root, args):

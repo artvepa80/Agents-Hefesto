@@ -6,7 +6,7 @@ All Rights Reserved.
 
 The code in this repository is licensed under the MIT License (see LICENSE).
 The terms below apply only to the paid Phase 1 (Pro) features: the PRO and
-OMEGA tiers and Enterprise plans. They do not change the license of the code
+OMEGA tiers. They do not change the license of the code
 in this repository.
 
 ================================================================================
@@ -30,11 +30,11 @@ Commercial License Terms:
    the Phase 1 (Pro) features.
 
 2. PRICING
-   PRO: $8 USD per month
+   PRO: $8/mo
 
-   OMEGA: $19 USD per month
+   OMEGA: $19/mo
 
-   Enterprise: Custom pricing (contact sales)
+   Enterprise licensing: sales@narapallc.com
 
    Current prices and plan details are published at
    https://github.com/artvepa80/Agents-Hefesto#features-by-tier and may

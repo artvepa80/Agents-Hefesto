@@ -13,8 +13,10 @@ def test_pricing_url_is_landing_pricing_section():
 
 
 def test_message_names_current_prices_and_url():
-    assert "$8/month" in PRO_REQUIRED_MESSAGE
-    assert "$19/month" in PRO_REQUIRED_MESSAGE
+    assert "$8/mo" in PRO_REQUIRED_MESSAGE
+    assert "$19/mo" in PRO_REQUIRED_MESSAGE
+    assert "14-day" not in PRO_REQUIRED_MESSAGE
+    assert "credit card" not in PRO_REQUIRED_MESSAGE.lower()
     assert PRICING_URL in PRO_REQUIRED_MESSAGE
     assert "buy.stripe.com" not in PRO_REQUIRED_MESSAGE
 
@@ -23,7 +25,7 @@ def test_info_prints_pricing_url():
     result = CliRunner().invoke(cli, ["info"])
     assert result.exit_code == 1
     assert PRICING_URL in result.output
-    assert "$8/month" in result.output
+    assert "$8/mo" in result.output
 
 
 def test_message_points_licensed_users_at_env_var():
