@@ -75,7 +75,12 @@ def gated_line(feature: str, tier: str, kind: str) -> str:
 GATED_SERVE_LINE = gated_line("The API server", "PRO", "gated_serve")
 GATED_ENRICH_LINE = gated_line("Enrichment", "PRO", "gated_enrich")
 GATED_SCOPE_LINE = gated_line("Scope gating", "PRO", "gated_scope")
-GATED_INFO_LINE = gated_line("Configuration info", "PRO", "gated_info")
+# ``hefesto info`` prints only this line. It names the real gates so it does
+# not repeat the multi-line PRO message used by serve and status.
+GATED_INFO_LINE = (
+    "PRO ($8/mo) adds the API server, enrichment, and scope gating. "
+    f"OMEGA ($19/mo) adds IRIS. See plans: {pricing_url('gated_info')}"
+)
 GATED_IRIS_LINE = gated_line("IRIS monitoring", "OMEGA", "gated_iris")
 
 

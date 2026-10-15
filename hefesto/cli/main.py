@@ -527,10 +527,6 @@ def _echo_analysis_config(paths_list, severity, exclude, quiet, json_mode=False)
 @cli.command()
 def info():
     """Show Hefesto configuration and license info."""
-    click.echo(
-        PRO_REQUIRED_MESSAGE,
-        err=True,
-    )
     from hefesto.cli.growth import GATED_INFO_LINE, show_notice
 
     show_notice("gated_info", GATED_INFO_LINE)

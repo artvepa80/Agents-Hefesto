@@ -111,6 +111,13 @@ def test_gated_prices_follow_the_tier() -> None:
     assert "PRO ($8/mo)" in GATED_ENRICH_LINE
     assert "PRO ($8/mo)" in GATED_SCOPE_LINE
     assert "PRO ($8/mo)" in GATED_INFO_LINE
+    assert "OMEGA ($19/mo)" in GATED_INFO_LINE
+    assert "API server" in GATED_INFO_LINE
+    assert "enrichment" in GATED_INFO_LINE
+    assert "scope gating" in GATED_INFO_LINE
+    assert "IRIS" in GATED_INFO_LINE
+    assert "utm_content=gated_info" in GATED_INFO_LINE
+    assert "Configuration info" not in GATED_INFO_LINE
     assert "OMEGA ($19/mo)" in GATED_IRIS_LINE
     assert "utm_content=gated_serve" in GATED_SERVE_LINE
     assert "utm_content=gated_iris" in GATED_IRIS_LINE
@@ -203,14 +210,17 @@ def test_milestone_line_after_25_finished_analyses(
     assert "utm_content=analyze_milestone" in err
 
 
-def test_info_prints_the_pro_line_after_the_result(monkeypatch: pytest.MonkeyPatch) -> None:
-    _record(monkeypatch)
-    from hefesto.cli.main import cli
+def test_info_prints_one_plans_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent = _record(monkeypatch)
+    from hefesto.cli.main import PRO_REQUIRED_MESSAGE, cli
 
     result = CliRunner().invoke(cli, ["info"])
     assert result.exit_code == 1
-    assert result.stderr.index("This feature requires") < result.stderr.index(GATED_INFO_LINE)
-    assert result.stderr.count("\n") >= 2
+    assert result.stderr.strip() == GATED_INFO_LINE
+    assert result.stderr.count("\n") == 1
+    assert PRO_REQUIRED_MESSAGE not in result.stderr
+    assert "This feature requires" not in result.stderr
+    assert sent[0]["properties"]["cta"] == "gated_info"
 
 
 def test_analyze_json_and_quiet_skip_the_milestone(

@@ -21,11 +21,12 @@ def test_message_names_current_prices_and_url():
     assert "buy.stripe.com" not in PRO_REQUIRED_MESSAGE
 
 
-def test_info_prints_pricing_url():
+def test_info_does_not_repeat_the_pro_message():
     result = CliRunner().invoke(cli, ["info"])
     assert result.exit_code == 1
-    assert PRICING_URL in result.output
-    assert "$8/mo" in result.output
+    assert PRO_REQUIRED_MESSAGE not in result.output
+    assert "This feature requires" not in result.output
+    assert PRICING_URL not in result.output
 
 
 def test_message_points_licensed_users_at_env_var():

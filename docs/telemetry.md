@@ -74,7 +74,7 @@ The CLI can print one extra stderr line after the command result. Prices in that
 | `gated_serve` | `hefesto serve` without the PRO API-hardening package |
 | `gated_enrich` | `hefesto analyze --enrich` without PRO enrichment |
 | `gated_scope` | a scope flag (`--include-third-party`, `--include-generated`, `--include-fixtures`, `--scope-allow`, `--scope-deny`) without PRO scope gating |
-| `gated_info` | `hefesto info` (the command exits with the PRO message) |
+| `gated_info` | `hefesto info` prints one line — PRO ($8/mo) adds the API server, enrichment, and scope gating; OMEGA ($19/mo) adds IRIS — then exits 1. The multi-line PRO message is not printed. |
 | `gated_iris` | `hefesto serve` with `IRIS_BQ_PROJECT` set and the IRIS package missing (OMEGA) |
 | `analyze_milestone` | 25 finished analyses, then every 100 (125, 225, ...) |
 | `init` | `hefesto init`, after the hooks are installed |
