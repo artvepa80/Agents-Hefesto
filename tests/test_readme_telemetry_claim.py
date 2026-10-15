@@ -12,10 +12,11 @@ from hefesto.telemetry.client import telemetry_enabled
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAIM = (
-    "The CLI sends anonymous usage events by default (a random id only; no code, file paths, "
-    "findings, repository names, or IP). Turn it off with `hefesto telemetry disable`, "
-    "HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1. The GitHub Action sends nothing unless you set "
-    "telemetry: 1."
+    "The CLI sends anonymous usage events by default (a random id; `analyze` also sends file "
+    "and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus "
+    "pypi or editable — no code, file paths, findings, repository names, or IP). Turn it off "
+    "with `hefesto telemetry disable`, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1. The GitHub "
+    "Action sends nothing unless you set telemetry: 1."
 )
 
 

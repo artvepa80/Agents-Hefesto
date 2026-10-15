@@ -91,6 +91,10 @@ def test_payload_has_no_pii_paths_findings_or_ip(
     sent = _record(monkeypatch)
     client.capture(
         "analyze",
+        files=2,
+        issues=1,
+        duration_ms=15,
+        exit_code=0,
         path=_PLANTED_PATH,
         code=_PLANTED_CODE,
         finding=_PLANTED_FINDING,
@@ -102,9 +106,19 @@ def test_payload_has_no_pii_paths_findings_or_ip(
     blob = json.dumps(body)
     for planted in (_PLANTED_PATH, _PLANTED_CODE, _PLANTED_FINDING, _PLANTED_REPO, _PLANTED_IP):
         assert planted not in blob
-    assert set(body["properties"]) == {"source", "$geoip_disable", "$process_person_profile"}
-    assert body["properties"]["$geoip_disable"] is True
-    assert "$ip" not in body and "ip" not in body["properties"]
+    props = body["properties"]
+    assert props["files"] == 2
+    assert props["issues"] == 1
+    assert props["duration_ms"] == 15
+    assert props["exit_code"] == 0
+    assert props["version"]
+    assert props["os"] == sys.platform
+    assert props["py"] == f"{sys.version_info.major}.{sys.version_info.minor}"
+    assert props["src"] in {"pypi", "editable", "unknown"}
+    assert isinstance(props["env"], list)
+    assert props["$geoip_disable"] is True
+    assert "$ip" not in body and "ip" not in props
+    assert "path" not in props and "code" not in props and "finding" not in props
     assert body["distinct_id"] == "11111111-1111-4111-8111-111111111111"
 
 
@@ -256,3 +270,134 @@ def test_install_hooks_emits_hooks_installed_once(
     assert events.count("hooks_installed") == 1
     hook = (tmp_path / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
     assert "HEFESTO_SOURCE=hook" in hook
+
+
+class _Body:
+    def __init__(self, payload: bytes) -> None:
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return self._payload
+
+
+def _pypi(version: str):
+    def _open(request: object, timeout: float = 0) -> _Body:
+        _open.calls.append((getattr(request, "full_url", ""), timeout))
+        return _Body(json.dumps({"info": {"version": version}}).encode("utf-8"))
+
+    _open.calls = []  # type: ignore[attr-defined]
+    return _open
+
+
+def test_pypi_notice_is_cached_for_a_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    assert opened.calls[0][0] == client.PYPI_JSON_URL
+    assert opened.calls[0][1] == client.PYPI_TIMEOUT
+    notice = client.get_upgrade_notice("4.17.1")
+    assert notice is not None
+    assert "Hefesto 9.9.9 available" in notice
+    assert "you have 4.17.1" in notice
+    assert client.get_upgrade_notice("9.9.9") is None
+    assert client.get_upgrade_notice("9.9.10") is None
+
+
+def test_pypi_failure_is_silent(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise TimeoutError("pypi")
+
+    monkeypatch.setattr(client.urllib.request, "urlopen", _boom)
+    client.refresh_latest_version()
+    assert client.get_upgrade_notice("4.17.1") is None
+
+
+def test_stale_version_cache_is_refetched(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    stale = {"version": "1.0.0", "ts": time.time() - client._CACHE_TTL_SECONDS - 5}
+    (tmp_path / ".latest_version").write_text(json.dumps(stale), encoding="utf-8")
+    opened = _pypi("8.0.0")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    notice = client.get_upgrade_notice("4.17.1")
+    assert notice is not None and "Hefesto 8.0.0 available" in notice
+
+
+def test_environment_labels_are_ci_docker_and_dogfood(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "CI",
+        "GITHUB_ACTIONS",
+        "GITLAB_CI",
+        "JENKINS_URL",
+        "CIRCLECI",
+        "KUBERNETES_SERVICE_HOST",
+        "HEFESTO_TELEMETRY_ENV",
+        "HEFESTO_DOGFOOD",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(client.os.path, "exists", lambda path: path == "/.dockerenv")
+    monkeypatch.setattr(client, "install_source", lambda: "pypi")
+    monkeypatch.setenv("CI", "true")
+    flags = client.environment_flags()
+    assert "ci" in flags and "docker" in flags
+    assert "dogfood" not in flags
+    monkeypatch.delenv("CI")
+    monkeypatch.setattr(client.os.path, "exists", lambda _path: False)
+    monkeypatch.setattr(client, "install_source", lambda: "editable")
+    assert client.environment_flags() == ["dogfood"]
+    monkeypatch.setattr(client, "install_source", lambda: "pypi")
+    monkeypatch.setenv("HEFESTO_TELEMETRY_ENV", "dogfood")
+    assert client.environment_flags() == ["dogfood"]
+
+
+def test_install_source_reads_the_package_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    import hefesto
+
+    monkeypatch.setattr(hefesto, "__file__", "/usr/lib/site-packages/hefesto/__init__.py")
+    assert client.install_source() == "pypi"
+    monkeypatch.setattr(hefesto, "__file__", "/workspace/hefesto/__init__.py")
+    assert client.install_source() == "editable"
+
+
+def test_analyze_command_sends_counts_and_the_pypi_notice(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _seed_noticed(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "app.py").write_text("def ok():\n    return 1\n", encoding="utf-8")
+    sent = _record(monkeypatch)
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    from hefesto.cli.main import cli
+
+    result = CliRunner().invoke(cli, ["analyze", "app.py"])
+    assert result.exit_code == 0, result.output
+    assert "Hefesto 9.9.9 available" in result.stdout
+    assert "you have" in result.stdout
+    analyze = [body for body in sent if body["event"] == "analyze"]
+    assert len(analyze) == 1
+    props = analyze[0]["properties"]
+    for key in (
+        "files",
+        "issues",
+        "duration_ms",
+        "exit_code",
+        "version",
+        "os",
+        "py",
+        "env",
+        "src",
+    ):
+        assert key in props
+    assert props["files"] >= 1
+    assert props["exit_code"] == 0
+    assert isinstance(props["issues"], int)
+    assert isinstance(props["duration_ms"], int)
+    assert props["src"] in {"pypi", "editable"}
+    blob = json.dumps(analyze[0])
+    assert "app.py" not in blob
+    assert str(tmp_path) not in blob
+    assert _PLANTED_IP not in blob
+    assert "$ip" not in analyze[0]

@@ -71,7 +71,7 @@ jobs:
 | fail_on | CRITICAL | Gate severity threshold |
 | min_severity | LOW | Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW; INFO is treated as LOW) |
 | format | text | Output format: text, json, html |
-| telemetry | 0 | Opt-in. Only `1`/`true` lets the CLI send anonymous usage events; anything else sends nothing |
+| telemetry | 0 | Opt-in anonymous telemetry: only `1`/`true` sends the per-run ping; anything else sends nothing |
 
 ### As a pip Install Step
 

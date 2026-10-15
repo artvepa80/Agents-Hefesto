@@ -3,6 +3,7 @@
 On by default. Nothing is sent until the one-time notice has been shown, and
 nothing is sent when the project key or host is empty. The body carries a
 random install id and no paths, code, findings, repository names, or IP.
+``analyze`` also carries counts and environment labels (not the findings).
 """
 
 from __future__ import annotations
@@ -13,12 +14,15 @@ import os
 import re
 import sys
 import threading
+import time
 import urllib.parse
 import urllib.request
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+
+from hefesto.__version__ import __version__
 
 # Public write-only project key (PostHog Cloud, US). Empty string disables sends.
 POSTHOG_API_KEY = "phc_ofYThaD8rd7ptYXG8PaqNL6hnLBafbXNddwNfqshzyJ7"
@@ -38,6 +42,10 @@ _EXPLICIT_SOURCES = frozenset({"hook", "ci", "action"})
 _OPT_OUT = frozenset({"0", "false", "no", "off"})
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 _UUID_RE_TEXT = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+_ANALYZE_COUNTS = ("files", "issues", "duration_ms", "exit_code")
+PYPI_JSON_URL = "https://pypi.org/pypi/hefesto-ai/json"
+PYPI_TIMEOUT = 1.5
+_CACHE_TTL_SECONDS = 86400
 
 NOTICE = (
     "Hefesto collects anonymous usage data by default (a random id; no code, "
@@ -116,7 +124,7 @@ def resolved_posthog_host() -> str:
 
 
 def build_event(event: str) -> dict[str, Any]:
-    """JSON body for one event. Caller-supplied fields are not accepted."""
+    """JSON body for one event. Extra caller fields are added only for ``analyze``."""
     if event not in EVENTS:
         raise ValueError(event)
     return {
@@ -129,6 +137,69 @@ def build_event(event: str) -> dict[str, Any]:
             "$process_person_profile": False,
         },
     }
+
+
+def environment_flags() -> list[str]:
+    """Environment labels stored with ``analyze``. Same classes as the old ping.
+
+    ``ci``, ``docker``, and ``dogfood`` are the comparison set. Vendor flags
+    (``github_actions``, ``gitlab_ci``, ``jenkins``, ``circleci``, ``kubernetes``)
+    stay so a row can still be matched to the previous series. ``user`` is the
+    fallback when nothing matches.
+    """
+    try:
+        flags: list[str] = []
+        if os.getenv("CI", "").strip().lower() == "true":
+            flags.append("ci")
+        if os.getenv("GITHUB_ACTIONS", "").strip().lower() == "true":
+            flags.append("github_actions")
+        if os.getenv("GITLAB_CI", "").strip().lower() == "true":
+            flags.append("gitlab_ci")
+        if os.getenv("JENKINS_URL"):
+            flags.append("jenkins")
+        if os.getenv("CIRCLECI", "").strip().lower() == "true":
+            flags.append("circleci")
+        if os.path.exists("/.dockerenv"):
+            flags.append("docker")
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
+            flags.append("kubernetes")
+        telemetry_env = os.getenv("HEFESTO_TELEMETRY_ENV", "").strip().lower()
+        dogfood = os.getenv("HEFESTO_DOGFOOD", "").strip().lower() in _TRUTHY
+        editable = install_source() == "editable"
+        if telemetry_env in {"dogfood", "internal", "dev"} or dogfood or editable:
+            flags.append("dogfood")
+        return flags or ["user"]
+    except Exception:  # noqa: BLE001 — classification must not break a scan
+        return ["user"]
+
+
+def install_source() -> str:
+    """``pypi`` when the package lives in site-packages, otherwise ``editable``."""
+    try:
+        import hefesto
+
+        path = os.path.dirname(hefesto.__file__)
+        if "site-packages" not in path:
+            return "editable"
+        return "pypi"
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
+def analyze_properties(extra: Mapping[str, Any]) -> dict[str, Any]:
+    """Counts and labels for ``analyze``. Anything else in ``extra`` is dropped."""
+    properties: dict[str, Any] = {
+        "version": __version__,
+        "os": sys.platform,
+        "py": f"{sys.version_info.major}.{sys.version_info.minor}",
+        "env": environment_flags(),
+        "src": install_source(),
+    }
+    for name in _ANALYZE_COUNTS:
+        value = extra.get(name)
+        if isinstance(value, int) and not isinstance(value, bool):
+            properties[name] = value
+    return properties
 
 
 def prepare_cli(subcommand: str | None) -> None:
@@ -153,8 +224,12 @@ def prepare_cli(subcommand: str | None) -> None:
 
 
 def capture(event: str, **extra: Any) -> None:
-    """Send one of the five events. ``extra`` is discarded (no paths or findings)."""
-    del extra
+    """Send one of the five events.
+
+    For ``analyze``, only ``files``, ``issues``, ``duration_ms``, and
+    ``exit_code`` are copied from ``extra``. Version, OS, Python, ``env``,
+    and ``src`` are added here. Every other keyword is ignored.
+    """
     if event not in EVENTS or not _may_emit():
         return
     if event == "upgrade_cta_shown" and resolve_source() not in CTA_SOURCES:
@@ -164,10 +239,108 @@ def capture(event: str, **extra: Any) -> None:
     if _defer_until_noticed():
         return
     body = build_event(event)
+    if event == "analyze":
+        body["properties"].update(analyze_properties(extra))
     if _debug_enabled():
         _print_debug(body)
         return
     _schedule_send(body)
+
+
+def refresh_latest_version() -> None:
+    """Cache the PyPI version of hefesto-ai for 24 hours. Never raises.
+
+    A short timeout. A network or parse failure leaves the previous cache
+    untouched. Skipped while the test runner is collecting other tests.
+    Independent of the usage-event opt-out: the upgrade line is not telemetry.
+    """
+    try:
+        if _suppressed_by_test_runner():
+            return
+        if _read_version_cache() is not None:
+            return
+        latest = _fetch_pypi_version()
+        if latest:
+            _cache_latest_version(latest)
+    except Exception:  # noqa: BLE001 — a version check must not surface
+        return
+
+
+def _fetch_pypi_version() -> str:
+    request = urllib.request.Request(PYPI_JSON_URL, method="GET")
+    response = urllib.request.urlopen(request, timeout=PYPI_TIMEOUT)
+    payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    if not isinstance(payload, dict):
+        return ""
+    info = payload.get("info")
+    if not isinstance(info, dict):
+        return ""
+    version = info.get("version")
+    if not isinstance(version, str):
+        return ""
+    return version.strip()
+
+
+def _version_cache_path() -> Path:
+    return hefesto_dir() / ".latest_version"
+
+
+def _read_version_cache() -> dict[str, Any] | None:
+    try:
+        loaded = json.loads(_version_cache_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(loaded, dict):
+        return None
+    stamped = loaded.get("ts")
+    if isinstance(stamped, bool) or not isinstance(stamped, (int, float)):
+        return None
+    if time.time() - float(stamped) > _CACHE_TTL_SECONDS:
+        return None
+    version = loaded.get("version")
+    if not isinstance(version, str) or not version.strip():
+        return None
+    return loaded
+
+
+def _cache_latest_version(version: str) -> None:
+    directory = hefesto_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    _version_cache_path().write_text(
+        json.dumps({"version": version, "ts": time.time()}),
+        encoding="utf-8",
+    )
+
+
+def _is_newer(latest: str, current: str) -> bool:
+    """True when ``latest`` is a higher dotted numeric version than ``current``."""
+    try:
+        latest_parts = [int(part) for part in latest.split(".")]
+        current_parts = [int(part) for part in current.split(".")]
+    except (ValueError, AttributeError):
+        return False
+    return latest_parts > current_parts
+
+
+def get_upgrade_notice(current_version: str) -> str | None:
+    """``Hefesto X available`` when the PyPI cache is newer, else None.
+
+    The cache is filled by :func:`refresh_latest_version`. Missing or stale
+    (older than 24 hours) caches return None. Never raises.
+    """
+    try:
+        cached = _read_version_cache()
+        if cached is None:
+            return None
+        latest = cached.get("version", "")
+        if not isinstance(latest, str) or not _is_newer(latest, current_version):
+            return None
+        return (
+            f"\n\u26a0\ufe0f  Hefesto {latest} available (you have {current_version})."
+            " Upgrade: pip install --upgrade hefesto-ai"
+        )
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def print_notice() -> None:

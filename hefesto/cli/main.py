@@ -450,9 +450,24 @@ def analyze(
             combined_report, fail_on, exclude_types, quiet, json_mode, allow_no_files
         )
 
-        from hefesto.telemetry.client import capture, resolve_source
+        from hefesto.telemetry.client import (
+            capture,
+            get_upgrade_notice,
+            refresh_latest_version,
+            resolve_source,
+        )
 
-        capture("analyze")
+        refresh_latest_version()
+        capture(
+            "analyze",
+            files=combined_report.summary.files_analyzed,
+            issues=combined_report.summary.total_issues,
+            duration_ms=int(combined_report.summary.duration_seconds * 1000),
+            exit_code=exit_code,
+        )
+        upgrade_msg = get_upgrade_notice(__version__)
+        if upgrade_msg and not quiet:
+            click.echo(upgrade_msg, err=json_mode)
         if (
             exit_code == 1
             and fail_on
