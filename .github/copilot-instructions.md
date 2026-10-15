@@ -2,7 +2,7 @@
 
 ## What is Hefesto?
 
-Hefesto (hefesto-ai on PyPI) is an AI-powered static analysis tool designed specifically for validating AI-generated code. It catches security flaws, semantic drift, and complexity issues that traditional linters miss — in 0.01s across 22 formats.
+Hefesto (hefesto-ai on PyPI) is a release truth engine for AI-generated code. Before merge, it checks that what a project declares matches what it actually does, and it catches security flaws, semantic drift, and complexity issues. The package ships analyzers for 22 formats.
 
 ## The Problem Hefesto Solves
 
@@ -20,21 +20,23 @@ hefesto/
 ├── cli/main.py              — CLI entry point (analyze, serve, install-hooks)
 ├── core/
 │   ├── analyzer_engine.py    — Central engine: loads analyzers, runs analysis
-│   ├── scanner.py            — File discovery + language detection
-│   └── languages/            — Per-language AST parsers
+│   ├── language_detector.py  — Language detection from extensions, names, and shebangs
+│   └── languages/            — Language specs and registry
 ├── analyzers/
 │   ├── complexity.py         — Cyclomatic/cognitive complexity
-│   ├── semantic.py           — AI semantic analysis (PRO)
-│   ├── duplicates.py         — Code duplication detection (PRO)
+│   ├── narrow_semantic.py    — Attribute-name and swallowed-exception checks
+│   ├── semantic_duplication.py — Duplicate-code detection (embeddings)
+│   ├── security.py           — HARDCODED_SECRET, SQL_INJECTION_RISK, COMMAND_INJECTION, PICKLE_USAGE
 │   ├── cloud/                — CloudFormation, ARM, Helm, Serverless
 │   └── devops/               — Docker, Terraform, Shell, YAML, SQL, PowerShell
 ├── security/
-│   ├── vulnerability.py      — HARDCODED_SECRET, SQL_INJECTION, COMMAND_INJECTION
+│   ├── masking.py            — Secret masking for logs
+│   ├── path_sandbox.py       — Path checks
 │   └── packs/                — Security rule packs
-├── api/                      — REST API server (PRO)
-├── omega/                    — IRIS production monitoring (OMEGA)
-└── licensing/                — 3-tier: FREE/PRO/OMEGA
+└── server.py                 — REST API (GET /health, POST /analyze)
 ```
+
+PRO and OMEGA features ship in the private distribution, not in this tree.
 
 ## Key Facts
 

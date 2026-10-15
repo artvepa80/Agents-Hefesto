@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
+- **Telemetry comments no longer call the CLI events a usage ping.** `HEFESTO_TELEMETRY=0` disables anonymous usage events. The Action `telemetry` input description matches the README: with `1` or `true`, the Action sends one anonymous ping per run and the CLI sends its usage events.
+- **`llms.txt` and the agent card no longer list PATH_TRAVERSAL or UNSAFE_DESERIALIZATION.** No analyzer emits those types (the README table was corrected in 4.17.0). They name `PICKLE_USAGE`, which is the emitted type. The agent-card security skill uses `SQL_INJECTION_RISK`.
+- **Hook docs match the hooks `install-hooks` writes.** `skill/integration.md` and `skill/commands.md` describe the package templates (staged files, `--fail-on HIGH`; the repository, `--fail-on CRITICAL`). `scripts/git-hooks/` is only for a clone of this repository.
+- **Copilot instructions drop the retired "0.01s" claim** and point the architecture sketch at files that exist (`language_detector.py`, `narrow_semantic.py`, `semantic_duplication.py`, `security.py`, `server.py`). `omega/` and `licensing/` are not in this tree.
+- **`docs/CLAUDE_HEFESTO.md` calls `hefesto analyze .`.** `hefesto analyze` has no `--project` flag.
+- **Handoff:** `docs/worklog/2026-10-15-hosted-engine-docs.md`.
+
 ## [4.19.0] - 2026-10-15
 
 ### Upgrading from 4.18.0 (`@v4` users get this release automatically)

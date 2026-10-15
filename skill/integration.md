@@ -13,20 +13,11 @@ Requires Python >= 3.10. Installs the `hefesto` CLI.
 ### Automatic Installation
 
 ```bash
-hefesto install-hooks         # install to .git/hooks/
+hefesto install-hooks         # install into the git hooks directory
 hefesto install-hooks --force # overwrite existing hooks
 ```
 
-Installs both pre-commit and pre-push hooks from `scripts/git-hooks/`.
-
-### What the Hook Does
-
-The pre-commit hook runs:
-```bash
-hefesto analyze . --severity HIGH --exclude tests/ --exclude docs/   --exclude build/ --exclude dist/ --exclude .git/ --exclude htmlcov/
-```
-
-Blocks commit if CRITICAL or HIGH issues are found.
+In your own project this installs the hooks shipped with the package. Pre-commit analyzes the staged files (`--fail-on HIGH`; the working-tree copy, not the index) and pre-push analyzes the repository (`--fail-on CRITICAL`). Both call the Python that ran `install-hooks` (`python -m hefesto`), fall back to `hefesto` on PATH, and fail if neither is found. Hooks go to `git rev-parse --git-path hooks`. If `core.hooksPath` is set, nothing is written and the command exits 1. The contributor hooks in `scripts/git-hooks/` are used only in a clone of this repository (root `pyproject.toml` with `name = "hefesto-ai"`).
 
 ### Bypass
 
@@ -70,7 +61,7 @@ jobs:
 | target | . | Path to analyze |
 | fail_on | CRITICAL | Gate severity threshold |
 | min_severity | LOW | Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW; INFO is treated as LOW) |
-| format | text | Output format: text, json, html |
+| format | text | Output format: text, json, html, sarif |
 | telemetry | 0 | Opt-in anonymous telemetry: only `1`/`true` sends the per-run ping; anything else sends nothing |
 
 ### As a pip Install Step
