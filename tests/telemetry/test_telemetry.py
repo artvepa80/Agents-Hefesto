@@ -189,17 +189,21 @@ def test_builtin_key_and_host_are_the_us_project(monkeypatch: pytest.MonkeyPatch
     assert client.resolved_posthog_host() == "https://us.i.posthog.com"
 
 
-def test_upgrade_cta_source_is_hook_ci_or_action(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_upgrade_cta_source_is_hook_or_cli(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _seed_noticed(tmp_path)
     sent = _record(monkeypatch)
-    client.capture("upgrade_cta_shown")
+    client.capture("upgrade_cta_shown", cta="init")
+    assert sent[0]["properties"]["source"] == "cli"
+    assert sent[0]["properties"]["cta"] == "init"
+    sent.clear()
+    monkeypatch.setenv("HEFESTO_SOURCE", "ci")
+    client.capture("upgrade_cta_shown", cta="init")
     assert sent == []
     monkeypatch.setenv("HEFESTO_SOURCE", "hook")
-    client.capture("upgrade_cta_shown")
+    client.capture("upgrade_cta_shown", cta="hook_blocked")
     assert sent[0]["properties"]["source"] == "hook"
-    assert sent[0]["properties"]["source"] in {"hook", "ci", "action"}
+    assert sent[0]["properties"]["cta"] == "hook_blocked"
+    assert sent[0]["properties"]["source"] in {"hook", "cli"}
 
 
 def test_cli_entry_points_exit_2_on_usage_errors(tmp_path: Path) -> None:

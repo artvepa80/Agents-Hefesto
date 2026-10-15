@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **PRO and OMEGA notices in the CLI.** One stderr line after the command result: `gated_serve`, `gated_enrich`, `gated_scope`, and `gated_info` (PRO $8/mo), `gated_iris` (OMEGA $19/mo, when `IRIS_BQ_PROJECT` is set and IRIS is not installed), `analyze_milestone` (25 finished analyses, then every 100; the line names hefesto-swarm), `init` (`Plans: PRO $8/mo · OMEGA $19/mo.`), and `hook_blocked`. Not printed in CI (including GitLab, Jenkins, and CircleCI), when stdout is not a TTY, with `--output json`/`sarif` or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `HEFESTO_NO_UPSELL=1`. At most one notice every 7 days, and each type at most 3 times (`~/.hefesto/upsell.json`; a corrupt file prints nothing). Each printed line can emit `upgrade_cta_shown` with `source` `hook` or `cli` and `cta` set to the type, only when telemetry is active.
+
+### Documentation
+
+- **`docs/telemetry.md` documents the upgrade notices and `HEFESTO_NO_UPSELL`.** `upgrade_cta_shown` is sent for `hook` and `cli`, with a `cta` property.
+
 ## [4.18.0] - 2026-10-15
 
 ### Upgrading from 4.17.1 (`@v4` users get this release automatically)

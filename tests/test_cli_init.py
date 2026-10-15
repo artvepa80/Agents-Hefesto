@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from hefesto.cli import growth
 from hefesto.cli.growth import (
     CTA_LINE,
     HOOK_BLOCKED_PRICING_URL,
@@ -63,6 +64,7 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(client, "_held", False)
+    monkeypatch.setattr(growth, "stdout_is_tty", lambda: False)
 
     def _refuse(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("init test opened a socket")
@@ -112,9 +114,8 @@ def test_init_is_idempotent_and_prints_the_init_url(
     assert first.exit_code == 0, first.output
     second = runner.invoke(cli, ["init"])
     assert second.exit_code == 0, second.output
-    assert _INIT_URL in first.stdout
-    assert _INIT_URL in second.stdout
-    assert "PRO $8/mo" in first.stdout and "OMEGA $19/mo" in first.stdout
+    assert _INIT_URL not in first.stdout
+    assert _INIT_URL not in second.stdout
     assert "already up to date" in second.stdout
     hook = (tmp_path / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
     assert "HEFESTO_SOURCE=hook" in hook
@@ -134,7 +135,7 @@ def test_init_prints_the_telemetry_notice_and_does_not_send(
     assert result.exit_code == 0, result.output
     assert NOTICE in result.stderr
     assert sent == []
-    assert _INIT_URL in result.stdout
+    assert _INIT_URL not in result.stdout
 
 
 def test_cta_prints_once_and_emits_hook_source(
@@ -142,6 +143,7 @@ def test_cta_prints_once_and_emits_hook_source(
 ) -> None:
     _seed_noticed(tmp_path)
     monkeypatch.setenv("HEFESTO_SOURCE", "hook")
+    monkeypatch.setattr(growth, "stdout_is_tty", lambda: True)
     sent = _record(monkeypatch)
     show_upgrade_cta()
     show_upgrade_cta()
@@ -151,8 +153,14 @@ def test_cta_prints_once_and_emits_hook_source(
     assert len(sent) == 1
     assert sent[0]["event"] == "upgrade_cta_shown"
     assert sent[0]["properties"]["source"] == "hook"
-    assert sent[0]["properties"]["source"] in {"hook", "ci", "action"}
-    assert set(sent[0]["properties"]) == {"source", "$geoip_disable", "$process_person_profile"}
+    assert sent[0]["properties"]["cta"] == "hook_blocked"
+    assert sent[0]["properties"]["source"] in {"hook", "cli"}
+    assert set(sent[0]["properties"]) == {
+        "source",
+        "cta",
+        "$geoip_disable",
+        "$process_person_profile",
+    }
     assert sent[0]["distinct_id"] == "11111111-1111-4111-8111-111111111111"
     blob = json.dumps(sent[0])
     assert "/home/" not in blob
@@ -182,6 +190,7 @@ def test_cta_never_in_ci(
 def test_hook_block_prints_the_cta_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _seed_noticed(tmp_path)
     monkeypatch.setenv("HEFESTO_SOURCE", "hook")
+    monkeypatch.setattr(growth, "stdout_is_tty", lambda: True)
     monkeypatch.chdir(tmp_path)
     (tmp_path / "app.py").write_text("eval(x)\n", encoding="utf-8")
     sent = _record(monkeypatch)
@@ -198,6 +207,7 @@ def test_hook_block_prints_the_cta_once(monkeypatch: pytest.MonkeyPatch, tmp_pat
     cta = [body for body in sent if body["event"] == "upgrade_cta_shown"]
     assert len(cta) == 1
     assert cta[0]["properties"]["source"] == "hook"
+    assert cta[0]["properties"]["cta"] == "hook_blocked"
 
 
 def test_current_copy_uses_only_the_two_prices() -> None:

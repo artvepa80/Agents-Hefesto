@@ -35,9 +35,10 @@ EVENTS = (
     "hook_blocked",
     "upgrade_cta_shown",
 )
-# Growth: upgrade_cta_shown.source is only one of these. A direct local CLI
-# run is "cli" so it is not mislabeled as a hook, CI, or the GitHub Action.
-CTA_SOURCES = frozenset({"hook", "ci", "action"})
+# upgrade_cta_shown.source is hook or cli. CI never prints the line, so ci
+# and action are not sources for that event.
+CTA_SOURCES = frozenset({"hook", "cli"})
+_CTA_RE = re.compile(r"^[a-z0-9_]{1,64}$")
 _EXPLICIT_SOURCES = frozenset({"hook", "ci", "action"})
 _OPT_OUT = frozenset({"0", "false", "no", "off"})
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
@@ -98,6 +99,21 @@ def in_ci() -> bool:
     if os.getenv("CI", "").strip().lower() == "true":
         return True
     return os.getenv("GITHUB_ACTIONS", "").strip().lower() in _TRUTHY
+
+
+def ci_vendor_detected() -> bool:
+    """True when a CI vendor from ``environment_flags`` is set.
+
+    GitHub Actions, GitLab CI, Jenkins (``JENKINS_URL``), and CircleCI.
+    Docker and Kubernetes are not vendors.
+    """
+    if os.getenv("GITHUB_ACTIONS", "").strip().lower() == "true":
+        return True
+    if os.getenv("GITLAB_CI", "").strip().lower() == "true":
+        return True
+    if os.getenv("JENKINS_URL"):
+        return True
+    return os.getenv("CIRCLECI", "").strip().lower() == "true"
 
 
 def resolved_posthog_key() -> str:
@@ -228,7 +244,8 @@ def capture(event: str, **extra: Any) -> None:
 
     For ``analyze``, only ``files``, ``issues``, ``duration_ms``, and
     ``exit_code`` are copied from ``extra``. Version, OS, Python, ``env``,
-    and ``src`` are added here. Every other keyword is ignored.
+    and ``src`` are added here. ``upgrade_cta_shown`` copies ``cta`` when it
+    is a short token. Every other keyword is ignored.
     """
     if event not in EVENTS or not _may_emit():
         return
@@ -241,6 +258,10 @@ def capture(event: str, **extra: Any) -> None:
     body = build_event(event)
     if event == "analyze":
         body["properties"].update(analyze_properties(extra))
+    elif event == "upgrade_cta_shown":
+        cta = extra.get("cta")
+        if isinstance(cta, str) and _CTA_RE.fullmatch(cta):
+            body["properties"]["cta"] = cta
     if _debug_enabled():
         _print_debug(body)
         return

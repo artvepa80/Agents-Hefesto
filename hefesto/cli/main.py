@@ -83,6 +83,9 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
             PRO_REQUIRED_MESSAGE,
             err=True,
         )
+        from hefesto.cli.growth import GATED_SERVE_LINE, show_notice
+
+        show_notice("gated_serve", GATED_SERVE_LINE)
         _exit(1)
 
     try:
@@ -107,6 +110,10 @@ def serve(host: Optional[str], port: Optional[int], reload: bool):
     click.echo(f"Starting Hefesto API server on {resolved_host}:{resolved_port}")
     if HAS_API_HARDENING:
         click.echo("  Hardening: ACTIVE (CORS, auth, rate-limit, request-id)")
+    if _iris_requested_but_missing():
+        from hefesto.cli.growth import GATED_IRIS_LINE, show_notice
+
+        show_notice("gated_iris", GATED_IRIS_LINE)
 
     import uvicorn
 
@@ -467,6 +474,17 @@ def analyze(
         upgrade_msg = get_upgrade_notice(__version__)
         if upgrade_msg and not quiet:
             click.echo(upgrade_msg, err=json_mode)
+        from hefesto.cli.growth import (
+            GATED_ENRICH_LINE,
+            GATED_SCOPE_LINE,
+            note_finished_analysis,
+            show_milestone,
+            show_notice,
+            show_upgrade_cta,
+        )
+
+        finished = note_finished_analysis()
+        machine = output in MACHINE_OUTPUTS
         if (
             exit_code == 1
             and fail_on
@@ -474,9 +492,19 @@ def analyze(
             and resolve_source() == "hook"
         ):
             capture("hook_blocked")
-            from hefesto.cli.growth import show_upgrade_cta
-
-            show_upgrade_cta()
+            show_upgrade_cta(quiet=quiet, machine=machine)
+        elif _enrich_refused(enrich):
+            show_notice("gated_enrich", GATED_ENRICH_LINE, quiet=quiet, machine=machine)
+        elif _scope_refused(
+            include_third_party,
+            include_generated,
+            include_fixtures,
+            scope_allow,
+            scope_deny,
+        ):
+            show_notice("gated_scope", GATED_SCOPE_LINE, quiet=quiet, machine=machine)
+        else:
+            show_milestone(finished, quiet=quiet, machine=machine)
 
         _exit(exit_code)
 
@@ -503,6 +531,9 @@ def info():
         PRO_REQUIRED_MESSAGE,
         err=True,
     )
+    from hefesto.cli.growth import GATED_INFO_LINE, show_notice
+
+    show_notice("gated_info", GATED_INFO_LINE)
     _exit(1)
 
 
@@ -866,10 +897,10 @@ def init_cmd(ctx: click.Context) -> None:
     Uses the same installer as ``install-hooks``. Running it again leaves
     hooks that already match in place.
     """
-    from hefesto.cli.growth import INIT_PRICING_URL
-
     ctx.invoke(install_hooks)
-    click.echo(f"PRO $8/mo. OMEGA $19/mo. {INIT_PRICING_URL}")
+    from hefesto.cli.growth import INIT_LINE, show_notice
+
+    show_notice("init", INIT_LINE)
 
 
 def _git_out(repo_root, args):
@@ -1416,6 +1447,50 @@ def drift(template_file, region, stack_name, tags, fail_on):
             break
 
     sys.exit(exit_code)
+
+
+def _enrich_refused(enrich: str) -> bool:
+    """True when the user asked for enrichment and the PRO package is absent."""
+    if enrich == "off":
+        return False
+    from hefesto.pro_optional import HAS_ENRICHMENT
+
+    return not HAS_ENRICHMENT
+
+
+def _scope_refused(
+    include_third_party: bool,
+    include_generated: bool,
+    include_fixtures: bool,
+    scope_allow: Tuple[str, ...],
+    scope_deny: Tuple[str, ...],
+) -> bool:
+    """True when a scope flag was passed and scope gating is not installed."""
+    requested = bool(
+        include_third_party or include_generated or include_fixtures or scope_allow or scope_deny
+    )
+    if not requested:
+        return False
+    from hefesto.pro_optional import HAS_SCOPE_GATING
+
+    return not HAS_SCOPE_GATING
+
+
+def _iris_requested_but_missing() -> bool:
+    """True when ``IRIS_BQ_PROJECT`` is set and the IRIS package is not installed.
+
+    ``_mount_iris_ingest`` is the OMEGA gate: it reads that variable and skips
+    the mount on ``ImportError``.
+    """
+    if not os.environ.get("IRIS_BQ_PROJECT", "").strip():
+        return False
+    import importlib
+
+    try:
+        importlib.import_module("iris.core.ingest")
+    except ImportError:
+        return True
+    return False
 
 
 def _build_scope_config(
