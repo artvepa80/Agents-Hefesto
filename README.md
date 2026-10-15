@@ -33,13 +33,13 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.17.0` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.17.1` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/month) and OMEGA ($19/month): [plans](https://hefestoai.narapallc.com/#pricing).
 
 ---
 
-## Operational Truth Analyzers (v4.17.0)
+## Operational Truth Analyzers (v4.17.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -129,7 +129,7 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
-`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.17.0` (exact tags never move) or a commit SHA, and bump it yourself.
+`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.17.1` (exact tags never move) or a commit SHA, and bump it yourself.
 
 With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
 
@@ -203,7 +203,7 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 
 ---
 
-## PR Review (v4.17.0)
+## PR Review (v4.17.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -281,7 +281,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.17.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.17.1, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
 
 ² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
 
@@ -308,7 +308,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.17.0)
+## CLI Reference (v4.17.1)
 
 ```bash
 # Analyze code
@@ -520,7 +520,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.17.0)
+### GitHub Actions — PR Review with Inline Comments (v4.17.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -557,7 +557,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.17.0
+    rev: v4.17.1
     hooks:
       - id: hefesto-analyze
 ```
