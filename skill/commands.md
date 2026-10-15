@@ -81,9 +81,7 @@ Install pre-commit and pre-push git hooks.
 hefesto install-hooks [--force]
 ```
 
-Copies hooks from `scripts/git-hooks/` to `.git/hooks/`.
-The pre-commit hook runs `hefesto analyze . --severity HIGH` and blocks
-on CRITICAL/HIGH issues. Bypass with `SKIP_HEFESTO_HOOKS=1 git commit`.
+In your own project, installs the hooks shipped with the package. Pre-commit analyzes the staged files with `--fail-on HIGH` (working-tree copy, not the index). Pre-push analyzes the repository with `--fail-on CRITICAL`. Both honour `SKIP_HEFESTO_HOOKS=1`. The contributor hooks in `scripts/git-hooks/` are used only in a clone of Agents-Hefesto. The command exits 1 when nothing was installed or when `core.hooksPath` is set.
 
 ## drift
 

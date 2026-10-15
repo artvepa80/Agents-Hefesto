@@ -22,7 +22,7 @@
     {
       "id": "security-scan",
       "name": "Security Scanning",
-      "description": "Detect HARDCODED_SECRET, SQL_INJECTION, COMMAND_INJECTION, PATH_TRAVERSAL, UNSAFE_DESERIALIZATION and other security vulnerabilities.",
+      "description": "Detect HARDCODED_SECRET, SQL_INJECTION_RISK, COMMAND_INJECTION, PICKLE_USAGE and other security vulnerabilities.",
       "inputModes": ["text/plain"],
       "outputModes": ["application/json"]
     },

@@ -14,7 +14,7 @@
 ### Pre-Commit & Pre-Push Quality Gates (OBLIGATORIO)
 **ANTES DE TODO COMMIT Y PUSH:**
 1. **Ejecutar Omega Guardian**: `omega-guardian run`
-2. **Ejecutar Agente Hefesto**: `hefesto analyze --project .`
+2. **Ejecutar Agente Hefesto**: `hefesto analyze .`
 3. **Bloquear si hay hallazgos críticos** - NO omitir estos pasos
 
 Los git hooks instalados en `.git/hooks/pre-commit` y `.git/hooks/pre-push` **enforcement** automático de estas validaciones.
