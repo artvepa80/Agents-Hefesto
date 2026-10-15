@@ -1,5 +1,7 @@
 """PRO/OMEGA-only CLI stubs point at the current offer, not retired links."""
 
+import re
+
 import pytest
 from click.testing import CliRunner
 
@@ -90,4 +92,7 @@ def test_readme_pricing_has_no_retired_links_or_coupons():
     readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
     for retired in ("narapallc.com/trial", "narapallc.com/founding", "Founding40", "FOUNDING100"):
         assert retired not in readme, retired
-    assert PRICING_URL in readme
+    # README links may carry a query string (UTM tags) before #pricing.
+    assert PRICING_URL == "https://hefestoai.narapallc.com/#pricing"
+    pricing = re.compile(r"https://hefestoai\.narapallc\.com/(\?[^)#\s]*)?#pricing")
+    assert pricing.search(readme), "README must link to the pricing section"
