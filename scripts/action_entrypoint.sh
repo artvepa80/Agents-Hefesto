@@ -42,14 +42,17 @@ if [ "$SEVERITY" = "INFO" ]; then
 fi
 
 # Telemetry is opt-in (SEC-06). Only the values 1 or true (any case) enable it.
-# Anything else, including the default 0, disables both the Action ping below
-# and the CLI's own ping (the CLI treats HEFESTO_TELEMETRY=0 as off).
+# Anything else, including the default 0, exports HEFESTO_TELEMETRY=0 so the
+# CLI sends nothing. This script does not call the network itself.
 TELEMETRY_NORMALIZED="${TELEMETRY_INPUT//[[:space:]]/}"
 case "${TELEMETRY_NORMALIZED,,}" in
     1|true) TELEMETRY_ENABLED=1 ;;
     *) TELEMETRY_ENABLED=0 ;;
 esac
 export HEFESTO_TELEMETRY="${TELEMETRY_ENABLED}"
+# The CLI tags events from this Action as source=action. With telemetry off
+# the CLI sends nothing; there is no separate ping from this script.
+export HEFESTO_SOURCE=action
 
 echo "::group::Hefesto Configuration"
 echo "Workspace: $(pwd)"
@@ -87,26 +90,10 @@ if [ "$SARIF_ENABLED" = "1" ]; then
     CMD+=("--sarif-file" "$SARIF_FILE")
 fi
 
-# Execute (tee to temp file for telemetry parsing)
-TMPOUT=$(mktemp)
-"${CMD[@]}" 2>&1 | tee "$TMPOUT"
-EXIT_CODE=${PIPESTATUS[0]}
+"${CMD[@]}"
+EXIT_CODE=$?
 
 echo "::endgroup::"
-
-# Anonymous Action ping: sent ONLY when the `telemetry` input is enabled
-# (1/true). With the default `telemetry: 0` nothing leaves the runner (SEC-06).
-if [ "$TELEMETRY_ENABLED" = "1" ]; then
-    HEFESTO_VERSION=$(hefesto --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
-    FILE_COUNT=$(grep -oE 'Files analyzed: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
-    ISSUE_COUNT=$(grep -oE 'Issues found: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")
-
-    curl -s -X POST https://hefestoai.narapallc.com/api/telemetry \
-      -H "Content-Type: application/json" \
-      -d "{\"event\":\"action\",\"v\":\"${HEFESTO_VERSION}\",\"files\":${FILE_COUNT},\"issues\":${ISSUE_COUNT},\"exit_code\":${EXIT_CODE}}" \
-      --connect-timeout 2 --max-time 3 || true
-fi
-rm -f "$TMPOUT"
 
 # Set Outputs
 echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"

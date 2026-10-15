@@ -1,24 +1,64 @@
 # Telemetry
 
-Moved from the README.
+Hefesto sends anonymous usage events to [PostHog Cloud](https://posthog.com) (US region, `https://us.i.posthog.com`) so we can see whether the CLI is used. It is **on by default**.
 
+The first time a send would happen, Hefesto prints a notice on stderr and does **not** send anything in that process. Events start on a later run.
 
-HefestoAI collects anonymous usage data by default to help improve the tool.
+## What is sent
 
-**What's sent (CLI):** event type, version, OS, Python version, file count, duration, issue count, exit code, a random anonymous ID stored in `~/.hefesto/.session_id` (delete the file to reset it), environment flags such as `ci`, `github_actions`, `docker` or `dogfood`, and the install source (`pypi` or `editable`).
-**What's sent (GitHub Action):** nothing by default. The Action's telemetry is opt-in: only with the `telemetry` input set to `1` or `true` does it send version, file count, issue count and exit code once per run, and it turns on the CLI ping described above. With `telemetry: 0` (the default) or any other value, the Action sends no ping and runs the CLI with `HEFESTO_TELEMETRY=0`. (Up to v4.14.0 the Action sent its ping even with `telemetry: 0`.)
-**What's NOT sent:** code, file paths, file contents, project names, or any PII.
+Five events, listed in code (`hefesto/telemetry/client.py`):
 
-The CLI prints a one-time notice to stderr the first time it sends a ping, and it uses the server's reply to tell you when a newer version is on PyPI. Disable the CLI ping with:
+| Event | When |
+|---|---|
+| `first_run` | The first run after the notice, once per install id |
+| `analyze` | `hefesto analyze` finished |
+| `hooks_installed` | `hefesto install-hooks` wrote at least one hook |
+| `hook_blocked` | A git hook's analyze gate failed because of findings |
+| `upgrade_cta_shown` | The PRO upgrade line was printed (see below) |
+
+Each event has:
+
+- `distinct_id`: a random UUID created on the machine (`~/.hefesto/telemetry_state.json`). It is not derived from a username, hostname, or path. Delete that file to reset it.
+- `source`: `hook` (git hook), `action` (GitHub Action), `ci` (`CI=true`), or `cli` (a direct local invocation). `upgrade_cta_shown` is only sent when `source` is `hook`, `ci`, or `action`.
+- `$geoip_disable: true` on every event, and `$process_person_profile: false` so PostHog does not build a person profile.
+
+No code, file paths, findings, repository names, or IP address is included. PostHog still sees the TCP connection; `$geoip_disable` tells it not to turn that into a location.
+
+The project key embedded in the client is a public write-only PostHog key. It is not a secret. Override it (including with an empty value, which sends nothing):
+
+- Environment: `HEFESTO_POSTHOG_KEY`, `HEFESTO_POSTHOG_HOST` (a set-but-empty value wins).
+- Config file `~/.hefesto/telemetry.json`:
+
+```json
+{"posthog_api_key": "", "posthog_host": "https://us.i.posthog.com"}
+```
+
+Environment wins over the file, and the file wins over the built-in default. The host must be an `http` or `https` origin with no user or password; anything else is treated as empty and nothing is sent.
+
+## How to turn it off
+
+Any one of these is enough:
+
 ```bash
+hefesto telemetry disable
 export HEFESTO_TELEMETRY=0
+export DO_NOT_TRACK=1
 ```
 
-Tag owner/dogfood runs so they do not mix with end-user analytics (`env` includes `dogfood`; also auto-tagged for editable installs):
+`hefesto telemetry disable` writes `~/.hefesto/telemetry_disabled`. Delete that file to turn telemetry back on. `HEFESTO_TELEMETRY=0` also accepts `false`, `no`, and `off`.
+
+Debug (prints the event on stderr, does not use the network):
+
 ```bash
-export HEFESTO_TELEMETRY_ENV=dogfood
-# or: export HEFESTO_DOGFOOD=1
+export HEFESTO_TELEMETRY_DEBUG=1
 ```
-Filter in Neon: `WHERE NOT ('dogfood' = ANY(env))`.
 
-`hefesto telemetry status` shows whether the CLI ping is enabled and where it goes, plus the state of a separate local telemetry log (opt-in with `HEFESTO_TELEMETRY=1`, never uploaded). `hefesto telemetry clear` deletes that local log; it does not affect the remote ping.
+Sending runs on a background thread with a short timeout and ignores errors. It does not change the command's exit code.
+
+## Git hooks and the GitHub Action
+
+Hooks installed by `hefesto install-hooks` export `HEFESTO_SOURCE=hook` before `hefesto analyze`.
+
+The GitHub Action does not send anything unless `telemetry` is `1` or `true`. That sets `HEFESTO_TELEMETRY=1` and `HEFESTO_SOURCE=action`. The Action does not call PostHog itself; the CLI does. The default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`.
+
+`upgrade_cta_shown` is reserved for the one-time PRO line printed after a hook blocks a commit. It is not printed when `CI=true` or when `GITHUB_ACTIONS` is set.

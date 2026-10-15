@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Anonymous usage events go to PostHog Cloud (US) instead of the previous usage ping.** Five events: `first_run`, `analyze`, `hooks_installed`, `hook_blocked`, `upgrade_cta_shown`. Each one carries a random install UUID and `source` (`cli` for a direct invocation, `hook`, `ci`, or `action`). `$geoip_disable` is true on every event. No code, paths, findings, repository names, or IP. On by default. The first eligible run prints a notice and does not send; later runs send on a background thread (short timeout, errors ignored). Off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or `DO_NOT_TRACK=1`. `HEFESTO_TELEMETRY_DEBUG=1` prints the event and does not use the network. The public write-only project key and `https://us.i.posthog.com` are the defaults; `HEFESTO_POSTHOG_KEY` / `HEFESTO_POSTHOG_HOST` or `~/.hefesto/telemetry.json` override them, and an empty key or host sends nothing. `upgrade_cta_shown` is only sent when `source` is `hook`, `ci`, or `action`.
+
+### Removed
+
+- **The local telemetry log and the old usage ping.** `HEFESTO_TELEMETRY=1` no longer writes `~/.hefesto/telemetry.jsonl`. `hefesto telemetry status` and `hefesto telemetry clear` are gone; use `hefesto telemetry disable`. The CLI no longer POSTs to `hefestoai.narapallc.com/api/telemetry` and no longer prints an upgrade line from that response. The GitHub Action no longer curls that endpoint; with `telemetry: 1` the CLI sends the events (`source=action`), and the default `telemetry: 0` still sends nothing.
+
 ### Documentation
 
+- **`docs/telemetry.md` describes the PostHog events, the notice, and the opt-out.** The README telemetry sentence matches that behaviour.
 - **README links to hefestoai.narapallc.com carry UTM parameters** (`utm_source=github`, `utm_medium=readme`, `utm_campaign=growth_q4_2026`), so visits from the README can be told apart in the landing's analytics. `utm_content` names the README section: `pricing_quickstart` (the plans line under the Action quick start), `pricing_features_by_tier` (Features by Tier) and `website_contact` (Contact). The query string goes before `#pricing`, so the anchor still works. Link text and destinations are unchanged. `tests/test_cli_pro_required_message.py` accepts the pricing URL with an optional query string before `#pricing`; it still requires a pricing link and still rejects the retired links and coupons.
 
 ## [4.17.1] - 2026-10-15

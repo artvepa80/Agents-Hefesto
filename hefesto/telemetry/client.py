@@ -1,439 +1,324 @@
+"""Anonymous usage events for PostHog Cloud.
+
+On by default. Nothing is sent until the one-time notice has been shown, and
+nothing is sent when the project key or host is empty. The body carries a
+random install id and no paths, code, findings, repository names, or IP.
+"""
+
 from __future__ import annotations
 
-import hashlib
+import atexit
 import json
 import os
-import time
+import re
+import sys
+import threading
+import urllib.parse
 import urllib.request
 import uuid
-from dataclasses import dataclass
-from datetime import datetime, timezone
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-DEFAULT_PATH = Path.home() / ".hefesto" / "telemetry.jsonl"
-DEFAULT_MAX_BYTES = 1048576  # 1MB
-DEFAULT_MAX_FILES = 3
-SCHEMA_VERSION = 1
-TELEMETRY_ENDPOINT = "https://hefestoai.narapallc.com/api/telemetry"
+# Public write-only project key (PostHog Cloud, US). Empty string disables sends.
+POSTHOG_API_KEY = "phc_ofYThaD8rd7ptYXG8PaqNL6hnLBafbXNddwNfqshzyJ7"
+POSTHOG_HOST = "https://us.i.posthog.com"
+
+EVENTS = (
+    "first_run",
+    "analyze",
+    "hooks_installed",
+    "hook_blocked",
+    "upgrade_cta_shown",
+)
+# Growth: upgrade_cta_shown.source is only one of these. A direct local CLI
+# run is "cli" so it is not mislabeled as a hook, CI, or the GitHub Action.
+CTA_SOURCES = frozenset({"hook", "ci", "action"})
+_EXPLICIT_SOURCES = frozenset({"hook", "ci", "action"})
+_OPT_OUT = frozenset({"0", "false", "no", "off"})
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+_UUID_RE_TEXT = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+
+NOTICE = (
+    "Hefesto collects anonymous usage data by default (a random id; no code, "
+    "file paths, findings, repository names, or IP addresses). "
+    "Disable: hefesto telemetry disable, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1."
+)
+
+# Set for the rest of this process after the notice is printed, so the first
+# run never sends. A later process starts with this false.
+_held = False
 
 
-def _env_truthy(v: Optional[str]) -> bool:
-    if not v:
+def hefesto_dir() -> Path:
+    override = os.environ.get("HEFESTO_STATE_DIR", "").strip()
+    if override:
+        return Path(override)
+    return Path.home() / ".hefesto"
+
+
+def telemetry_enabled() -> bool:
+    """True unless the user opted out. Ignores the project key."""
+    if os.getenv("DO_NOT_TRACK", "").strip().lower() in _TRUTHY:
         return False
-    return v.strip().lower() in {"1", "true", "yes", "on"}
+    if os.getenv("HEFESTO_TELEMETRY", "").strip().lower() in _OPT_OUT:
+        return False
+    return not (hefesto_dir() / "telemetry_disabled").is_file()
 
 
-_OPT_OUT_VALUES = {"0", "false", "no", "off"}
+def disable() -> None:
+    """Persist the machine opt-out used by ``hefesto telemetry disable``."""
+    directory = hefesto_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "telemetry_disabled").write_text("1\n", encoding="utf-8")
 
 
-def remote_ping_enabled() -> bool:
-    """Return True if the CLI sends the anonymous usage ping.
+def resolve_source() -> str:
+    """Channel for this process: hook, action, ci, or cli (direct invocation)."""
+    explicit = os.getenv("HEFESTO_SOURCE", "").strip().lower()
+    if explicit in _EXPLICIT_SOURCES:
+        return explicit
+    if os.getenv("GITHUB_ACTIONS", "").strip().lower() == "true":
+        return "action"
+    if os.getenv("CI", "").strip().lower() == "true":
+        return "ci"
+    return "cli"
 
-    The ping (see ``_ping_remote``) is sent after ``hefesto analyze`` and is
-    **on by default** (opt-out): only ``HEFESTO_TELEMETRY`` set to ``0``,
-    ``false``, ``no`` or ``off`` (any case) disables it. This is the single
-    check used by ``_ping_remote`` and ``hefesto telemetry status``.
+
+def in_ci() -> bool:
+    """True for ``CI=true`` or ``GITHUB_ACTIONS`` set to a truthy value."""
+    if os.getenv("CI", "").strip().lower() == "true":
+        return True
+    return os.getenv("GITHUB_ACTIONS", "").strip().lower() in _TRUTHY
+
+
+def resolved_posthog_key() -> str:
+    """Env, then ``~/.hefesto/telemetry.json``, then the built-in key.
+
+    A set-but-empty env var or config value wins, and then nothing is sent.
     """
-    return os.getenv("HEFESTO_TELEMETRY", "").strip().lower() not in _OPT_OUT_VALUES
+    if "HEFESTO_POSTHOG_KEY" in os.environ:
+        return os.environ["HEFESTO_POSTHOG_KEY"].strip()
+    configured = _config_string("posthog_api_key")
+    if configured is not None:
+        return configured
+    return POSTHOG_API_KEY
 
 
-def local_log_enabled() -> bool:
-    """Return True if the local JSONL event log is written.
+def resolved_posthog_host() -> str:
+    """Origin only (scheme + host). Empty when the value is missing or invalid."""
+    if "HEFESTO_POSTHOG_HOST" in os.environ:
+        raw = os.environ["HEFESTO_POSTHOG_HOST"]
+    else:
+        configured = _config_string("posthog_host")
+        raw = POSTHOG_HOST if configured is None else configured
+    return _valid_host(raw)
 
-    The local log (``TelemetryClient``) is **off by default** (opt-in): only
-    ``HEFESTO_TELEMETRY`` set to ``1``, ``true``, ``yes`` or ``on`` enables
-    it. It is never uploaded.
+
+def build_event(event: str) -> dict[str, Any]:
+    """JSON body for one event. Caller-supplied fields are not accepted."""
+    if event not in EVENTS:
+        raise ValueError(event)
+    return {
+        "api_key": resolved_posthog_key(),
+        "event": event,
+        "distinct_id": install_id(),
+        "properties": {
+            "source": resolve_source(),
+            "$geoip_disable": True,
+            "$process_person_profile": False,
+        },
+    }
+
+
+def prepare_cli(subcommand: str | None) -> None:
+    """Hook used by the Click group, which is what the console script runs.
+
+    Prints the notice on the first eligible invocation and sends ``first_run``
+    only on a later one. ``hefesto telemetry`` is skipped so ``disable`` does
+    not emit an event before the opt-out is stored.
     """
-    return _env_truthy(os.getenv("HEFESTO_TELEMETRY"))
+    if not subcommand or subcommand == "telemetry":
+        return
+    if not _may_emit():
+        return
+    if not _can_deliver() and not _debug_enabled():
+        return
+    if _defer_until_noticed():
+        return
+    if _flag("first_run_sent"):
+        return
+    _set_flag("first_run_sent", True)
+    capture("first_run")
 
 
-def _utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def capture(event: str, **extra: Any) -> None:
+    """Send one of the five events. ``extra`` is discarded (no paths or findings)."""
+    del extra
+    if event not in EVENTS or not _may_emit():
+        return
+    if event == "upgrade_cta_shown" and resolve_source() not in CTA_SOURCES:
+        return
+    if not _can_deliver() and not _debug_enabled():
+        return
+    if _defer_until_noticed():
+        return
+    body = build_event(event)
+    if _debug_enabled():
+        _print_debug(body)
+        return
+    _schedule_send(body)
 
 
-def _safe_mkdir(p: Path) -> None:
-    p.parent.mkdir(parents=True, exist_ok=True)
+def print_notice() -> None:
+    print(NOTICE, file=sys.stderr)
 
 
-def _sha256(s: str) -> str:
-    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+def _print_debug(body: Mapping[str, Any]) -> None:
+    public = {
+        "event": body["event"],
+        "distinct_id": body["distinct_id"],
+        "properties": body["properties"],
+    }
+    print(json.dumps(public, separators=(",", ":"), sort_keys=True), file=sys.stderr)
 
 
-def _sanitize_args_for_hash(argv: List[str]) -> str:
-    """
-    Remove/normalize obvious sensitive bits (paths, tokens, emails).
-    We only use this for a hash, never store raw.
-    """
-    redacted: List[str] = []
-    for a in argv:
-        x = a.strip()
-
-        # crude redactions
-        if "/" in x or "\\" in x:
-            redacted.append("<path>")
-            continue
-        if "@" in x and "." in x:
-            redacted.append("<email>")
-            continue
-        if "key" in x.lower() or "token" in x.lower() or "secret" in x.lower():
-            redacted.append("<secret>")
-            continue
-
-        redacted.append(x)
-    return " ".join(redacted)
+def _defer_until_noticed() -> bool:
+    """True when this process must not send. The first call prints the notice."""
+    global _held
+    if _held:
+        return True
+    if _flag("notice_shown"):
+        return False
+    print_notice()
+    _set_flag("notice_shown", True)
+    _held = True
+    return True
 
 
-@dataclass
-class TelemetryEvent:
-    ts: str
-    command: str
-    version: str
-    exit_code: int
-    duration_ms: int
-    schema_version: int = SCHEMA_VERSION
-    args_hash: Optional[str] = None
+def _may_emit() -> bool:
+    if _suppressed_by_test_runner():
+        return False
+    return telemetry_enabled()
 
 
-class TelemetryClient:
-    def __init__(self) -> None:
-        self._start_ts: Optional[float] = None
-        self._command: Optional[str] = None
-        self._version: Optional[str] = None
-        self._args_hash: Optional[str] = None
-        self._finalized = False
-
-        self._refresh_config()
-
-        if self.enabled:
-            pass
-
-    def _safe_int(self, v: Any, default: int) -> int:
-        try:
-            return int(v)
-        except Exception:
-            return default
-
-    def _clamp(self, v: int, min_v: int, max_v: int) -> int:
-        return max(min_v, min(v, max_v))
-
-    def _refresh_config(self) -> None:
-        self.enabled = local_log_enabled()
-        self.path = Path(os.getenv("HEFESTO_TELEMETRY_PATH", str(DEFAULT_PATH)))
-
-        # Clamp settings to safe ranges
-        raw_bytes = self._safe_int(os.getenv("HEFESTO_TELEMETRY_MAX_BYTES"), DEFAULT_MAX_BYTES)
-        self.max_bytes = self._clamp(raw_bytes, 1024, 50_000_000)  # 1KB - 50MB
-
-        raw_files = self._safe_int(os.getenv("HEFESTO_TELEMETRY_MAX_FILES"), DEFAULT_MAX_FILES)
-        self.max_files = self._clamp(raw_files, 0, 20)  # 0 - 20 files
-
-    def _rotated_path(self, i: int) -> Path:
-        # Stable: "/x/telemetry.jsonl" -> "/x/telemetry.jsonl.1"
-        return Path(str(self.path) + f".{i}")
-
-    def start(self, *, command: str, version: str, argv: Optional[List[str]] = None) -> None:
-        # Refresh config in case env changed (e.g. testing)
-        self._refresh_config()
-
-        # Reset state for reuse (prevents cross-command carryover)
-        self._start_ts = None
-        self._command = None
-        self._version = None
-        self._args_hash = None
-        self._finalized = False
-
-        if not self.enabled:
-            return
-        self._start_ts = time.time()
-        self._command = command
-        self._version = version
-        if argv is not None:
-            self._args_hash = _sha256(_sanitize_args_for_hash(argv))
-
-    def end(self, *, exit_code: int) -> None:
-        if not self.enabled or self._finalized:
-            return
-        self._finalized = True
-        if self._start_ts is None or self._command is None or self._version is None:
-            return
-
-        dur_ms = int((time.time() - self._start_ts) * 1000)
-        ev = TelemetryEvent(
-            ts=_utc_iso(),
-            command=self._command,
-            version=self._version,
-            exit_code=int(exit_code),
-            duration_ms=dur_ms,
-            schema_version=SCHEMA_VERSION,
-            args_hash=self._args_hash,
-        )
-        self._write(ev)
-
-    def _atomic_replace(self, src: Path, dst: Path) -> None:
-        try:
-            os.replace(str(src), str(dst))
-        except Exception:
-            # swallow
-            pass
-
-    def _rotate_if_needed(self) -> None:
-        try:
-            if not self.path.exists():
-                return
-
-            size = self.path.stat().st_size
-            if size < self.max_bytes:
-                return
-
-            max_files = self._safe_int(self.max_files, DEFAULT_MAX_FILES)
-            if max_files <= 0:
-                return
-
-            # Spec: delete <path>.<max_files> if exists (avoid rename collisions)
-            # We actively delete the oldest one to make space
-            last = self._rotated_path(max_files)
-            if last.exists():
-                try:
-                    last.unlink()
-                except Exception:
-                    pass
-
-            # Rotate: file.{n} -> file.{n+1}
-            # Start from max_files-1 down to 1
-            for i in range(max_files - 1, 0, -1):
-                s_curr = self._rotated_path(i)
-                s_next = self._rotated_path(i + 1)
-                if s_curr.exists():
-                    self._atomic_replace(s_curr, s_next)
-
-            # Rotate: file -> file.1
-            s_first = self._rotated_path(1)
-            self._atomic_replace(self.path, s_first)
-
-        except Exception:
-            # Swallow rotation errors to not break CLI
-            pass
-
-    def _write(self, ev: TelemetryEvent) -> None:
-        try:
-            _safe_mkdir(self.path)
-            self._rotate_if_needed()
-
-            line = json.dumps(ev.__dict__, separators=(",", ":"), ensure_ascii=False)
-            with open(self.path, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
-        except Exception:
-            # MUST NOT break CLI
-            return
-
-    def get_status(self) -> Dict[str, Any]:
-        """Return telemetry status for diagnostics."""
-        self._refresh_config()
-        size = 0
-        if self.path.exists():
-            try:
-                size = self.path.stat().st_size
-            except Exception:
-                pass
-
-        return {
-            # Local JSONL log (opt-in).
-            "enabled": self.enabled,
-            # Anonymous remote usage ping (opt-out); reported so that
-            # ``hefesto telemetry status`` does not hide it.
-            "remote_ping_enabled": remote_ping_enabled(),
-            "remote_endpoint": TELEMETRY_ENDPOINT,
-            "path": str(self.path),
-            "size_bytes": size,
-            "max_bytes": self.max_bytes,
-            "max_files": self.max_files,
-            "schema_version": SCHEMA_VERSION,
-        }
-
-    def clear_data(self) -> None:
-        """Purge telemetry data (current + rotated)."""
-        self._refresh_config()
-        try:
-            if self.path.exists():
-                self.path.unlink()
-
-            # Use clamped max_files to avoid trying to delete thousands of files if env is bad
-            max_files = self.max_files
-            for i in range(1, max_files + 1):
-                f = self._rotated_path(i)
-                if f.exists():
-                    try:
-                        f.unlink()
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+def _suppressed_by_test_runner() -> bool:
+    if os.environ.get("HEFESTO_TELEMETRY_UNDER_TEST") == "1":
+        return False
+    return "PYTEST_CURRENT_TEST" in os.environ
 
 
-_LATEST_VERSION_CACHE = Path.home() / ".hefesto" / ".latest_version"
-_SESSION_ID_FILE = Path.home() / ".hefesto" / ".session_id"
-_CACHE_TTL_SECONDS = 86400  # 24h
+def _can_deliver() -> bool:
+    return bool(resolved_posthog_key() and resolved_posthog_host())
 
 
-def _get_session_id() -> str:
-    """Return a stable anonymous session ID (UUID4), generated once per machine."""
+def _debug_enabled() -> bool:
+    return os.getenv("HEFESTO_TELEMETRY_DEBUG", "").strip().lower() in _TRUTHY
+
+
+def _config_string(key: str) -> str | None:
+    path = hefesto_dir() / "telemetry.json"
     try:
-        if _SESSION_ID_FILE.exists():
-            sid = _SESSION_ID_FILE.read_text(encoding="utf-8").strip()
-            if sid:
-                return sid
-        sid = uuid.uuid4().hex[:12]
-        _SESSION_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
-        _SESSION_ID_FILE.write_text(sid, encoding="utf-8")
-        return sid
-    except Exception:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(loaded, dict) or key not in loaded:
+        return None
+    value = loaded[key]
+    if value is None:
         return ""
+    return str(value).strip()
 
 
-def _get_environment_flags() -> list:
-    """Detect execution environment. All matching flags appended (not first-match-wins).
+def _valid_host(raw: str) -> str:
+    text = raw.strip()
+    if not text:
+        return ""
+    parsed = urllib.parse.urlparse(text)
+    if parsed.scheme not in {"https", "http"} or not parsed.hostname:
+        return ""
+    if parsed.username or parsed.password:
+        return ""
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{parsed.hostname}{port}"
 
-    A GitHub Actions run produces ['ci', 'github_actions'].
-    A Docker container in CI produces ['ci', 'docker'].
-    Owner dogfood: set ``HEFESTO_TELEMETRY_ENV=dogfood`` (or ``HEFESTO_DOGFOOD=1``)
-    to append ``dogfood`` so Neon analytics can exclude internal pings.
-    Editable installs also get ``dogfood`` (src already reports editable; env
-    makes filtering by env[] alone reliable).
-    Default: ['user'] if none match.
-    """
+
+def _read_state() -> dict[str, Any]:
+    path = hefesto_dir() / "telemetry_state.json"
     try:
-        flags = []
-        if os.getenv("CI", "").lower() == "true":
-            flags.append("ci")
-        if os.getenv("GITHUB_ACTIONS", "").lower() == "true":
-            flags.append("github_actions")
-        if os.getenv("GITLAB_CI", "").lower() == "true":
-            flags.append("gitlab_ci")
-        if os.getenv("JENKINS_URL"):
-            flags.append("jenkins")
-        if os.getenv("CIRCLECI", "").lower() == "true":
-            flags.append("circleci")
-        if os.path.exists("/.dockerenv"):
-            flags.append("docker")
-        if os.getenv("KUBERNETES_SERVICE_HOST"):
-            flags.append("kubernetes")
-
-        # Separate dogfood / internal pings from end-user analytics (env text[]).
-        telemetry_env = os.getenv("HEFESTO_TELEMETRY_ENV", "").strip().lower()
-        if telemetry_env in {"dogfood", "internal", "dev"} or _env_truthy(
-            os.getenv("HEFESTO_DOGFOOD")
-        ):
-            flags.append("dogfood")
-        elif _get_install_source() == "editable":
-            # Local ``pip install -e .`` is almost never an end-user install.
-            flags.append("dogfood")
-
-        return flags or ["user"]
-    except Exception:
-        return ["user"]
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(loaded, dict):
+        return {}
+    return loaded
 
 
-def _get_install_source() -> str:
-    """Detect if installed from PyPI or as editable (dev) install."""
+def _write_state(state: Mapping[str, Any]) -> None:
+    directory = hefesto_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / "telemetry_state.json"
+    temporary = directory / "telemetry_state.json.tmp"
+    temporary.write_text(json.dumps(dict(state), separators=(",", ":")), encoding="utf-8")
+    os.replace(temporary, target)
+
+
+def _flag(name: str) -> bool:
+    return _read_state().get(name) is True
+
+
+def _set_flag(name: str, value: bool) -> None:
+    state = _read_state()
+    state[name] = value
     try:
-        import hefesto
-
-        path = os.path.dirname(hefesto.__file__)
-        if "site-packages" not in path:
-            return "editable"
-        return "pypi"
-    except Exception:
-        return "unknown"
-
-
-def _ping_remote(payload: dict) -> None:
-    """Anonymous ping. Caches ``latest_version`` from server response for upgrade notices."""
-    if not remote_ping_enabled():
+        _write_state(state)
+    except OSError:
         return
 
-    # First-run notice (once per machine)
-    notice_file = Path.home() / ".hefesto" / ".telemetry_noticed"
-    if not notice_file.exists():
+
+def install_id() -> str:
+    """Random UUID stored on disk. Delete ``telemetry_state.json`` to reset it."""
+    state = _read_state()
+    current = state.get("install_id")
+    if isinstance(current, str) and re.fullmatch(_UUID_RE_TEXT, current):
+        return current
+    new_id = str(uuid.uuid4())
+    state["install_id"] = new_id
+    try:
+        _write_state(state)
+    except OSError:
+        return new_id
+    return new_id
+
+
+_pending: list[threading.Thread] = []
+
+
+def _schedule_send(payload: Mapping[str, Any]) -> None:
+    body = json.dumps(dict(payload), separators=(",", ":")).encode("utf-8")
+    url = resolved_posthog_host() + "/capture/"
+
+    def _run() -> None:
         try:
-            notice_file.parent.mkdir(parents=True, exist_ok=True)
-            notice_file.touch()
-            import sys
-
-            print(
-                "\u2139\ufe0f  Anonymous telemetry enabled. No code or paths sent."
-                " Disable: HEFESTO_TELEMETRY=0",
-                file=sys.stderr,
+            request = urllib.request.Request(
+                url,
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
             )
-        except Exception:
-            pass
+            urllib.request.urlopen(request, timeout=1.5)
+        except Exception:  # noqa: BLE001 — a telemetry failure must not surface
+            return
 
-    sid = _get_session_id()
-    if sid:
-        payload["sid"] = sid
-    payload["env"] = _get_environment_flags()
-    payload["src"] = _get_install_source()
-
-    try:
-        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        req = urllib.request.Request(
-            TELEMETRY_ENDPOINT,
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        resp = urllib.request.urlopen(req, timeout=2)
-        body = resp.read().decode("utf-8", errors="ignore")
-        if body:
-            resp_data = json.loads(body)
-            latest = resp_data.get("latest_version")
-            if latest:
-                _cache_latest_version(latest)
-    except Exception:
-        pass
+    thread = threading.Thread(target=_run, name="hefesto-telemetry", daemon=True)
+    thread.start()
+    if os.environ.get("HEFESTO_TELEMETRY_UNDER_TEST") != "1":
+        _pending.append(thread)
 
 
-def _cache_latest_version(version: str) -> None:
-    try:
-        _LATEST_VERSION_CACHE.parent.mkdir(parents=True, exist_ok=True)
-        _LATEST_VERSION_CACHE.write_text(
-            json.dumps({"version": version, "ts": time.time()}),
-            encoding="utf-8",
-        )
-    except Exception:
-        pass
+def _flush_pending() -> None:
+    for thread in _pending:
+        thread.join(timeout=1.0)
 
 
-def get_upgrade_notice(current_version: str) -> Optional[str]:
-    """Return an upgrade notice string if a newer version is available, else None.
-
-    Reads from the local cache populated by ``_ping_remote``. Returns None
-    if cache is missing, stale (>24h), or current version is up to date.
-    Never raises.
-    """
-    try:
-        if not _LATEST_VERSION_CACHE.exists():
-            return None
-        raw = json.loads(_LATEST_VERSION_CACHE.read_text(encoding="utf-8"))
-        cached_ts = raw.get("ts", 0)
-        if time.time() - cached_ts > _CACHE_TTL_SECONDS:
-            return None
-        latest = raw.get("version", "")
-        if not latest or not _is_newer(latest, current_version):
-            return None
-        return (
-            f"\n\u26a0\ufe0f  Hefesto {latest} available (you have {current_version})."
-            f" Upgrade: pip install --upgrade hefesto-ai"
-        )
-    except Exception:
-        return None
-
-
-def _is_newer(latest: str, current: str) -> bool:
-    """Compare semver-style version strings. Returns True if latest > current."""
-    try:
-        l_parts = [int(x) for x in latest.split(".")]
-        c_parts = [int(x) for x in current.split(".")]
-        return l_parts > c_parts
-    except (ValueError, AttributeError):
-        return False
+atexit.register(_flush_pending)
