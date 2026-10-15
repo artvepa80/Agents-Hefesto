@@ -76,7 +76,7 @@ hefesto analyze . --fail-on HIGH --output json
 ## Differentiators vs Competition
 
 - **vs Semgrep/Bandit:** Hefesto validates AI-generated code intent, not just patterns
-- **vs SonarQube:** No server required, 0.01s speed, $8 vs $15K+/year
+- **vs SonarQube:** No server required, local runs
 - **vs all:** Only SAST tool with MCP server integration for AI agent workflows
 - **Dogfooding:** Found 3 critical bugs in its own v4.0.1 release
 

@@ -170,6 +170,27 @@ def capture(event: str, **extra: Any) -> None:
     _schedule_send(body)
 
 
+def sends_this_process() -> bool:
+    """True when an event would leave this process (send or debug print).
+
+    False during the notice process, when telemetry is off, or when the key
+    or host is empty.
+    """
+    if not _may_emit():
+        return False
+    if _held or not _flag("notice_shown"):
+        return False
+    return _can_deliver() or _debug_enabled()
+
+
+def persisted_flag(name: str) -> bool:
+    return _flag(name)
+
+
+def persist_flag(name: str) -> None:
+    _set_flag(name, True)
+
+
 def print_notice() -> None:
     print(NOTICE, file=sys.stderr)
 

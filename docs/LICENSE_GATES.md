@@ -68,8 +68,8 @@ if not validator.is_pro():
     raise ProFeatureError(
         "ML Enhancement requires Hefesto PRO license.\n\n"
         "Upgrade options:\n"
-        "• PRO: $8/month\n"
-        "• OMEGA Guardian: $19/month\n"
+        "• PRO: $8/mo\n"
+        "• OMEGA Guardian: $19/mo\n"
         "• Plans and checkout: https://hefestoai.narapallc.com/#pricing\n\n"
         "Questions? support@narapallc.com"
     )

@@ -92,7 +92,7 @@ After completing ANY non-trivial work:
 
 ### URLs de Producción
 - PyPI: https://pypi.org/project/hefesto-ai/
-- Pricing / checkout: https://hefestoai.narapallc.com/#pricing (PRO $8/month, OMEGA $19/month)
+- Pricing / checkout: https://hefestoai.narapallc.com/#pricing (PRO $8/mo, OMEGA $19/mo)
 - Stripe PRO: https://buy.stripe.com/4gM00i6jE6gV3zE4HseAg0b
 - Stripe OMEGA: https://buy.stripe.com/14A9AS23o20Fgmqb5QeAg0c
 - GitHub: https://github.com/artvepa80/Agents-Hefesto
@@ -402,14 +402,14 @@ The full audit and refactor history are tracked internally in our private repo. 
 - CLI commands
 - Pre-push hooks
 
-### PRO Tier ($8/month)
+### PRO Tier ($8/mo)
 - SemanticAnalyzer (AI/ML)
 - Advanced security scanning
 - REST API (2 endpoints: `GET /health`, `POST /analyze`; see docs/rest-api.md)
 - BigQuery integration
 - Duplicate detection
 
-### OMEGA Guardian ($19/month)
+### OMEGA Guardian ($19/mo)
 - Everything in PRO
 - IRIS Agent (production monitoring)
 - HefestoEnricher (auto-correlation)
