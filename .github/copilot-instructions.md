@@ -38,7 +38,7 @@ hefesto/
 
 ## Key Facts
 
-- **Version:** 4.17.1
+- **Version:** 4.18.0
 - **Tests:** 531 across 38 test files
 - **Languages:** Python (native AST), TypeScript, JavaScript, Java, Go, Rust, C# (TreeSitter — requires `pip install "hefesto-ai[multilang]"`)
 - **DevOps:** YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy

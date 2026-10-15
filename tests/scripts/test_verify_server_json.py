@@ -52,9 +52,9 @@ def test_description_fits_the_schema_limit(mod):
 
 def test_committed_document_names_the_public_repo_and_the_closed_server(mod, committed):
     version = mod.read_package_version(ROOT / "pyproject.toml")
-    assert version == "4.17.1"
+    assert version == "4.18.0"
     assert mod.check_document(committed, version) == []
-    assert committed["version"] == "4.17.1"
+    assert committed["version"] == "4.18.0"
     assert committed["repository"]["url"] == mod.PUBLIC_REPOSITORY_URL
     assert committed["repository"]["id"] == "1079896229"
     assert isinstance(committed["repository"]["id"], str)
@@ -73,19 +73,19 @@ def test_public_docs_state_the_hosted_server_is_closed_source():
 def test_check_document_rejects_a_private_repository(mod, committed):
     document = json.loads(json.dumps(committed))
     document["repository"]["url"] = "https://github.com/artvepa80/Agents-Hefesto-Pro-Private"
-    errors = mod.check_document(document, "4.17.1")
+    errors = mod.check_document(document, "4.18.0")
     assert any("repository.url" in error for error in errors)
 
 
 def test_check_document_rejects_a_numeric_repository_id(mod, committed):
     document = json.loads(json.dumps(committed))
     document["repository"]["id"] = 1079896229
-    errors = mod.check_document(document, "4.17.1")
+    errors = mod.check_document(document, "4.18.0")
     assert any("repository.id" in error for error in errors)
 
 
 def test_check_document_rejects_a_version_bump(mod, committed):
-    errors = mod.check_document(committed, "4.17.2")
+    errors = mod.check_document(committed, "4.18.1")
     assert any("pyproject.toml" in error for error in errors)
 
 

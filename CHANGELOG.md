@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.18.0] - 2026-10-15
+
+### Upgrading from 4.17.1 (`@v4` users get this release automatically)
+
+- **Usage events go to PostHog and stay on unless you opt out.** The CLI no longer POSTs to `hefestoai.narapallc.com/api/telemetry`. The first eligible run prints a notice and sends nothing; later runs send anonymous events. Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0` (also `false`, `no`, or `off`), or `DO_NOT_TRACK=1` (also `true`, `yes`, or `on`).
+- **`hefesto telemetry status` and `hefesto telemetry clear` are gone.** `HEFESTO_TELEMETRY=1` no longer writes `~/.hefesto/telemetry.jsonl`. Use `hefesto telemetry disable`.
+- **The "Hefesto X available" line now comes from PyPI**, not from the old ping response. After `analyze`, a newer cached release still prints that line, including when usage events are off. A PyPI failure is ignored.
+- **`hefesto init` is new.** It installs the same git hooks as `install-hooks` and prints the plans link. After a hook blocks a commit, the CLI prints `PRO $8/mo` once. That line is not printed when `CI=true` or when `GITHUB_ACTIONS` is set.
+- **GitHub Action users: no change.** With `telemetry: 1` it still sends its own `event=action` ping; the default `telemetry: 0` still sends nothing.
+
+To keep the 4.17.1 behaviour, pin `@v4.17.1`.
+
 ### Added
 
 - **`hefesto init` installs the git hooks and prints the plans link.** It uses the same installer as `install-hooks` and is safe to run again. The link is `https://hefestoai.narapallc.com/?utm_source=hefesto-cli&utm_medium=cli&utm_campaign=growth_q4_2026&utm_content=init#pricing`. After a git hook blocks a commit, the CLI prints `PRO $8/mo` once, with the same link and `utm_content=hook_blocked`, and emits `upgrade_cta_shown` only when `source` is `hook`, `ci`, or `action`. That line is not printed when `CI=true` or when `GITHUB_ACTIONS` is set. The notice process prints the line and does not send the event.
@@ -21,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`docs/telemetry.md` describes the PostHog events, the notice, and the opt-out.** The README telemetry sentence matches that behaviour.
 - **README links to hefestoai.narapallc.com carry UTM parameters** (`utm_source=github`, `utm_medium=readme`, `utm_campaign=growth_q4_2026`), so visits from the README can be told apart in the landing's analytics. `utm_content` names the README section: `pricing_quickstart` (the plans line under the Action quick start), `pricing_features_by_tier` (Features by Tier) and `website_contact` (Contact). The query string goes before `#pricing`, so the anchor still works. `tests/test_cli_pro_required_message.py` accepts the pricing URL with an optional query string before `#pricing`; it still requires a pricing link and still rejects the retired links and coupons.
 - **Current price text is PRO $8/mo and OMEGA $19/mo.** The CLI PRO message, the README plan lines, and the getting-started, license, and integration docs no longer say `$8/month` or a 14-day free trial. The README comparison table still lists competitor prices. The GitHub UTM query strings on the README pricing links are unchanged.
+- **4.18.0 release worklog** records the version bump. The tag, the GitHub Release, and the PyPI publish stay for Arturo.
 
 ## [4.17.1] - 2026-10-15
 
