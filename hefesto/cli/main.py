@@ -17,7 +17,6 @@ from typing import Optional, Tuple
 import click
 
 from hefesto.__version__ import __version__
-from hefesto.telemetry.client import TelemetryClient
 
 PRICING_URL = "https://hefestoai.narapallc.com/#pricing"
 PRO_REQUIRED_MESSAGE = (
@@ -44,68 +43,6 @@ def _pro_installed() -> bool:
 # Outputs that are a document on stdout (everything else goes to stderr)
 MACHINE_OUTPUTS = ("json", "sarif")
 
-# Initialize telemetry
-telemetry = TelemetryClient()
-
-
-def _detect_command(argv: list[str]) -> str:
-    """
-    Return a stable telemetry command name:
-      - "serve"
-      - "analyze"
-      - "telemetry status"
-      - "telemetry clear"
-    Ignores global flags like --help/--version and their values.
-    """
-    tokens = argv[1:]  # skip program name
-
-    # Pre-checks for help/version which might not be caught by generic logic
-    if any(a in ("-h", "--help") for a in tokens):
-        return "help"
-    if any(a == "--version" for a in tokens):
-        return "version"
-
-    cmd_parts = _parse_command_parts(tokens)
-
-    if not cmd_parts:
-        return "unknown"
-    return " ".join(cmd_parts)
-
-
-def _parse_command_parts(tokens: list[str]) -> list[str]:
-    cmd_parts: list[str] = []
-    i = 0
-    while i < len(tokens):
-        t = tokens[i]
-
-        if t.startswith("-"):
-            if "=" not in t and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
-                i += 2
-            else:
-                i += 1
-            continue
-
-        cmd_parts.append(t)
-        i += 1
-
-        if t == "telemetry":
-            i = _parse_telemetry_subcommand(tokens, i, cmd_parts)
-            break
-
-        break
-    return cmd_parts
-
-
-def _parse_telemetry_subcommand(tokens: list[str], i: int, cmd_parts: list[str]) -> int:
-    while i < len(tokens) and tokens[i].startswith("-"):
-        if "=" not in tokens[i] and (i + 1) < len(tokens) and not tokens[i + 1].startswith("-"):
-            i += 2
-        else:
-            i += 1
-    if i < len(tokens) and not tokens[i].startswith("-"):
-        cmd_parts.append(tokens[i])
-    return i
-
 
 def _exit(code: int) -> None:
     raise SystemExit(code)
@@ -113,13 +50,18 @@ def _exit(code: int) -> None:
 
 @click.group()
 @click.version_option(version=__version__)
-def cli():
+@click.pass_context
+def cli(ctx: click.Context) -> None:
     """
     HEFESTO - AI-Powered Code Quality Guardian
 
     Autonomous code analysis, refactoring, and quality assurance.
     """
-    pass
+    # The console script and ``python -m hefesto`` call cli() directly.
+    # main() is not that path, so telemetry has to start here.
+    from hefesto.telemetry.client import prepare_cli
+
+    prepare_cli(ctx.invoked_subcommand)
 
 
 @cli.command()
@@ -508,26 +450,31 @@ def analyze(
             combined_report, fail_on, exclude_types, quiet, json_mode, allow_no_files
         )
 
-        # Anonymous usage ping — also caches latest_version for upgrade notice
-        from hefesto.telemetry.client import _ping_remote, get_upgrade_notice
-
-        _ping_remote(
-            {
-                "event": "analyze",
-                "v": __version__,
-                "os": sys.platform,
-                "py": f"{sys.version_info.major}.{sys.version_info.minor}",
-                "files": combined_report.summary.files_analyzed,
-                "duration_ms": int(combined_report.summary.duration_seconds * 1000),
-                "issues": combined_report.summary.total_issues,
-                "exit_code": exit_code,
-            }
+        from hefesto.telemetry.client import (
+            capture,
+            get_upgrade_notice,
+            refresh_latest_version,
+            resolve_source,
         )
 
-        # Upgrade notice (after report, before exit)
+        refresh_latest_version()
+        capture(
+            "analyze",
+            files=combined_report.summary.files_analyzed,
+            issues=combined_report.summary.total_issues,
+            duration_ms=int(combined_report.summary.duration_seconds * 1000),
+            exit_code=exit_code,
+        )
         upgrade_msg = get_upgrade_notice(__version__)
         if upgrade_msg and not quiet:
             click.echo(upgrade_msg, err=json_mode)
+        if (
+            exit_code == 1
+            and fail_on
+            and combined_report.summary.files_analyzed > 0
+            and resolve_source() == "hook"
+        ):
+            capture("hook_blocked")
 
         _exit(exit_code)
 
@@ -888,9 +835,13 @@ def install_hooks(force: bool):
         hooks_dir = repo_root / ".git" / "hooks"
 
     ok = 0
+    installed = 0
     for hook_name in ("pre-commit", "pre-push"):
-        if _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir):
+        result = _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir)
+        if result in ("installed", "current"):
             ok += 1
+        if result == "installed":
+            installed += 1
 
     if ok == 0:
         click.echo(
@@ -898,6 +849,11 @@ def install_hooks(force: bool):
             err=True,
         )
         _exit(1)
+
+    if installed:
+        from hefesto.telemetry.client import capture
+
+        capture("hooks_installed")
 
 
 def _git_out(repo_root, args):
@@ -937,49 +893,20 @@ def _is_hefesto_repo(repo_root) -> bool:
 
 
 @cli.group()
-def telemetry_cmd():
-    """Telemetry utilities: show what is sent and manage the local log."""
-    pass
+def telemetry_cmd() -> None:
+    """Anonymous usage telemetry (on by default)."""
 
 
-@telemetry_cmd.command("status")
-def telemetry_status():
-    """Show the anonymous usage ping and the local telemetry log status."""
-    s = telemetry.get_status()
-    ping_on = bool(s.get("remote_ping_enabled"))
-    log_on = bool(s.get("enabled"))
-    click.echo("Telemetry Status:")
+@telemetry_cmd.command("disable")
+def telemetry_disable() -> None:
+    """Stop anonymous usage telemetry on this machine."""
+    from hefesto.telemetry.client import disable
+
+    disable()
     click.echo(
-        f"  Usage ping:  {'enabled' if ping_on else 'disabled'}"
-        " (anonymous, sent after `hefesto analyze`; on by default,"
-        " disable with HEFESTO_TELEMETRY=0)"
+        "Anonymous telemetry is off on this machine. "
+        "Turn it back on by deleting ~/.hefesto/telemetry_disabled."
     )
-    click.echo(f"  Endpoint:    {s.get('remote_endpoint')}")
-    click.echo(
-        f"  Local log:   {'enabled' if log_on else 'disabled'}"
-        " (opt-in with HEFESTO_TELEMETRY=1; never uploaded)"
-    )
-    click.echo(f"  Path:        {s.get('path')}")
-    click.echo(f"  Size:        {s.get('size_bytes')} bytes")
-    click.echo(f"  Max Bytes:   {s.get('max_bytes')}")
-    click.echo(f"  Max Files:   {s.get('max_files')}")
-    click.echo(f"  Schema:      v{s.get('schema_version')}")
-
-
-@telemetry_cmd.command("clear")
-@click.option("--yes", is_flag=True, help="Skip confirmation prompt.")
-def telemetry_clear(yes: bool):
-    """Delete local telemetry data (active + rotated backups)."""
-    if not yes:
-        ok = click.confirm(
-            "This will delete local telemetry files (active + rotated). Continue?",
-            default=False,
-        )
-        if not ok:
-            click.echo("Cancelled.")
-            return
-    telemetry.clear_data()
-    click.echo("Telemetry data cleared.")
 
 
 # Register the group
@@ -987,26 +914,21 @@ cli.add_command(telemetry_cmd, name="telemetry")
 
 
 def main() -> None:
-    # Start telemetry if valid command
-    cmd = _detect_command(list(sys.argv))
-    telemetry.start(command=cmd, version=__version__, argv=list(sys.argv))
-
+    """Used by ``python -m hefesto.cli.main``. The console script calls ``cli``."""
     try:
         cli.main(prog_name="hefesto", standalone_mode=False)
-        telemetry.end(exit_code=0)
-        sys.exit(0)
-    except SystemExit as e:
-        code = e.code
+    except click.ClickException as exc:
+        exc.show()
+        sys.exit(exc.exit_code)
+    except SystemExit as exc:
+        code = exc.code
         if code is None:
             code = 0
         elif not isinstance(code, int):
             code = 1
-        telemetry.end(exit_code=int(code))
         sys.exit(code)
-    except Exception as e:
-        # Unexpected crash
-        click.echo(f"Unexpected error: {e}", err=True)
-        telemetry.end(exit_code=1)
+    except Exception as exc:
+        click.echo(f"Unexpected error: {exc}", err=True)
         sys.exit(1)
 
 
@@ -1030,8 +952,8 @@ def _find_repo_root():
     return None
 
 
-def _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir) -> bool:
-    """Install one hook. Return True if it was installed or is already up to date."""
+def _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir) -> str:
+    """Install one hook. Return installed, current, or skipped."""
     import os
     import stat
 
@@ -1041,7 +963,7 @@ def _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir) ->
         source_hook = repo_root / "scripts" / "git-hooks" / hook_name
         if not source_hook.exists():
             click.echo(f"Skipping {hook_name}: template not found at {source_hook}", err=True)
-            return False
+            return "skipped"
         content = source_hook.read_bytes().replace(b"\r\n", b"\n")
     else:
         content = render(hook_name, sys.executable).encode("utf-8")
@@ -1053,22 +975,22 @@ def _install_hook(repo_root, hook_name, force, use_repo_templates, hooks_dir) ->
         try:
             if dest_hook.read_bytes() == content:
                 click.echo(f"{hook_name}: already up to date.")
-                return True
+                return "current"
         except Exception:
             pass
         click.echo(f"{hook_name}: already exists at {dest_hook}. Use --force to overwrite.")
-        return False
+        return "skipped"
 
     try:
         dest_hook.write_bytes(content)
         st = os.stat(dest_hook)
         os.chmod(dest_hook, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
         click.echo(f"{hook_name}: installed to {dest_hook}")
-        return True
+        return "installed"
     except Exception as e:
         click.echo(f"Error installing {hook_name}: {e}", err=True)
         _exit(1)
-        return False
+        return "skipped"
 
 
 def _mount_iris_ingest(app):

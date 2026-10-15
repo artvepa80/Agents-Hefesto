@@ -1,21 +1,22 @@
 """The README's telemetry sentence matches the code (README = PyPI page).
 
-The CLI ping is on by default (opt-out with HEFESTO_TELEMETRY=0) and the GitHub
-Action sends nothing unless its ``telemetry`` input is 1/true. If either default
-changes, this test fails until the README sentence is updated with it.
+The CLI is on by default (opt-out with HEFESTO_TELEMETRY=0, among other switches)
+and the GitHub Action sends nothing unless its ``telemetry`` input is 1/true.
 """
 
 from pathlib import Path
 
 import yaml
 
-from hefesto.telemetry.client import remote_ping_enabled
+from hefesto.telemetry.client import telemetry_enabled
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAIM = (
-    "The CLI sends one anonymous usage ping per run by default (no code, file paths or PII); "
-    "turn it off with HEFESTO_TELEMETRY=0. The GitHub Action sends nothing unless you set "
-    "telemetry: 1."
+    "The CLI sends anonymous usage events by default (a random id; `analyze` also sends file "
+    "and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus "
+    "pypi or editable — no code, file paths, findings, repository names, or IP). Turn it off "
+    "with `hefesto telemetry disable`, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1. The GitHub "
+    "Action sends nothing unless you set telemetry: 1."
 )
 
 
@@ -23,14 +24,13 @@ def test_readme_states_the_telemetry_defaults():
     assert CLAIM in (ROOT / "README.md").read_text(encoding="utf-8")
 
 
-def test_cli_ping_is_on_by_default(monkeypatch):
+def test_cli_telemetry_default_and_opt_out(monkeypatch, tmp_path):
+    monkeypatch.setenv("HEFESTO_STATE_DIR", str(tmp_path))
     monkeypatch.delenv("HEFESTO_TELEMETRY", raising=False)
-    assert remote_ping_enabled() is True
-
-
-def test_cli_ping_is_off_when_opted_out(monkeypatch):
+    monkeypatch.delenv("DO_NOT_TRACK", raising=False)
+    assert telemetry_enabled() is True
     monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
-    assert remote_ping_enabled() is False
+    assert telemetry_enabled() is False
 
 
 def test_action_telemetry_is_off_by_default():

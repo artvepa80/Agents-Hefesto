@@ -43,6 +43,7 @@ if [[ ${#FILES[@]} -eq 0 ]]; then
   exit 0
 fi
 echo "[hefesto] Analyzing ${#FILES[@]} staged file(s)..."
+export HEFESTO_SOURCE=hook
 "${RUN[@]}" analyze "${FILES[@]}" --fail-on HIGH --allow-no-files
 """
 )
@@ -59,6 +60,7 @@ fi
     + """ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 echo "[hefesto] Analyzing the repository before push..."
+export HEFESTO_SOURCE=hook
 "${RUN[@]}" analyze . --fail-on CRITICAL --allow-no-files
 """
 )

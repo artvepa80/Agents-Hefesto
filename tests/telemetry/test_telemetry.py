@@ -1,268 +1,332 @@
+"""PostHog usage events: opt-out, notice, payload, and the CLI entry point."""
+
+from __future__ import annotations
+
+import json
 import os
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
-from hefesto.telemetry.client import (
-    TelemetryClient,
-    _get_environment_flags,
-    _get_install_source,
-)
+import pytest
+from click.testing import CliRunner
+
+from hefesto.telemetry import client
+
+_PLANTED_PATH = "/home/secret/repo/app.py"
+_PLANTED_CODE = "password = 'hunter2'"
+_PLANTED_FINDING = "SQL injection in app.py"
+_PLANTED_REPO = "Agents-Hefesto-private"
+_PLANTED_IP = "203.0.113.50"
 
 
-def test_telemetry_disabled_by_default(tmp_path, monkeypatch):
-    monkeypatch.delenv("HEFESTO_TELEMETRY", raising=False)
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(tmp_path / "t.jsonl"))
-    c = TelemetryClient()
-    c.start(command="analyze", version="0.0.0", argv=["hefesto", "analyze", "."])
-    c.end(exit_code=0)
-    assert not Path(os.environ["HEFESTO_TELEMETRY_PATH"]).exists()
+def _seed_noticed(tmp_path: Path) -> None:
+    state = {
+        "install_id": "11111111-1111-4111-8111-111111111111",
+        "notice_shown": True,
+        "first_run_sent": True,
+    }
+    (tmp_path / "telemetry_state.json").write_text(json.dumps(state), encoding="utf-8")
+    client._held = False
 
 
-def test_telemetry_opt_in_writes_jsonl(tmp_path, monkeypatch):
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
+def _record(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
+    sent: list[dict] = []
 
-    c = TelemetryClient()
-    c.start(
-        command="drift",
-        version="1.2.3",
-        argv=["hefesto", "drift", "template.yml", "--region", "us-east-1"],
+    def _capture(payload: dict) -> None:
+        sent.append(payload)
+
+    monkeypatch.setattr(client, "_schedule_send", _capture)
+    return sent
+
+
+def test_opt_out_env_dnt_and_disable_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _seed_noticed(tmp_path)
+    sent = _record(monkeypatch)
+    monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
+    client.capture("analyze", path=_PLANTED_PATH)
+    monkeypatch.delenv("HEFESTO_TELEMETRY")
+    monkeypatch.setenv("DO_NOT_TRACK", "1")
+    client.capture("analyze", code=_PLANTED_CODE)
+    monkeypatch.delenv("DO_NOT_TRACK")
+    (tmp_path / "telemetry_disabled").write_text("1\n", encoding="utf-8")
+    client.capture("analyze", finding=_PLANTED_FINDING)
+    assert sent == []
+
+
+def test_disable_command_writes_the_opt_out(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from hefesto.cli.main import cli
+
+    _seed_noticed(tmp_path)
+    sent = _record(monkeypatch)
+    result = CliRunner().invoke(cli, ["telemetry", "disable"])
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "telemetry_disabled").is_file()
+    client.capture("analyze")
+    assert sent == []
+
+
+def test_debug_prints_the_event_and_does_not_send(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _seed_noticed(tmp_path)
+    monkeypatch.setenv("HEFESTO_TELEMETRY_DEBUG", "1")
+    client.capture("analyze", path=_PLANTED_PATH, ip=_PLANTED_IP)
+    err = capsys.readouterr().err
+    assert '"event":"analyze"' in err
+    assert '"$geoip_disable":true' in err
+    assert _PLANTED_PATH not in err
+    assert _PLANTED_IP not in err
+    assert client.POSTHOG_API_KEY not in err
+
+
+def test_payload_has_no_pii_paths_findings_or_ip(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _seed_noticed(tmp_path)
+    sent = _record(monkeypatch)
+    client.capture(
+        "analyze",
+        files=2,
+        issues=1,
+        duration_ms=15,
+        exit_code=0,
+        path=_PLANTED_PATH,
+        code=_PLANTED_CODE,
+        finding=_PLANTED_FINDING,
+        repo=_PLANTED_REPO,
+        ip=_PLANTED_IP,
     )
-    c.end(exit_code=2)
+    assert len(sent) == 1
+    body = sent[0]
+    blob = json.dumps(body)
+    for planted in (_PLANTED_PATH, _PLANTED_CODE, _PLANTED_FINDING, _PLANTED_REPO, _PLANTED_IP):
+        assert planted not in blob
+    props = body["properties"]
+    assert props["files"] == 2
+    assert props["issues"] == 1
+    assert props["duration_ms"] == 15
+    assert props["exit_code"] == 0
+    assert props["version"]
+    assert props["os"] == sys.platform
+    assert props["py"] == f"{sys.version_info.major}.{sys.version_info.minor}"
+    assert props["src"] in {"pypi", "editable", "unknown"}
+    assert isinstance(props["env"], list)
+    assert props["$geoip_disable"] is True
+    assert "$ip" not in body and "ip" not in props
+    assert "path" not in props and "code" not in props and "finding" not in props
+    assert body["distinct_id"] == "11111111-1111-4111-8111-111111111111"
 
-    assert p.exists()
-    lines = p.read_text(encoding="utf-8").strip().splitlines()
-    assert len(lines) == 1
-    assert '"command":"drift"' in lines[0]
-    assert '"version":"1.2.3"' in lines[0]
-    assert '"exit_code":2' in lines[0]
-    assert '"duration_ms":' in lines[0]
-    assert '"schema_version":1' in lines[0]
+
+@pytest.mark.parametrize("event", client.EVENTS)
+def test_every_event_disables_geoip(event: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HEFESTO_SOURCE", "hook")
+    body = client.build_event(event)
+    assert body["properties"]["$geoip_disable"] is True
+    assert body["event"] == event
+    assert body["properties"]["source"] in client.CTA_SOURCES
 
 
-def test_telemetry_cli_success_exit_code_0(tmp_path, monkeypatch):
-    import sys
+def test_notice_is_printed_before_any_send(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    sent = _record(monkeypatch)
+    client.prepare_cli("analyze")
+    notice = capsys.readouterr().err
+    assert client.NOTICE in notice
+    assert sent == []
+    client.capture("analyze", path=_PLANTED_PATH)
+    assert sent == []
+    client._held = False
+    client.capture("analyze")
+    assert len(sent) == 1
+    assert client.NOTICE not in capsys.readouterr().err
 
+
+def test_send_returns_before_a_slow_socket(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _seed_noticed(tmp_path)
+    entered = threading.Event()
+
+    def _slow(*_args: object, **_kwargs: object) -> None:
+        entered.set()
+        time.sleep(2)
+
+    monkeypatch.setattr(client.urllib.request, "urlopen", _slow)
+    started = time.perf_counter()
+    client.capture("analyze")
+    assert time.perf_counter() - started < 0.5
+    assert entered.wait(timeout=1)
+
+
+def test_empty_key_from_env_or_config_sends_nothing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _seed_noticed(tmp_path)
+    sent = _record(monkeypatch)
+    monkeypatch.setenv("HEFESTO_POSTHOG_KEY", "")
+    client.capture("analyze")
+    monkeypatch.delenv("HEFESTO_POSTHOG_KEY")
+    (tmp_path / "telemetry.json").write_text(json.dumps({"posthog_api_key": ""}), encoding="utf-8")
+    client.capture("analyze")
+    (tmp_path / "telemetry.json").write_text(
+        json.dumps({"posthog_api_key": client.POSTHOG_API_KEY}), encoding="utf-8"
+    )
+    monkeypatch.setenv("HEFESTO_POSTHOG_KEY", "   ")
+    client.capture("analyze")
+    assert sent == []
+    assert client.resolved_posthog_key() == ""
+
+
+def test_builtin_key_and_host_are_the_us_project(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HEFESTO_POSTHOG_KEY", raising=False)
+    monkeypatch.delenv("HEFESTO_POSTHOG_HOST", raising=False)
+    assert client.resolved_posthog_key() == client.POSTHOG_API_KEY
+    assert client.resolved_posthog_key().startswith("phc_")
+    assert client.resolved_posthog_host() == "https://us.i.posthog.com"
+
+
+def test_upgrade_cta_source_is_hook_ci_or_action(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _seed_noticed(tmp_path)
+    sent = _record(monkeypatch)
+    client.capture("upgrade_cta_shown")
+    assert sent == []
+    monkeypatch.setenv("HEFESTO_SOURCE", "hook")
+    client.capture("upgrade_cta_shown")
+    assert sent[0]["properties"]["source"] == "hook"
+    assert sent[0]["properties"]["source"] in {"hook", "ci", "action"}
+
+
+def test_cli_entry_points_exit_2_on_usage_errors(tmp_path: Path) -> None:
+    env = os.environ.copy()
+    env["HEFESTO_TELEMETRY"] = "0"
+    env["HEFESTO_STATE_DIR"] = str(tmp_path)
+    module = subprocess.run(
+        [sys.executable, "-m", "hefesto", "not-a-command"],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert module.returncode == 2
+    script = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; sys.argv=['hefesto','not-a-command']; "
+                "from hefesto.cli.main import cli; cli()"
+            ),
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert script.returncode == 2
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    assert 'hefesto = "hefesto.cli.main:cli"' in pyproject.read_text(encoding="utf-8")
+
+
+def test_main_preserves_click_usage_exit_2(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto.cli.main import main
 
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-
-    # Mock sys.argv
-    monkeypatch.setattr(sys, "argv", ["hefesto", "--version"])
-
-    try:
+    monkeypatch.setattr(sys, "argv", ["hefesto", "not-a-command"])
+    with pytest.raises(SystemExit) as caught:
         main()
-    except SystemExit as e:
-        assert e.code == 0
-
-    assert p.exists()
-    lines = p.read_text(encoding="utf-8").strip().splitlines()
-    assert '"exit_code":0' in lines[-1]
+    assert caught.value.code == 2
 
 
-def test_telemetry_rotation(tmp_path, monkeypatch):
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-    # Minimum is 1024 bytes
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_BYTES", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "2")
-
-    c = TelemetryClient()
-
-    # We need the JSON line to be > 1024 bytes.
-    # argv is hashed, so it doesn't add size.
-    # command is stored as-is.
-    huge_cmd = "cmd_" + "x" * 1200
-
-    # Write event 1 -> t.jsonl
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-    assert p.exists()
-
-    # Write event 2 -> triggers rotation
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-
-    # Check rotation
-    assert p.exists()
-    p1 = Path(f"{p}.1")
-    assert p1.exists()
-
-    content = p.read_text(encoding="utf-8")
-    assert huge_cmd in content
-
-    content_1 = p1.read_text(encoding="utf-8")
-    assert huge_cmd in content_1
-
-    # Write event 3 -> triggers rotation again
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-
-    p2 = Path(f"{p}.2")
-    assert p.exists()
-    assert p1.exists()
-    assert p2.exists()
-
-    # Write event 4 -> max files 2
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-
-    assert p.exists()
-    assert p1.exists()
-    assert p2.exists()
-    # .3 should NOT exist
-    assert not Path(f"{p}.3").exists()
-
-
-def test_telemetry_status_command(tmp_path, monkeypatch):
-    from click.testing import CliRunner
-
+def test_telemetry_is_hooked_inside_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto.cli.main import cli
 
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-
-    r = CliRunner()
-    res = r.invoke(cli, ["telemetry", "status"])
-    assert res.exit_code == 0
-    assert "Telemetry Status:" in res.output
-    assert "Usage ping:  enabled" in res.output
-    assert "Local log:   enabled" in res.output
-    assert "Max Bytes:" in res.output
+    seen: list[str] = []
+    monkeypatch.setattr(client, "prepare_cli", lambda sub: seen.append(sub or ""))
+    result = CliRunner().invoke(cli, ["telemetry", "disable"])
+    assert result.exit_code == 0, result.output
+    assert seen == ["telemetry"]
 
 
-def test_telemetry_clear_command(tmp_path, monkeypatch):
-    from click.testing import CliRunner
-
+def test_install_hooks_emits_hooks_installed_once(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    if subprocess.run(["git", "--version"], capture_output=True, check=False).returncode != 0:
+        pytest.skip("git not available")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    events: list[str] = []
+    monkeypatch.setattr(client, "capture", lambda event, **_extra: events.append(event))
+    monkeypatch.chdir(tmp_path)
     from hefesto.cli.main import cli
 
-    p = tmp_path / "t.jsonl"
-    p.write_text("some data")
-
-    # Create rotated file manually to test cleanup
-    p1 = Path(f"{p}.1")
-    p1.write_text("backup data")
-
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "2")
-
-    r = CliRunner()
-    res = r.invoke(cli, ["telemetry", "clear"], input="y\n")
-    assert res.exit_code == 0
-    assert not p.exists()
-    assert not p1.exists()
+    first = CliRunner().invoke(cli, ["install-hooks"])
+    assert first.exit_code == 0, first.output
+    second = CliRunner().invoke(cli, ["install-hooks"])
+    assert second.exit_code == 0, second.output
+    assert events.count("hooks_installed") == 1
+    hook = (tmp_path / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
+    assert "HEFESTO_SOURCE=hook" in hook
 
 
-def test_invalid_env_vars_are_sanitized(tmp_path, monkeypatch):
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_BYTES", "invalid")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "-5")
+class _Body:
+    def __init__(self, payload: bytes) -> None:
+        self._payload = payload
 
-    c = TelemetryClient()
-    # Should fallback to defaults/clamped
-    # Default bytes = 1MB (1048576)
-    assert c.max_bytes == 1048576
-    # Clamped files = 0 (min)
-    assert c.max_files == 0
+    def read(self) -> bytes:
+        return self._payload
 
 
-def test_clamps_large_values(tmp_path, monkeypatch):
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_BYTES", "999999999999")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "999")
+def _pypi(version: str):
+    def _open(request: object, timeout: float = 0) -> _Body:
+        _open.calls.append((getattr(request, "full_url", ""), timeout))
+        return _Body(json.dumps({"info": {"version": version}}).encode("utf-8"))
 
-    c = TelemetryClient()
-    assert c.max_bytes == 50_000_000
-    assert c.max_files == 20
-
-
-def test_max_files_zero_disables_rotation(tmp_path, monkeypatch):
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_BYTES", "1")  # Force rotation
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "0")  # Disable rotation
-
-    c = TelemetryClient()
-
-    # Event 1
-    c.start(command="cmd1", version="1", argv=[])
-    c.end(exit_code=0)
-    assert p.exists()
-
-    # Event 2 (would trigger rotation if allowed)
-    c.start(command="cmd2", version="1", argv=[])
-    c.end(exit_code=0)
-
-    # Check no rotation happened
-    assert p.exists()
-    assert not Path(f"{p}.1").exists()
-
-    # Content should just append
-    content = p.read_text(encoding="utf-8")
-    assert "cmd1" in content
-    assert "cmd2" in content
+    _open.calls = []  # type: ignore[attr-defined]
+    return _open
 
 
-def test_rotation_overwrites_existing_destination(tmp_path, monkeypatch):
-    """
-    If destination rotated file already exists, rotation must not crash and must overwrite it.
-    This specifically validates using os.replace (atomic overwrite) instead of Path.rename.
-    """
-    from pathlib import Path
-
-    from hefesto.telemetry.client import TelemetryClient
-
-    p = tmp_path / "t.jsonl"
-    monkeypatch.setenv("HEFESTO_TELEMETRY", "1")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_PATH", str(p))
-    monkeypatch.setenv(
-        "HEFESTO_TELEMETRY_MAX_BYTES", "1"
-    )  # clamped to 1024 -> forces rotation with huge command
-    monkeypatch.setenv("HEFESTO_TELEMETRY_MAX_FILES", "2")
-
-    # Pre-create destination .2 to simulate "already exists" collision.
-    p2 = Path(f"{p}.2")
-    p2.write_text("PREEXISTING_DESTINATION_SHOULD_BE_OVERWRITTEN\n", encoding="utf-8")
-    assert p2.exists()
-
-    c = TelemetryClient()
-    huge_cmd = "cmd_" + "x" * 1200
-
-    # Event 1 -> creates p
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-    assert p.exists()
-
-    # Event 2 -> rotates p -> p.1 (p.2 already exists but shouldn't matter yet)
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-    assert Path(f"{p}.1").exists()
-    assert p.exists()
-
-    # Event 3 -> rotates p.1 -> p.2 (THIS is the collision case), then p -> p.1
-    c.start(command=huge_cmd, version="1", argv=[])
-    c.end(exit_code=0)
-
-    # Must still exist, and must NOT keep the old preexisting marker content.
-    assert p2.exists()
-    content_2 = p2.read_text(encoding="utf-8")
-    assert "PREEXISTING_DESTINATION_SHOULD_BE_OVERWRITTEN" not in content_2
-    assert huge_cmd in content_2
+def test_pypi_notice_is_cached_for_a_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    assert opened.calls[0][0] == client.PYPI_JSON_URL
+    assert opened.calls[0][1] == client.PYPI_TIMEOUT
+    notice = client.get_upgrade_notice("4.17.1")
+    assert notice is not None
+    assert "Hefesto 9.9.9 available" in notice
+    assert "you have 4.17.1" in notice
+    assert client.get_upgrade_notice("9.9.9") is None
+    assert client.get_upgrade_notice("9.9.10") is None
 
 
-# --- Environment flags tests ---
+def test_pypi_failure_is_silent(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise TimeoutError("pypi")
+
+    monkeypatch.setattr(client.urllib.request, "urlopen", _boom)
+    client.refresh_latest_version()
+    assert client.get_upgrade_notice("4.17.1") is None
 
 
-def _clear_ci_env(monkeypatch):
-    for key in (
+def test_stale_version_cache_is_refetched(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    stale = {"version": "1.0.0", "ts": time.time() - client._CACHE_TTL_SECONDS - 5}
+    (tmp_path / ".latest_version").write_text(json.dumps(stale), encoding="utf-8")
+    opened = _pypi("8.0.0")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    notice = client.get_upgrade_notice("4.17.1")
+    assert notice is not None and "Hefesto 8.0.0 available" in notice
+
+
+def test_environment_labels_are_ci_docker_and_dogfood(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
         "CI",
         "GITHUB_ACTIONS",
         "GITLAB_CI",
@@ -272,79 +336,68 @@ def _clear_ci_env(monkeypatch):
         "HEFESTO_TELEMETRY_ENV",
         "HEFESTO_DOGFOOD",
     ):
-        monkeypatch.delenv(key, raising=False)
-
-
-def test_env_flags_ci(monkeypatch):
-    _clear_ci_env(monkeypatch)
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(client.os.path, "exists", lambda path: path == "/.dockerenv")
+    monkeypatch.setattr(client, "install_source", lambda: "pypi")
     monkeypatch.setenv("CI", "true")
-    # Isolate from editable auto-tag used in local/dev installs
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert "ci" in result
-    assert "user" not in result
-    assert "dogfood" not in result
-
-
-def test_env_flags_multiple(monkeypatch):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setenv("CI", "true")
-    monkeypatch.setenv("GITHUB_ACTIONS", "true")
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert result == ["ci", "github_actions"]
-
-
-def test_env_flags_default(monkeypatch):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert result == ["user"]
-
-
-def test_env_flags_docker(monkeypatch, tmp_path):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    # Mock /.dockerenv existence
-    monkeypatch.setattr("os.path.exists", lambda p: p == "/.dockerenv")
-    result = _get_environment_flags()
-    assert "docker" in result
-    assert "dogfood" not in result
-
-
-def test_env_flags_dogfood_via_telemetry_env(monkeypatch):
-    _clear_ci_env(monkeypatch)
+    flags = client.environment_flags()
+    assert "ci" in flags and "docker" in flags
+    assert "dogfood" not in flags
+    monkeypatch.delenv("CI")
+    monkeypatch.setattr(client.os.path, "exists", lambda _path: False)
+    monkeypatch.setattr(client, "install_source", lambda: "editable")
+    assert client.environment_flags() == ["dogfood"]
+    monkeypatch.setattr(client, "install_source", lambda: "pypi")
     monkeypatch.setenv("HEFESTO_TELEMETRY_ENV", "dogfood")
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert result == ["dogfood"]
+    assert client.environment_flags() == ["dogfood"]
 
 
-def test_env_flags_dogfood_with_ci(monkeypatch):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setenv("CI", "true")
-    monkeypatch.setenv("HEFESTO_TELEMETRY_ENV", "dogfood")
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert result == ["ci", "dogfood"]
+def test_install_source_reads_the_package_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    import hefesto
+
+    monkeypatch.setattr(hefesto, "__file__", "/usr/lib/site-packages/hefesto/__init__.py")
+    assert client.install_source() == "pypi"
+    monkeypatch.setattr(hefesto, "__file__", "/workspace/hefesto/__init__.py")
+    assert client.install_source() == "editable"
 
 
-def test_env_flags_dogfood_via_hefesto_dogfood(monkeypatch):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setenv("HEFESTO_DOGFOOD", "1")
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "pypi")
-    result = _get_environment_flags()
-    assert "dogfood" in result
+def test_analyze_command_sends_counts_and_the_pypi_notice(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _seed_noticed(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "app.py").write_text("def ok():\n    return 1\n", encoding="utf-8")
+    sent = _record(monkeypatch)
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    from hefesto.cli.main import cli
 
-
-def test_env_flags_dogfood_editable_auto(monkeypatch):
-    _clear_ci_env(monkeypatch)
-    monkeypatch.setattr("hefesto.telemetry.client._get_install_source", lambda: "editable")
-    result = _get_environment_flags()
-    assert result == ["dogfood"]
-
-
-def test_install_source_pypi():
-    result = _get_install_source()
-    # In test context, hefesto is imported from source (not site-packages)
-    assert result in ("pypi", "editable", "unknown")
+    result = CliRunner().invoke(cli, ["analyze", "app.py"])
+    assert result.exit_code == 0, result.output
+    assert "Hefesto 9.9.9 available" in result.stdout
+    assert "you have" in result.stdout
+    analyze = [body for body in sent if body["event"] == "analyze"]
+    assert len(analyze) == 1
+    props = analyze[0]["properties"]
+    for key in (
+        "files",
+        "issues",
+        "duration_ms",
+        "exit_code",
+        "version",
+        "os",
+        "py",
+        "env",
+        "src",
+    ):
+        assert key in props
+    assert props["files"] >= 1
+    assert props["exit_code"] == 0
+    assert isinstance(props["issues"], int)
+    assert isinstance(props["duration_ms"], int)
+    assert props["src"] in {"pypi", "editable"}
+    blob = json.dumps(analyze[0])
+    assert "app.py" not in blob
+    assert str(tmp_path) not in blob
+    assert _PLANTED_IP not in blob
+    assert "$ip" not in analyze[0]
