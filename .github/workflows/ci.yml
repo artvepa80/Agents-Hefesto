@@ -70,6 +70,9 @@ jobs:
       - name: Verify README Parity
         run: python scripts/verify_readme.py
 
+      - name: Verify MCP server.json
+        run: python scripts/verify_server_json.py
+
       - name: Pytest (unit)
         env:
           CI: true

@@ -123,6 +123,8 @@ Other editors: use the same URL with their streamable-HTTP transport.
 
 The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`; the response's `engine.version` field reports the hosted engine version) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF `hefestoFingerprint/v1` fingerprints (`format: "sarif"` adds the SARIF 2.1.0 log). TypeScript, JavaScript, Java, Go, Rust and C# are covered through the `multilang` tree-sitter grammars (the first such request on a fresh server instance downloads them and is a few seconds slower). No `.hefesto.yaml` is read. Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
+The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
+
 ### Available MCP Endpoints
 
 | Endpoint | Protocol | Purpose |
