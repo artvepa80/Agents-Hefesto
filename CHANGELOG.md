@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.19.0] - 2026-10-15
+
+### Upgrading from 4.18.0 (`@v4` users get this release automatically)
+
+- **`hefesto info` no longer prints the four-line PRO message.** It prints one line, `PRO ($8/mo) adds the API server, enrichment, and scope gating. OMEGA ($19/mo) adds IRIS.`, and exits 1. That line follows the notice rules below, so in CI, when stdout is not a TTY, or when notices are opted out, `hefesto info` exits 1 and prints nothing. A script that looked for `This feature requires` or the bare `#pricing` URL in that output will not find them. `hefesto serve` and `hefesto status` still print the four-line PRO message.
+- **`hefesto init` no longer always prints the plans line on stdout.** The line is now `Plans: PRO $8/mo · OMEGA $19/mo.` on stderr, and only when the notice rules allow it.
+- **The hook-block line uses the same rules as the other notices.** It is no longer printed once unless `CI=true` or `GITHUB_ACTIONS` is set. `upgrade_cta_shown` is sent when `source` is `hook` or `cli` (not `ci` or `action`) and includes `cta`.
+- **Some commands print one extra stderr line after the result.** The API server, enrichment, scope flags, IRIS, and an analysis-count milestone. Prices in that line are PRO $8/mo and OMEGA $19/mo. It is not printed in CI (including GitLab, Jenkins, and CircleCI), when stdout is not a TTY, with `--output json`/`sarif` or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, `hefesto telemetry disable`, or `HEFESTO_NO_UPSELL=1`. At most one notice every 7 days, and each type at most 3 times.
+- **GitHub Action users: no change.** Notices are not printed in CI. The Action telemetry input is unchanged.
+
+To keep the 4.18.0 behaviour, pin `@v4.18.0`.
+
 ### Added
 
 - **PRO and OMEGA notices in the CLI.** One stderr line after the command result: `gated_serve`, `gated_enrich`, and `gated_scope` (PRO $8/mo), `gated_info` (`hefesto info` prints only `PRO ($8/mo) adds the API server, enrichment, and scope gating. OMEGA ($19/mo) adds IRIS.`), `gated_iris` (OMEGA $19/mo, when `IRIS_BQ_PROJECT` is set and IRIS is not installed), `analyze_milestone` (25 finished analyses, then every 100; the line names hefesto-swarm), `init` (`Plans: PRO $8/mo · OMEGA $19/mo.`), and `hook_blocked`. Not printed in CI (including GitLab, Jenkins, and CircleCI), when stdout is not a TTY, with `--output json`/`sarif` or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `HEFESTO_NO_UPSELL=1`. At most one notice every 7 days, and each type at most 3 times (`~/.hefesto/upsell.json`; a corrupt file prints nothing). Each printed line can emit `upgrade_cta_shown` with `source` `hook` or `cli` and `cta` set to the type, only when telemetry is active.
@@ -14,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **`docs/telemetry.md` documents the upgrade notices and `HEFESTO_NO_UPSELL`.** `upgrade_cta_shown` is sent for `hook` and `cli`, with a `cta` property.
+- **4.19.0 release worklog** records the version bump. The tag, the GitHub Release, and the PyPI publish stay for Arturo.
 
 ## [4.18.0] - 2026-10-15
 

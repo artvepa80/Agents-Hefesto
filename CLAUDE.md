@@ -114,7 +114,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **Mission**: Build the most trusted release truth engine for AI-generated code. We dogfood the gate against our own code on every push to main; gate-internals refactor history is documented in the private repo.
 
-**Current Status (v4.18.0)**:
+**Current Status (v4.19.0)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
 - BigQuery integration
@@ -124,6 +124,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 - Self-validated (dogfooding successful)
 - GitHub Release automation (hardened workflow)
 - Anonymous PostHog usage events, on by default, with opt-out (`hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`); `hefesto init`; PyPI newer-version notice
+- CLI PRO/OMEGA notices (one stderr line; `HEFESTO_NO_UPSELL=1` hides them). `hefesto info` prints only the plans line
 
 ---
 

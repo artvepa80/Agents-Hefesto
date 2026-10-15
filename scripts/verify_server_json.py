@@ -10,7 +10,7 @@ draft). Confirmed 2026-10-15:
   is ``2025-12-11``.
 
 This script does not publish to the registry. ``version`` must keep matching
-``pyproject.toml`` (4.18.0 at the time of writing). The live registry entry
+``pyproject.toml`` (4.19.0 at the time of writing). The live registry entry
 is updated only by a separate publish, which this check never performs.
 
 ``repository`` stays on this public repository because it contains the
