@@ -45,4 +45,4 @@ def test_flags_used_in_the_guide_exist():
 def test_action_input_rows_kept():
     text = _text()
     assert "INFO is treated as LOW" in text
-    assert "Only `1`/`true` lets the CLI send anonymous usage events" in text
+    assert "only `1`/`true` sends the per-run ping" in text

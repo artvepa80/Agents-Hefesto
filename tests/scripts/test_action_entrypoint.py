@@ -42,7 +42,6 @@ for arg in "$@"; do
 done
 echo "Files analyzed: 3"
 echo "Issues found: 2"
-echo "${HEFESTO_SOURCE-<unset>}" > "$FAKE_LOG_DIR/hefesto_source"
 exit "${FAKE_HEFESTO_EXIT:-0}"
 """
 
@@ -92,7 +91,6 @@ def _run(
         "curl": curl_log.read_text(encoding="utf-8") if curl_log.exists() else None,
         "hefesto_args": (log_dir / "hefesto_args").read_text(encoding="utf-8").split(),
         "telemetry_env": (log_dir / "hefesto_telemetry_env").read_text(encoding="utf-8").strip(),
-        "source_env": (log_dir / "hefesto_source").read_text(encoding="utf-8").strip(),
         "gh_output": gh_output.read_text(encoding="utf-8"),
     }
 
@@ -102,26 +100,22 @@ def test_no_ping_unless_telemetry_is_1_or_true(tmp_path: Path, value: Optional[s
     r = _run(tmp_path, {"telemetry": value})
     assert r["proc"].returncode == 0, r["proc"].stderr
     assert r["curl"] is None, f"telemetry={value!r} must not ping, got: {r['curl']}"
-    # The CLI's own events are disabled too. The Action never curls.
+    # The CLI's own ping is disabled too.
     assert r["telemetry_env"] == "0"
-    assert r["source_env"] == "action"
     assert "exit_code=0" in r["gh_output"]
 
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "True", " 1 "])
-def test_telemetry_on_enables_the_cli_and_does_not_curl(tmp_path: Path, value: str) -> None:
+def test_ping_sent_when_telemetry_enabled(tmp_path: Path, value: str) -> None:
     r = _run(tmp_path, {"telemetry": value}, hefesto_exit=1)
     assert r["proc"].returncode == 1
-    assert r["curl"] is None
+    assert r["curl"] is not None
+    assert "https://hefestoai.narapallc.com/api/telemetry" in r["curl"]
+    assert '{"event":"action","v":"9.9.9","files":3,"issues":2,"exit_code":1}' in r["curl"], r[
+        "curl"
+    ]
     assert r["telemetry_env"] == "1"
-    assert r["source_env"] == "action"
     assert "exit_code=1" in r["gh_output"]
-
-
-def test_entrypoint_does_not_call_the_old_ping_endpoint() -> None:
-    text = ENTRYPOINT.read_text(encoding="utf-8")
-    assert "api/telemetry" not in text
-    assert "curl " not in text
 
 
 def test_exit_code_propagates_without_telemetry(tmp_path: Path) -> None:

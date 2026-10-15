@@ -43,7 +43,7 @@ inputs:
     required: false
     default: 'hefesto'
   telemetry:
-    description: 'Opt-in anonymous telemetry. Only 1 or true lets the CLI send anonymous usage events (random id, channel; no code, paths, findings, or IP). Any other value, including the default 0, sends nothing.'
+    description: 'Opt-in anonymous telemetry. Only 1 or true enables it: one anonymous ping per run (version, file count, issue count, exit code) plus the CLI usage ping. Any other value, including the default 0, sends nothing.'
     required: false
     default: '0'
 
