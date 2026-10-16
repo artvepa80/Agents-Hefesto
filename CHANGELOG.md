@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, and `python -m flake8 hefesto tests`.
+- **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, `python -m flake8 hefesto tests`, and a dogfood step, `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`.
 - **Handoff:** `docs/worklog/2026-10-16-prepush-ruff-mypy.md`.
 - **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
 - **Telemetry comments no longer call the CLI events a usage ping.** `HEFESTO_TELEMETRY=0` disables anonymous usage events. The Action `telemetry` input description matches the README: with `1` or `true`, the Action sends one anonymous ping per run and the CLI sends its usage events.

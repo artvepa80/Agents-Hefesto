@@ -56,6 +56,9 @@ ruff check
 python -m mypy hefesto --ignore-missing-imports
 python -m flake8 hefesto tests
 
+# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.19.0)
+HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
+
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
 # agent-card.json, SKILL.md, copilot-instructions.md — also runs in CI)
 python scripts/verify_readme.py
@@ -93,6 +96,7 @@ All PRs must:
    `ruff check`
    `python -m mypy hefesto --ignore-missing-imports`
    `python -m flake8 hefesto tests`
+   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request

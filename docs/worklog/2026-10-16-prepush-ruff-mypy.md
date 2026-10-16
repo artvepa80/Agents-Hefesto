@@ -26,7 +26,7 @@ Handoff. Sin merge. No se tocan tags, releases ni el PR #111.
   Archivos: `examples/basic_usage.py`, `examples/pre_commit_hook.py`, `examples/pro_semantic_analysis.py`, `scripts/verify_capabilities.py`, `scripts/verify_readme.py`, `scripts/verify_release_tag.py`, `scripts/verify_server_json.py`.
 - `hefesto/` y `tests/` quedan en 0 hallazgos con esas reglas. No se corrió `ruff --fix`. No hay `per-file-ignores`: no hizo falta dentro del alcance de CI.
 - `.github/` y `build_grammars.py` no están excluidos: bajo E/W/F también dan 0.
-- CONTRIBUTING documenta los comandos locales de pre-push.
+- CONTRIBUTING documenta los comandos locales de pre-push, incluido el dogfood con el CLI del repo.
 
 ## Fuentes abiertas
 
@@ -43,6 +43,16 @@ Handoff. Sin merge. No se tocan tags, releases ni el PR #111.
 - https://peps.python.org/pep-0008/#imports
 - https://peps.python.org/pep-0484/ (`Optional` como `Union[..., None]`; `Any` acepta el módulo inyectado en tests)
 
+## Dogfood
+
+CLI del propio repo, distribución `hefesto-ai` 4.19.0 (editable). Los únicos `.py` del PR son `hefesto/analyzers/format_drift.py` y `tests/test_format_check.py`.
+
+```bash
+HEFESTO_TELEMETRY=0 python3 -m hefesto analyze hefesto/analyzers/format_drift.py tests/test_format_check.py --severity LOW
+```
+
+Exit 0. Salida: 2 archivos analizados, 0 hallazgos, `No issues found! Analysis complete in 0.08s`. Nada que corregir.
+
 ## Comandos
 
-Los resultados de esta corrida están en el cuerpo del PR. Cada uno tiene que salir 0.
+Los resultados de guard, ruff, mypy, flake8 y pytest están en el cuerpo del PR. Cada uno salió 0.
