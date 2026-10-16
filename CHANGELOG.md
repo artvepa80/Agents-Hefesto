@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Chinese and Japanese READMEs.** `README.zh-CN.md` and `README.ja.md` are short translations of `README.md` (install, quick start, GitHub Action, MCP, languages, plans). `README.md` stays the reference and links to both at the top.
 - **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, `python -m flake8 hefesto tests`, and a dogfood step, `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`.
 - **Handoff:** `docs/worklog/2026-10-16-prepush-ruff-mypy.md`.
 - **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
