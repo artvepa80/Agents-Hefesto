@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "hefestoai": {
+      "url": "https://hefestoai.narapallc.com/api/mcp-protocol"
+    }
+  }
+}

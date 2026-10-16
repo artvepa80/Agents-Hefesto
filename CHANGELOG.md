@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cursor agents dogfood HefestoAI.** `.cursor/mcp.json` registers the hosted `hefestoai` MCP server (`https://hefestoai.narapallc.com/api/mcp-protocol`, Streamable HTTP, no auth). `.cursor/rules/hefesto-dogfood.mdc` (`alwaysApply: true`) tells Cursor agents to run `analyze` on every changed file, fix HIGH/CRITICAL findings or explain false positives, and report the result in the PR body. Above 5 files, or when the MCP is unavailable, the rule uses `HEFESTO_TELEMETRY=0 hefesto analyze` because the hosted MCP allows 10 calls per minute. Cursor documents project `mcp.json` for the editor; cloud agents get MCP servers from the dashboard (cursor.com/agents MCP dropdown or Dashboard > Plugins & MCPs), so the CLI fallback covers cloud runs where the server is not added there.
+
 ### Fixed
 
 - **mypy `no-redef` on the optional Black import.** `FormatDriftChecker` no longer writes `import black as black_module` over the constructor parameter. Black is loaded with `importlib.import_module` inside `try/except ImportError`. That function is annotated as returning `types.ModuleType`, so the name is not defined twice. A missing install still raises `ImportError`. Tests cover the injected module, the real import, and the missing-import path.
