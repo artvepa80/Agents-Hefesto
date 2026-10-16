@@ -1,0 +1,9 @@
+pipeline {
+  stages {
+    stage('install') {
+      steps {
+        sh 'curl -fsSL https://example.invalid/install.sh | bash'
+      }
+    }
+  }
+}

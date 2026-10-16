@@ -10,6 +10,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Tuple
 
+from hefesto.core.languages.content_classify import refine_language
 from hefesto.core.languages.specs import LANGUAGE_SPECS, Language, LanguageSpec, ProviderRef
 
 
@@ -45,9 +46,13 @@ class LanguageRegistry:
                     continue
 
                 # Simple extension glob like "*.py" (single dot after *)
+                # First registration owns the extension. ARM also lists
+                # "*.json"; JSON is registered first and content sniffing
+                # selects ARM or CloudFormation afterwards.
                 if g.startswith("*.") and g.count(".") == 1:
                     ext = g[1:]  # ".py"
-                    self._by_extension[ext] = spec.language
+                    if ext not in self._by_extension:
+                        self._by_extension[ext] = spec.language
                     continue
 
                 # Otherwise treat as glob (*.tf.json, Dockerfile.*, *.Dockerfile)
@@ -75,32 +80,39 @@ class LanguageRegistry:
 
         Detection order:
         1. Exact filename match (Dockerfile, Makefile, etc.)
-        2. Extension match
-        3. Shebang detection (if content provided)
+        2. Glob match (*.tf.json, Dockerfile.*, values-*.yaml)
+        3. Extension match
+        4. Shebang detection (if content provided)
+        5. Content sniffing when several formats share a suffix
         """
         filename = file_path.name.lower()
         suffix = file_path.suffix.lower()
+        guessed = Language.UNKNOWN
 
         if filename in self._by_filename:
-            return self._by_filename[filename]
+            guessed = self._by_filename[filename]
+        else:
+            # Wildcards (Dockerfile.*, *.Dockerfile, *.tf.json, etc.)
+            for pattern, lang in self._glob_patterns:
+                if fnmatch(filename, pattern):
+                    guessed = lang
+                    break
 
-        # Wildcards (Dockerfile.*, *.Dockerfile, *.tf.json, etc.)
-        for pattern, lang in self._glob_patterns:
-            if fnmatch(filename, pattern):
-                return lang
+        if guessed == Language.UNKNOWN and suffix in self._by_extension:
+            guessed = self._by_extension[suffix]
 
-        if suffix in self._by_extension:
-            return self._by_extension[suffix]
-
-        if content and self._shebang_languages:
+        if guessed == Language.UNKNOWN and content and self._shebang_languages:
             first_line = content.split("\n", 1)[0].strip()
             if first_line.startswith("#!"):
                 for spec in self._shebang_languages:
                     for shebang in spec.shebang_patterns:
                         if first_line.startswith(shebang):
-                            return spec.language
+                            guessed = spec.language
+                            break
 
-        return Language.UNKNOWN
+        if guessed == Language.UNKNOWN and content is None:
+            return Language.UNKNOWN
+        return refine_language(guessed, file_path, content)
 
     def is_supported(self, file_path: Path, content: Optional[str] = None) -> bool:
         """Check if file language is supported."""

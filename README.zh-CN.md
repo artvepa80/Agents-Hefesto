@@ -6,7 +6,7 @@
 
 HefestoAI 在 AI 助手写完代码之后、代码发布之前运行。它检查项目所声明的内容（依赖、配置、安装产物）是否与实际行为一致，并对代码本身执行安全和复杂度检查。
 
-开源（MIT），支持 Python 3.10+。软件包提供 22 种格式的分析器（7 种代码语言 + 11 种 DevOps 格式 + 4 种云格式）；在 v4.19.0 中，`hefesto analyze` 实际运行其中 13 种。
+开源（MIT），支持 Python 3.10+。软件包提供 22 种格式的分析器（7 种代码语言 + 11 种 DevOps 格式 + 4 种云格式）；`hefesto analyze` 会运行全部 22 种。
 
 ## 安装
 
@@ -74,7 +74,7 @@ MCP 端点：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0�
 ## 支持的语言
 
 - 代码：Python（原生 AST，完整支持）、TypeScript、JavaScript、Java、Go、Rust、C#（TreeSitter，需要 `[multilang]`）
-- `hefesto analyze` 运行的 DevOps 格式：YAML、Terraform、Shell、Dockerfile、SQL、COBOL（16 条免费规则，COBOL001–COBOL016）
+- `hefesto analyze` 运行的 DevOps 与云格式：YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL（16 条免费规则，COBOL001–COBOL016）、CloudFormation、ARM、Helm、Serverless。后缀重叠时的优先级见 [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md)。
 
 ## 价格
 

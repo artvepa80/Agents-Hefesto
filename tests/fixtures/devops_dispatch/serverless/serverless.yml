@@ -1,0 +1,5 @@
+service: demo
+provider:
+  name: aws
+  environment:
+    api_key: "super-secret-value"

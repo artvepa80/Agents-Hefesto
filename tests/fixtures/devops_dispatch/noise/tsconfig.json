@@ -1,0 +1,8 @@
+{
+  // tsconfig allows comments; RFC 8259 does not
+  "compilerOptions": {
+    "strict": true
+  },
+  "author": "Ada Lovelace",
+  "api_key": "sk-tsconfig-secret"
+}

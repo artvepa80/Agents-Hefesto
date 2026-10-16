@@ -4,7 +4,8 @@ The agent card is served twice: from this repo (.well-known/agent-card.json)
 and by the landing (private repo, landing-page/api/agent-card.js). The private
 repo's tests/landing_js/agent-card-parity.test.mjs deep-compares its card with
 this file on main, so change both together. CANONICAL_DESCRIPTION is pinned
-here and in that private test.
+here and in that private test. This PR cannot edit the private repo: the
+landing card must pick up "runs all 22" or that parity test fails.
 """
 
 import json
@@ -20,7 +21,7 @@ CANONICAL_DESCRIPTION = (
     "Release truth engine for AI-generated code. Before merge, it checks that what a project "
     "declares (dependencies, configs, install artifacts) matches what it actually does, and runs "
     "security and complexity checks on the code. Analyzers for 22 formats (7 code languages + 15 "
-    "DevOps/IaC); hefesto analyze runs 13 of them today."
+    "DevOps/IaC); hefesto analyze runs all 22 of them."
 )
 
 # Retired or unverified claims (2026-10-10, Path Y).
@@ -46,7 +47,7 @@ def test_card_description_is_canonical():
 def test_card_figures_are_the_verified_ones():
     text = json.dumps(CARD)
     assert "22 formats" in text
-    assert "hefesto analyze runs 13" in text
+    assert "hefesto analyze runs all 22" in text
     assert "7 code languages + 15" in CANONICAL_DESCRIPTION
 
 
