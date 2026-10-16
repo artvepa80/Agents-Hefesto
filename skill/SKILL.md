@@ -53,11 +53,11 @@ Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
 ## Architecture (short)
 
-**Phase 0 — static** (always): complexity, smells, security, best practices, resource safety; plus YAML/Shell/Dockerfile/Terraform/SQL analyzers.
+**Phase 0 — static** (always): complexity, smells, security, best practices, resource safety; plus the DevOps and cloud analyzers `hefesto analyze` runs (YAML, Shell, Dockerfile, Terraform, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm, Serverless).
 
 **Phase 1 — ML semantic** (PRO/OMEGA): embeddings when `HEFESTO_TIER=professional` or `omega`.
 
-Languages: Python, JS/TS, Java, Go, Rust, C/C++, YAML, Shell, Dockerfile, Terraform/HCL, SQL, PowerShell.
+Languages: Python, JS/TS, Java, Go, Rust, C#, YAML, Shell, Dockerfile, Terraform/HCL, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, Serverless.
 
 ## MCP (optional)
 

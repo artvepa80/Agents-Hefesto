@@ -26,6 +26,18 @@ class TestJ001HardcodedSecrets:
         issues = analyzer.analyze("config.json", content)
         assert any(i.rule_id == "J001" for i in issues)
 
+    def test_author_and_dependency_names_are_not_secrets(self, analyzer):
+        """``author`` is not ``auth``, and a package name is not a credential."""
+        content = (
+            '{"author": "Ada", "author_email": "ada@example.com",'
+            ' "dependencies": {"@aws-sdk/credential-providers": "3.0.0"},'
+            ' "api_key": "sk-1234567890"}'
+        )
+        issues = analyzer.analyze("package.json", content)
+        secrets = [i for i in issues if i.rule_id == "J001"]
+        assert len(secrets) == 1
+        assert "api_key" in secrets[0].message
+
     def test_token_detected(self, analyzer):
         """Hardcoded token should trigger J001."""
         content = '{"auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"}'

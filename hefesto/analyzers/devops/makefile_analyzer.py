@@ -192,6 +192,36 @@ class MakefileAnalyzer:
             metadata={"line_content": line_content},
         )
 
+    @staticmethod
+    def _mask_quoted(line: str) -> str:
+        """Replace characters inside single or double quotes with spaces.
+
+        The result has the same length, so a match column still points at the
+        recipe line. Backslash escapes count only inside double quotes.
+        """
+        chars = list(line)
+        index = 0
+        length = len(chars)
+        while index < length:
+            if chars[index] not in ("'", '"'):
+                index += 1
+                continue
+            quote = chars[index]
+            index += 1
+            while index < length:
+                current = chars[index]
+                if quote == '"' and current == "\\" and index + 1 < length:
+                    chars[index] = " "
+                    chars[index + 1] = " "
+                    index += 2
+                    continue
+                if current == quote:
+                    break
+                chars[index] = " "
+                index += 1
+            index += 1
+        return "".join(chars)
+
     def analyze(self, file_path: str, content: str) -> List[AnalysisIssue]:
         """
         Analyze Makefile content. Only scans recipe lines (TAB-prefixed).
@@ -233,9 +263,10 @@ class MakefileAnalyzer:
             if stripped.startswith("#"):
                 continue
 
-            scan_line = line
-
             for pattern, msg, confidence, severity, rule_id in self.all_patterns:
+                # MF002 is a recipe that runs curl|sh. Text inside quotes is
+                # an echo of that command, not the command itself.
+                scan_line = self._mask_quoted(line) if rule_id == "MF002" else line
                 for m in pattern.finditer(scan_line):
                     col = m.start() + 1
 

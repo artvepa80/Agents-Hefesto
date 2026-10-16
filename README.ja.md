@@ -6,7 +6,7 @@
 
 HefestoAI は、AI アシスタントがコードを書いた後、そのコードが出荷される前に実行されます。プロジェクトが宣言している内容（依存関係、設定、インストール成果物）が実際の動作と一致しているかを確認し、コード自体のセキュリティと複雑度もチェックします。
 
-オープンソース（MIT）、Python 3.10 以上。パッケージには 22 フォーマットのアナライザー（コード言語 7 + DevOps フォーマット 11 + クラウドフォーマット 4）が含まれ、v4.19.0 の `hefesto analyze` はそのうち 13 を実行します。
+オープンソース（MIT）、Python 3.10 以上。パッケージには 22 フォーマットのアナライザー（コード言語 7 + DevOps フォーマット 11 + クラウドフォーマット 4）が含まれ、`hefesto analyze` は 22 すべてを実行します。
 
 ## インストール
 
@@ -74,7 +74,7 @@ MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`�
 ## 対応言語
 
 - コード：Python（ネイティブ AST、フルサポート）、TypeScript、JavaScript、Java、Go、Rust、C#（TreeSitter、`[multilang]` が必要）
-- `hefesto analyze` が実行する DevOps フォーマット：YAML、Terraform、Shell、Dockerfile、SQL、COBOL（無料ルール 16 個、COBOL001–COBOL016）
+- `hefesto analyze` が実行する DevOps / クラウドフォーマット：YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL（無料ルール 16 個、COBOL001–COBOL016）、CloudFormation、ARM、Helm、Serverless。接尾辞が重なるときの優先順位は [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md)。
 
 ## 料金
 

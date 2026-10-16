@@ -3,6 +3,8 @@ Language detection from file extensions, filenames, and shebangs.
 
 v4.4.0: Now uses LanguageRegistry for unified language support including
 Ola 1 DevOps languages (YAML, Terraform, Shell, Dockerfile, SQL).
+Content classification picks ARM, CloudFormation, Helm, and Serverless
+when a suffix is shared. See docs/design/devops-analyzers-wiring.md.
 
 Copyright 2025 Narapa LLC, Miami, Florida
 """
@@ -38,8 +40,10 @@ class LanguageDetector:
 
         Detection priority:
         1. Exact filename match (Dockerfile, Makefile, etc.)
-        2. Extension match (.py, .ts, .yml, etc.)
-        3. Shebang detection for shell scripts (if content provided)
+        2. Glob match (*.tf.json, Dockerfile.*, values-*.yaml)
+        3. Extension match (.py, .ts, .yml, etc.)
+        4. Shebang detection for shell scripts (if content provided)
+        5. Content classification when several formats share a suffix
 
         Args:
             file_path: Path to the file

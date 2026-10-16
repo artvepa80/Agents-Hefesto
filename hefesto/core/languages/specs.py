@@ -34,6 +34,17 @@ class Language(Enum):
     # Legacy languages (v4.12.0)
     COBOL = "cobol"
 
+    # Ola 2 / cloud formats dispatched by the engine (v4.20.0)
+    POWERSHELL = "powershell"
+    JSON = "json"
+    TOML = "toml"
+    MAKEFILE = "makefile"
+    GROOVY = "groovy"
+    CLOUDFORMATION = "cloudformation"
+    ARM = "arm"
+    HELM = "helm"
+    SERVERLESS = "serverless"
+
     UNKNOWN = "unknown"
 
 
@@ -204,6 +215,71 @@ LANGUAGE_SPECS: List[LanguageSpec] = [
         internal_analyzers=["cobol_governance"],
         providers=[],
         tier_required="FREE",
+    ),
+    # Formats that already had analyzers. Globs discover files; content
+    # classification in content_classify.py breaks suffix ties.
+    LanguageSpec(
+        language=Language.POWERSHELL,
+        display_name="PowerShell",
+        file_globs=["*.ps1", "*.psm1", "*.psd1"],
+        parser_type="powershell",
+        internal_analyzers=["powershell_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.JSON,
+        display_name="JSON",
+        file_globs=["*.json"],
+        parser_type="json",
+        internal_analyzers=["json_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.TOML,
+        display_name="TOML",
+        file_globs=["*.toml"],
+        parser_type="toml",
+        internal_analyzers=["toml_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.MAKEFILE,
+        display_name="Makefile",
+        file_globs=["Makefile", "makefile", "GNUmakefile", "*.mk"],
+        parser_type="makefile",
+        internal_analyzers=["makefile_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.GROOVY,
+        display_name="Groovy/Jenkins",
+        file_globs=["Jenkinsfile", "*.groovy"],
+        parser_type="groovy",
+        internal_analyzers=["groovy_jenkins_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.CLOUDFORMATION,
+        display_name="CloudFormation",
+        file_globs=["*.cfn.json", "*.cfn.yaml", "*.cfn.yml"],
+        parser_type="cloudformation",
+        internal_analyzers=["cloudformation_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.ARM,
+        display_name="ARM",
+        file_globs=["*.json"],
+        parser_type="arm",
+        internal_analyzers=["arm_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.HELM,
+        display_name="Helm",
+        file_globs=["values.yaml", "values.yml", "values-*.yaml", "values-*.yml"],
+        parser_type="helm",
+        internal_analyzers=["helm_analyzer"],
+    ),
+    LanguageSpec(
+        language=Language.SERVERLESS,
+        display_name="Serverless",
+        file_globs=["serverless.yml", "serverless.yaml"],
+        parser_type="serverless",
+        internal_analyzers=["serverless_analyzer"],
     ),
 ]
 

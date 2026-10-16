@@ -58,7 +58,7 @@ coverage:
         display: Makefile
         status: GA
         analyzer_module: hefesto.analyzers.devops.makefile_analyzer
-        file_globs: ["Makefile", "**/Makefile"]
+        file_globs: ["Makefile", "makefile", "GNUmakefile", "**/*.mk"]
       - id: powershell
         display: PowerShell
         status: GA
@@ -78,7 +78,7 @@ coverage:
         display: Terraform
         status: GA
         analyzer_module: hefesto.analyzers.devops.terraform_analyzer
-        file_globs: ["**/*.tf", "**/*.tfvars"]
+        file_globs: ["**/*.tf", "**/*.tfvars", "**/*.tf.json"]
       - id: toml
         display: TOML
         status: GA
@@ -103,22 +103,26 @@ coverage:
         display: CloudFormation
         status: GA
         analyzer_module: hefesto.analyzers.cloud.cloudformation
-        file_globs: ["**/*.yaml", "**/*.json"]
+        file_globs: ["**/*.json", "**/*.yml", "**/*.yaml", "**/*.cfn.json", "**/*.cfn.yaml", "**/*.cfn.yml"]
+        notes: "Dispatched when the file has AWSTemplateFormatVersion or a Resources object whose Type starts with AWS::. See docs/design/devops-analyzers-wiring.md."
       - id: arm
         display: ARM Templates
         status: GA
         analyzer_module: hefesto.analyzers.cloud.arm
         file_globs: ["**/*.json"]
+        notes: "Dispatched when $schema contains deploymentTemplate.json. *.tf.json stays Terraform."
       - id: helm
         display: Helm Charts
         status: GA
         analyzer_module: hefesto.analyzers.cloud.helm
-        file_globs: ["**/Chart.yaml", "**/values.yaml"]
+        file_globs: ["values.yaml", "values.yml", "values-*.yaml", "values-*.yml"]
+        notes: "Dispatched only when Chart.yaml is in the same directory. Chart.yaml and templates/ stay YAML."
       - id: serverless
         display: Serverless Framework
         status: GA
         analyzer_module: hefesto.analyzers.cloud.serverless
-        file_globs: ["serverless.yml"]
+        file_globs: ["serverless.yml", "serverless.yaml"]
+        notes: "Dispatched when the file is one mapping with service or provider and it is not CloudFormation."
 
   # Convenience rollup (used for badges, README display, etc.)
   totals:
@@ -181,7 +185,7 @@ release_policy:
 
 roadmap:
   ola4_cloud_formats:
-    status: PLANNED
+    status: SHIPPED
     items:
       - cloudformation
       - helm

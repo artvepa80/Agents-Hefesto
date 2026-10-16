@@ -8,6 +8,7 @@ Part of Ola 2 DevOps language support.
 import re
 from typing import Any, List, Optional, Tuple
 
+from hefesto.analyzers.devops.key_match import DEPENDENCY_MAP_KEYS, key_has_pattern
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -128,6 +129,7 @@ class TomlAnalyzer:
         content: str,
         path: str = "",
         issues: Optional[List[AnalysisIssue]] = None,
+        skip_keys: bool = False,
     ) -> List[AnalysisIssue]:
         """Recursively check for hardcoded secrets (T001)."""
         if issues is None:
@@ -135,8 +137,10 @@ class TomlAnalyzer:
 
         if isinstance(data, dict):
             for key, value in data.items():
-                key_lower = str(key).lower()
-                is_secret_key = any(p in key_lower for p in self.SECRET_KEY_PATTERNS)
+                child_skip = str(key).lower() in DEPENDENCY_MAP_KEYS
+                is_secret_key = (not skip_keys) and key_has_pattern(
+                    str(key), self.SECRET_KEY_PATTERNS
+                )
 
                 if is_secret_key and isinstance(value, str) and value:
                     # Skip environment variable references
@@ -165,11 +169,11 @@ class TomlAnalyzer:
                     )
 
                 # Recurse into nested structures
-                self._check_secrets(value, file_path, content, path, issues)
+                self._check_secrets(value, file_path, content, path, issues, child_skip)
 
         elif isinstance(data, list):
             for item in data:
-                self._check_secrets(item, file_path, content, path, issues)
+                self._check_secrets(item, file_path, content, path, issues, False)
 
         return issues
 
@@ -179,6 +183,7 @@ class TomlAnalyzer:
         file_path: str,
         content: str,
         issues: Optional[List[AnalysisIssue]] = None,
+        skip_keys: bool = False,
     ) -> List[AnalysisIssue]:
         """Check for insecure HTTP URLs (T003)."""
         if issues is None:
@@ -186,8 +191,8 @@ class TomlAnalyzer:
 
         if isinstance(data, dict):
             for key, value in data.items():
-                key_lower = str(key).lower()
-                is_url_key = any(p in key_lower for p in self.INSECURE_URL_KEYS)
+                child_skip = str(key).lower() in DEPENDENCY_MAP_KEYS
+                is_url_key = (not skip_keys) and key_has_pattern(str(key), self.INSECURE_URL_KEYS)
 
                 if is_url_key and isinstance(value, str):
                     is_local = any(h in value for h in self.LOCAL_HOSTS)
@@ -209,11 +214,11 @@ class TomlAnalyzer:
                         )
 
                 # Recurse
-                self._check_insecure_urls(value, file_path, content, issues)
+                self._check_insecure_urls(value, file_path, content, issues, child_skip)
 
         elif isinstance(data, list):
             for item in data:
-                self._check_insecure_urls(item, file_path, content, issues)
+                self._check_insecure_urls(item, file_path, content, issues, False)
 
         return issues
 

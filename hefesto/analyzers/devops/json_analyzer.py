@@ -9,6 +9,7 @@ import json
 import re
 from typing import Any, List, Optional, Tuple
 
+from hefesto.analyzers.devops.key_match import DEPENDENCY_MAP_KEYS, key_has_pattern
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -121,6 +122,7 @@ class JsonAnalyzer:
         content: str,
         path: str = "",
         issues: Optional[List[AnalysisIssue]] = None,
+        skip_keys: bool = False,
     ) -> List[AnalysisIssue]:
         """Recursively check for hardcoded secrets (J001)."""
         if issues is None:
@@ -129,10 +131,13 @@ class JsonAnalyzer:
         if isinstance(data, dict):
             for key, value in data.items():
                 current_path = f"{path}.{key}" if path else key
-                key_lower = key.lower()
+                child_skip = str(key).lower() in DEPENDENCY_MAP_KEYS
 
-                # Check if key suggests a secret
-                is_secret_key = any(pattern in key_lower for pattern in self.SECRET_KEY_PATTERNS)
+                # Check if key suggests a secret. Dependency-map children are
+                # package names, so their keys are not secret names.
+                is_secret_key = (not skip_keys) and key_has_pattern(
+                    str(key), self.SECRET_KEY_PATTERNS
+                )
 
                 if is_secret_key and isinstance(value, str) and len(value) > 0:
                     # Skip environment variable references
@@ -165,11 +170,11 @@ class JsonAnalyzer:
                     )
 
                 # Recurse into nested structures
-                self._check_secrets(data[key], file_path, content, current_path, issues)
+                self._check_secrets(data[key], file_path, content, current_path, issues, child_skip)
 
         elif isinstance(data, list):
             for i, item in enumerate(data):
-                self._check_secrets(item, file_path, content, f"{path}[{i}]", issues)
+                self._check_secrets(item, file_path, content, f"{path}[{i}]", issues, False)
 
         return issues
 
@@ -180,6 +185,7 @@ class JsonAnalyzer:
         content: str,
         path: str = "",
         issues: Optional[List[AnalysisIssue]] = None,
+        skip_keys: bool = False,
     ) -> List[AnalysisIssue]:
         """Check for insecure HTTP URLs (J002)."""
         if issues is None:
@@ -188,10 +194,10 @@ class JsonAnalyzer:
         if isinstance(data, dict):
             for key, value in data.items():
                 current_path = f"{path}.{key}" if path else key
-                key_lower = key.lower()
+                child_skip = str(key).lower() in DEPENDENCY_MAP_KEYS
 
                 # Check if key suggests a URL field
-                is_url_key = any(pattern in key_lower for pattern in self.INSECURE_URL_KEYS)
+                is_url_key = (not skip_keys) and key_has_pattern(str(key), self.INSECURE_URL_KEYS)
 
                 if is_url_key and isinstance(value, str):
                     if value.startswith("http://") and "localhost" not in value:
@@ -215,11 +221,13 @@ class JsonAnalyzer:
                         )
 
                 # Recurse
-                self._check_insecure_urls(data[key], file_path, content, current_path, issues)
+                self._check_insecure_urls(
+                    data[key], file_path, content, current_path, issues, child_skip
+                )
 
         elif isinstance(data, list):
             for i, item in enumerate(data):
-                self._check_insecure_urls(item, file_path, content, f"{path}[{i}]", issues)
+                self._check_insecure_urls(item, file_path, content, f"{path}[{i}]", issues, False)
 
         return issues
 

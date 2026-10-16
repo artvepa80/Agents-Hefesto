@@ -52,7 +52,53 @@ DEFAULT_EXCLUDES = [
     ".pytest_cache/",
     ".eggs/",
     ".egg-info/",
+    # Generated lockfiles. A directory walk skips the filename. Naming the
+    # file on the command line still analyzes it (the single-file branch
+    # does not apply these patterns).
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "composer.lock",
+    "poetry.lock",
+    "Cargo.lock",
+    "uv.lock",
+    "Pipfile.lock",
+    "packages.lock.json",
+    "flake.lock",
+    "deno.lock",
+    "bun.lock",
 ]
+
+# Analyzers that take (path, content) and return AnalysisIssue.
+_TEXT_ANALYZERS = {
+    Language.POWERSHELL: (
+        "hefesto.analyzers.devops.powershell_analyzer",
+        "PowerShellAnalyzer",
+    ),
+    Language.JSON: ("hefesto.analyzers.devops.json_analyzer", "JsonAnalyzer"),
+    Language.TOML: ("hefesto.analyzers.devops.toml_analyzer", "TomlAnalyzer"),
+    Language.MAKEFILE: (
+        "hefesto.analyzers.devops.makefile_analyzer",
+        "MakefileAnalyzer",
+    ),
+    Language.GROOVY: (
+        "hefesto.analyzers.devops.groovy_jenkins_analyzer",
+        "GroovyJenkinsAnalyzer",
+    ),
+}
+
+# Cloud analyzers take (content, path) and return CloudFinding.
+_CLOUD_ANALYZERS = {
+    Language.CLOUDFORMATION: (
+        "hefesto.analyzers.cloud.cloudformation",
+        "CloudFormationAnalyzer",
+    ),
+    Language.ARM: ("hefesto.analyzers.cloud.arm", "ArmAnalyzer"),
+    Language.HELM: ("hefesto.analyzers.cloud.helm", "HelmAnalyzer"),
+    Language.SERVERLESS: (
+        "hefesto.analyzers.cloud.serverless",
+        "ServerlessAnalyzer",
+    ),
+}
 
 
 def _pattern_parts(pattern: str) -> Tuple[List[str], bool]:
@@ -672,6 +718,10 @@ class AnalyzerEngine:
                     metadata=cobol_meta,
                 )
 
+            dispatched = self._analyze_dispatched(language, file_path, code, loc, start_time)
+            if dispatched is not None:
+                return dispatched
+
             try:
                 parser = ParserFactory.get_parser(language)
                 tree = parser.parse(code, str(file_path))
@@ -762,6 +812,44 @@ class AnalyzerEngine:
                 synthetic[issue.file_path] = target
                 file_results.append(target)
             target.issues.append(issue)
+
+    def _analyze_dispatched(
+        self,
+        language: Language,
+        file_path: Path,
+        code: str,
+        loc: int,
+        start_time: float,
+    ) -> Optional[FileAnalysisResult]:
+        """Run a text or cloud analyzer. ``None`` means this language is not one of them.
+
+        A supported file with zero findings still returns a result, so a clean
+        ``tsconfig.json`` counts as analyzed.
+        """
+        import importlib
+
+        text = _TEXT_ANALYZERS.get(language)
+        cloud = _CLOUD_ANALYZERS.get(language)
+        if text is not None:
+            module_name, class_name = text
+            analyzer = getattr(importlib.import_module(module_name), class_name)()
+            issues = analyzer.analyze(str(file_path), code)
+        elif cloud is not None:
+            module_name, class_name = cloud
+            analyzer = getattr(importlib.import_module(module_name), class_name)()
+            from hefesto.analyzers.cloud.adapt import cloud_findings_to_issues
+
+            issues = cloud_findings_to_issues(analyzer.analyze(code, str(file_path)))
+        else:
+            return None
+        duration_ms = (time.time() - start_time) * 1000
+        return FileAnalysisResult(
+            file_path=str(file_path),
+            issues=self._filter_by_severity(issues),
+            lines_of_code=loc,
+            analysis_duration_ms=duration_ms,
+            language=language.value,
+        )
 
     def _filter_by_severity(self, issues: List[AnalysisIssue]) -> List[AnalysisIssue]:
         """Filter issues by severity threshold."""

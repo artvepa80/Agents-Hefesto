@@ -1,0 +1,8 @@
+{
+  "name": "demo",
+  "author": "Ada Lovelace",
+  "dependencies": {
+    "@aws-sdk/credential-providers": "3.0.0"
+  },
+  "api_key": "sk-real-secret"
+}

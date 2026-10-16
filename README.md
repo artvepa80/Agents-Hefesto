@@ -35,7 +35,7 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.19.0` or a commit SHA. The Action analyzes Python, YAML, Terraform, Shell, Dockerfile, SQL and COBOL plus the drift checks; TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.19.0` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/mo) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
@@ -260,34 +260,32 @@ pointing to the install command (also exposed via
 
 ### DevOps & Configuration
 
-| Format | Analyzer | Rules | Status | Run by `hefesto analyze`² |
+| Format | Analyzer | Rules | Status | Run by `hefesto analyze` |
 |--------|----------|-------|--------|---------------------------|
 | **YAML** | YamlAnalyzer | Generic YAML security | v4.4.0 | Yes |
 | **Terraform** | TerraformAnalyzer | TfSec-aligned rules | v4.4.0 | Yes |
 | **Shell** | ShellAnalyzer | ShellCheck-aligned | v4.4.0 | Yes |
 | **Dockerfile** | DockerfileAnalyzer | Hadolint-aligned | v4.4.0 | Yes |
 | **SQL** | SqlAnalyzer | SQL Injection prevention | v4.4.0 | Yes |
-| **PowerShell** | PS001-PS006 | 6 security rules | v4.5.0 | Not yet |
-| **JSON** | J001-J005 | 5 security rules | v4.5.0 | Not yet |
-| **TOML** | T001-T003 | 3 security rules | v4.5.0 | Not yet |
-| **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Not yet |
-| **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Not yet |
-| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL016 (16 free rules)³ | v4.12.0 | Yes |
+| **PowerShell** | PS001-PS006 | 6 security rules | v4.5.0 | Yes |
+| **JSON** | J001, J002, J004, J005 | 4 security rules | v4.5.0 | Yes |
+| **TOML** | T001-T003 | 3 security rules | v4.5.0 | Yes |
+| **Makefile** | MF001-MF005 | 5 security rules | v4.5.0 | Yes |
+| **Groovy** | GJ001-GJ005 | 5 security rules | v4.5.0 | Yes |
+| **COBOL** | CobolGovernanceAnalyzer | COBOL001-COBOL016 (16 free rules)² | v4.12.0 | Yes |
 
 ### Cloud Infrastructure
 
-| Format | Analyzer | Focus | Status | Run by `hefesto analyze`² |
+| Format | Analyzer | Focus | Status | Run by `hefesto analyze` |
 |--------|----------|-------|--------|---------------------------|
-| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | v4.7.0 | Not yet |
-| **ARM Templates** | ArmAnalyzer | Azure IaC Security | v4.7.0 | Not yet |
-| **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Not yet |
-| **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Not yet |
+| **CloudFormation** | CloudFormationAnalyzer | AWS IaC Security | v4.7.0 | Yes |
+| **ARM Templates** | ArmAnalyzer | Azure IaC Security | v4.7.0 | Yes |
+| **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Yes |
+| **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Yes |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). In v4.19.0, `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs 13 of them.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs all 22. When a suffix matches more than one format, the precedence table in [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md) chooses one analyzer.
 
-² The PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless analyzers are included and tested as modules, but the analysis engine does not route files to them yet, so these files are skipped by the CLI.
-
-³ COBOL: all 16 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009/COBOL016, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
+² COBOL: all 16 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009/COBOL016, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 
 COBOL details (source format, per-rule behaviour, COPY expansion, measured recall, performance, SARIF): [docs/cobol.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/cobol.md).
 
@@ -676,7 +674,7 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
 | **AI-generated code focus** | ✅ Primary use case | Generic | ✅ Yes | ✅ Yes | Generic |
 | **Declared-vs-real drift detection** | ✅ Core feature | ❌ | ❌ | ❌ | ❌ |
 | **Operational truth analyzers** | ✅ 5 analyzers | ❌ | ❌ | ❌ | ❌ |
-| **Languages supported** | 13 formats analyzed by the CLI (22 analyzers shipped; [details](#language-support)) | Many | Many | Many | Many |
+| **Languages supported** | 22 formats analyzed by the CLI ([details](#language-support)) | Many | Many | Many | Many |
 | **Setup time** | < 5 min, no config | Config-heavy | Cloud signup | Cloud signup | Cloud signup |
 | **Where it runs** | Local CLI / GitHub Action / pre-commit / MCP | Local / cloud | Cloud only | Cloud only | Cloud / CLI |
 | **Pricing (as of Oct 2026)** | Free OSS / $8/mo PRO / $19/mo OMEGA | Free tier / Teams $30/contributor/mo (Code)\* | Free for public repos / $24/dev/mo (annual) | Credit-based, $0.012/credit; no permanent free plan | Free / Team $25/mo\*\* |
