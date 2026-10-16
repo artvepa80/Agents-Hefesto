@@ -1,43 +1,69 @@
 {
   "name": "HefestoAI",
   "description": "Release truth engine for AI-generated code. Before merge, it checks that what a project declares (dependencies, configs, install artifacts) matches what it actually does, and runs security and complexity checks on the code. Analyzers for 22 formats (7 code languages + 15 DevOps/IaC); hefesto analyze runs 13 of them today.",
-  "url": "https://hefestoai.narapallc.com",
   "version": "4.19.0",
+  "supportedInterfaces": [
+    {
+      "url": "https://hefestoai.narapallc.com/api/mcp-protocol",
+      "protocolBinding": "MCP",
+      "protocolVersion": "2025-11-25"
+    }
+  ],
   "provider": {
     "organization": "Narapa LLC",
     "url": "https://narapallc.com"
   },
+  "documentationUrl": "https://github.com/artvepa80/Agents-Hefesto#readme",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false
   },
+  "defaultInputModes": [
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "application/json"
+  ],
   "skills": [
     {
       "id": "analyze",
-      "name": "Code Analysis",
-      "description": "Analyze code files or directories with the local hefesto CLI (hefesto analyze) for security vulnerabilities, complexity issues, semantic drift, and code smells. The package ships analyzers for 22 formats (Python, TypeScript, JavaScript, Java, Go, Rust, C#, plus 15 DevOps and Cloud IaC formats including COBOL); hefesto analyze runs 13 of them today.",
-      "inputModes": ["text/plain", "application/json"],
-      "outputModes": ["application/json", "text/plain", "text/html"]
+      "name": "Analyze code",
+      "description": "MCP tool analyze: runs the open-source hefesto-ai engine (hefesto analyze --no-config, free tier) on the files you send and returns findings with rule id, severity, file, line, message and SARIF fingerprint. Limits: 20 files, 100 KB per file, 256 KB in total, 20 seconds, 10 requests per minute per IP. Nothing is stored. For a whole repository, run hefesto analyze . locally.",
+      "tags": [
+        "code-analysis",
+        "security",
+        "sarif",
+        "ci",
+        "ai-generated-code"
+      ],
+      "examples": [
+        "Analyze this Python file for hardcoded secrets and unsafe pickle use."
+      ]
     },
     {
-      "id": "security-scan",
-      "name": "Security Scanning",
-      "description": "Detect HARDCODED_SECRET, SQL_INJECTION_RISK, COMMAND_INJECTION, PICKLE_USAGE and other security vulnerabilities.",
-      "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "id": "install",
+      "name": "Install",
+      "description": "MCP tool install: returns the install commands for the open-source package (pip install hefesto-ai, Python 3.10+). Installs nothing.",
+      "tags": [
+        "install",
+        "pip"
+      ]
     },
     {
-      "id": "semantic-drift",
-      "name": "Semantic Drift Detection",
-      "description": "Detect when AI-generated code deviates from intended behavior. Validates that code does what the prompt asked for.",
-      "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "id": "pricing",
+      "name": "Pricing",
+      "description": "MCP tool pricing: returns current prices (Free $0, PRO: $8/month, OMEGA: $19/month). Static text.",
+      "tags": [
+        "pricing"
+      ]
+    },
+    {
+      "id": "compare",
+      "name": "Compare tools",
+      "description": "MCP tool compare: returns a short static comparison with sonarqube, snyk, github-advanced-security, semgrep or claude-code-security. No live lookup; no code is inspected.",
+      "tags": [
+        "comparison"
+      ]
     }
-  ],
-  "authentication": {
-    "schemes": ["apiKey"],
-    "credentials": "Set HEFESTO_API_KEY environment variable or X-API-Key header"
-  },
-  "defaultInputModes": ["text/plain"],
-  "defaultOutputModes": ["application/json"]
+  ]
 }

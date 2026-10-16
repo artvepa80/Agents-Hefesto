@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Agent card follows A2A v1.0 required fields.** `.well-known/agent-card.json` adds `supportedInterfaces` (the MCP endpoint `https://hefestoai.narapallc.com/api/mcp-protocol`, `protocolBinding` `MCP`, which the spec allows as an open-form binding; protocol 2025-11-25) and `documentationUrl`. `skills` now list the four MCP tools (`analyze`, `install`, `pricing`, `compare`) with `tags`. The `authentication` block (API key) and top-level `url` are removed: the MCP endpoint needs no key, and A2A v1.0 has no top-level `url`. Spec: https://a2a-protocol.org/latest/specification/ (4.4.1, 4.4.5, 4.4.6).
 - **Chinese and Japanese READMEs.** `README.zh-CN.md` and `README.ja.md` are short translations of `README.md` (install, quick start, GitHub Action, MCP, languages, plans). `README.md` stays the reference and links to both at the top.
 - **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, `python -m flake8 hefesto tests`, and a dogfood step, `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`.
 - **Handoff:** `docs/worklog/2026-10-16-prepush-ruff-mypy.md`.
