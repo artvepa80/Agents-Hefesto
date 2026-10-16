@@ -13,7 +13,7 @@ Assumptions, stated so they can be checked:
 - A file is analyzed by one language, not by every analyzer whose suffix matches.
 - Directory walks keep today's default directory excludes (`node_modules/`, `.git/`, virtualenvs, build output). New excludes are filenames of generated lockfiles only.
 - A path the user names on the command line is still analyzed even when a directory walk would skip that filename. That is the same rule vendored JavaScript already uses.
-- The package version stays 4.19.0. This change is the unreleased 4.20.0 work.
+- Shipped in 4.20.0 (the change was merged as unreleased work on 4.19.0, PR #124).
 
 ## Invariants
 

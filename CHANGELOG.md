@@ -7,9 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [4.20.0] - 2026-10-16
 
-- **Cursor agents dogfood HefestoAI.** `.cursor/mcp.json` registers the hosted `hefestoai` MCP server (`https://hefestoai.narapallc.com/api/mcp-protocol`, Streamable HTTP, no auth). `.cursor/rules/hefesto-dogfood.mdc` (`alwaysApply: true`) tells Cursor agents to run `analyze` on every changed file, fix HIGH/CRITICAL findings or explain false positives, and report the result in the PR body. Above 5 files, or when the MCP is unavailable, the rule uses `HEFESTO_TELEMETRY=0 hefesto analyze` because the hosted MCP allows 10 calls per minute. Cursor documents project `mcp.json` for the editor; cloud agents get MCP servers from the dashboard (cursor.com/agents MCP dropdown or Dashboard > Plugins & MCPs), so the CLI fallback covers cloud runs where the server is not added there.
+### Upgrading from 4.19.0 (`@v4` users get this release automatically)
+
+- **`hefesto analyze` now runs nine more analyzers: PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, and Serverless.** Files that 4.19.0 skipped are analyzed now, so a run over the same tree can report new findings (for example J001/J002 in `*.json`, TOML secrets, Makefile MF002) and a `--fail-on` gate that passed on 4.19.0 can fail. The GitHub Action runs the same engine, so `@v4` workflows see this too.
+- **Some files change analyzer.** A `.json` or `.yaml` file can now be read as CloudFormation (`AWSTemplateFormatVersion`, or `Resources` with `AWS::` types), ARM (`$schema` with `deploymentTemplate.json`), Serverless (`serverless.yml` with `service` or `provider`), or Helm (`values.yaml` next to `Chart.yaml`). `*.tf.json` stays Terraform; `Chart.yaml` and `templates/` stay YAML.
+- **Generated lockfiles are skipped in directory walks** (`package-lock.json`, `composer.lock`, `poetry.lock`, `Cargo.lock`, and the other names in `DEFAULT_EXCLUDES`). Naming one on the command line still analyzes it.
+- **Fewer false positives in the new analyzers:** JSON and TOML secret keys match whole tokens (`author` and dependency names are not secrets), and MF002 ignores `curl | sh` inside quotes.
+- **No CLI flag, output format, or exit-code change.** To stay on the 4.19.0 file set, pin `@v4.19.0` (Action) or `hefesto-ai==4.19.0` (pip), or exclude the new paths.
 
 ### Fixed
 
@@ -17,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`hefesto analyze` runs the PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, and Serverless analyzers.** Each already shipped as a module. A `LanguageSpec` now has globs for it, and the engine dispatches the file to that analyzer. Shared suffixes are classified from the contents: `*.tf.json` stays Terraform; a JSON `$schema` containing `deploymentTemplate.json` is ARM; `AWSTemplateFormatVersion` or a `Resources` object with `Type` `AWS::` is CloudFormation; `serverless.yml` with `service` or `provider` is Serverless Framework; `values.yaml` next to `Chart.yaml` is Helm. `Chart.yaml` and `templates/` stay YAML. Directory walks skip generated lockfiles (`package-lock.json`, `composer.lock`, `poetry.lock`, `Cargo.lock`, and the other names in `DEFAULT_EXCLUDES`). Naming one of those files on the command line still analyzes it. JSON and TOML secret keys match whole tokens, so `author` and dependency names are not secrets. Makefile MF002 ignores `curl | sh` when that text is inside quotes. The precedence table, the pages it is based on, and the noise counts are in `docs/design/devops-analyzers-wiring.md`. The package version is unchanged.
+- **Cursor agents dogfood HefestoAI.** `.cursor/mcp.json` registers the hosted `hefestoai` MCP server (`https://hefestoai.narapallc.com/api/mcp-protocol`, Streamable HTTP, no auth). `.cursor/rules/hefesto-dogfood.mdc` (`alwaysApply: true`) tells Cursor agents to run `analyze` on every changed file, fix HIGH/CRITICAL findings or explain false positives, and report the result in the PR body. Above 5 files, or when the MCP is unavailable, the rule uses `HEFESTO_TELEMETRY=0 hefesto analyze` because the hosted MCP allows 10 calls per minute. Cursor documents project `mcp.json` for the editor; cloud agents get MCP servers from the dashboard (cursor.com/agents MCP dropdown or Dashboard > Plugins & MCPs), so the CLI fallback covers cloud runs where the server is not added there.
+
+- **`hefesto analyze` runs the PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, and Serverless analyzers.** Each already shipped as a module. A `LanguageSpec` now has globs for it, and the engine dispatches the file to that analyzer. Shared suffixes are classified from the contents: `*.tf.json` stays Terraform; a JSON `$schema` containing `deploymentTemplate.json` is ARM; `AWSTemplateFormatVersion` or a `Resources` object with `Type` `AWS::` is CloudFormation; `serverless.yml` with `service` or `provider` is Serverless Framework; `values.yaml` next to `Chart.yaml` is Helm. `Chart.yaml` and `templates/` stay YAML. Directory walks skip generated lockfiles (`package-lock.json`, `composer.lock`, `poetry.lock`, `Cargo.lock`, and the other names in `DEFAULT_EXCLUDES`). Naming one of those files on the command line still analyzes it. JSON and TOML secret keys match whole tokens, so `author` and dependency names are not secrets. Makefile MF002 ignores `curl | sh` when that text is inside quotes. The precedence table, the pages it is based on, and the noise counts are in `docs/design/devops-analyzers-wiring.md`.
 
 - **Ruff is configured to the same rules CI already runs with Flake8.** `[tool.ruff]` sets `line-length` 100 and `target-version` py310. `[tool.ruff.lint]` selects `E`, `W`, and `F`. The ignore list is the Flake8 default codes Ruff implements (`E226`, `E24`) plus `E203` from `.flake8`. Ruff does not implement Flake8's other default ignores (`E121`, `E123`, `E126`, `E704`, `W503`, `W504`), so those selectors are not listed. McCabe stays off, matching `.flake8` (no `max-complexity`). `extend-exclude` omits `scripts/` and `examples/`, which `python -m flake8 hefesto tests` does not lint. `ruff` is part of the `lint` extra. `hefesto/` and `tests/` are clean under these rules; no files were autofixed.
 
@@ -35,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Copilot instructions drop the retired "0.01s" claim** and point the architecture sketch at files that exist (`language_detector.py`, `narrow_semantic.py`, `semantic_duplication.py`, `security.py`, `server.py`). `omega/` and `licensing/` are not in this tree.
 - **`docs/CLAUDE_HEFESTO.md` calls `hefesto analyze .`.** `hefesto analyze` has no `--project` flag.
 - **Handoff:** `docs/worklog/2026-10-15-hosted-engine-docs.md`.
+- **4.20.0 release worklog:** `docs/worklog/2026-10-16-release-4.20.0.md` records the version bump. The tag, the GitHub Release, the PyPI publish, and the hosted engine bump stay for Arturo.
 
 ## [4.19.0] - 2026-10-15
 
