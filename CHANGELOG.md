@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Engineering skill `.cursor/skills/hefestoai-language-learnings/`** for contributors and agents (not the customer-facing `skill/`). `SKILL.md` is an index with the entry format (Symptom, Cause, Fix, Official source, PR/commit, Verified, Status) and the process to add entries and review them at each release. `references/` has python, js-ts, json, cobol, yaml-iac, github-actions and tooling-ci notes, 30 entries seeded from this CHANGELOG, `docs/cobol.md`, `docs/worklog/` and PRs #122, #124, #127, each checked against its source. Frontmatter follows https://cursor.com/docs/context/skills and https://agentskills.io/specification.
+
 ### Changed
 
 - **CI: GitHub Actions moved off the deprecated Node 20 runtime** ([GitHub changelog, 2025-09-19](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)). In all 9 workflows: `actions/checkout` v4 → v5, `actions/setup-python` v5 → v6, `actions/upload-artifact` v4 → v6, `actions/cache` v4 → v5 (all `runs.using: node24`), and `codecov/codecov-action` v4 → v5 (composite, no Node runtime; the `files` input is unchanged). `release.yml` only changes the two action versions; triggers, permissions, secrets and the floating `v4` step are untouched. Runners stay on `ubuntu-latest`. No change to the package or the published GitHub Action.
