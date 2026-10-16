@@ -43,16 +43,21 @@ cd Agents-Hefesto
 python3.10 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install in development mode
-pip install -e ".[dev]"
+# Install in development mode (the lint extra provides black, flake8, isort, ruff)
+pip install -e ".[dev,lint]"
 
 # Run tests
 pytest
 
-# Run linters
-black .
-isort .
-mypy hefesto/
+# Local pre-push checks (same commands as CI for guard, mypy, and flake8;
+# ruff enforces the flake8 rule set from pyproject.toml)
+python scripts/guard_public_repo.py
+ruff check
+python -m mypy hefesto --ignore-missing-imports
+python -m flake8 hefesto tests
+
+# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.19.0)
+HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
 # agent-card.json, SKILL.md, copilot-instructions.md — also runs in CI)
@@ -76,8 +81,8 @@ All PRs must:
 - Include tests for new code
 - Maintain or improve coverage (currently 96%)
 - Pass all existing tests
-- Pass linters (black, isort, mypy)
-- Run local verification checks: `./scripts/run_checks.sh`
+- Pass linters (black, isort, ruff, flake8, mypy)
+- Run the local pre-push checks in Development Setup
 
 ## 📤 Pull Request Process
 
@@ -85,8 +90,13 @@ All PRs must:
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests
-5. Run test suite (`pytest`)
-6. Run linters (`black . && isort . && mypy hefesto/`)
+5. Run test suite (`HEFESTO_TELEMETRY=0 python -m pytest -q -m "not integration and not slow"`)
+6. Run the local pre-push checks:
+   `python scripts/guard_public_repo.py`
+   `ruff check`
+   `python -m mypy hefesto --ignore-missing-imports`
+   `python -m flake8 hefesto tests`
+   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request

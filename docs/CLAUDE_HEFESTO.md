@@ -28,8 +28,8 @@ Los git hooks instalados en `.git/hooks/pre-commit` y `.git/hooks/pre-push` **en
 ### Estilo de Código
 - Formato: Black (`black hefesto/ tests/`)
 - Imports: isort (`isort hefesto/ tests/`)
-- Type checking: mypy (`mypy hefesto/ --ignore-missing-imports`)
-- Linting: flake8 (`flake8 hefesto/ tests/`)
+- Type checking: `python -m mypy hefesto --ignore-missing-imports`
+- Linting: `ruff check` (E/W/F, same ignores as Flake8) and `python -m flake8 hefesto tests`
 
 ---
 
@@ -348,7 +348,10 @@ black hefesto/ tests/ || exit 1
 isort hefesto/ tests/ || exit 1
 
 # 5. Type Checking
-mypy hefesto/ --ignore-missing-imports || exit 1
+python -m mypy hefesto --ignore-missing-imports || exit 1
+
+# 6. Ruff (the E/W/F rules CI enforces with flake8)
+ruff check || exit 1
 ```
 
 **Git hooks enforce these automatically** - DO NOT bypass them.
