@@ -84,6 +84,16 @@ All PRs must:
 - Pass linters (black, isort, ruff, flake8, mypy)
 - Run the local pre-push checks in Development Setup
 
+### Cursor agents and HefestoAI dogfooding
+
+`.cursor/mcp.json` registers the hosted `hefestoai` MCP server, and
+`.cursor/rules/hefesto-dogfood.mdc` (always applied) asks Cursor agents to analyze
+every changed file and report the result in the PR. Human contributors follow the
+same rule: run `HEFESTO_TELEMETRY=0 hefesto analyze <changed files>` and paste the
+command and output under a `Dogfood` heading in the PR body. Cloud agents only get
+the MCP server if it is added in cursor.com/agents (MCP dropdown) or
+Dashboard > Plugins & MCPs; otherwise they use the CLI.
+
 ## 📤 Pull Request Process
 
 1. Fork the repository

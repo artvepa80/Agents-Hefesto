@@ -1,0 +1,29 @@
+---
+description: Dogfood HefestoAI on every code or config change
+alwaysApply: true
+---
+
+# Dogfood HefestoAI on your changes
+
+After you create or edit code or config in this repo, analyze every changed file
+with HefestoAI before you finish.
+
+1. List the changed files: `git diff --name-only origin/main...HEAD` plus uncommitted
+   changes (`git status --porcelain`).
+2. Analyze them:
+   - **5 files or fewer:** call the `hefestoai` MCP server's `analyze` tool once,
+     with `files: [{"path": "<relative/posix/path>", "content": "<file text>"}]`
+     (up to 20 files, 100 KB each; no `..`, absolute paths, `.git` or `.hefesto.yaml`).
+     Optional: `severity` (`LOW`..`CRITICAL`), `format` (`json` or `sarif`).
+   - **More than 5 files, or the MCP tool is unavailable or rate-limited:** the
+     hosted MCP allows 10 calls per minute, so use the local CLI instead:
+     `HEFESTO_TELEMETRY=0 hefesto analyze <files>`. If `hefesto` is not on PATH,
+     run `HEFESTO_TELEMETRY=0 python -m hefesto analyze <files>`
+     (install with `pip install hefesto-ai` if needed).
+3. Fix every HIGH or CRITICAL finding. If one is a false positive, say why in
+   one line.
+4. Put the result in the PR body under a `Dogfood` heading: the exact tool call
+   or command and its output (or a finding count summary when long), plus the
+   fixes or false-positive explanations.
+
+Files the analyzer does not support are fine to skip; list them as skipped.
