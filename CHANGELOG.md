@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **mypy `no-redef` on the optional Black import.** `FormatDriftChecker` no longer writes `import black as black_module` over the constructor parameter. Black is loaded with `importlib.import_module` inside `try/except ImportError`. That function is annotated as returning `types.ModuleType`, so the name is not defined twice. A missing install still raises `ImportError`. Tests cover the injected module, the real import, and the missing-import path.
+
+### Added
+
+- **Ruff is configured to the same rules CI already runs with Flake8.** `[tool.ruff]` sets `line-length` 100 and `target-version` py310. `[tool.ruff.lint]` selects `E`, `W`, and `F`. The ignore list is the Flake8 default codes Ruff implements (`E226`, `E24`) plus `E203` from `.flake8`. Ruff does not implement Flake8's other default ignores (`E121`, `E123`, `E126`, `E704`, `W503`, `W504`), so those selectors are not listed. McCabe stays off, matching `.flake8` (no `max-complexity`). `extend-exclude` omits `scripts/` and `examples/`, which `python -m flake8 hefesto tests` does not lint. `ruff` is part of the `lint` extra. `hefesto/` and `tests/` are clean under these rules; no files were autofixed.
+
 ### Documentation
 
+- **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, and `python -m flake8 hefesto tests`.
+- **Handoff:** `docs/worklog/2026-10-16-prepush-ruff-mypy.md`.
 - **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
 - **Telemetry comments no longer call the CLI events a usage ping.** `HEFESTO_TELEMETRY=0` disables anonymous usage events. The Action `telemetry` input description matches the README: with `1` or `true`, the Action sends one anonymous ping per run and the CLI sends its usage events.
 - **`llms.txt` and the agent card no longer list PATH_TRAVERSAL or UNSAFE_DESERIALIZATION.** No analyzer emits those types (the README table was corrected in 4.17.0). They name `PICKLE_USAGE`, which is the emitted type. The agent-card security skill uses `SQL_INJECTION_RISK`.

@@ -23,6 +23,7 @@ import logging
 import re
 from dataclasses import dataclass, field, fields
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from hefesto.core.analysis_models import (
@@ -52,6 +53,23 @@ def is_black_available() -> bool:
         return False
 
 
+def _import_black() -> ModuleType:
+    """Import optional Black, or raise ``ImportError`` when it is not installed.
+
+    ``importlib.import_module`` is annotated as returning ``ModuleType``, so the
+    imported module is not bound under a name that already exists (mypy
+    ``no-redef``). Callers that only need to know whether Black is present
+    should use ``is_black_available`` and skip this import.
+    """
+    try:
+        return importlib.import_module("black")
+    except ImportError as exc:
+        raise ImportError(
+            'black is required for format check; pip install "hefesto-ai[format]" '
+            "(or pip install black)"
+        ) from exc
+
+
 @dataclass
 class FormatCheckStats:
     """Counters for one format-check run."""
@@ -77,12 +95,11 @@ class FormatCheckStats:
 class FormatDriftChecker:
     """Check Python sources against Black and build FORMAT_DRIFT findings."""
 
-    def __init__(self, black_module: Any = None):
-        if black_module is None:
-            import black as black_module  # optional dependency
-
-        self._black = black_module
-        self.stats = FormatCheckStats(black_version=str(getattr(black_module, "__version__", "")))
+    def __init__(self, black_module: Optional[Any] = None) -> None:
+        # None loads optional Black. A caller may pass a module or a test double.
+        resolved: Any = _import_black() if black_module is None else black_module
+        self._black = resolved
+        self.stats = FormatCheckStats(black_version=str(getattr(resolved, "__version__", "")))
         # pyproject path (or None) -> (config dict, project root or None)
         self._config_by_pyproject: Dict[Optional[str], Tuple[Dict[str, Any], Optional[Path]]] = {}
         # directory -> pyproject path (or None)

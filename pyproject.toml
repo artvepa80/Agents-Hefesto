@@ -59,6 +59,7 @@ lint = [
     "black==26.1.0",
     "flake8>=6.1.0",
     "isort==6.1.0",
+    "ruff>=0.8.0",
 ]
 dev = [
     "pytest>=7.4.0,<8.0.0",
@@ -131,6 +132,44 @@ multi_line_output = 3
 [tool.flake8]
 max-line-length = 100
 extend-ignore = ["E203", "W503"]
+
+# Local `ruff check` mirrors CI's `python -m flake8 hefesto tests`.
+# Flake8 reads `.flake8` (max-line-length 100, extend-ignore E203,W503) and
+# its own default ignore list. It does not read this [tool.flake8] table.
+# McCabe (C90) stays off: neither `.flake8` nor CI sets max-complexity.
+# https://docs.astral.sh/ruff/configuration/
+# https://docs.astral.sh/ruff/linter/
+# https://docs.astral.sh/ruff/faq/#how-does-ruffs-linter-compare-to-flake8
+# https://docs.astral.sh/ruff/settings/#extend-exclude
+# https://docs.astral.sh/ruff/settings/#lint_per-file-ignores
+# https://flake8.pycqa.org/en/latest/user/options.html#cmdoption-flake8-ignore
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# CI lints only `hefesto` and `tests` (`python -m flake8 hefesto tests`).
+# `ruff check` with no paths walks the tree, so these directories are omitted:
+# Flake8 does not lint them, and they are not rewritten in this change.
+extend-exclude = [
+    "scripts",
+    "examples",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+]
+# Flake8's default `--ignore` is E121,E123,E126,E226,E24,E704,W503,W504.
+# `.flake8` adds E203 (and repeats W503) via extend-ignore.
+# Ruff only implements some of those codes. Ignore the ones it implements;
+# the rest cannot fire, so they are not listed (Ruff rejects unknown selectors).
+# Not implemented here: E121, E123, E126, E704, W503, W504.
+ignore = [
+    "E203",
+    "E226",
+    "E24",
+]
 
 [tool.mypy]
 python_version = "3.10"

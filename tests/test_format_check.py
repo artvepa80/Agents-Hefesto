@@ -14,6 +14,7 @@ import json
 import os
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -161,6 +162,33 @@ def test_black_missing_warns_and_continues(tmp_path, monkeypatch):
     assert BLACK_MISSING_WARNING.count("\n") == 0
     assert 'pip install "hefesto-ai[format]"' in BLACK_MISSING_WARNING
     assert "FORMAT_DRIFT" not in result.output
+
+
+def test_checker_imports_black_when_not_injected():
+    pytest.importorskip("black")
+    import black
+
+    checker = FormatDriftChecker()
+    assert checker._black is black
+    assert checker.stats.black_version == black.__version__
+
+
+def test_checker_uses_injected_black_module():
+    fake = types.SimpleNamespace(__version__="9.9.9")
+    checker = FormatDriftChecker(black_module=fake)
+    assert checker._black is fake
+    assert checker.stats.black_version == "9.9.9"
+
+
+def test_checker_raises_when_black_cannot_be_imported(monkeypatch):
+    def missing(name, package=None):
+        if name == "black":
+            raise ImportError("no black")
+        raise AssertionError(name)
+
+    monkeypatch.setattr(format_drift.importlib, "import_module", missing)
+    with pytest.raises(ImportError, match='pip install "hefesto-ai\\[format\\]"'):
+        FormatDriftChecker()
 
 
 def test_black_missing_flag_off_prints_nothing(tmp_path, monkeypatch):
