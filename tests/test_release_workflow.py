@@ -5,6 +5,7 @@ stayed green, the GitHub Release was still created, and the floating ``v4``
 tag still moved. These checks read the workflow YAML only.
 """
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -60,11 +61,40 @@ def _needs_list(job: dict[str, Any]) -> list[str]:
     return [str(item) for item in needs]
 
 
+def _dict_steps(job: dict[str, Any]) -> list[dict[str, Any]]:
+    steps = job.get("steps")
+    if not isinstance(steps, list):
+        return []
+    return [step for step in steps if isinstance(step, dict)]
+
+
+def _first_match(
+    jobs: dict[str, Any], predicate: Callable[[dict[str, Any]], bool]
+) -> tuple[str, int] | None:
+    for job_name, job in jobs.items():
+        for index, step in enumerate(_dict_steps(job)):
+            if predicate(step):
+                return (job_name, index)
+    return None
+
+
+def _follows_or_depends(
+    jobs: dict[str, Any],
+    publish: tuple[str, int],
+    found: tuple[str, int],
+) -> bool:
+    job_name, index = found
+    publish_job, publish_index = publish
+    if job_name == publish_job:
+        return index > publish_index
+    return publish_job in _needs_list(jobs[job_name])
+
+
 def test_no_release_step_continues_on_error() -> None:
     offenders: list[str] = []
     for job_name, job in _jobs(_workflow()).items():
-        for index, step in enumerate(job.get("steps") or []):
-            if isinstance(step, dict) and _continues_on_error(step):
+        for index, step in enumerate(_dict_steps(job)):
+            if _continues_on_error(step):
                 label = step.get("name") or step.get("id") or f"step {index}"
                 offenders.append(f"{job_name}: {label}")
     assert offenders == []
@@ -72,31 +102,11 @@ def test_no_release_step_continues_on_error() -> None:
 
 def test_release_and_v4_follow_or_depend_on_publish() -> None:
     jobs = _jobs(_workflow())
-    publish: tuple[str, int] | None = None
-    release: tuple[str, int] | None = None
-    move_v4: tuple[str, int] | None = None
-
-    for job_name, job in jobs.items():
-        for index, step in enumerate(job.get("steps") or []):
-            if not isinstance(step, dict):
-                continue
-            if _is_publish(step):
-                publish = (job_name, index)
-            if _is_github_release(step):
-                release = (job_name, index)
-            if _is_v4_move(step):
-                move_v4 = (job_name, index)
-
+    publish = _first_match(jobs, _is_publish)
+    release = _first_match(jobs, _is_github_release)
+    move_v4 = _first_match(jobs, _is_v4_move)
     assert publish is not None, "Publish to PyPI step not found"
     assert release is not None, "Create GitHub Release step not found"
     assert move_v4 is not None, "Move floating v4 tag step not found"
-
-    def follows_or_depends(found: tuple[str, int]) -> bool:
-        job_name, index = found
-        publish_job, publish_index = publish
-        if job_name == publish_job:
-            return index > publish_index
-        return publish_job in _needs_list(jobs[job_name])
-
-    assert follows_or_depends(release)
-    assert follows_or_depends(move_v4)
+    assert _follows_or_depends(jobs, publish, release)
+    assert _follows_or_depends(jobs, publish, move_v4)

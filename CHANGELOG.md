@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A failed PyPI upload no longer leaves the release workflow green.** `.github/workflows/release.yml` no longer sets `continue-on-error: true` on `Publish to PyPI`. A failed `twine upload` fails the job, so `Create GitHub Release` and `Move floating v4 tag` do not run. Both steps stay after the publish step in the same job and set `if: success()`. Triggers, `PYPI_API_TOKEN`, and the skip when that token is empty are unchanged. There is no `skip-existing` check; a re-run of a version already on PyPI still fails the upload. Handoff: `docs/worklog/2026-10-17-release-fail-closed.md`.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)
