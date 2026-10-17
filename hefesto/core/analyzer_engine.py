@@ -169,6 +169,16 @@ def vendored_skip_message(count: int) -> str:
     return f"{count} {noun} skipped as vendored (use --include-vendored)"
 
 
+# latin-1 maps every byte 0x00-0xff to one code point, so decoding never fails
+# and ASCII text is unchanged: https://docs.python.org/3/library/codecs.html#encodings-and-unicode
+FALLBACK_ENCODING = "latin-1"
+
+
+def decoded_with_fallback_message(entry: Dict[str, Any]) -> str:
+    """``<path>: decoded with fallback (latin-1)`` for reports."""
+    return f"{entry.get('path')}: decoded with fallback ({entry.get('encoding')})"
+
+
 def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
     """One-line reason for a ``meta.not_analyzed`` entry."""
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
@@ -265,6 +275,8 @@ class AnalyzerEngine:
         self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
         # Found files that could not be read or whose analyzer raised
         self._not_analyzed: List[Dict[str, Any]] = []
+        # Found files that are not valid UTF-8, read with FALLBACK_ENCODING
+        self._decoded_with_fallback: List[Dict[str, Any]] = []
         # COBOL COPY index (COBOL007/COBOL015). Set for the whole run by
         # prepare_cobol_index(); otherwise built per analyze_path() call.
         self._cobol_index: Any = None
@@ -451,12 +463,14 @@ class AnalyzerEngine:
         source_files = self._with_indexed_copybooks(source_files, path_obj)
 
         not_analyzed_before = len(self._not_analyzed)
+        fallback_before = len(self._decoded_with_fallback)
         for py_file in source_files:
             file_result = self._analyze_file(py_file)
             if file_result:
                 file_results.append(file_result)
                 all_issues.extend(file_result.issues)
         self._emit_not_analyzed(not_analyzed_before)
+        self._emit_decoded_with_fallback(fallback_before)
 
         # Project-level analyzers (Phase 1a — Operational Truth)
         if self._project_analyzers:
@@ -544,6 +558,7 @@ class AnalyzerEngine:
         all_issues: List[AnalysisIssue] = []
 
         not_analyzed_before = len(self._not_analyzed)
+        fallback_before = len(self._decoded_with_fallback)
         for py_file in file_path_objs:
             if not py_file.exists() or not py_file.is_file():
                 continue
@@ -552,6 +567,7 @@ class AnalyzerEngine:
                 file_results.append(file_result)
                 all_issues.extend(file_result.issues)
         self._emit_not_analyzed(not_analyzed_before)
+        self._emit_decoded_with_fallback(fallback_before)
 
         # Project-level analyzers (Phase 1a/1b) run once against the project root.
         if self._project_analyzers:
@@ -626,8 +642,7 @@ class AnalyzerEngine:
         language: Optional[Language] = None
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                code = f.read()
+            code = self._read_source(file_path)
             stage = "analyze"
 
             # Cache source for ML semantic analysis (Phase 1)
@@ -798,6 +813,18 @@ class AnalyzerEngine:
             logger.debug("Not analyzed: %s (%s)", file_path, exc, exc_info=True)
             return None
 
+    def _read_source(self, file_path: Path) -> str:
+        """UTF-8, else FALLBACK_ENCODING (never fails to decode); the file is listed."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except UnicodeDecodeError:
+            pass
+        with open(file_path, "r", encoding=FALLBACK_ENCODING) as f:
+            code = f.read()
+        self._decoded_with_fallback.append({"path": str(file_path), "encoding": FALLBACK_ENCODING})
+        return code
+
     def _run_project_analyzers(self, project_root: Path) -> List[AnalysisIssue]:
         """Run registered project-level analyzers once against the project root.
 
@@ -951,6 +978,23 @@ class AnalyzerEngine:
         if len(entries) > 10:
             click.echo(f"   ... and {len(entries) - 10} more", err=True)
 
+    def _emit_decoded_with_fallback(self, start: int) -> None:
+        """Warn on stderr (also with ``--quiet``) about files read with the fallback."""
+        entries = self._decoded_with_fallback[start:]
+        if not entries:
+            return
+        import click
+
+        click.echo(
+            f"Warning: {len(entries)} file(s) are not valid UTF-8 and were decoded with fallback"
+            f" ({FALLBACK_ENCODING}); they were analyzed:",
+            err=True,
+        )
+        for entry in entries[:10]:
+            click.echo(f"   - {entry['path']}", err=True)
+        if len(entries) > 10:
+            click.echo(f"   ... and {len(entries) - 10} more", err=True)
+
     def _emit_skip_summary(self) -> None:
         """Emit categorized parser-skip warnings to stderr.
 
@@ -1082,6 +1126,15 @@ class AnalyzerEngine:
                 result = orch.run(inp, config)
                 issue.metadata["enrichment"] = result.to_dict()
 
+    def _file_records(self) -> Dict[str, Any]:
+        """Per-file records for ``meta``; empty lists are left out."""
+        records = {
+            "parser_failures": self._parser_failures,
+            "not_analyzed": self._not_analyzed,
+            "decoded_with_fallback": self._decoded_with_fallback,
+        }
+        return {key: list(entries) for key, entries in records.items() if entries}
+
     def _build_meta(self) -> dict:
         """Assemble the ``meta`` dict for the report from PRO features."""
         meta: dict = {}
@@ -1116,11 +1169,9 @@ class AnalyzerEngine:
                 "by_rule": by_rule,
             }
 
-        # Parser failures (silent skips of tree-sitter-dependent languages)
-        if self._parser_failures:
-            meta["parser_failures"] = list(self._parser_failures)
-        if self._not_analyzed:
-            meta["not_analyzed"] = list(self._not_analyzed)
+        # Parser failures (silent skips of tree-sitter-dependent languages),
+        # files not analyzed, files decoded with the fallback encoding
+        meta.update(self._file_records())
 
         # Vendored/minified JavaScript left out of the run (--include-vendored)
         if self._vendored_skipped:

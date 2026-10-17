@@ -17,12 +17,17 @@ PR: #132 (runtime under GH-8: opened 2026-10-16 Lima, not merged that day). No t
 
 ## Shipped in #132
 
-Not-analyzed record (text, `meta.not_analyzed`, SARIF `error` notification, stderr warning); `--fail-on` fails on it, before the zero-files rule; `--allow-not-analyzed` and the Action input `allow_not_analyzed` opt out; regex fallback on `RecursionError`; memoized key matching with a call-count test.
+Not-analyzed record (text, `meta.not_analyzed`, SARIF `error` notification, stderr warning); latin-1 fallback for files that are not valid UTF-8, listed as "decoded with fallback"; `--fail-on` fails on it, before the zero-files rule; `--allow-not-analyzed` and the Action input `allow_not_analyzed` opt out; regex fallback on `RecursionError`; memoized key matching with a call-count test.
 
 ## Deferred
 
 Iterative walks; cloud analyzers (ARM, Serverless, Helm, CloudFormation) that return `[]` on invalid input; deep YAML losing secrets (already in 4.19.0); parser failures still do not fail the gate.
 
-## Open question for Arturo
+## Decision on files that are not valid UTF-8 (Arturo, 2026-10-17 06:42 Lima)
 
-Should `read_error` (a file that is not valid UTF-8, also dropped silently in 4.19.0) fail `--fail-on` in 4.20.1, or only `analyzer_error`?
+Replaces the open question (and the 2026-10-16 22:14 note) on `read_error`. A file that is not valid UTF-8 is read with a fallback encoding and analyzed; it is listed as "decoded with fallback" in text, JSON (`meta.decoded_with_fallback`) and SARIF (`warning` notification). The gate fails only when a file really cannot be analyzed (option (c), `--allow-not-analyzed` opts out).
+
+- Fallback: `latin-1`. Source: https://docs.python.org/3/library/codecs.html, "Encodings and Unicode": latin-1 maps code points 0–255 to bytes 0x0–0xff, so any byte sequence decodes, one character per byte (line numbers kept), ASCII unchanged. `errors="replace"` (U+FFFD, "Error Handlers" table) was rejected: it destroys the bytes it replaces.
+- Limit: non-ASCII text may be wrong (a UTF-16 file reads as noise); that is why each file is listed, and SARIF uses `warning`, not `note`.
+- `read_error` now means an `OSError` on read only.
+- Tests: `tests/test_decode_fallback.py` (latin-1 `config.json` with a password → `HARDCODED_SECRET`, exit 1 under `--fail-on CRITICAL`; listing in text, JSON, SARIF and stderr; `analyze_files`; CRLF line numbers) and `test_os_error_on_read_is_still_read_error`.

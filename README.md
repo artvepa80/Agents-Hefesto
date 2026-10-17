@@ -422,7 +422,12 @@ skipped: no files were analyzed (--allow-no-files)", while "Files analyzed: 0",
 command-line flag only: `.hefesto.yaml` cannot set it (an `allow_no_files` key
 is rejected as unknown, exit 2), so a shared config never turns this check off.
 
-A file the run found but could not analyze (it is not valid UTF-8, or its
+A file that is not valid UTF-8 is read with the `latin-1` fallback and
+analyzed (its findings count); the text report lists it under "Decoded with
+fallback (latin-1)", `--output json` has it in `meta.decoded_with_fallback`,
+SARIF has a `warning` notification for it, and stderr warns about it.
+
+A file the run found but could not analyze (it could not be read, or its
 analyzer raised an error) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
 `meta.not_analyzed` (`path`, `language`, `reason`: `read_error` or

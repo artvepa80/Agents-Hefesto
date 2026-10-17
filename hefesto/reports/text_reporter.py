@@ -97,6 +97,21 @@ class TextReporter:
             lines.append(f"   ... and {len(entries) - 10} more (see meta.not_analyzed in JSON)")
         return lines
 
+    @staticmethod
+    def _fallback_lines(meta: Optional[Dict[str, Any]]) -> List[str]:
+        """Files that are not valid UTF-8 and were analyzed after a fallback decode."""
+        entries = (meta or {}).get("decoded_with_fallback") or []
+        if not entries:
+            return []
+        encoding = entries[0].get("encoding")
+        lines = [f"   Decoded with fallback ({encoding}): {len(entries)}"]
+        lines.extend(f"   - {entry.get('path')}" for entry in entries[:10])
+        if len(entries) > 10:
+            lines.append(
+                f"   ... and {len(entries) - 10} more (see meta.decoded_with_fallback in JSON)"
+            )
+        return lines
+
     def _format_header(self) -> str:
         """Format report header."""
         bold = self.COLORS["BOLD"]
@@ -115,6 +130,7 @@ class TextReporter:
 
             lines.append(f"   {vendored_skip_message(vendored['count'])}")
         lines.extend(self._not_analyzed_lines(meta))
+        lines.extend(self._fallback_lines(meta))
         lines.append(f"   Issues found: {summary.total_issues}")
 
         if summary.total_issues > 0:

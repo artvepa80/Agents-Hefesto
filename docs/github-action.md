@@ -74,12 +74,16 @@ still printed.
 
 ### Files that could not be analyzed
 
-Since 4.20.1, a file the step found but could not analyze (not valid UTF-8, or
-its analyzer raised an error) fails the step: the log lists it under "Not
+Since 4.20.1, a file the step found but could not analyze (it could not be
+read, or its analyzer raised an error) fails the step: the log lists it under "Not
 analyzed" with the reason and prints "Gate failure: N file(s) could not be
 analyzed (exit 1)". In 4.20.0 such a file was dropped without a warning. Set
 `allow_not_analyzed: 'true'` to keep the old exit code; the file is still
 listed and warned about.
+
+A file that is not valid UTF-8 is not in this group: it is read with the
+`latin-1` fallback, analyzed, and listed as "decoded with fallback" (a
+`warning` notification in SARIF). Only its findings can fail the step.
 
 ## Outputs
 
