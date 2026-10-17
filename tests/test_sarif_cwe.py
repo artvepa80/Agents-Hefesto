@@ -129,7 +129,9 @@ def test_every_mapped_rule_emits_the_tag_and_the_relationship(tmp_path):
         cwe_id, kind, precision = expected
         digits = str(cwe_id)
         assert tags == [CWE_TAG.format(digits)]
-        assert CWE_TAG.format(f"{cwe_id:03d}") not in tags
+        padded = f"{cwe_id:03d}"
+        if padded != digits:
+            assert CWE_TAG.format(padded) not in tags
         assert len(relationships) == 1
         relationship = relationships[0]
         assert relationship["kinds"] == [kind]
