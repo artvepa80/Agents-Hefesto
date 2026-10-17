@@ -25,6 +25,7 @@ from hefesto.core.analysis_models import (
     AnalysisSummary,
     FileAnalysisResult,
 )
+from hefesto.core.config_parse import parse_scope
 from hefesto.core.language_detector import Language, LanguageDetector
 from hefesto.core.languages.registry import get_registry
 from hefesto.core.parsers.parser_factory import ParserFactory
@@ -644,7 +645,28 @@ class AnalyzerEngine:
         try:
             code = self._read_source(file_path)
             stage = "analyze"
+            with parse_scope():
+                return self._analyze_source(file_path, code, start_time)
+        except Exception as exc:
+            # Never drop a found file silently: it is reported as not analyzed
+            # (text, JSON and SARIF) and fails --fail-on unless opted out.
+            self._not_analyzed.append(
+                {
+                    "path": str(file_path),
+                    "language": language.value if language is not None else None,
+                    "reason": "read_error" if stage == "read" else "analyzer_error",
+                    "exception": type(exc).__name__,
+                }
+            )
+            logger.debug("Not analyzed: %s (%s)", file_path, exc, exc_info=True)
+            return None
 
+    def _analyze_source(
+        self, file_path: Path, code: str, start_time: float
+    ) -> Optional[FileAnalysisResult]:
+        """Detect the language and run its analyzers. One YAML/JSON parse is shared."""
+        language: Optional[Language] = None
+        try:
             # Cache source for ML semantic analysis (Phase 1)
             self.source_cache[str(file_path)] = code
 
@@ -806,7 +828,7 @@ class AnalyzerEngine:
                 {
                     "path": str(file_path),
                     "language": language.value if language is not None else None,
-                    "reason": "read_error" if stage == "read" else "analyzer_error",
+                    "reason": "analyzer_error",
                     "exception": type(exc).__name__,
                 }
             )

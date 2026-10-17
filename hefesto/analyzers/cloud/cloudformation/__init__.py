@@ -1,10 +1,6 @@
-import json
 from typing import Any, Dict, List
 
-try:
-    import yaml  # type: ignore
-except ImportError:
-    yaml = None  # type: ignore
+from hefesto.core.config_parse import load_json, load_yaml, yaml_installed
 
 from ..detectors import SecretDetector
 from ..finding_schema import CloudFinding, CloudLocation
@@ -17,15 +13,18 @@ class CloudFormationAnalyzer:
 
     def analyze(self, file_content: str, file_path: str) -> List[CloudFinding]:
         findings = []
-        try:
-            # Parse template (YAML or JSON)
-            if file_path.endswith(".json"):
-                template = json.loads(file_content)
-            elif yaml:
-                template = yaml.safe_load(file_content)
-            else:
+        # Parsed once and shared with format detection.
+        if file_path.endswith(".json"):
+            loaded = load_json(file_content)
+            if loaded.error is not None:
                 return []
-        except Exception:
+            template = loaded.value
+        elif yaml_installed():
+            stream = load_yaml(file_content)
+            if stream.error is not None or not stream.is_single:
+                return []
+            template = stream.single_document
+        else:
             return []
 
         if not isinstance(template, dict):
