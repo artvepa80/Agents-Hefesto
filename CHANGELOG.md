@@ -31,7 +31,7 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 
 ### Documentation
 
-- **Language-learnings skill:** YAML double-parse entry in `.claude/skills/hefestoai-language-learnings/references/yaml-iac.md`. Handoff: `docs/worklog/2026-10-17-yaml-single-parse.md`.
+- **Language-learnings skill:** YAML double-parse entry in `.claude/skills/hefestoai-language-learnings/references/yaml-iac.md`, citing #139. Handoff: `docs/worklog/2026-10-17-yaml-single-parse.md`.
 
 ## [4.20.1] - 2026-10-17
 

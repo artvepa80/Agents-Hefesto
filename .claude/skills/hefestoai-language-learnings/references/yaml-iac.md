@@ -50,6 +50,6 @@ as far as the sources show; check the analyzer before relying on them.
 - **Cause:** since 4.20.0, format detection and the analyzer each call `yaml.safe_load_all`. A file named on the command line is classified a third time. `safe_load` and `safe_load_all` always use the pure-Python `SafeLoader`, even when libyaml is installed.
 - **Fix:** one parse per file, shared by detection and analysis, with `yaml.CSafeLoader` when it exists and `yaml.SafeLoader` otherwise. A syntax error is parsed again with `SafeLoader` so the line and the message stay the pure-Python ones. Helm chart templates under `templates/` next to `Chart.yaml` that contain `{{` are not parsed.
 - **Official source:** https://pyyaml.org/wiki/PyYAMLDocumentation
-- **PR/commit:** CHANGELOG 4.20.2, `docs/worklog/2026-10-17-yaml-single-parse.md`
+- **PR/commit:** #139, CHANGELOG 4.20.2, `docs/worklog/2026-10-17-yaml-single-parse.md`
 - **Verified:** 4.20.2
 - **Status:** Fixed

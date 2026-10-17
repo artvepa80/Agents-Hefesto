@@ -1,6 +1,6 @@
 # 2026-10-17 — 4.20.2: parse each YAML file once, with CSafeLoader
 
-PR: opened this day (runtime under GH-8: not merged the same calendar day in America/Lima; merging needs Arturo's OK). No tag, release or PyPI publish.
+PR: #139 (runtime under GH-8: opened 2026-10-17 Lima, not merged that day; merging needs Arturo's OK). No tag, release or PyPI publish.
 
 ## What was reported
 
