@@ -223,7 +223,9 @@ class TestLibyamlFailClosed:
         # SafeLoader's wording. The libyaml loader says "control characters".
         assert "special characters are not allowed" in text
 
-    def test_non_yaml_error_from_the_loader_is_not_analyzed(self, tmp_path, monkeypatch):
+    def test_non_yaml_error_from_the_loader_is_still_a_finding(self, tmp_path, monkeypatch):
+        # 4.20.1 caught every exception from safe_load_all, recorded
+        # YAML_SYNTAX_ERROR, and kept analyzing the file.
         path = _write(tmp_path, "broken.yaml", "a: 1\n")
 
         def boom(*_args, **_kwargs):
@@ -236,13 +238,14 @@ class TestLibyamlFailClosed:
         cli = __import__("hefesto.cli.main", fromlist=["cli"]).cli
         result = runner.invoke(
             cli,
-            ["analyze", str(path), "--fail-on", "CRITICAL", "--no-config"],
+            ["analyze", str(path), "--fail-on", "HIGH", "--no-config", "--severity", "LOW"],
         )
         text = _cli_text(result)
         assert result.exit_code == 1
-        assert "could not be analyzed" in text
+        assert "YAML_SYNTAX_ERROR" in text
+        assert "libyaml aborted" in text
+        assert "could not be analyzed" not in text
         assert "Gate passed" not in text
-        assert "RuntimeError" in text
 
     def test_non_utf8_yaml_is_analyzed(self, tmp_path, monkeypatch):
         path = tmp_path / "legacy.yaml"
