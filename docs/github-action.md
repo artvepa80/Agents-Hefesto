@@ -144,7 +144,10 @@ Requirements and limits on the GitHub side:
 2. **Security > Code scanning** lists one alert per finding; filter with
    `tool:HefestoAI`. Each alert shows the rule help, the severity (security
    rules also get a security severity) and, for COBOL findings from a copybook,
-   the copybook line as a related location.
+   the copybook line as a related location. Python security rules that have a
+   CWE also carry the tag `external/cwe/cwe-N` (no zero-padding), which code
+   scanning can filter on. The mapping is in
+   [docs/ANALYSIS_RULES.md](ANALYSIS_RULES.md#27-cwe-in-sarif).
 3. On a pull request, the **Code scanning results / HefestoAI** check and the
    annotations in **Files changed** show alerts introduced by the PR.
 4. Moving code without changing it does not reopen alerts: the fingerprints

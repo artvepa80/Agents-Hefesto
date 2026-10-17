@@ -358,7 +358,8 @@ hefesto analyze . --sarif-file out/hefesto.sarif   # any --output, plus a SARIF 
 SARIF 2.1.0 for every finding `hefesto analyze` reports (all analyzers it runs, COBOL included, plus Operational Truth and provider findings), validated against the OASIS schema in the tests:
 
 - one rule per rule ID (`COBOL004`, `DOCKER010`, ...; the issue type such as `HARDCODED_SECRET` when an analyzer has no ID) with name, description, help, help URI and a default level;
-- `level`: CRITICAL/HIGH -> `error`, MEDIUM -> `warning`, LOW -> `note`; security rules (secrets, injection, unsafe commands, ...) also get `security-severity` (9.5 / 8.0 / 5.5 / 3.0), so GitHub rates them Critical/High/Medium/Low, plus CWE tags when known;
+- `level`: CRITICAL/HIGH -> `error`, MEDIUM -> `warning`, LOW -> `note`; security rules (secrets, injection, unsafe commands, ...) also get `security-severity` (9.5 / 8.0 / 5.5 / 3.0), so GitHub rates them Critical/High/Medium/Low;
+- CWE, from one mapping (CWE list 4.20): GitHub code scanning reads the rule tag `external/cwe/cwe-N` (no zero-padding). The same id is a `run.taxonomies` CWE entry (organization MITRE) with a `relationships` kind on the rule (`equal`, `superset` or `relevant`). Python: secrets 798, SQL injection 89, command injection 78, eval/exec 95, bare except 396, pickle import 502 (`relevant`, precision `low`, because only the import is flagged). Assert has no CWE. A finding's `metadata.cwe` overrides the table; existing COBOL tags (`cwe-798`, `cwe-20`) stay as written. Table: [docs/ANALYSIS_RULES.md](docs/ANALYSIS_RULES.md#27-cwe-in-sarif);
 - repo-relative URIs (`%SRCROOT%`, the git top level of the current directory) and `partialFingerprints` built from the rule, the file and the text of the flagged line, so alerts keep their identity when code above them moves;
 - GitHub upload limits: at most 25,000 results (highest severity kept) and 10 MB gzipped; anything dropped is reported in the log's tool notifications.
 
