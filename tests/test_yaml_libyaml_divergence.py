@@ -2,10 +2,10 @@
 
 16 documents are accepted only by libyaml. 10 are accepted only by
 SafeLoader. Ids are the suite directory names (``ID/NN`` is a subtest).
-A tab, a line starting with ``%``, or ``[|>][0-9+-]*#`` routes the file
-to SafeLoader. JR7V and WZ62 match none of those, so libyaml keeps them
-and the syntax finding from 4.20.1 goes away. X4QW (``block: ># comment``)
-is the block-scalar rule.
+A tab, a line starting with ``%``, ``[|>][0-9+-]*#``, or ``?`` / ``!``
+together with ``[`` / ``{`` routes the file to SafeLoader. JR7V and WZ62
+match the last rule, so they are flagged the way 4.20.1 flagged them.
+X4QW (``block: ># comment``) is the block-scalar rule.
 """
 
 import pytest
@@ -14,8 +14,6 @@ import yaml
 from hefesto.core.config_parse import load_yaml, parse_scope
 
 _HAS_C = getattr(yaml, "CSafeLoader", None) is not None
-# Valid documents libyaml accepts and SafeLoader rejects, with no marker.
-_RESIDUAL = {"JR7V", "WZ62"}
 
 
 def _accepts(content, loader):
@@ -124,13 +122,11 @@ SAFE_ONLY = [
 
 @pytest.mark.parametrize("suite_id, content", LIBYAML_ONLY, ids=[item[0] for item in LIBYAML_ONLY])
 def test_libyaml_only_suite_case(suite_id, content):
-    """SafeLoader rejects these. Markers route them back, except JR7V and WZ62."""
+    """SafeLoader rejects these. Markers route every one of them back."""
     assert _accepts(content, yaml.SafeLoader) is False
     if _HAS_C:
         assert _accepts(content, yaml.CSafeLoader) is True
-        assert _flagged(content) is (suite_id not in _RESIDUAL)
-    else:
-        assert _flagged(content) is True
+    assert _flagged(content) is True, suite_id
 
 
 @pytest.mark.parametrize("suite_id, content", SAFE_ONLY, ids=[item[0] for item in SAFE_ONLY])

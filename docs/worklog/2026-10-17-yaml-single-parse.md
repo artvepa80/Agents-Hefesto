@@ -22,7 +22,8 @@ HEFESTO_TELEMETRY=0 HEFESTO_NO_UPSELL=1 \
 | 4.19.0 | 1.804 s (1.68 s) | 6.694 s (6.58 s) |
 | 4.20.0 | 4.485 s (4.37 s) | 17.828 s (17.71 s) |
 | 4.20.1 | 4.504 s (4.39 s) | 17.908 s (17.79 s) |
-| 4.20.2, this tree, best of 3, event scan on every file | 0.685 s (0.57 s) | 2.397 s (2.28 s) |
+| 4.20.2, this tree, best of 3, no `?` `!` `[` `{` | 0.715 s (0.60 s) | 2.515 s (2.40 s) |
+| 4.20.2, same files plus `note: "what?"` / `ports: [80, 443]` (SafeLoader path) | 1.875 s (1.76 s) | 7.112 s (6.99 s) |
 
 One `yaml.load_all` of the same strings, best of 2:
 
@@ -68,7 +69,16 @@ Loader calls inside `AnalyzerEngine.analyze_path` (monkeypatch of `yaml.safe_loa
 ## Arturo's decision (option A, still 4.20.2)
 
 - Route to `SafeLoader` when the text has a tab, a line starting with `%`, or `[|>][0-9+-]*#`. The third rule is X4QW (`block: ># comment`).
-- Over the 402 yaml-test-suite `in.yaml` files: no invalid document newly accepted, nothing newly rejected, and only JR7V and WZ62 (both valid) stop being flagged. Those two are one class: a `?` or `!` inside a flow collection (`urls: [http://example.com/?a=1, b]`, `{foo: a?}`, `a: [!!str, c]`). 4.20.1 flagged that class; 4.20.2 does not.
 - A U+FEFF anywhere, and an empty flow `?` key (`(?:^|[\s\[{,])\?\s*[,\]}]`), also route to `SafeLoader`. Libyaml skips a BOM at the start of any line (a leading BOM hides `%`) and drops an empty `?` together with the next comma or bracket. Fixtures include `\ufeff%YAML 1.1#...`, a double BOM in front of DMG6 and N4JP, a BOM after `---`, `k: [?]]`, and a ConfigMap `hosts: [? ]]`.
 - `tests/test_yaml_libyaml_divergence.py` has the 16 libyaml-only cases and the 10 SafeLoader-only cases, named by suite id.
+
+## Arturo's decision (strict parity with 4.20.1, still 4.20.2)
+
+Independent review of `95b1b25` found that leaving `?` / `!` inside flow collections on `CSafeLoader` also accepts invalid YAML. `[ ?ke? y` / `: value ]` and `[?!  foo` / `bar ?: baz]` exit 1 on 4.20.1 and exited 0 on that commit.
+
+- Any file whose text contains `?` or `!` and also `[` or `{` is parsed with `SafeLoader`. The tab, `%`, block-header-`#`, BOM and empty-`?` rules stay.
+- JR7V and WZ62 are flagged HIGH again, the same as 4.20.1. The class examples `urls: [http://example.com/?a=1, b]`, `{foo: a?}` and `a: [!!str, c]` are parity tests, plus `[ ?ke? y` / `: value ]`, `[?!  foo` / `bar ?: baz]`, `[?x?]` and `flow: [a?,` / `b,` / `c]`.
+- On the 402 yaml-test-suite `in.yaml` files the HIGH-or-above gate and the not-analyzed count match `HEFESTO_YAML_LOADER=safe` (0 diffs, in process). That is the 4.20.1 exit code for these files. The only syntax difference vs 4.20.1 remains the 483-488 depth band.
 - Left for 4.21.0: align YAML syntax findings with the yaml-test-suite in both directions, and an explicit depth limit that is the same on every Python.
+- Retimed on this machine, best of 3, same command. The original manifests have no `?`, `!`, `[` or `{` (1,004,184 and 4,014,906 bytes): 0.715 s (0.60 s) and 2.515 s (2.40 s). The same files plus one document both loaders accept (`note: "what?"`, `ports: [80, 443]`; 1,004,220 and 4,014,942 bytes) take `SafeLoader`: 1.875 s (1.76 s) and 7.112 s (6.99 s). The three runs were 0.724/0.715/0.716, 2.544/2.522/2.515, 1.878/1.882/1.875 and 7.112/7.184/7.180.
+- The 402 `/tmp/yaml-data` `in.yaml` files: HIGH-or-above gate compared in process with `HEFESTO_YAML_LOADER=safe`. Diffs: 0.

@@ -338,22 +338,44 @@ def test_bom_and_empty_flow_key_match_4_20_1(tmp_path, label):
     assert "could not be analyzed" not in text
 
 
-@pytest.mark.parametrize(
-    "label",
-    ["flow-question", "flow-question-brace", "flow-tag"],
-)
-def test_flow_question_and_tag_stay_unflagged(tmp_path, label):
-    """Valid flow ``?`` / ``!`` that 4.20.1 flagged and this release does not."""
+def _flow_mark_document(label: str) -> str:
+    """``?`` or ``!`` next to a flow collection. 4.20.1 flags every one."""
     documents = {
         "flow-question": "urls: [http://example.com/?a=1, b]\n",
         "flow-question-brace": "{foo: a?}\n",
         "flow-tag": "a: [!!str, c]\n",
+        "spaced-key": "[ ?ke? y\n  : value ]",
+        "bang-flow": "[\n?!  foo\n bar ?: baz\n]",
+        "compact-key": "[?x?]",
+        "flow-question-lines": "flow: [a?,\nb,\nc]",
     }
-    path = tmp_path / "ok.yaml"
-    path.write_text(documents[label], encoding="utf-8")
+    return documents[label]
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "flow-question",
+        "flow-question-brace",
+        "flow-tag",
+        "spaced-key",
+        "bang-flow",
+        "compact-key",
+        "flow-question-lines",
+    ],
+)
+def test_flow_question_and_tag_match_4_20_1(tmp_path, label):
+    """``--fail-on high`` exits 1, the same as 4.20.1's SafeLoader."""
+    path = tmp_path / "flow.yaml"
+    path.write_text(_flow_mark_document(label), encoding="utf-8")
     result = _analyze(path, "high")
-    assert result.returncode == 0, (label, result.returncode, result.stdout, result.stderr)
-    assert "YAML_SYNTAX_ERROR" not in (result.stdout or "")
+    safe = _analyze(path, "high", HEFESTO_YAML_LOADER="safe")
+    assert result.returncode == 1, (label, result.returncode, result.stdout, result.stderr)
+    assert result.returncode == safe.returncode
+    assert _finding_sig(result) == _finding_sig(safe)
+    assert any(item[0] == "YAML_SYNTAX_ERROR" for item in _finding_sig(result))
+    text = (result.stdout or "") + (result.stderr or "")
+    assert "could not be analyzed" not in text
 
 
 if __name__ == "__main__":

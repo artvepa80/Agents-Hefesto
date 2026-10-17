@@ -25,13 +25,16 @@ collections in one indent column.
 A tab, a line that starts with ``%``, a U+FEFF byte-order mark, a
 block-scalar header glued to ``#`` (``[|>][0-9+-]*#``, yaml-test-suite
 X4QW ``block: ># comment``), or an empty ``?`` key in a flow collection
-(``[?]]``, ``[ ?, , b]``) is also parsed with the pure-Python
-loader. Libyaml skips U+FEFF at the start of any line and drops an empty
-flow ``?`` key together with the next comma or bracket; ``SafeLoader``
-rejects both. A ``?`` or ``!`` inside a flow value (JR7V, WZ62, and the
-same shape) stays on ``CSafeLoader``. Any exception from a loader becomes
-that pure-Python error, which is what 4.20.1 reported while still
-returning the file's other findings.
+(``[?]]``, ``[ ?, , b]``) is also parsed with the pure-Python loader.
+Libyaml skips U+FEFF at the start of any line and drops an empty flow
+``?`` key together with the next comma or bracket; ``SafeLoader``
+rejects both. A file that contains ``?`` or ``!`` and also ``[`` or
+``{`` uses ``SafeLoader`` as well. That keeps the syntax finding
+identical to 4.20.1 for JR7V, WZ62, and invalid documents libyaml
+accepts. Aligning those findings with the yaml-test-suite is planned
+for 4.21.0. Any exception from a loader becomes that pure-Python error,
+which is what 4.20.1 reported while still returning the file's other
+findings.
 """
 
 from __future__ import annotations
@@ -147,14 +150,25 @@ def _event_depth_exceeds(content: str, limit: int) -> bool:
     return False
 
 
+def _question_or_tag_in_flow(content: str) -> bool:
+    """True when ``?`` or ``!`` shares the file with ``[`` or ``{``.
+
+    4.20.1 parsed every file with ``SafeLoader``. This route keeps that
+    syntax finding, including documents libyaml accepts. The characters
+    do not have to be the same token.
+    """
+    if "?" not in content and "!" not in content:
+        return False
+    return "[" in content or "{" in content
+
+
 def _libyaml_markers(content: str) -> bool:
     """True when this text carries a known libyaml / SafeLoader split.
 
     A tab, U+FEFF anywhere (libyaml skips it at the start of every line,
     and a leading mark hides a ``%`` directive), a line starting with
-    ``%``, :data:`_BLOCK_SCALAR_HASH`, or :data:`_EMPTY_FLOW_KEY`.
-    A ``?`` or ``!`` inside a flow value matches none of these and stays
-    on ``CSafeLoader``.
+    ``%``, :data:`_BLOCK_SCALAR_HASH`, :data:`_EMPTY_FLOW_KEY`, or
+    :func:`_question_or_tag_in_flow`.
     """
     if "\t" in content or "\ufeff" in content:
         return True
@@ -163,7 +177,7 @@ def _libyaml_markers(content: str) -> bool:
             return True
     if _BLOCK_SCALAR_HASH.search(content) is not None:
         return True
-    return _EMPTY_FLOW_KEY.search(content) is not None
+    return _EMPTY_FLOW_KEY.search(content) is not None or _question_or_tag_in_flow(content)
 
 
 def _loader_for(content: str) -> type:
