@@ -1,18 +1,20 @@
 """CSafeLoader must not crash, and a loader error must not drop findings.
 
 ``CSafeLoader`` segfaults between 20,000 and 30,000 levels on CPython 3.13,
-including flow documents whose ``[`` or ``{`` are not consecutive. Around
-1,000 levels the pure-Python loader raises and 4.20.1 reports
-YAML_SYNTAX_ERROR, while ``CSafeLoader`` still accepts the document and the
-gate exits 0. A timestamp such as ``2001-13-01`` raises ValueError, which
-is not a yaml.YAMLError; 4.20.1 caught it and still reported the file's
-other findings.
+including flow documents whose ``[`` or ``{`` are not consecutive.
+``SafeLoader`` rejects from depth 486-489 (the default recursion limit is
+1000, about 2 frames per level) and 4.20.1 reports YAML_SYNTAX_ERROR.
+``CSafeLoader`` still accepts those documents, so the gate exits 0.
+A timestamp such as ``2001-13-01`` raises ValueError, which is not a
+yaml.YAMLError; 4.20.1 caught it and still reported the file's other
+findings.
 
 This module is collected on every CI Python (3.10 through 3.14). The deep
 cases run in a subprocess so a signal death fails the test instead of
 killing the suite.
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -54,8 +56,10 @@ def _sig(issues):
     )
 
 
-def _analyze(path: Path, fail_on: str) -> subprocess.CompletedProcess:
+def _analyze(path: Path, fail_on: str, **extra_env: str) -> subprocess.CompletedProcess:
     env = dict(os.environ, HEFESTO_TELEMETRY="0", HEFESTO_NO_UPSELL="1")
+    env.pop("HEFESTO_YAML_LOADER", None)
+    env.update(extra_env)
     return subprocess.run(
         [
             sys.executable,
@@ -88,30 +92,67 @@ def _safe_syntax_message(content: str) -> str:
     raise AssertionError("SafeLoader accepted a document 4.20.1 rejected")
 
 
-def test_depth_above_500_is_too_deep_for_the_c_loader():
-    from hefesto.core.config_parse import C_LOADER_MAX_DEPTH, yaml_nesting_exceeds
-
-    # 500 is below the depth SafeLoader rejects on every supported Python.
-    assert C_LOADER_MAX_DEPTH == 500
-    assert yaml_nesting_exceeds("{a: " * 501 + "1" + "}" * 501 + "\n")
-    assert yaml_nesting_exceeds("[ " * 501 + "]" * 501 + "\n")
-    assert not yaml_nesting_exceeds("{a: " * 500 + "1" + "}" * 500 + "\n")
-    assert not yaml_nesting_exceeds("[ " * 500 + "]" * 500 + "\n")
-    shallow = (
-        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: web\nspec:\n  containers:\n  - name: web\n"
-    )
-    assert not yaml_nesting_exceeds(shallow)
+def _nested(style: str, depth: int) -> str:
+    """A document whose collection nesting is ``depth`` levels."""
+    if style == "flow-seq":
+        return "[ " * depth + "1" + "]" * depth + "\n"
+    if style == "flow-map":
+        return "{a: " * depth + "1" + "}" * depth + "\n"
+    lines = ["  " * i + "a:" for i in range(depth)]
+    lines.append("  " * depth + "1")
+    return "\n".join(lines) + "\n"
 
 
-def test_shallow_manifest_skips_the_event_scan(monkeypatch):
-    from hefesto.core.config_parse import yaml_nesting_exceeds
+def _alternating_block(depth: int) -> str:
+    """``a:`` / ``-`` pairs. Two collections share one indent column."""
+    lines = []
+    for i in range(depth):
+        indent = " " * (i // 2)
+        lines.append(f"{indent}a:" if i % 2 == 0 else f"{indent}-")
+    return "\n".join(lines) + "\n"
 
-    def boom(*_args, **_kwargs):
-        raise AssertionError("yaml.parse was called for a shallow manifest")
 
-    monkeypatch.setattr("hefesto.core.config_parse.yaml.parse", boom)
-    shallow = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cfg\n"
-    assert not yaml_nesting_exceeds(shallow)
+def _finding_sig(result: subprocess.CompletedProcess) -> list:
+    data = json.loads(result.stdout)
+    found = []
+    for entry in data["files"]:
+        for issue in entry["issues"]:
+            found.append(
+                (issue["type"], issue["line"], issue["column"], issue["severity"], issue["message"])
+            )
+    return sorted(found)
+
+
+def _assert_same_as_safeloader(path: Path, content: str) -> None:
+    """Findings and ``--fail-on high`` match SafeLoader on the same stack.
+
+    The pure-Python loader is forced with ``HEFESTO_YAML_LOADER=safe``.
+    A bare ``python -c`` SafeLoader is not the oracle: the CLI is already
+    on the stack, and each nesting level uses about two frames.
+    """
+    path.write_text(content, encoding="utf-8")
+    default = _analyze(path, "high")
+    safe = _analyze(path, "high", HEFESTO_YAML_LOADER="safe")
+    assert default.returncode == safe.returncode
+    assert default.returncode in (0, 1)
+    assert _finding_sig(default) == _finding_sig(safe)
+    text = (default.stdout or "") + (default.stderr or "")
+    assert "could not be analyzed" not in text
+
+
+@pytest.mark.parametrize("style", ["flow-seq", "flow-map", "block"])
+@pytest.mark.parametrize("depth", range(480, 506))
+def test_depth_matches_safeloader(tmp_path, style, depth):
+    _assert_same_as_safeloader(tmp_path / "nest.yaml", _nested(style, depth))
+
+
+def test_alternating_block_at_990_matches_safeloader(tmp_path):
+    content = _alternating_block(990)
+    longest = max(len(line) for line in content.splitlines())
+    # Brackets plus the longest line understates this shape by about half,
+    # so a bound of that form stays under 500 and used to skip the scan.
+    assert content.count("[") + content.count("{") + longest <= 500
+    _assert_same_as_safeloader(tmp_path / "alt.yaml", content)
 
 
 def _thirty_k(label: str) -> str:

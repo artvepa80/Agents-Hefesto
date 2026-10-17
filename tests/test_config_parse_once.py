@@ -1,9 +1,11 @@
 """Each config file is parsed once.
 
 The guard counts parser calls. It does not use wall-clock time, so a slow CI
-machine cannot fail it. A YAML syntax error is the one file parsed twice when
-libyaml is installed: the C loader fails, and SafeLoader is parsed again so
-the mark and the message stay the ones SafeLoader reports.
+machine cannot fail it. A document ``yaml.parse`` rejects is loaded once,
+with ``SafeLoader``. A ``CSafeLoader`` exception after that scan accepted
+the document (a timestamp ``ValueError``) is the extra ``SafeLoader`` parse
+when libyaml is installed, so the mark and the message stay the ones
+``SafeLoader`` reports.
 """
 
 import importlib
@@ -22,7 +24,7 @@ if getattr(yaml, "CSafeLoader", None) is not None:
 
 @pytest.fixture
 def parses(monkeypatch):
-    counts = {"yaml": 0, "json": 0, "toml": 0, "safe_load": 0}
+    counts = {"yaml": 0, "json": 0, "toml": 0, "safe_load": 0, "loaders": []}
     real_load_all = yaml.load_all
     real_json = json.loads
     real_toml = toml_analyzer.tomli.loads
@@ -31,6 +33,7 @@ def parses(monkeypatch):
         if Loader not in _ALLOWED_LOADERS:
             raise AssertionError("refusing loader %r" % (Loader,))
         counts["yaml"] += 1
+        counts["loaders"].append(Loader)
         return real_load_all(stream, Loader=Loader)
 
     def safe_load(*_args, **_kwargs):
@@ -168,19 +171,34 @@ def test_helm_template_file_is_not_parsed(tmp_path, parses):
     assert parses["yaml"] == 0
 
 
-def test_syntax_error_uses_one_extra_safe_parse_when_libyaml_is_present(
-    tmp_path, parses, monkeypatch
-):
+def test_parser_error_is_one_safeloader_parse(tmp_path, parses, monkeypatch):
+    """``yaml.parse`` rejects this stream, so ``CSafeLoader`` is not called."""
     path = _write(tmp_path, "bad.yaml", "a: [\n")
     _analyze(path)
-    if getattr(yaml, "CSafeLoader", None) is None:
-        assert parses["yaml"] == 1
-    else:
-        assert parses["yaml"] == 2
+    assert parses["loaders"] == [yaml.SafeLoader]
     monkeypatch.setattr("hefesto.core.config_parse.loader_class", lambda: yaml.SafeLoader)
     parses["yaml"] = 0
+    parses["loaders"] = []
     _analyze(path)
-    assert parses["yaml"] == 1
+    assert parses["loaders"] == [yaml.SafeLoader]
+
+
+def test_c_loader_valueerror_is_reparsed_with_safeloader(tmp_path, parses, monkeypatch):
+    """A bad timestamp is events the parser accepts. ``load_all`` raises.
+
+    With libyaml, ``CSafeLoader`` runs and ``SafeLoader`` runs again.
+    Forcing ``SafeLoader`` is one call: the event scan is not a second load.
+    """
+    path = _write(tmp_path, "bad.yaml", "created: 2001-13-01\n")
+    _analyze(path)
+    if getattr(yaml, "CSafeLoader", None) is None:
+        assert parses["loaders"] == [yaml.SafeLoader]
+    else:
+        assert parses["loaders"] == [yaml.CSafeLoader, yaml.SafeLoader]
+    monkeypatch.setattr("hefesto.core.config_parse.loader_class", lambda: yaml.SafeLoader)
+    parses["loaders"] = []
+    _analyze(path)
+    assert parses["loaders"] == [yaml.SafeLoader]
 
 
 def test_json_toml_and_terraform_json_parse_once(tmp_path, parses):
