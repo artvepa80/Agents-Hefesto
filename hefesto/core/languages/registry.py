@@ -115,7 +115,17 @@ class LanguageRegistry:
         return refine_language(guessed, file_path, content)
 
     def is_supported(self, file_path: Path, content: Optional[str] = None) -> bool:
-        """Check if file language is supported."""
+        """True when this path is a language the engine analyzes.
+
+        The text is read only when the path is not already a known language
+        (an extensionless file whose shebang names a shell). Classifying the
+        text of a YAML or JSON file parses it, and analysis parses that same
+        file again.
+        """
+        if self.detect_language(file_path, None) != Language.UNKNOWN:
+            return True
+        if content is None:
+            return False
         return self.detect_language(file_path, content) != Language.UNKNOWN
 
     def get_supported_extensions(self) -> List[str]:

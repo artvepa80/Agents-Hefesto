@@ -43,3 +43,13 @@ as far as the sources show; check the analyzer before relying on them.
 - **PR/commit:** CHANGELOG 4.17.0
 - **Verified:** 4.17.0
 - **Status:** Fixed
+
+### YAML file parsed more than once, and always with SafeLoader
+
+- **Symptom:** `hefesto analyze` on a 1 MB multi-document Kubernetes manifest was about 1.8 s on 4.19.0 and about 4.5 s on 4.20.0 and 4.20.1 (this machine; see the 4.20.2 changelog).
+- **Cause:** since 4.20.0, format detection and the analyzer each call `yaml.safe_load_all`. A file named on the command line is classified a third time. `safe_load` and `safe_load_all` always use the pure-Python `SafeLoader`, even when libyaml is installed.
+- **Fix:** one parse per file, shared by detection and analysis, with `yaml.CSafeLoader` when it exists and `yaml.SafeLoader` otherwise. A syntax error is parsed again with `SafeLoader` so the line and the message stay the pure-Python ones. Helm chart templates under `templates/` next to `Chart.yaml` that contain `{{` are not parsed.
+- **Official source:** https://pyyaml.org/wiki/PyYAMLDocumentation
+- **PR/commit:** CHANGELOG 4.20.2, `docs/worklog/2026-10-17-yaml-single-parse.md`
+- **Verified:** 4.20.2
+- **Status:** Fixed

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.20.2] - 2026-10-17
+
+### Fixed
+
+- **YAML files were parsed more than once, always with the pure-Python loader.** Since 4.20.0, format detection (`yaml.safe_load_all` to tell CloudFormation, Helm and Serverless from plain YAML) and the analyzer each parsed the file. A file named on the command line was classified a third time, because discovery also sniffed the text. A directory walk parsed twice. `yaml.safe_load` and `yaml.safe_load_all` always use `SafeLoader`, so libyaml was unused. Each file is now parsed once and that result is reused. The loader is `yaml.CSafeLoader` when libyaml is installed, otherwise `yaml.SafeLoader`. `Loader`, `FullLoader` and `unsafe_load` are not used. On a syntax error the file is parsed again with `SafeLoader`, and that error's line and message are the ones reported, because the two loaders word the same failure differently. Helm chart templates (`{{` in a file under `<chart>/templates/` next to `Chart.yaml`) are still not parsed. JSON detection and the JSON, ARM and CloudFormation JSON analyzers share one `json.loads`. A test counts parser calls per file (YAML, JSON, TOML, and one analyzer call for Makefile, Groovy, PowerShell, Dockerfile, Terraform, Shell and SQL). It does not use wall-clock time.
+- **Fail-closed behaviour from 4.20.1 is unchanged.** A `yaml.YAMLError`, including the subclasses libyaml's `CParser` raises (`ReaderError` and the other parser errors), is a `YAML_SYNTAX_ERROR` finding and fails `--fail-on`. Any other exception from the loader is recorded as not analyzed and fails `--fail-on` too. A file that is not valid UTF-8 is still read with the `latin-1` fallback, analyzed, and listed as decoded with fallback.
+
+### Performance
+
+Same machine, same files, best wall-clock of 2 runs for the released versions and 3 runs for this change. Command: `HEFESTO_TELEMETRY=0 HEFESTO_NO_UPSELL=1 hefesto analyze FILE --no-config --quiet --severity LOW`. Linux, 4 CPUs, Python 3.12.3, PyYAML 6.0.1 with `CSafeLoader`. Synthetic multi-document Kubernetes manifests (Deployments, Services, ConfigMaps, anchors and aliases): 1,004,184 bytes / 2,808 documents and 4,014,906 bytes / 11,142 documents. The parenthetical time is the tool's own "Analysis complete" line on that run.
+
+| version | 1 MB | 4 MB |
+| --- | --- | --- |
+| 4.19.0 | 1.804 s (1.68 s) | 6.694 s (6.58 s) |
+| 4.20.0 | 4.485 s (4.37 s) | 17.828 s (17.71 s) |
+| 4.20.1 | 4.504 s (4.39 s) | 17.908 s (17.79 s) |
+| 4.20.2 | 0.622 s (0.51 s) | 2.105 s (1.99 s) |
+
+One parse of the 1 MB file: `SafeLoader` 1.404 s, `CSafeLoader` 0.174 s, 2,808 documents either way. The 4 MB file: 5.621 s and 0.686 s, 11,142 documents either way.
+
+These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1 MB on 4.19.0 / 4.20.0 / 4.20.1, 31.7 s for 4 MB, and 3.62 s versus 0.44 s for one `SafeLoader` versus `CSafeLoader` parse. That profile was not from this machine (the 4.20.1 notes used an 8 vCPU Xeon and Python 3.13.5). The shape matches: 4.20.0 and 4.20.1 are much slower than 4.19.0, 4 MB is about four times 1 MB, and `CSafeLoader` is about eight times faster than `SafeLoader` with the same documents. 4.20.1 was not faster than 4.20.0 here; the two are within run-to-run noise. "Parsed twice" is the directory walk (`safe_load_all` 2 on 4.20.1). A single file on the command line was parsed three times (`safe_load_all` 1 on 4.19.0, 3 on 4.20.0 and 4.20.1). `safe_load` and `unsafe_load` stayed 0.
+
+### Documentation
+
+- **Language-learnings skill:** YAML double-parse entry in `.claude/skills/hefestoai-language-learnings/references/yaml-iac.md`. Handoff: `docs/worklog/2026-10-17-yaml-single-parse.md`.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)

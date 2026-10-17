@@ -17,15 +17,8 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
-
-try:
-    import yaml  # type: ignore
-
-    YAML_AVAILABLE = True
-except ImportError:
-    yaml = None  # type: ignore
-    YAML_AVAILABLE = False
-
+from hefesto.core.config_parse import load_yaml, yaml_error_line, yaml_installed
+from hefesto.core.languages.content_classify import is_helm_template
 
 # A line that opens a block scalar: "key: |", "- >-", "key: |2", "key: >+ # note"
 _BLOCK_SCALAR_START = re.compile(
@@ -155,24 +148,19 @@ class YamlAnalyzer:
         """Check for basic YAML syntax issues."""
         issues = []
 
-        if YAML_AVAILABLE and yaml is not None and not self._is_helm_template(file_path, content):
-            try:
-                # A file may hold several documents separated by ``---``
-                # (the usual form of Kubernetes manifests): parse them all.
-                for _ in yaml.safe_load_all(content):
-                    pass
-            except Exception as e:
-                line_num = 1
-                if hasattr(e, "problem_mark") and e.problem_mark:
-                    line_num = e.problem_mark.line + 1
+        # Helm chart templates are Go templates, not YAML, until rendered.
+        # A multi-document stream (Kubernetes manifests) is one parse.
+        if yaml_installed() and not self._is_helm_template(file_path, content):
+            error = load_yaml(content).error
+            if error is not None:
                 issues.append(
                     AnalysisIssue(
                         file_path=file_path,
-                        line=line_num,
+                        line=yaml_error_line(error),
                         column=0,
                         issue_type=AnalysisIssueType.YAML_SYNTAX_ERROR,
                         severity=AnalysisIssueSeverity.HIGH,
-                        message=f"YAML syntax error: {str(e)[:100]}",
+                        message=f"YAML syntax error: {str(error)[:100]}",
                         suggestion="Fix the YAML syntax to ensure valid parsing",
                         engine="internal:yaml_analyzer",
                     )
@@ -197,20 +185,8 @@ class YamlAnalyzer:
 
     @staticmethod
     def _is_helm_template(file_path: str, content: str) -> bool:
-        """True for a Helm chart template that uses template actions.
-
-        Files under ``<chart>/templates/`` (a directory next to ``Chart.yaml``)
-        are Go templates that Helm renders into YAML; ``{{ ... }}`` actions such
-        as ``{{- if }}`` or ``{{ include ... | nindent 4 }}`` make them invalid
-        YAML until rendered, so they cannot be syntax-checked as YAML. Files
-        with the same syntax outside a chart are still checked.
-        """
-        if "{{" not in content:
-            return False
-        for parent in Path(file_path).parents:
-            if parent.name == "templates" and (parent.parent / "Chart.yaml").is_file():
-                return True
-        return False
+        """True when ``file_path`` is a Helm template that must not be parsed."""
+        return is_helm_template(Path(file_path), content)
 
     def _check_secrets(self, file_path: str, lines: List[str]) -> List[AnalysisIssue]:
         """Check for potential hardcoded secrets with tiered severity."""
