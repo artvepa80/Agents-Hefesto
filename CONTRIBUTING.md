@@ -56,7 +56,7 @@ ruff check
 python -m mypy hefesto --ignore-missing-imports
 python -m flake8 hefesto tests
 
-# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.20.0)
+# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.20.1)
 HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,

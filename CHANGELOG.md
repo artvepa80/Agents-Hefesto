@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.20.1] - 2026-10-17
+
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)
 
 - **Exit code change: under `--fail-on`, a found file that could not be analyzed now fails the gate (exit 1).** In 4.20.0 such a file was dropped without a warning, so a run could print "Gate passed" over it. Example: a `config.json` with a hardcoded password next to an array nested 5000 levels deep gave "Files analyzed: 1" of 2 found, "Gate passed: no CRITICAL+ issues" and exit 0. The run now prints "Gate failure: N file(s) could not be analyzed (exit 1)", also with `--allow-no-files`. To keep the 4.20.0 exit code, pass `--allow-not-analyzed` (GitHub Action: `allow_not_analyzed: 'true'`); the file is still listed and warned about. Or pin `@v4.20.0` / `hefesto-ai==4.20.0`. Without `--fail-on` the exit code is unchanged (0).
@@ -18,16 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fail-open on analyzer exceptions.** `AnalyzerEngine._analyze_file` swallowed every exception with `except Exception: return None`, with no record and no warning. Found files that could not be read (`OSError`) or whose analyzer raised are now recorded as not analyzed: listed under "Not analyzed" in the text summary with the reason, in `meta.not_analyzed` in JSON (`path`, `language`, `reason` `read_error`/`analyzer_error`, `exception`), and as an `error` notification with the file as location in SARIF `invocations[0].toolExecutionNotifications`. A warning goes to stderr, also with `--quiet`.
 - **JSON nested deeper than the recursion limit.** `JsonAnalyzer` catches `RecursionError` from `json.loads` and from its recursive checks and falls back to its regex analysis, as it already did for invalid JSON. The JSON content classifier treats a too-deep file as plain JSON instead of raising. A CloudFormation template nested that deep is reported as not analyzed.
 - **JSON and TOML analysis time grew with the number of keys** (about 3 s per MB of JSON on 4.20.0, 2.9 to 3.5 s in the measurements below). `key_has_pattern` re-tokenized every pattern and every key on each call; tokenizing is now memoized per key and per pattern list (bounded LRU caches). On the same machine and fixtures (Linux, 8 vCPU Xeon, Python 3.13.5; arrays of `{"id", "name", "tags"}` objects): 0.95 MB 2.73 s → 0.29 s, 1.93 MB 5.38 s → 0.41 s, 3.88 MB 13.65 s → 0.64 s, 25 MB 74.95 s → 4.29 s, findings identical. A test bounds tokenizer calls by unique keys plus patterns (no wall-clock assertion).
-
 - **Files that are not valid UTF-8 were dropped without a warning.** They are now read with the `latin-1` fallback and analyzed. `latin-1` maps each byte 0x00–0xff to one code point ([Python codecs, "Encodings and Unicode"](https://docs.python.org/3/library/codecs.html#encodings-and-unicode)), so decoding never fails, line numbers are kept and ASCII text such as keys and secrets is unchanged; non-ASCII characters may come out wrong (a UTF-16 file reads as noise). Each such file is listed as "decoded with fallback": "Decoded with fallback (latin-1): N" in the text summary, `meta.decoded_with_fallback` (`path`, `encoding`) in JSON, a `warning` notification with the file as location in SARIF, and a warning on stderr (also with `--quiet`).
-
-### Documentation
-
-- **Language-learnings skill:** two JSON entries (deep nesting dropped by the gate; key-matching cost) in `.claude/skills/hefestoai-language-learnings/references/json.md`, citing #132. Handoff: `docs/worklog/2026-10-16-fail-closed-4.20.1.md`.
 
 ### Added
 
 - **`--allow-not-analyzed`** (command-line flag only; `.hefesto.yaml` rejects it as an unknown key) and the GitHub Action input **`allow_not_analyzed`** (default `false`), modelled on `--allow-no-files`.
+- **Engineering skill `.claude/skills/hefestoai-language-learnings/`** (first added under `.cursor/skills/`, moved in the fixes below) for contributors and agents (not the customer-facing `skill/`). `SKILL.md` is an index with the entry format (Symptom, Cause, Fix, Official source, PR/commit, Verified, Status) and the process to add entries and review them at each release. `references/` has python, js-ts, json, cobol, yaml-iac, github-actions and tooling-ci notes, 30 entries seeded from this CHANGELOG, `docs/cobol.md`, `docs/worklog/` and PRs #122, #124, #127, each checked against its source. Frontmatter follows https://cursor.com/docs/context/skills and https://agentskills.io/specification.
+
+### Changed
+
+- **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.
+- **CI: GitHub Actions moved off the deprecated Node 20 runtime** ([GitHub changelog, 2025-09-19](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)). In all 9 workflows: `actions/checkout` v4 → v5, `actions/setup-python` v5 → v6, `actions/upload-artifact` v4 → v6, `actions/cache` v4 → v5 (all `runs.using: node24`), and `codecov/codecov-action` v4 → v5 (composite, no Node runtime; the `files` input is unchanged). `release.yml` only changes the two action versions; triggers, permissions, secrets and the floating `v4` step are untouched. Runners stay on `ubuntu-latest`. No change to the package or the published GitHub Action.
 
 ### Security
 
@@ -35,19 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- **Language-learnings skill:** two JSON entries (deep nesting dropped by the gate; key-matching cost) in `.claude/skills/hefestoai-language-learnings/references/json.md`, citing #132. Handoff: `docs/worklog/2026-10-16-fail-closed-4.20.1.md`.
 - **Merge timing rule GH-8 in `CLAUDE.md` section 5.** A PR that changes runtime behaviour (`hefesto/`, `action.yml`, `scripts/action_entrypoint.sh`, `Dockerfile.action`, `scripts/guard_*.py`, `scripts/verify_*.py`, dependency pins in `pyproject.toml` and `requirements*.txt`, lockfiles outside `tests/fixtures/`, `.github/workflows/`) is not merged on the calendar day (America/Lima) it was opened, unless the PR body records `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: ...`. Docs-only, test-only, CI-only scripts that are not guards or verifiers, and version-bump-only PRs (version strings plus `CHANGELOG.md`) are exempt; definitions decided by Arturo on 2026-10-16.
-
-### Changed
-
-- **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.
-
-### Added
-
-- **Engineering skill `.claude/skills/hefestoai-language-learnings/`** (first added under `.cursor/skills/`, moved in the fixes below) for contributors and agents (not the customer-facing `skill/`). `SKILL.md` is an index with the entry format (Symptom, Cause, Fix, Official source, PR/commit, Verified, Status) and the process to add entries and review them at each release. `references/` has python, js-ts, json, cobol, yaml-iac, github-actions and tooling-ci notes, 30 entries seeded from this CHANGELOG, `docs/cobol.md`, `docs/worklog/` and PRs #122, #124, #127, each checked against its source. Frontmatter follows https://cursor.com/docs/context/skills and https://agentskills.io/specification.
-
-### Changed
-
-- **CI: GitHub Actions moved off the deprecated Node 20 runtime** ([GitHub changelog, 2025-09-19](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)). In all 9 workflows: `actions/checkout` v4 → v5, `actions/setup-python` v5 → v6, `actions/upload-artifact` v4 → v6, `actions/cache` v4 → v5 (all `runs.using: node24`), and `codecov/codecov-action` v4 → v5 (composite, no Node runtime; the `files` input is unchanged). `release.yml` only changes the two action versions; triggers, permissions, secrets and the floating `v4` step are untouched. Runners stay on `ubuntu-latest`. No change to the package or the published GitHub Action.
 
 ## [4.20.0] - 2026-10-16
 
