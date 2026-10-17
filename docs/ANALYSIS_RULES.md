@@ -265,13 +265,15 @@ result = simple_eval(expression, functions={"abs": abs, "min": min})
 
 ---
 
-### 2.4 Unsafe Deserialization (pickle)
+### 2.4 Pickle import (PICKLE_USAGE)
 
-**Rule ID:** `SECURITY_004`
+**Rule ID:** `PICKLE_USAGE`
 
 **Severity:** HIGH
 
 **Description:** `pickle.load()` can execute arbitrary code during deserialization.
+
+**What Hefesto flags:** the `import pickle` / `import cPickle` / `from pickle import …` line. The `pickle.load()` call itself is not reported separately, and `yaml.load` is not detected.
 
 **Example - BAD:**
 
@@ -1081,7 +1083,7 @@ Is it a minor style or documentation issue?
 | SECURITY_001 | Hardcoded Secrets | CRITICAL | Security |
 | SECURITY_002 | SQL Injection | CRITICAL | Security |
 | SECURITY_003 | eval() Usage | CRITICAL | Security |
-| SECURITY_004 | Unsafe Pickle | HIGH | Security |
+| PICKLE_USAGE | Pickle import | HIGH | Security |
 | SECURITY_005 | Assert in Production | MEDIUM | Security |
 | SECURITY_006 | Bare Except | MEDIUM | Security |
 | SMELL_001 | Long Function | MEDIUM-HIGH | Code Smells |
