@@ -120,11 +120,15 @@ def test_invalid_timestamp_keeps_the_other_findings(tmp_path, monkeypatch):
     path.write_text(TIMESTAMP, encoding="utf-8")
     engine, issues = _issues(path)
     assert engine._not_analyzed == []
-    assert _sig(issues) == [
+    # 4.20.1 stored str(ValueError)[:100]. CPython 3.14 appends ", not 13".
+    sig = _sig(issues)
+    assert sig[:2] == [
         ("YAML_SECRET_EXPOSURE", 7, 0, "MEDIUM", "Possible hardcoded token"),
         ("YAML_SECRET_EXPOSURE", 8, 0, "HIGH", "Potential hardcoded password"),
-        ("YAML_SYNTAX_ERROR", 1, 0, "HIGH", "YAML syntax error: month must be in 1..12"),
     ]
+    assert len(sig) == 3
+    assert sig[2][:4] == ("YAML_SYNTAX_ERROR", 1, 0, "HIGH")
+    assert sig[2][4].startswith("YAML syntax error: month must be in 1..12")
     monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
     monkeypatch.setenv("HEFESTO_NO_UPSELL", "1")
     cli = __import__("hefesto.cli.main", fromlist=["cli"]).cli
