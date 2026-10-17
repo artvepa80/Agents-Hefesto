@@ -293,6 +293,77 @@ def _pypi(version: str):
     return _open
 
 
+# Tokens the client already treats as on (_TRUTHY) or off (_OPT_OUT), including
+# surrounding space and mixed case, because both checks use strip().lower().
+_UPDATE_CHECK_OFF = (
+    ("HEFESTO_NO_UPDATE_CHECK", "1"),
+    ("HEFESTO_NO_UPDATE_CHECK", "true"),
+    ("HEFESTO_NO_UPDATE_CHECK", "yes"),
+    ("HEFESTO_NO_UPDATE_CHECK", "on"),
+    ("HEFESTO_NO_UPDATE_CHECK", " TRUE "),
+    ("HEFESTO_TELEMETRY", "0"),
+    ("HEFESTO_TELEMETRY", "false"),
+    ("HEFESTO_TELEMETRY", "no"),
+    ("HEFESTO_TELEMETRY", "off"),
+    ("HEFESTO_TELEMETRY", " Off "),
+    ("DO_NOT_TRACK", "1"),
+    ("DO_NOT_TRACK", "true"),
+    ("DO_NOT_TRACK", "yes"),
+    ("DO_NOT_TRACK", "on"),
+    ("DO_NOT_TRACK", " Yes "),
+)
+
+
+def _forbid_http(monkeypatch: pytest.MonkeyPatch) -> list[tuple[object, object]]:
+    """Record every urllib request or urlopen, then fail the call."""
+    calls: list[tuple[object, object]] = []
+
+    def _boom(*args: object, **kwargs: object) -> None:
+        calls.append((args, kwargs))
+        raise AssertionError("unexpected HTTP call")
+
+    monkeypatch.setattr(client.urllib.request, "Request", _boom)
+    monkeypatch.setattr(client.urllib.request, "urlopen", _boom)
+    return calls
+
+
+@pytest.mark.parametrize(("name", "value"), _UPDATE_CHECK_OFF)
+def test_update_check_skips_network_and_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, name: str, value: str
+) -> None:
+    calls = _forbid_http(monkeypatch)
+    monkeypatch.setenv(name, value)
+    client.refresh_latest_version()
+    assert calls == []
+    assert not (tmp_path / ".latest_version").exists()
+
+
+def test_update_check_runs_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    for name in ("HEFESTO_NO_UPDATE_CHECK", "HEFESTO_TELEMETRY", "DO_NOT_TRACK"):
+        monkeypatch.delenv(name, raising=False)
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    assert opened.calls[0][0] == client.PYPI_JSON_URL
+    cache = tmp_path / ".latest_version"
+    assert cache.is_file()
+    loaded = json.loads(cache.read_text(encoding="utf-8"))
+    assert loaded["version"] == "9.9.9"
+
+
+def test_update_check_still_runs_when_only_telemetry_file_is_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """``hefesto telemetry disable`` does not skip the version check."""
+    (tmp_path / "telemetry_disabled").write_text("1\n", encoding="utf-8")
+    opened = _pypi("9.9.9")
+    monkeypatch.setattr(client.urllib.request, "urlopen", opened)
+    client.refresh_latest_version()
+    assert len(opened.calls) == 1
+    assert (tmp_path / ".latest_version").is_file()
+
+
 def test_pypi_notice_is_cached_for_a_day(monkeypatch: pytest.MonkeyPatch) -> None:
     opened = _pypi("9.9.9")
     monkeypatch.setattr(client.urllib.request, "urlopen", opened)

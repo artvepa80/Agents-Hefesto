@@ -14,6 +14,7 @@ def _isolate_telemetry(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     for name in (
         "HEFESTO_TELEMETRY",
         "DO_NOT_TRACK",
+        "HEFESTO_NO_UPDATE_CHECK",
         "HEFESTO_TELEMETRY_DEBUG",
         "HEFESTO_POSTHOG_KEY",
         "HEFESTO_POSTHOG_HOST",
