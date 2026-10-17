@@ -25,6 +25,7 @@ import yaml
 from click.testing import CliRunner
 
 from hefesto.core.analyzer_engine import AnalyzerEngine
+from hefesto.core.config_parse import load_yaml, parse_scope
 
 REPO = Path(__file__).resolve().parents[1]
 FLOW_SEQ_30K = "[ " * 30000 + "]" * 30000 + "\n"
@@ -140,10 +141,62 @@ def _assert_same_as_safeloader(path: Path, content: str) -> None:
     assert "could not be analyzed" not in text
 
 
+def _loader_outcome(content: str):
+    """What the HIGH syntax finding is built from, or success.
+
+    ``--fail-on high`` exits 1 when this is an error. The message is the
+    same truncation ``YamlAnalyzer`` stores.
+    """
+    with parse_scope():
+        loaded = load_yaml(content)
+    if loaded.error is None:
+        return ("ok", len(loaded.raw or []))
+    return ("err", type(loaded.error).__name__, str(loaded.error)[:100])
+
+
+def _sweep_depths(style: str) -> None:
+    """Compare depths 480-505 to SafeLoader inside this process.
+
+    The parent runs one subprocess per shape. A crash here fails that
+    test. Print the depth before loading it so a signal still names the
+    level; rerun that one depth only when diagnosing.
+    """
+    if style not in ("flow-seq", "flow-map", "block"):
+        raise SystemExit("unknown style %s" % style)
+    os.environ.pop("HEFESTO_YAML_LOADER", None)
+    for depth in range(480, 506):
+        print("depth %s %s" % (style, depth), flush=True)
+        content = _nested(style, depth)
+        os.environ.pop("HEFESTO_YAML_LOADER", None)
+        default = _loader_outcome(content)
+        os.environ["HEFESTO_YAML_LOADER"] = "safe"
+        safe = _loader_outcome(content)
+        if default != safe:
+            raise SystemExit("mismatch %s %s\n%s\n%s" % (style, depth, default, safe))
+    print("ok %s 480-505" % style, flush=True)
+
+
 @pytest.mark.parametrize("style", ["flow-seq", "flow-map", "block"])
-@pytest.mark.parametrize("depth", range(480, 506))
-def test_depth_matches_safeloader(tmp_path, style, depth):
-    _assert_same_as_safeloader(tmp_path / "nest.yaml", _nested(style, depth))
+def test_depth_sweep_matches_safeloader(style):
+    """One subprocess for the whole 480-505 sweep. Kept on PR CI, not nightly."""
+    env = dict(os.environ, HEFESTO_TELEMETRY="0", HEFESTO_NO_UPSELL="1")
+    env.pop("HEFESTO_YAML_LOADER", None)
+    # pytest-cov traces every frame in the child. SafeLoader near the
+    # recursion limit then dominates the sweep. The assertion is the
+    # loader outcome, which does not need that trace.
+    for key in list(env):
+        if key.startswith("COV_CORE"):
+            env.pop(key)
+    result = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve()), "--sweep", style],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(REPO),
+        timeout=60,
+    )
+    assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+    assert "ok %s 480-505" % style in result.stdout
 
 
 def test_alternating_block_at_990_matches_safeloader(tmp_path):
@@ -228,3 +281,10 @@ def test_invalid_timestamp_keeps_the_other_findings(tmp_path, monkeypatch):
     assert "month must be in 1..12" in text
     assert "token" in text
     assert "password" in text
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--sweep":
+        _sweep_depths(sys.argv[2])
+    else:
+        raise SystemExit("usage: test_yaml_loader_guards.py --sweep STYLE")

@@ -20,15 +20,21 @@ is 1000 and each level uses about two frames. Nesting deeper than
 :data:`C_LOADER_MAX_DEPTH` is parsed with the pure-Python loader. Depth is
 always measured with ``yaml.parse`` (iterative events). A count of ``[``
 and ``{`` plus the longest line is not enough: block YAML can nest two
-collections in one indent column. Any exception from a loader becomes that
-pure-Python error, which is what 4.20.1 reported while still returning the
-file's other findings.
+collections in one indent column.
+
+A tab, a line that starts with ``%``, or a block-scalar header glued to
+``#`` (``[|>][0-9+-]*#``, yaml-test-suite X4QW ``block: ># comment``) is
+also parsed with the pure-Python loader. Those are the markers that
+separate the two loaders on the yaml-test-suite, apart from JR7V and
+WZ62. Any exception from a loader becomes that pure-Python error, which
+is what 4.20.1 reported while still returning the file's other findings.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -50,6 +56,10 @@ C_LOADER_MAX_DEPTH = 256
 
 _COLLECTION_START = frozenset({"SequenceStartEvent", "MappingStartEvent"})
 _COLLECTION_END = frozenset({"SequenceEndEvent", "MappingEndEvent"})
+
+# ``>#``, ``|+2#``, ``|-#``: a block scalar indicator, optional chomp or
+# indent digits, then ``#`` with no space. X4QW is ``block: ># comment``.
+_BLOCK_SCALAR_HASH = re.compile(r"[|>][0-9+-]*#")
 
 
 def yaml_installed() -> bool:
@@ -129,9 +139,26 @@ def _event_depth_exceeds(content: str, limit: int) -> bool:
     return False
 
 
+def _libyaml_markers(content: str) -> bool:
+    """True when this text carries a known libyaml / SafeLoader split.
+
+    A tab anywhere, a line starting with ``%``, or :data:`_BLOCK_SCALAR_HASH`.
+    JR7V and WZ62 disagree too and match none of these; they stay on
+    ``CSafeLoader``, which accepts both.
+    """
+    if "\t" in content:
+        return True
+    for line in content.splitlines():
+        if line.startswith("%"):
+            return True
+    return _BLOCK_SCALAR_HASH.search(content) is not None
+
+
 def _loader_for(content: str) -> type:
     loader = loader_class()
-    if yaml is not None and loader is not yaml.SafeLoader and yaml_nesting_exceeds(content):
+    if yaml is None or loader is yaml.SafeLoader:
+        return loader
+    if _libyaml_markers(content) or yaml_nesting_exceeds(content):
         return yaml.SafeLoader
     return loader
 
