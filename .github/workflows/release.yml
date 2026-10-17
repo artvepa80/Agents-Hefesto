@@ -53,27 +53,32 @@ jobs:
         run: |
           python -m twine check dist/*
 
+      # A real upload error fails this step and the job. --skip-existing
+      # ignores only files already on PyPI, so a re-run of the same tag can
+      # still reach the release and the v4 move. Those steps use success().
       - name: Publish to PyPI
         id: pypi
         if: ${{ env.TWINE_PASSWORD != '' }}
-        continue-on-error: true
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python -m twine upload dist/*
+          python -m twine upload --skip-existing dist/*
 
       - name: PyPI publish status
+        if: success()
         run: |
           if [ "${{ steps.pypi.outcome }}" = "success" ]; then
             echo "::notice::PyPI publish succeeded."
           elif [ "${{ steps.pypi.outcome }}" = "skipped" ]; then
             echo "::warning::PyPI publish skipped (no PYPI_API_TOKEN)."
           else
-            echo "::warning::PyPI publish failed. Check token and PyPI account email verification."
+            echo "::error::PyPI publish failed. Check the token and the PyPI account email verification."
+            exit 1
           fi
 
       - name: Create GitHub Release
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -88,6 +93,7 @@ jobs:
       # CLAUDE.md); a future v5 alias needs its own decision. Lightweight, like
       # actions/checkout's major tags. An older patch never moves v4 back.
       - name: Move floating v4 tag
+        if: success()
         env:
           TAG: ${{ github.ref_name }}
         run: |

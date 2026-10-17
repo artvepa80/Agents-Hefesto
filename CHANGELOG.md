@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI: a failed PyPI upload fails the release workflow.** `.github/workflows/release.yml` no longer sets `continue-on-error` on the publish step. `twine upload --skip-existing` ignores only files already on PyPI (a re-run of the same tag). Any other upload error fails the job. The GitHub Release and the floating `v4` move use `if: success()`, so they do not run after that failure. A missing `PYPI_API_TOKEN` still skips the upload and warns. Triggers, permissions, and secrets are unchanged. Handoff: `docs/worklog/2026-10-17-release-publish-fail-closed.md`.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)

@@ -505,7 +505,7 @@ Releases are automated via GitHub Actions:
 3.  **GitHub Release** (automatic)
     - The hardened `release.yml` now creates GitHub Releases automatically on tag push.
     - Build artifacts (wheel + sdist) are attached to the release.
-    - If PyPI publish fails (e.g., email verification pending), the release is still created.
+    - The GitHub Release and the `v4` move run only after the PyPI upload succeeds. A failed upload fails the workflow. `twine upload --skip-existing` ignores only files already on PyPI.
 
 4.  **Tag `v4`, floating alias of the 4.x line** (automatic)
     - The last step of `release.yml` force-moves the lightweight tag `v4` to the commit of a
