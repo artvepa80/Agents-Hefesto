@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Opt out of the PyPI newer-version check.** `hefesto analyze` does not request `https://pypi.org/pypi/hefesto-ai/json` and does not write `~/.hefesto/.latest_version` when `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`, when `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off`, or when `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`. Usage events stay on by default. `hefesto telemetry disable` does not skip the check. The GitHub Action's default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`, so the check does not run on runners.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)
