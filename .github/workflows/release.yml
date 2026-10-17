@@ -65,6 +65,8 @@ jobs:
         run: |
           python -m twine upload --skip-existing dist/*
 
+      # Only the success and skipped outcomes are visible here. A failed upload
+      # fails the job, so this step (if: success()) does not run to report it.
       - name: PyPI publish status
         if: success()
         run: |
@@ -72,9 +74,6 @@ jobs:
             echo "::notice::PyPI publish succeeded."
           elif [ "${{ steps.pypi.outcome }}" = "skipped" ]; then
             echo "::warning::PyPI publish skipped (no PYPI_API_TOKEN)."
-          else
-            echo "::error::PyPI publish failed. Check the token and the PyPI account email verification."
-            exit 1
           fi
 
       - name: Create GitHub Release

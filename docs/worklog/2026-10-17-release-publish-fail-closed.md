@@ -37,11 +37,20 @@ side effect of ignoring every upload error.
   A missing `PYPI_API_TOKEN` still skips the upload
   (`if: env.TWINE_PASSWORD != ''`); the status step warns, and the release
   and the `v4` move still run, as before.
-- The status step's non-success, non-skipped branch now prints `::error::`
-  and exits 1. With `continue-on-error` gone that branch is not reached; it
-  no longer warns and continues.
+- The publish-status step reports success and a missing token only. Its
+  `else` branch was removed. With `continue-on-error` gone, a failed upload
+  fails the job before a later `if: success()` step starts, so that branch
+  never ran and could not be what failed the run. `if: always()` was not
+  used: it would also run after an earlier failure (build, twine check),
+  when the publish step is skipped, and the "no PYPI_API_TOKEN" warning
+  would be the wrong reason. The upload step's own log is the failure.
 - Triggers, `permissions`, the concurrency group, and the `PYPI_API_TOKEN`
   secret are unchanged.
+- `tests/test_release_workflow.py` (ported from the closed duplicate PR #137,
+  branch `cursor/release-fail-closed-3aa9`, and adapted) reads the workflow
+  YAML. It fails if the publish step sets `continue-on-error`, if the upload
+  omits `--skip-existing`, or if the GitHub Release or `v4` step omits
+  `success()`.
 
 ## Docs cited
 
