@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- **`scripts/guard_public_repo.py` also scans Markdown, rules and agent skills.** It reads `.md`/`.mdc` files everywhere and text files under `.claude/`, `.cursor/` and `docs/`, and fails on private references: `MEMORY.md`, `swarm/` and `iris/` paths, `hefesto_pro`, the private repository name, "private #NNN" PR references, and private paths (`landing-page/`, agent handoffs). Plain words ("private repo", "Swarm Gate", "landing page") and public PR numbers are not flagged. Pre-existing mentions outside `.claude/` and `.cursor/` are listed per file and rule in `scripts/guard_markdown_allowlist.txt`; skills and rules cannot be allowlisted. New tests in `tests/test_guard_public_repo_markdown.py`. Known limit: a bare `#NNN` cannot be told apart from a public PR.
+- **`scripts/guard_public_repo.py` also scans Markdown, rules and agent skills.** It reads `.md`/`.mdc` files everywhere and text files under `.claude/`, `.cursor/` and `docs/`, and fails on private references: `MEMORY.md`, paths in the private `swarm` and `iris` packages, `hefesto_pro`, the private repository name, "private #NNN" PR references, and private paths (the private landing directory, agent handoffs). Plain words ("private repo", "Swarm Gate", "landing page") and public PR numbers are not flagged. Pre-existing mentions outside `.claude/` and `.cursor/` are listed per file and rule in `scripts/guard_markdown_allowlist.txt`; skills and rules cannot be allowlisted. New tests in `tests/test_guard_public_repo_markdown.py`. Known limit: a bare `#NNN` cannot be told apart from a public PR.
 
 ### Changed
 
