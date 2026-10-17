@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **TestPyPI publishes with PyPI Trusted Publishing (OIDC).** `.github/workflows/release-testpypi.yml` keeps the RC-tag trigger and the "Verify release tag" step. A `build` job still checks out, builds the sdist and wheel, and runs `twine check`, then uploads `dist/` as the `python-package-distributions` artifact (`actions/upload-artifact@v6`). A `publish` job downloads that artifact (`actions/download-artifact@v7`, the Node 24 release that uses the same `@actions/artifact` 5.x client as upload-artifact v6) and publishes with `pypa/gh-action-pypi-publish@v1.14.2` (latest release on 2026-10-17, published 2026-07-29) to `https://test.pypi.org/legacy/`. The publish job sets environment `testpypi` (`https://test.pypi.org/p/hefesto-ai`) and `permissions: id-token: write`. Workflow permissions stay `contents: read`. Digital attestations stay at the action default (PEP 740). The `TEST_PYPI_API_TOKEN` / `twine upload` step and the "Skip Publish (Missing Credentials)" step are removed, so a missing publisher or environment fails the job. Production `release.yml` is unchanged. The GitHub environment `testpypi` must exist in repository settings, matching the TestPyPI pending publisher. After the first successful publish, the owner can delete the `TEST_PYPI_API_TOKEN` secret.
+
+### Documentation
+
+- **`CLAUDE.md` deployment section** describes the TestPyPI trusted publisher (environment `testpypi`, no `TEST_PYPI_API_TOKEN`). `README.md` does not mention that secret, and the repository has no `RELEASING` document.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)
