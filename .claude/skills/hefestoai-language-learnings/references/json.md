@@ -6,7 +6,7 @@
 - **Cause:** `JsonAnalyzer` shipped as a module, but no `LanguageSpec` routed `*.json` to it.
 - **Fix:** 4.20.0 dispatches JSON (and eight more formats). After the release, `config.json` with fake secrets gives "Found 1 file(s)" and 2 CRITICAL `HARDCODED_SECRET` with rule id J001.
 - **Official source:** n/a, internal behavior
-- **PR/commit:** #124 (`4bb568f`), released in 4.20.0 (`ea260bc`); handoff `release-4.20.0-2026-10-16.md`
+- **PR/commit:** #124 (`4bb568f`), released in 4.20.0 (`ea260bc`); `docs/worklog/2026-10-16-release-4.20.0.md`
 - **Verified:** 4.20.0 from PyPI in a fresh venv (2026-10-16)
 - **Status:** Fixed
 
@@ -30,12 +30,3 @@
 - **Verified:** 4.20.0
 - **Status:** Known limitation (by design)
 
-### `.cursor/mcp.json`: 0 files in the private repo, 1 in the public
-
-- **Symptom:** `hefesto analyze .cursor/mcp.json` counted 0 files in the private repo and 1 in the public one.
-- **Cause:** not established. The handoff suggests an exclusion or a different hefesto version.
-- **Fix:** none yet. Recorded as an observation.
-- **Official source:** n/a
-- **PR/commit:** handoff `cursor-mcp-dogfood-2026-10-16.md`
-- **Verified:** 2026-10-16
-- **Status:** Open

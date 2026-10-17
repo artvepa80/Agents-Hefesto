@@ -36,6 +36,6 @@
 - **Cause:** unit fixtures do not show precision.
 - **Fix:** use the pinned corpus (`scripts/cobol_corpus_baseline.py`, `benchmark/cobol/baseline.json`) and the 440 labelled findings in `tests/fixtures/cobol/labels/phase3_labels.json`; recall with `python scripts/cobol_recall.py` (39 of 41 seeded issues; 2 documented misses).
 - **Official source:** n/a, internal process
-- **PR/commit:** `docs/cobol.md`; private `MEMORY.md` (COBOL status 2026-10-10)
+- **PR/commit:** `docs/cobol.md`; CHANGELOG 4.15.0 (COBOL Phase 3, 440 labelled findings)
 - **Verified:** 2026-10-16
 - **Status:** Known limitation (2 recall misses)

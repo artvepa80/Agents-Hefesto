@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.
+
 ### Added
 
-- **Engineering skill `.cursor/skills/hefestoai-language-learnings/`** for contributors and agents (not the customer-facing `skill/`). `SKILL.md` is an index with the entry format (Symptom, Cause, Fix, Official source, PR/commit, Verified, Status) and the process to add entries and review them at each release. `references/` has python, js-ts, json, cobol, yaml-iac, github-actions and tooling-ci notes, 30 entries seeded from this CHANGELOG, `docs/cobol.md`, `docs/worklog/` and PRs #122, #124, #127, each checked against its source. Frontmatter follows https://cursor.com/docs/context/skills and https://agentskills.io/specification.
+- **Engineering skill `.claude/skills/hefestoai-language-learnings/`** (first added under `.cursor/skills/`, moved in the fixes below) for contributors and agents (not the customer-facing `skill/`). `SKILL.md` is an index with the entry format (Symptom, Cause, Fix, Official source, PR/commit, Verified, Status) and the process to add entries and review them at each release. `references/` has python, js-ts, json, cobol, yaml-iac, github-actions and tooling-ci notes, 30 entries seeded from this CHANGELOG, `docs/cobol.md`, `docs/worklog/` and PRs #122, #124, #127, each checked against its source. Frontmatter follows https://cursor.com/docs/context/skills and https://agentskills.io/specification.
 
 ### Changed
 
