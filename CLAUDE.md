@@ -509,11 +509,22 @@ Releases are automated via GitHub Actions:
     git tag v4.7.1
     git push origin v4.7.1
     ```
+    The workflow builds the sdist and wheel, runs `twine check`, then publishes
+    with PyPI Trusted Publishing (OIDC): environment `pypi`,
+    `pypa/gh-action-pypi-publish` pinned to a release tag. The action's default
+    repository is PyPI; attestations stay at the action default (PEP 740).
+    Authentication is the GitHub OIDC token for that environment;
+    `PYPI_API_TOKEN` is retired on this workflow. The GitHub environment `pypi`
+    must exist under repository Settings → Environments (the name registered
+    on the PyPI trusted publisher). After the first successful production
+    publish, the owner can delete the `PYPI_API_TOKEN` secret.
+    Release-candidate publishes go through `release-testpypi.yml` (item 1).
 
 3.  **GitHub Release** (automatic)
-    - The hardened `release.yml` now creates GitHub Releases automatically on tag push.
+    - `release.yml` creates the GitHub Release after the PyPI publish job succeeds.
     - Build artifacts (wheel + sdist) are attached to the release.
-    - If PyPI publish fails (e.g., email verification pending), the release is still created.
+    - A failed publish fails the workflow. The GitHub Release is not created and
+      the floating `v4` tag is not moved.
 
 4.  **Tag `v4`, floating alias of the 4.x line** (automatic)
     - The last step of `release.yml` force-moves the lightweight tag `v4` to the commit of a
