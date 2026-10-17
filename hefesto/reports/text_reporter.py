@@ -83,6 +83,20 @@ class TextReporter:
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _not_analyzed_lines(meta: Optional[Dict[str, Any]]) -> List[str]:
+        """Found files that could not be analyzed (``meta.not_analyzed``)."""
+        entries = (meta or {}).get("not_analyzed") or []
+        if not entries:
+            return []
+        from hefesto.core.analyzer_engine import not_analyzed_message
+
+        lines = [f"   Not analyzed: {len(entries)}"]
+        lines.extend(f"   - {not_analyzed_message(entry)}" for entry in entries[:10])
+        if len(entries) > 10:
+            lines.append(f"   ... and {len(entries) - 10} more (see meta.not_analyzed in JSON)")
+        return lines
+
     def _format_header(self) -> str:
         """Format report header."""
         bold = self.COLORS["BOLD"]
@@ -100,6 +114,7 @@ class TextReporter:
             from hefesto.core.analyzer_engine import vendored_skip_message
 
             lines.append(f"   {vendored_skip_message(vendored['count'])}")
+        lines.extend(self._not_analyzed_lines(meta))
         lines.append(f"   Issues found: {summary.total_issues}")
 
         if summary.total_issues > 0:

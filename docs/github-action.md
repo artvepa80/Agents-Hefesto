@@ -51,6 +51,7 @@ That image is still in the repository for running the same entrypoint with
 | `target` | `.` | File or directory to analyze |
 | `fail_on` | `CRITICAL` | Fail when a finding is at or above this severity |
 | `allow_no_files` | `false` | `true`/`1`/`yes`: pass `--allow-no-files`, so a run that analyzes no files keeps exit 0 (see below) |
+| `allow_not_analyzed` | `false` | `true`/`1`/`yes`: pass `--allow-not-analyzed`, so a found file that could not be analyzed does not fail the step (see below) |
 | `min_severity` | `LOW` | Lowest severity reported (`INFO` is read as `LOW`) |
 | `format` | `text` | Report printed to the log: `text`, `json`, `html` or `sarif` |
 | `sarif` | `false` | `true`/`1`/`yes`: also write a SARIF file and upload it |
@@ -70,6 +71,15 @@ purpose, such as a changed-files-only job on a PR that touches only Markdown,
 set `allow_no_files: 'true'`: the Action passes `--allow-no-files`, and only the
 exit code changes (0 instead of 1); "Files analyzed: 0" and the warning are
 still printed.
+
+### Files that could not be analyzed
+
+Since 4.20.1, a file the step found but could not analyze (not valid UTF-8, or
+its analyzer raised an error) fails the step: the log lists it under "Not
+analyzed" with the reason and prints "Gate failure: N file(s) could not be
+analyzed (exit 1)". In 4.20.0 such a file was dropped without a warning. Set
+`allow_not_analyzed: 'true'` to keep the old exit code; the file is still
+listed and warned about.
 
 ## Outputs
 

@@ -250,6 +250,15 @@ def _load_project_config(paths, config_path, option_names):
     ),
 )
 @click.option(
+    "--allow-not-analyzed",
+    is_flag=True,
+    help=(
+        "With --fail-on, do not fail the gate because a found file could not be"
+        " analyzed (read error or analyzer failure); the file is still listed as"
+        " 'Not analyzed' and warned about on stderr"
+    ),
+)
+@click.option(
     "--quiet",
     is_flag=True,
     help="Minimal output (summary only, no pipeline details)",
@@ -343,6 +352,7 @@ def analyze(
     save_html: Optional[str],
     fail_on: Optional[str],
     allow_no_files: bool,
+    allow_not_analyzed: bool,
     quiet: bool,
     max_issues: Optional[int],
     exclude_types: str,
@@ -453,7 +463,13 @@ def analyze(
             _write_sarif(combined_report, sarif_file, quiet, json_mode)
 
         exit_code = _determine_exit_code(
-            combined_report, fail_on, exclude_types, quiet, json_mode, allow_no_files
+            combined_report,
+            fail_on,
+            exclude_types,
+            quiet,
+            json_mode,
+            allow_no_files,
+            allow_not_analyzed,
         )
 
         from hefesto.telemetry.client import (
@@ -1140,6 +1156,12 @@ def _vendored_skipped_count(engine) -> int:
     return int(skipped.get("count", 0))
 
 
+def _not_analyzed_hint(engine, before: int) -> str:
+    """'; N file(s) could not be analyzed' for files the last path left out."""
+    failed = len(getattr(engine, "_not_analyzed", [])) - before
+    return f"; {failed} file(s) could not be analyzed" if failed > 0 else ""
+
+
 def _run_analysis_loop(engine, paths_list, exclude_patterns):
     all_file_results = []
     total_loc = 0
@@ -1151,6 +1173,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
 
     for path in paths_list:
         vendored_before = _vendored_skipped_count(engine)
+        failed_before = len(getattr(engine, "_not_analyzed", []))
         report = engine.analyze_path(path, exclude_patterns)
         if not report.file_results:
             # Always on stderr, even with --quiet: an empty run is never a pass.
@@ -1159,6 +1182,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
             if vendored > 0:
                 noun = "file" if vendored == 1 else "files"
                 hint = f"; {vendored} {noun} skipped as vendored (use --include-vendored)"
+            hint += _not_analyzed_hint(engine, failed_before)
             click.echo(
                 f"Warning: no files were analyzed in {path} "
                 f"(no supported source files, or every file was excluded){hint}",
@@ -1316,9 +1340,45 @@ def _write_sarif(combined_report, sarif_file, quiet, json_mode):
         click.echo(f"SARIF report saved to: {sarif_file}", err=json_mode)
 
 
+def _not_analyzed_gate_fails(
+    fail_on, combined_report, quiet, json_mode, allow_not_analyzed
+) -> bool:
+    """Under --fail-on, a found file that could not be analyzed fails the gate.
+
+    Checked before the zero-files rule, so --allow-no-files never turns a file
+    that failed into a pass. --allow-not-analyzed opts out (the file is still
+    listed in the report and warned about on stderr).
+    """
+    not_analyzed = (combined_report.meta or {}).get("not_analyzed") or []
+    if not fail_on or not not_analyzed:
+        return False
+    if allow_not_analyzed:
+        if not quiet:
+            click.echo(
+                f"\nGate: {len(not_analyzed)} file(s) not analyzed, not counted"
+                " (--allow-not-analyzed)",
+                err=json_mode,
+            )
+        return False
+    if not quiet:
+        click.echo(
+            f"\nGate failure: {len(not_analyzed)} file(s) could not be analyzed (exit 1)",
+            err=json_mode,
+        )
+    return True
+
+
 def _determine_exit_code(
-    combined_report, fail_on, exclude_types, quiet, json_mode=False, allow_no_files=False
+    combined_report,
+    fail_on,
+    exclude_types,
+    quiet,
+    json_mode=False,
+    allow_no_files=False,
+    allow_not_analyzed=False,
 ):
+    if _not_analyzed_gate_fails(fail_on, combined_report, quiet, json_mode, allow_not_analyzed):
+        return 1
     if fail_on and combined_report.summary.files_analyzed == 0:
         if allow_no_files:
             # Opted out (--allow-no-files): an intentionally empty run keeps exit 0.

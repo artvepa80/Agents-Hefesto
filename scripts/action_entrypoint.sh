@@ -30,6 +30,7 @@ is_true() {
 SARIF_ENABLED=$(is_true "${INPUT_SARIF:-false}")
 UPLOAD_SARIF=$(is_true "${INPUT_UPLOAD_SARIF:-true}")
 ALLOW_NO_FILES=$(is_true "${INPUT_ALLOW_NO_FILES:-false}")
+ALLOW_NOT_ANALYZED=$(is_true "${INPUT_ALLOW_NOT_ANALYZED:-false}")
 if [ "$SARIF_ENABLED" != "1" ]; then
     UPLOAD_SARIF=0
 fi
@@ -56,6 +57,7 @@ echo "Workspace: $(pwd)"
 echo "Target: ${TARGET}"
 echo "Fail On: ${FAIL_ON}"
 echo "Allow no files: $([ "$ALLOW_NO_FILES" = "1" ] && echo "yes (--allow-no-files)" || echo no)"
+echo "Allow not analyzed: $([ "$ALLOW_NOT_ANALYZED" = "1" ] && echo "yes (--allow-not-analyzed)" || echo no)"
 echo "Min Severity: ${SEVERITY}"
 echo "Format: ${FORMAT}"
 echo "Telemetry: ${HEFESTO_TELEMETRY}"
@@ -76,6 +78,9 @@ set +e # Allow failure to capture exit code
 CMD=("hefesto" "analyze" "$TARGET" "--severity" "$SEVERITY" "--fail-on" "$FAIL_ON")
 if [ "$ALLOW_NO_FILES" = "1" ]; then
     CMD+=("--allow-no-files")
+fi
+if [ "$ALLOW_NOT_ANALYZED" = "1" ]; then
+    CMD+=("--allow-not-analyzed")
 fi
 
 # Add format if specified (default logic handled in CLI or verified here)

@@ -21,7 +21,8 @@ Produces a SARIF log that GitHub code scanning accepts
   rule, and the serialized log is kept under 10 MB once gzipped. What was
   dropped is reported in ``invocations[0].toolExecutionNotifications``
   (level ``warning``), as are files left out as vendored JavaScript (level
-  ``note``).
+  ``note``) and files that could not be analyzed (level ``error``, with the
+  file as location).
 
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
@@ -83,12 +84,14 @@ class SARIFReporter:
         self.root = Path(root).resolve() if root else _default_root()
         self.max_results = max_results
         self._lines: Dict[str, List[str]] = {}
+        self._not_analyzed: List[Dict[str, Any]] = []
 
     def generate(self, report: AnalysisReport) -> str:
         """SARIF log as a JSON string."""
         return json.dumps(self.generate_dict(report), indent=2, ensure_ascii=False)
 
     def generate_dict(self, report: AnalysisReport) -> Dict[str, Any]:
+        self._not_analyzed = list((getattr(report, "meta", None) or {}).get("not_analyzed") or [])
         issues = sorted(
             report.get_all_issues(),
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
@@ -125,7 +128,8 @@ class SARIFReporter:
         seen: Dict[str, int] = {}
         results = [self._result(issue, index, seen) for issue in self._stable_order(issues)]
         invocation: Dict[str, Any] = {"executionSuccessful": True}
-        notifications = [{"level": "warning", "message": {"text": text}} for text in notes]
+        notifications = self._not_analyzed_notifications()
+        notifications += [{"level": "warning", "message": {"text": text}} for text in notes]
         notifications += [{"level": "note", "message": {"text": text}} for text in info]
         if notifications:
             invocation["toolExecutionNotifications"] = notifications
@@ -149,6 +153,25 @@ class SARIFReporter:
                 }
             ],
         }
+
+    def _not_analyzed_notifications(self) -> List[Dict[str, Any]]:
+        """One ``error`` notification per found file that could not be analyzed."""
+        from hefesto.core.analyzer_engine import not_analyzed_message
+
+        notifications: List[Dict[str, Any]] = []
+        for entry in self._not_analyzed:
+            uri, base = self._uri(str(entry.get("path", "")))
+            location: Dict[str, Any] = {"uri": uri}
+            if base:
+                location["uriBaseId"] = base
+            notifications.append(
+                {
+                    "level": "error",
+                    "message": {"text": not_analyzed_message(entry)},
+                    "locations": [{"physicalLocation": {"artifactLocation": location}}],
+                }
+            )
+        return notifications
 
     def _stable_order(self, issues: List[AnalysisIssue]) -> List[AnalysisIssue]:
         """File/line order, so occurrence numbers in fingerprints are stable."""

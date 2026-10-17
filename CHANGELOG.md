@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 4.20.0 (`@v4` users get this automatically)
+
+- **Exit code change: under `--fail-on`, a found file that could not be analyzed now fails the gate (exit 1).** In 4.20.0 such a file was dropped without a warning, so a run could print "Gate passed" over it. Example: a `config.json` with a hardcoded password next to an array nested 5000 levels deep gave "Files analyzed: 1" of 2 found, "Gate passed: no CRITICAL+ issues" and exit 0. The run now prints "Gate failure: N file(s) could not be analyzed (exit 1)", also with `--allow-no-files`. To keep the 4.20.0 exit code, pass `--allow-not-analyzed` (GitHub Action: `allow_not_analyzed: 'true'`); the file is still listed and warned about. Or pin `@v4.20.0` / `hefesto-ai==4.20.0`. Without `--fail-on` the exit code is unchanged (0).
+- That example JSON file now gets its J001 finding (regex fallback), so the same run fails on the finding itself.
+
+### Fixed
+
+- **Fail-open on analyzer exceptions.** `AnalyzerEngine._analyze_file` swallowed every exception with `except Exception: return None`, with no record and no warning. Found files that could not be read (not valid UTF-8) or whose analyzer raised are now recorded as not analyzed: listed under "Not analyzed" in the text summary with the reason, in `meta.not_analyzed` in JSON (`path`, `language`, `reason` `read_error`/`analyzer_error`, `exception`), and as an `error` notification with the file as location in SARIF `invocations[0].toolExecutionNotifications`. A warning goes to stderr, also with `--quiet`.
+- **JSON nested deeper than the recursion limit.** `JsonAnalyzer` catches `RecursionError` from `json.loads` and from its recursive checks and falls back to its regex analysis, as it already did for invalid JSON. The JSON content classifier treats a too-deep file as plain JSON instead of raising. A CloudFormation template nested that deep is reported as not analyzed.
+- **JSON and TOML analysis time grew with the number of keys** (about 3 s per MB of JSON on 4.20.0, 2.9 to 3.5 s in the measurements below). `key_has_pattern` re-tokenized every pattern and every key on each call; tokenizing is now memoized per key and per pattern list (bounded LRU caches). On the same machine and fixtures (Linux, 8 vCPU Xeon, Python 3.13.5; arrays of `{"id", "name", "tags"}` objects): 0.95 MB 2.73 s → 0.29 s, 1.93 MB 5.38 s → 0.41 s, 3.88 MB 13.65 s → 0.64 s, 25 MB 74.95 s → 4.29 s, findings identical. A test bounds tokenizer calls by unique keys plus patterns (no wall-clock assertion).
+
+### Added
+
+- **`--allow-not-analyzed`** (command-line flag only; `.hefesto.yaml` rejects it as an unknown key) and the GitHub Action input **`allow_not_analyzed`** (default `false`), modelled on `--allow-no-files`.
+
 ### Changed
 
 - **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.

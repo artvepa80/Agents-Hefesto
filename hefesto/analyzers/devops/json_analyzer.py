@@ -373,14 +373,20 @@ class JsonAnalyzer:
         # Try to parse JSON
         try:
             data = json.loads(content)
-        except json.JSONDecodeError:
-            # Fallback to regex for invalid JSON
+        except (json.JSONDecodeError, RecursionError):
+            # Invalid JSON, or nested deeper than the parser allows: regex fallback
             return self._fallback_regex_analysis(file_path, content)
 
-        # Run all checks
-        issues.extend(self._check_secrets(data, file_path, content))
-        issues.extend(self._check_insecure_urls(data, file_path, content))
-        issues.extend(self._check_dangerous_flags(data, file_path, content))
-        issues.extend(self._check_docker_creds(data, file_path, content))
+        # The checks walk the document recursively. Nesting just below the
+        # parser's limit can still exceed the interpreter's recursion limit in
+        # a walk; then the whole file gets the regex analysis instead of
+        # being dropped.
+        try:
+            issues.extend(self._check_secrets(data, file_path, content))
+            issues.extend(self._check_insecure_urls(data, file_path, content))
+            issues.extend(self._check_dangerous_flags(data, file_path, content))
+            issues.extend(self._check_docker_creds(data, file_path, content))
+        except RecursionError:
+            return self._fallback_regex_analysis(file_path, content)
 
         return issues
