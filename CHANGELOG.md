@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`scripts/guard_public_repo.py` also scans Markdown, rules and agent skills.** It reads `.md`/`.mdc` files everywhere and text files under `.claude/`, `.cursor/` and `docs/`, and fails on private references: `MEMORY.md`, paths in the private `swarm` and `iris` packages, `hefesto_pro`, the private repository name, "private #NNN" PR references, and private paths (the private landing directory, agent handoffs). Plain words ("private repo", "Swarm Gate", "landing page") and public PR numbers are not flagged. Pre-existing mentions outside `.claude/` and `.cursor/` are listed per file and rule in `scripts/guard_markdown_allowlist.txt`; skills and rules cannot be allowlisted. New tests in `tests/test_guard_public_repo_markdown.py`. Known limit: a bare `#NNN` cannot be told apart from a public PR.
+
 ### Changed
 
 - **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.
