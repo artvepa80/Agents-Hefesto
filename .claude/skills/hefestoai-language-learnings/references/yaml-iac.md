@@ -1,6 +1,7 @@
 # YAML and IaC learnings
 
-These three came from a manual review of public repositories on 2026-10-07. They are not fixed
+These three came from a manual review of public repositories on 2026-10-13
+(`docs/worklog/2026-10-13-iac-yaml-triage.md`). They are not fixed
 as far as the sources show; check the analyzer before relying on them.
 
 ### TF001B/TF002B on network ACL rules, reported as security-group ingress
@@ -9,8 +10,8 @@ as far as the sources show; check the analyzer before relying on them.
 - **Cause:** the rule fires on AWS network ACL rules with the security-group/ingress message: wrong resource type and direction.
 - **Fix:** none yet. Triage such findings as mislabels.
 - **Official source:** https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html
-- **PR/commit:** handoff `2026-10-07-hefesto-growth-x-content.md`
-- **Verified:** 2026-10-07
+- **PR/commit:** `docs/worklog/2026-10-13-iac-yaml-triage.md`
+- **Verified:** 2026-10-13
 - **Status:** Open
 
 ### YAML_SECRET_EXPOSURE on Docker secrets
@@ -19,8 +20,8 @@ as far as the sources show; check the analyzer before relying on them.
 - **Cause:** the rule treats the recommended Docker secrets pattern as a literal secret.
 - **Fix:** none yet. Triage as false positive.
 - **Official source:** https://docs.docker.com/compose/how-tos/use-secrets/
-- **PR/commit:** handoff `2026-10-07-hefesto-growth-x-content.md`
-- **Verified:** 2026-10-07
+- **PR/commit:** `docs/worklog/2026-10-13-iac-yaml-triage.md`
+- **Verified:** 2026-10-13
 - **Status:** Open
 
 ### YAML_SYNTAX_ERROR on `{{ }}` template files
@@ -29,8 +30,8 @@ as far as the sources show; check the analyzer before relying on them.
 - **Cause:** the file is a template, not YAML until rendered.
 - **Fix:** none yet (skipping templates was proposed). Triage as false positive.
 - **Official source:** https://yaml.org/spec/1.2.2/
-- **PR/commit:** handoff `2026-10-07-hefesto-growth-x-content.md`
-- **Verified:** 2026-10-07
+- **PR/commit:** `docs/worklog/2026-10-13-iac-yaml-triage.md`
+- **Verified:** 2026-10-13
 - **Status:** Open
 
 ### YAML_INDENTATION on normally nested files

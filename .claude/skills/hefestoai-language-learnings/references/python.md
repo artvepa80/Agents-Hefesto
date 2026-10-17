@@ -22,7 +22,7 @@
 
 ### R3 (RELIABILITY_SESSION_LIFECYCLE) on self-managed connections
 
-- **Symptom:** R3 on `self._conn = sqlite3.connect(...)` with a lazy getter, and messages containing the literal `'None'` (seen on the private `swarm/storage/sqlite_store.py:31`).
+- **Symptom:** R3 on `self._conn = sqlite3.connect(...)` with a lazy getter, and messages containing the literal `'None'`.
 - **Cause:** R3 only handled `ast.Name` targets, not `ast.Attribute`.
 - **Fix:** R3 accepts `self.<attr>` targets and skips them when a sibling method calls `self.<attr>.close()` (or `disconnect`/`shutdown`/`dispose`). Local connections without cleanup still fire.
 - **Official source:** https://docs.python.org/3/library/ast.html#ast.Attribute

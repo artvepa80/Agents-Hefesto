@@ -48,7 +48,7 @@ Every entry uses exactly these fields:
 ## Adding an entry
 
 1. Only add something that happened in these repos and is written down: a CHANGELOG entry, a
-   worklog/handoff, a PR or a commit. Do not add guesses or general advice.
+   worklog in `docs/worklog/`, a PR or a commit. Do not add guesses or general advice.
 2. Open the source file or commit and check the claim before writing it. Cite it in **PR/commit**.
 3. Link the upstream documentation you used in **Official source**. If the behavior is our own
    code, say so.
@@ -57,7 +57,8 @@ Every entry uses exactly these fields:
    (`pip install skills-ref`), and dogfood any changed code with `HEFESTO_TELEMETRY=0 hefesto analyze`
    (Markdown is not a supported format, so the skill files themselves report 0 files).
 6. Public repo: run `python scripts/guard_public_repo.py`. Internal topics (the paid package, billing,
-   landing, hosted engine) never go in the public copy.
+   landing, hosted engine), private file paths, private PR numbers and agent handoffs never go in the
+   public copy. Check the Markdown by hand too: the guard may not scan it.
 
 ## Reviewing at each release
 
@@ -73,6 +74,27 @@ Part of the release checklist, before tagging:
 
 ## Sources used to seed this skill
 
-`CHANGELOG.md`, `docs/cobol.md` and `docs/worklog/` in the public repo; `MEMORY.md`,
-`CHANGELOG.md`, `docs/CI_TROUBLESHOOTING.md` and `docs/worklog/` in the private repo; PRs and
-commits cited in each entry. Seeded 2026-10-16 with hefesto-ai 4.20.0.
+Public copy: `CHANGELOG.md`, `docs/cobol.md`, `docs/worklog/` and the public PRs and commits cited
+in each entry. Seeded 2026-10-16 with hefesto-ai 4.20.0. Every public entry must be checkable from
+this repository alone; private files, private PRs and agent handoffs outside the repo are not valid
+sources here.
+
+## Excluded on purpose
+
+These were observed while seeding the skill but are not recorded in any file or commit in the repos,
+so they are left out (same standard for all of them):
+
+1. PyPI JSON API lag right after an upload.
+2. A branch with merge conflicts not running its `pull_request` workflows.
+3. Ruff picking up nested repositories in the working tree.
+4. The box's outbound IP rotating on every connection (the private copy records it as an
+   observation, because its rate-limit check depends on a stable IP).
+5. pre-commit `types: [python]` behavior (no config file in the repo shows it).
+
+Add any of them only once a worklog, CHANGELOG entry, PR or commit records it.
+
+## Where this skill lives
+
+`.claude/skills/hefestoai-language-learnings/`. Cursor loads project skills from `.claude/skills/`
+"for compatibility" (https://cursor.com/docs/context/skills, "Skill directories"), and Claude Code
+reads project skills from `.claude/skills/` (https://code.claude.com/docs/en/skills).

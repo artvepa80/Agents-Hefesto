@@ -4,9 +4,9 @@
 
 - **Symptom:** Node 20 deprecation annotations on workflow runs.
 - **Cause:** GitHub is moving runners to Node 24.
-- **Fix:** first Node 24 majors: `actions/checkout` v5, `actions/setup-python` v6, `actions/upload-artifact` v6 (v5 still defaulted to Node 20), `actions/cache` v5; `codecov/codecov-action` v5 is composite. The private repo keeps SHA pins with the version in a comment.
+- **Fix:** first Node 24 majors: `actions/checkout` v5, `actions/setup-python` v6, `actions/upload-artifact` v6 (v5 still defaulted to Node 20), `actions/cache` v5; `codecov/codecov-action` v5 is composite.
 - **Official source:** https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-- **PR/commit:** public #127 (`fc9d072`), private #169 (`a31c06a`)
+- **PR/commit:** #127 (`fc9d072`); `docs/worklog/2026-10-16-node24-actions.md`
 - **Verified:** 2026-10-16
 - **Status:** Fixed
 
@@ -20,23 +20,13 @@
 - **Verified:** 2026-10-16
 - **Status:** Workaround
 
-### softprops/action-gh-release v2 still runs on Node 20
-
-- **Symptom:** Node 20 warning remains after bumping the actions/* ones.
-- **Cause:** every v2 release of softprops/action-gh-release uses node20.
-- **Fix:** v3 (pinned `efb35369`, v3.0.3), checked as node24 at that SHA.
-- **Official source:** https://github.com/softprops/action-gh-release/releases
-- **PR/commit:** private #169 (`a31c06a`)
-- **Verified:** 2026-10-16
-- **Status:** Fixed
-
 ### ubuntu-latest moves to Ubuntu 26.04
 
 - **Symptom:** notices about the `ubuntu-latest` migration starting Oct 19.
 - **Cause:** runner-images rolls out 26.04 as `ubuntu-latest` from Oct 19 to Nov 19, 2026.
 - **Fix:** stay on `ubuntu-latest`; the 26.04 image has every Python in our matrices. Pin `ubuntu-24.04` only if a job breaks.
 - **Official source:** https://github.com/actions/runner-images/issues/14748
-- **PR/commit:** #127, #169; handoff `node24-actions-public-2026-10-16.md`
+- **PR/commit:** #127 (`fc9d072`); `docs/worklog/2026-10-16-node24-actions.md`
 - **Verified:** 2026-10-16
 - **Status:** Open (watch the rollout)
 
@@ -46,7 +36,7 @@
 - **Cause:** the `gh` OAuth token lacked the `workflow` scope.
 - **Fix:** the owner grants it or pushes; agents do not request broader scopes themselves.
 - **Official source:** https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
-- **PR/commit:** handoffs `node24-actions-public-2026-10-16.md`, `node24-actions-private-2026-10-16.md`
+- **PR/commit:** `docs/worklog/2026-10-16-node24-actions.md`; #127
 - **Verified:** 2026-10-16
 - **Status:** Workaround
 
