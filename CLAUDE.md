@@ -493,6 +493,14 @@ Releases are automated via GitHub Actions:
     git tag v4.7.1-rc.1
     git push origin v4.7.1-rc.1
     ```
+    The workflow builds the sdist and wheel, runs `twine check`, then publishes
+    with PyPI Trusted Publishing (OIDC): environment `testpypi`,
+    `pypa/gh-action-pypi-publish` pinned to a release tag, repository
+    `https://test.pypi.org/legacy/`. Authentication is the GitHub OIDC token
+    for that environment; `TEST_PYPI_API_TOKEN` is retired on this workflow.
+    The GitHub environment `testpypi` must exist under repository Settings →
+    Environments (the name registered on the TestPyPI pending publisher).
+    Production publishes go through `release.yml` (item 2).
 
 2.  **PyPI (Production)**
     ```bash
