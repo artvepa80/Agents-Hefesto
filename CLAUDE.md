@@ -291,6 +291,22 @@ test(analyzers): add empirical complexity validation
 - **GH-5 (MUST)** Version bumps follow semver strictly
 - **GH-6 (MUST)** Include changelog entry for every release
 - **GH-7 (MUST)** Run dogfooding validation before publishing to PyPI
+- **GH-8 (MUST)** No same-day merge for runtime changes. A PR that changes runtime behaviour is not merged on the calendar day (America/Lima) it was opened. Runtime paths in this repo:
+  - code under `hefesto/`;
+  - `action.yml` and `scripts/action_entrypoint.sh` (the GitHub Action runs that script);
+  - the guards and verifiers that decide pass or fail: `scripts/guard_*.py` and `scripts/verify_*.py`;
+  - dependency pins in `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, or any lockfile outside `tests/fixtures/`;
+  - `.github/workflows/`.
+
+  Exempt (may merge the day they are opened):
+  - docs-only PRs;
+  - test-only PRs (changes only under `tests/`);
+  - CI-only scripts under `scripts/` that are not guards or verifiers (benchmarks, corpus and recall tools, `scripts/git-hooks/`, `run_checks.sh`, `prepush_gate.sh`);
+  - version-bump-only PRs, only when the diff is version strings plus `CHANGELOG.md`. Anything else in the diff makes it a runtime PR.
+
+  A PR that touches both an exempt path and a runtime path is a runtime PR. The only exception is Arturo's explicit OK for that PR, recorded in the PR body as:
+  `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: <one line>.`
+  A same-day merge of a runtime PR without that line is a violation, not an exception. The rule is checkable from GitHub data alone: the PR's `created_at` and `merged_at` converted to America/Lima, its changed files, and the exception line in its body.
 
 ### Ruleset incident procedure
 If infrastructure (not the change under review) breaks a required check of the `main` ruleset (15985908) so that a fix cannot merge:

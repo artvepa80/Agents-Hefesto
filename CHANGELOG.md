@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Merge timing rule GH-8 in `CLAUDE.md` section 5.** A PR that changes runtime behaviour (`hefesto/`, `action.yml`, `scripts/action_entrypoint.sh`, `scripts/guard_*.py`, `scripts/verify_*.py`, dependency pins in `pyproject.toml` and `requirements*.txt`, lockfiles outside `tests/fixtures/`, `.github/workflows/`) is not merged on the calendar day (America/Lima) it was opened, unless the PR body records `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: ...`. Docs-only, test-only, CI-only scripts that are not guards or verifiers, and version-bump-only PRs (version strings plus `CHANGELOG.md`) are exempt; definitions decided by Arturo on 2026-10-16.
+
 ### Changed
 
 - **`hefestoai-language-learnings` skill fixes.** Moved from `.cursor/skills/` to `.claude/skills/`: Claude Code reads project skills only from `.claude/skills/` (https://code.claude.com/docs/en/skills), and Cursor also loads `.claude/skills/` "for compatibility" (https://cursor.com/docs/context/skills). Public/private boundary: the Swarm Gate entry, the merge-conflict entry, the `.cursor/mcp.json` 0-files entry and the softprops/action-gh-release entry moved to the private copy; private paths, private PR numbers, `MEMORY.md` and handoff citations were removed. The `yaml-iac` and `workflow` scope entries now cite new sanitized worklogs `docs/worklog/2026-10-13-iac-yaml-triage.md` (triage date corrected from 2026-10-07 to 2026-10-13) and `docs/worklog/2026-10-16-node24-actions.md`. `SKILL.md` names all five exclusions and allows only in-repo sources. 26 public entries.
