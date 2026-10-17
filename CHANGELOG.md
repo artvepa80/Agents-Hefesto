@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- **Merge timing rule GH-8 in `CLAUDE.md` section 5.** A PR that changes runtime behaviour (`hefesto/`, `action.yml`, `scripts/action_entrypoint.sh`, `scripts/guard_*.py`, `scripts/verify_*.py`, dependency pins in `pyproject.toml` and `requirements*.txt`, lockfiles outside `tests/fixtures/`, `.github/workflows/`) is not merged on the calendar day (America/Lima) it was opened, unless the PR body records `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: ...`. Docs-only, test-only, CI-only scripts that are not guards or verifiers, and version-bump-only PRs (version strings plus `CHANGELOG.md`) are exempt; definitions decided by Arturo on 2026-10-16.
+- **Merge timing rule GH-8 in `CLAUDE.md` section 5.** A PR that changes runtime behaviour (`hefesto/`, `action.yml`, `scripts/action_entrypoint.sh`, `Dockerfile.action`, `scripts/guard_*.py`, `scripts/verify_*.py`, dependency pins in `pyproject.toml` and `requirements*.txt`, lockfiles outside `tests/fixtures/`, `.github/workflows/`) is not merged on the calendar day (America/Lima) it was opened, unless the PR body records `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: ...`. Docs-only, test-only, CI-only scripts that are not guards or verifiers, and version-bump-only PRs (version strings plus `CHANGELOG.md`) are exempt; definitions decided by Arturo on 2026-10-16.
 
 ### Changed
 

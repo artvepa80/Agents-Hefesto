@@ -294,6 +294,7 @@ test(analyzers): add empirical complexity validation
 - **GH-8 (MUST)** No same-day merge for runtime changes. A PR that changes runtime behaviour is not merged on the calendar day (America/Lima) it was opened. Runtime paths in this repo:
   - code under `hefesto/`;
   - `action.yml` and `scripts/action_entrypoint.sh` (the GitHub Action runs that script);
+  - `Dockerfile.action` (it builds the Action image that `@v4` users can run);
   - the guards and verifiers that decide pass or fail: `scripts/guard_*.py` and `scripts/verify_*.py`;
   - dependency pins in `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, or any lockfile outside `tests/fixtures/`;
   - `.github/workflows/`.
