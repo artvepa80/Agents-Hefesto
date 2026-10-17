@@ -10,11 +10,14 @@ analyzer share that result. On a syntax error the pure-Python loader is the
 source of the mark and the message, because the two loaders word the same
 failure differently and can point at different marks.
 
-libyaml's ``CSafeLoader`` segfaults on CPython 3.10-3.13 when a document is
-nested about 50,000 levels, and it accepts depths the pure-Python loader
-rejects. Above :data:`C_LOADER_MAX_DEPTH` the pure-Python loader is used.
-Any exception from a loader becomes that pure-Python error, which is what
-4.20.1 reported while still returning the file's other findings.
+libyaml's ``CSafeLoader`` segfaults between 20,000 and 30,000 levels,
+including flow documents whose brackets are not consecutive. It also
+accepts depths the pure-Python loader rejects. Nesting deeper than
+:data:`C_LOADER_MAX_DEPTH` is parsed with the pure-Python loader. Depth is
+measured with ``yaml.parse`` (iterative events). A count of ``[`` and ``{``
+plus the longest line is an upper bound, so a normal manifest skips that
+scan. Any exception from a loader becomes that pure-Python error, which is
+what 4.20.1 reported while still returning the file's other findings.
 """
 
 from __future__ import annotations
@@ -33,11 +36,13 @@ except ImportError:  # pragma: no cover - PyYAML is a required dependency
 
 _CACHE: ContextVar[Optional[dict]] = ContextVar("hefesto_config_parse_cache", default=None)
 
-# SafeLoader raises RecursionError near 800 nested ``- `` sequences (a HIGH
-# YAML_SYNTAX_ERROR on 4.20.1) while CSafeLoader still accepts them. CSafeLoader
-# segfaults near 50,000 levels on CPython 3.10-3.13. Documents deeper than this
-# are parsed with SafeLoader. Normal manifests are far shallower.
-C_LOADER_MAX_DEPTH = 256
+# Deeper than this uses SafeLoader. 500 stays under the depth where 3.14's
+# SafeLoader fails (900). It is not taken from the C loader's crash
+# (20,000 to 30,000). A 1,000-level file therefore keeps the 4.20.1 finding.
+C_LOADER_MAX_DEPTH = 500
+
+_COLLECTION_START = frozenset({"SequenceStartEvent", "MappingStartEvent"})
+_COLLECTION_END = frozenset({"SequenceEndEvent", "MappingEndEvent"})
 
 
 def yaml_installed() -> bool:
@@ -56,34 +61,72 @@ def loader_class() -> type:
 
 
 def yaml_nesting_exceeds(content: str, limit: int = C_LOADER_MAX_DEPTH) -> bool:
-    """True when a cheap scan sees nesting deeper than ``limit``.
+    """True when collection nesting is deeper than ``limit``.
 
-    The scan is a run of ``- ``, ``[``, ``{`` or leading spaces. A real
-    bracket depth is counted only when the file has more brackets than
-    ``limit``. Over-counting selects SafeLoader, which is how 4.20.1 parsed
-    the file.
+    ``[`` plus ``{`` plus the longest line is an upper bound. A normal
+    manifest is at or under ``limit`` and is not parsed here. A document
+    that might be deeper is measured with :func:`yaml.parse`, which emits
+    events iteratively and does not build the objects that crash libyaml.
     """
-    if ("- " * (limit + 1)) in content:
-        return True
-    if ("[" * (limit + 1)) in content or ("{" * (limit + 1)) in content:
-        return True
-    spaces = " " * (limit + 1)
-    if content.startswith(spaces) or ("\n" + spaces) in content:
-        return True
-    if content.count("[") + content.count("{") <= limit:
+    if yaml is None or _nesting_upper_bound(content, limit) <= limit:
         return False
-    return _flow_depth_exceeds(content, limit)
+    return _event_depth_exceeds(content, limit)
 
 
-def _flow_depth_exceeds(content: str, limit: int) -> bool:
+def _nesting_upper_bound(content: str, limit: int) -> int:
+    """``[`` count + ``{`` count + the longest line. Stops once past ``limit``."""
+    brackets = content.count("[") + content.count("{")
+    if brackets > limit:
+        return brackets
+    longest = 0
+    for line in content.splitlines():
+        size = len(line)
+        if size > longest:
+            longest = size
+            if brackets + longest > limit:
+                return brackets + longest
+    return brackets + longest
+
+
+def _event_loader() -> type:
+    """``CSafeLoader`` for the event scan. Its parser does not recurse in Python."""
+    c_loader = getattr(yaml, "CSafeLoader", None)
+    if c_loader is not None:
+        return cast(type, c_loader)
+    return yaml.SafeLoader
+
+
+def _event_depth_exceeds(content: str, limit: int) -> bool:
+    """True when ``yaml.parse`` sees more than ``limit`` open collections.
+
+    A parser error, or ``RecursionError`` from the pure-Python parser, is
+    treated as too deep: the C loader is not given a document this bound
+    could not clear.
+    """
+    try:
+        events = yaml.parse(content, Loader=_event_loader())
+    except RecursionError:
+        return True
+    except yaml.YAMLError:
+        return True
     depth = 0
-    for char in content:
-        if char == "[" or char == "{":
-            depth += 1
-            if depth > limit:
-                return True
-        elif (char == "]" or char == "}") and depth:
-            depth -= 1
+    try:
+        for event in events:
+            kind = type(event).__name__
+            if kind in _COLLECTION_START:
+                depth += 1
+                if depth > limit:
+                    return True
+            elif kind in _COLLECTION_END and depth:
+                depth -= 1
+    except RecursionError:
+        return True
+    except yaml.YAMLError:
+        return True
+    finally:
+        close = getattr(events, "close", None)
+        if close is not None:
+            close()
     return False
 
 

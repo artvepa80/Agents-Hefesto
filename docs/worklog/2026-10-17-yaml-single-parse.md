@@ -22,7 +22,7 @@ HEFESTO_TELEMETRY=0 HEFESTO_NO_UPSELL=1 \
 | 4.19.0 | 1.804 s (1.68 s) | 6.694 s (6.58 s) |
 | 4.20.0 | 4.485 s (4.37 s) | 17.828 s (17.71 s) |
 | 4.20.1 | 4.504 s (4.39 s) | 17.908 s (17.79 s) |
-| 4.20.2, this tree, best of 3, after the depth pre-scan | 0.622 s (0.50 s) | 2.107 s (1.99 s) |
+| 4.20.2, this tree, best of 3, after the event-depth scan | 0.604 s (0.49 s) | 2.139 s (2.03 s) |
 
 One `yaml.load_all` of the same strings, best of 2:
 
@@ -62,5 +62,5 @@ Loader calls inside `AnalyzerEngine.analyze_path` (monkeypatch of `yaml.safe_loa
 
 ## Review fixes (still 4.20.2)
 
-- `CSafeLoader` segfaults (exit 139, signal 11) on CPython 3.12 for `'- ' * 50000 + 'x'`. `SafeLoader` raises `RecursionError` near 800 nested `- ` sequences; `CSafeLoader` still accepts 900, so the HIGH `YAML_SYNTAX_ERROR` 4.20.1 reported was missing. A run-length scan (`- `, `[`, `{`, leading spaces) above 256 uses `SafeLoader` and never calls the C loader. `tests/test_yaml_loader_guards.py` runs the 50,000 case in a subprocess (no signal exit, `YAML_SYNTAX_ERROR` present) and checks that 900 matches a forced `SafeLoader` run. The module has no skip marker, so the CI matrix (3.10-3.14) runs it.
+- `CSafeLoader` segfaults between 20,000 and 30,000 levels on Python 3.13, flow and block, from a file of about 60 KB. A run of `- `, `[` or `{` misses `[ ` * 30000 and `{a: ` * 30000 (runs of 1) and still crashes. Real collection depth is `yaml.parse` with `CSafeLoader` (events, iterative; it survived depths a full load does not). A count of `[` and `{` plus the longest line skips that scan when the bound is at most 500. Depth above 500 uses `SafeLoader`, which is below the depth `SafeLoader` rejects (3.14 fails at 900), so a 1,000-level file keeps the 4.20.1 HIGH finding and `--fail-on high` exits 1. `tests/test_yaml_loader_guards.py` runs both 30,000-level shapes, and `cfg: {a: {a: ...}}` next to a hardcoded password, in a subprocess (no signal exit, finding present, exit 1). The module has no skip marker, so the CI matrix (3.10-3.14) runs it.
 - `created: 2001-13-01` raises `ValueError`, not `yaml.YAMLError`. 4.20.1's `except Exception` on `safe_load_all` recorded `YAML syntax error: month must be in 1..12` and still reported the other findings. The first 4.20.2 cut let the `ValueError` become "not analyzed" and dropped them. The loader now catches any `Exception` and keeps `SafeLoader`'s error, so the other findings stay.

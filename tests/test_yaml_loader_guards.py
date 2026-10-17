@@ -1,14 +1,15 @@
 """CSafeLoader must not crash, and a loader error must not drop findings.
 
-On CPython 3.10-3.13 libyaml segfaults on a document nested about 50,000
-levels (``'- ' * 50000``). Around 900 levels the pure-Python loader raises
-and 4.20.1 reports YAML_SYNTAX_ERROR, while CSafeLoader still accepts the
-document. A timestamp such as ``2001-13-01`` raises ValueError, which is
-not a yaml.YAMLError; 4.20.1 caught it and still reported the file's other
-findings.
+``CSafeLoader`` segfaults between 20,000 and 30,000 levels on CPython 3.13,
+including flow documents whose ``[`` or ``{`` are not consecutive. Around
+1,000 levels the pure-Python loader raises and 4.20.1 reports
+YAML_SYNTAX_ERROR, while ``CSafeLoader`` still accepts the document and the
+gate exits 0. A timestamp such as ``2001-13-01`` raises ValueError, which
+is not a yaml.YAMLError; 4.20.1 caught it and still reported the file's
+other findings.
 
 This module is collected on every CI Python (3.10 through 3.14). The deep
-case runs in a subprocess so a signal death fails the test instead of
+cases run in a subprocess so a signal death fails the test instead of
 killing the suite.
 """
 
@@ -24,8 +25,10 @@ from click.testing import CliRunner
 from hefesto.core.analyzer_engine import AnalyzerEngine
 
 REPO = Path(__file__).resolve().parents[1]
-DEEP = "- " * 50000 + "x\n"
-NINE_HUNDRED = "- " * 900 + "x\n"
+FLOW_SEQ_30K = "[ " * 30000 + "]" * 30000 + "\n"
+FLOW_MAP_30K = "{a: " * 30000 + "1" + "}" * 30000 + "\n"
+PASSWORD_30K = 'password: "super-secret-value"\ncfg: ' + "{a: " * 30000 + "1" + "}" * 30000 + "\n"
+THOUSAND = "{a: " * 1000 + "1" + "}" * 1000 + "\n"
 TIMESTAMP = """apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -51,28 +54,9 @@ def _sig(issues):
     )
 
 
-def test_pre_scan_flags_only_deep_runs():
-    from hefesto.core.config_parse import C_LOADER_MAX_DEPTH, yaml_nesting_exceeds
-
-    # 900 is the depth SafeLoader rejects and CSafeLoader accepts.
-    assert C_LOADER_MAX_DEPTH < 900
-    assert C_LOADER_MAX_DEPTH >= 32
-    assert yaml_nesting_exceeds(DEEP)
-    assert yaml_nesting_exceeds(NINE_HUNDRED)
-    assert yaml_nesting_exceeds("[" * 900 + "x" + "]" * 900)
-    assert yaml_nesting_exceeds("{" * (C_LOADER_MAX_DEPTH + 1))
-    shallow = (
-        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: web\nspec:\n  containers:\n  - name: web\n"
-    )
-    assert not yaml_nesting_exceeds(shallow)
-    assert not yaml_nesting_exceeds("- " * C_LOADER_MAX_DEPTH + "x\n")
-
-
-def test_deep_nesting_does_not_kill_the_process(tmp_path):
-    path = tmp_path / "deep.yaml"
-    path.write_text(DEEP, encoding="utf-8")
+def _analyze(path: Path, fail_on: str) -> subprocess.CompletedProcess:
     env = dict(os.environ, HEFESTO_TELEMETRY="0", HEFESTO_NO_UPSELL="1")
-    result = subprocess.run(
+    return subprocess.run(
         [
             sys.executable,
             "-m",
@@ -83,7 +67,7 @@ def test_deep_nesting_does_not_kill_the_process(tmp_path):
             "--severity",
             "LOW",
             "--fail-on",
-            "HIGH",
+            fail_on,
             "--output",
             "json",
         ],
@@ -93,26 +77,87 @@ def test_deep_nesting_does_not_kill_the_process(tmp_path):
         cwd=str(REPO),
         timeout=60,
     )
+
+
+def _safe_syntax_message(content: str) -> str:
+    """The HIGH finding 4.20.1 reported: SafeLoader's exception, truncated."""
+    try:
+        list(yaml.load_all(content, Loader=yaml.SafeLoader))
+    except Exception as exc:
+        return f"YAML syntax error: {str(exc)[:100]}"
+    raise AssertionError("SafeLoader accepted a document 4.20.1 rejected")
+
+
+def test_depth_above_500_is_too_deep_for_the_c_loader():
+    from hefesto.core.config_parse import C_LOADER_MAX_DEPTH, yaml_nesting_exceeds
+
+    # 500 is below the depth SafeLoader rejects on every supported Python.
+    assert C_LOADER_MAX_DEPTH == 500
+    assert yaml_nesting_exceeds("{a: " * 501 + "1" + "}" * 501 + "\n")
+    assert yaml_nesting_exceeds("[ " * 501 + "]" * 501 + "\n")
+    assert not yaml_nesting_exceeds("{a: " * 500 + "1" + "}" * 500 + "\n")
+    assert not yaml_nesting_exceeds("[ " * 500 + "]" * 500 + "\n")
+    shallow = (
+        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: web\nspec:\n  containers:\n  - name: web\n"
+    )
+    assert not yaml_nesting_exceeds(shallow)
+
+
+def test_shallow_manifest_skips_the_event_scan(monkeypatch):
+    from hefesto.core.config_parse import yaml_nesting_exceeds
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("yaml.parse was called for a shallow manifest")
+
+    monkeypatch.setattr("hefesto.core.config_parse.yaml.parse", boom)
+    shallow = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cfg\n"
+    assert not yaml_nesting_exceeds(shallow)
+
+
+def _thirty_k(label: str) -> str:
+    if label == "flow-seq":
+        return FLOW_SEQ_30K
+    if label == "flow-map":
+        return FLOW_MAP_30K
+    return PASSWORD_30K
+
+
+@pytest.mark.parametrize("label", ["flow-seq", "flow-map", "password"])
+def test_thirty_thousand_deep_does_not_kill_the_process(tmp_path, label):
+    # The document stays out of the test id. Pytest copies that id into the
+    # environment, and a 30,000-level parameter exceeds the OS argument limit.
+    content = _thirty_k(label)
+    password = label == "password"
+    path = tmp_path / f"{label}.yaml"
+    path.write_text(content, encoding="utf-8")
+    result = _analyze(path, "high")
     # SIGSEGV is -11 from subprocess, or 139 when a shell encodes the signal.
-    assert result.returncode > 0, result.returncode
+    # 4.20.1 exited 1 under --fail-on high.
+    assert result.returncode == 1, result.returncode
     text = (result.stdout or "") + (result.stderr or "")
     assert "YAML_SYNTAX_ERROR" in text
     assert "could not be analyzed" not in text
     assert '"not_analyzed"' not in text
+    if password:
+        assert "YAML_SECRET_EXPOSURE" in text
+        assert "password" in text
 
 
-def test_nine_hundred_deep_matches_safeloader(tmp_path, monkeypatch):
+def test_thousand_deep_matches_4_20_1(tmp_path, monkeypatch):
     path = tmp_path / "nest.yaml"
-    path.write_text(NINE_HUNDRED, encoding="utf-8")
+    path.write_text(THOUSAND, encoding="utf-8")
+    expected = _safe_syntax_message(THOUSAND)
     _, default_issues = _issues(path)
     monkeypatch.setattr("hefesto.core.config_parse.loader_class", lambda: yaml.SafeLoader)
     _, safe_issues = _issues(path)
     assert _sig(default_issues) == _sig(safe_issues)
-    # SafeLoader rejects this depth (RecursionError). That is the 4.20.1 finding.
-    with pytest.raises(RecursionError):
-        list(yaml.load_all(NINE_HUNDRED, Loader=yaml.SafeLoader))
     assert any(issue.issue_type.value == "YAML_SYNTAX_ERROR" for issue in default_issues)
     assert all(issue.severity.value == "HIGH" for issue in default_issues)
+    result = _analyze(path, "high")
+    text = (result.stdout or "") + (result.stderr or "")
+    assert result.returncode == 1, result.returncode
+    assert expected in text
+    assert "could not be analyzed" not in text
 
 
 def test_invalid_timestamp_keeps_the_other_findings(tmp_path, monkeypatch):

@@ -225,7 +225,10 @@ class TestLibyamlFailClosed:
 
     def test_non_yaml_error_from_the_loader_is_still_a_finding(self, tmp_path, monkeypatch):
         # 4.20.1 caught every exception from safe_load_all, recorded
-        # YAML_SYNTAX_ERROR, and kept analyzing the file.
+        # YAML_SYNTAX_ERROR, and kept analyzing the file. The first cut of
+        # this test expected the RuntimeError to mark the file not analyzed.
+        # That contradicted 4.20.1: the file stayed analyzed, so --fail-on
+        # saw the finding instead of a not-analyzed gate failure.
         path = _write(tmp_path, "broken.yaml", "a: 1\n")
 
         def boom(*_args, **_kwargs):
