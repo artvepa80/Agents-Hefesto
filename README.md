@@ -718,6 +718,8 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 The CLI sends anonymous usage events by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings, repository names, or IP). Turn it off with `hefesto telemetry disable`, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1. The GitHub Action sends nothing unless you set telemetry: 1. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
 
+The PyPI newer-version check is skipped, with no request and no cache write, when `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`, when `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off`, or when `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`. Usage events stay on by default. The Action's default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`, so that check does not run on runners.
+
 ## Changelog
 
 Release history: [CHANGELOG.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/CHANGELOG.md).
