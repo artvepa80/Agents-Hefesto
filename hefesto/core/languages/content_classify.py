@@ -82,7 +82,8 @@ def _refine_json(guessed: Language, content: Optional[str]) -> Language:
         return Language.JSON if guessed != Language.ARM else guessed
     try:
         data = json.loads(content)
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError, RecursionError):
+        # too deep to parse: stays plain JSON, whose analyzer falls back to regex
         return Language.JSON
     if isinstance(data, dict):
         if _is_arm(data):

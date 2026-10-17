@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 4.20.0 (`@v4` users get this automatically)
+
+- **Exit code change: under `--fail-on`, a found file that could not be analyzed now fails the gate (exit 1).** In 4.20.0 such a file was dropped without a warning, so a run could print "Gate passed" over it. Example: a `config.json` with a hardcoded password next to an array nested 5000 levels deep gave "Files analyzed: 1" of 2 found, "Gate passed: no CRITICAL+ issues" and exit 0. The run now prints "Gate failure: N file(s) could not be analyzed (exit 1)", also with `--allow-no-files`. To keep the 4.20.0 exit code, pass `--allow-not-analyzed` (GitHub Action: `allow_not_analyzed: 'true'`); the file is still listed and warned about. Or pin `@v4.20.0` / `hefesto-ai==4.20.0`. Without `--fail-on` the exit code is unchanged (0).
+- That example JSON file now gets its J001 finding (regex fallback), so the same run fails on the finding itself.
+- **A found file that is not valid UTF-8 is now analyzed** (4.20.0 and 4.19.0 dropped it without a warning). It is read with the `latin-1` fallback and listed as "decoded with fallback"; it does not fail the gate by itself, but its findings now count, so a gate that passed over such a file can now fail on what is in it.
+
+### Fixed
+
+- **Fail-open on analyzer exceptions.** `AnalyzerEngine._analyze_file` swallowed every exception with `except Exception: return None`, with no record and no warning. Found files that could not be read (`OSError`) or whose analyzer raised are now recorded as not analyzed: listed under "Not analyzed" in the text summary with the reason, in `meta.not_analyzed` in JSON (`path`, `language`, `reason` `read_error`/`analyzer_error`, `exception`), and as an `error` notification with the file as location in SARIF `invocations[0].toolExecutionNotifications`. A warning goes to stderr, also with `--quiet`.
+- **JSON nested deeper than the recursion limit.** `JsonAnalyzer` catches `RecursionError` from `json.loads` and from its recursive checks and falls back to its regex analysis, as it already did for invalid JSON. The JSON content classifier treats a too-deep file as plain JSON instead of raising. A CloudFormation template nested that deep is reported as not analyzed.
+- **JSON and TOML analysis time grew with the number of keys** (about 3 s per MB of JSON on 4.20.0, 2.9 to 3.5 s in the measurements below). `key_has_pattern` re-tokenized every pattern and every key on each call; tokenizing is now memoized per key and per pattern list (bounded LRU caches). On the same machine and fixtures (Linux, 8 vCPU Xeon, Python 3.13.5; arrays of `{"id", "name", "tags"}` objects): 0.95 MB 2.73 s → 0.29 s, 1.93 MB 5.38 s → 0.41 s, 3.88 MB 13.65 s → 0.64 s, 25 MB 74.95 s → 4.29 s, findings identical. A test bounds tokenizer calls by unique keys plus patterns (no wall-clock assertion).
+
+- **Files that are not valid UTF-8 were dropped without a warning.** They are now read with the `latin-1` fallback and analyzed. `latin-1` maps each byte 0x00–0xff to one code point ([Python codecs, "Encodings and Unicode"](https://docs.python.org/3/library/codecs.html#encodings-and-unicode)), so decoding never fails, line numbers are kept and ASCII text such as keys and secrets is unchanged; non-ASCII characters may come out wrong (a UTF-16 file reads as noise). Each such file is listed as "decoded with fallback": "Decoded with fallback (latin-1): N" in the text summary, `meta.decoded_with_fallback` (`path`, `encoding`) in JSON, a `warning` notification with the file as location in SARIF, and a warning on stderr (also with `--quiet`).
+
+### Documentation
+
+- **Language-learnings skill:** two JSON entries (deep nesting dropped by the gate; key-matching cost) in `.claude/skills/hefestoai-language-learnings/references/json.md`, citing #132. Handoff: `docs/worklog/2026-10-16-fail-closed-4.20.1.md`.
+
+### Added
+
+- **`--allow-not-analyzed`** (command-line flag only; `.hefesto.yaml` rejects it as an unknown key) and the GitHub Action input **`allow_not_analyzed`** (default `false`), modelled on `--allow-no-files`.
+
 ### Security
 
 - **`scripts/guard_public_repo.py` also scans Markdown, rules and agent skills.** It reads `.md`/`.mdc` files everywhere and text files under `.claude/`, `.cursor/` and `docs/`, and fails on private references: `MEMORY.md`, paths in the private `swarm` and `iris` packages, `hefesto_pro`, the private repository name, "private #NNN" PR references, and private paths (the private landing directory, agent handoffs). Plain words ("private repo", "Swarm Gate", "landing page") and public PR numbers are not flagged. Pre-existing mentions outside `.claude/` and `.cursor/` are listed per file and rule in `scripts/guard_markdown_allowlist.txt`; skills and rules cannot be allowlisted. New tests in `tests/test_guard_public_repo_markdown.py`. Known limit: a bare `#NNN` cannot be told apart from a public PR.

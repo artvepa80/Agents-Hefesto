@@ -161,6 +161,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `target` | Path to analyze (file or directory) | `.` |
 | `fail_on` | Exit with error if issues found at or above this severity level | `CRITICAL` |
 | `allow_no_files` | `true`: passes `--allow-no-files`, so a run that analyzes no files keeps exit 0 under `fail_on` (intentionally empty target); the warning is still printed | `false` |
+| `allow_not_analyzed` | `true`: passes `--allow-not-analyzed`, so a found file that could not be analyzed does not fail `fail_on`; the file is still listed as "Not analyzed" and warned about | `false` |
 | `min_severity` | Minimum severity to report (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) | `LOW` |
 | `format` | Output format printed to the log (`text`, `json`, `html`, `sarif`) | `text` |
 | `sarif` | `true`: also write a SARIF 2.1.0 file and upload it to code scanning (needs `security-events: write`) | `false` |
@@ -403,6 +404,7 @@ hefesto analyze . --fail-on high         # exit 1 if HIGH+ found
 hefesto analyze . --fail-on critical     # exit 1 only if CRITICAL found
 hefesto analyze .                        # always exit 0 (report only)
 hefesto analyze . --fail-on high --allow-no-files   # an empty run keeps exit 0
+hefesto analyze . --fail-on high --allow-not-analyzed  # a file that failed does not fail the gate
 ```
 
 A run that analyzes no files (empty directory, only unsupported files, or every
@@ -419,6 +421,23 @@ skipped: no files were analyzed (--allow-no-files)", while "Files analyzed: 0",
 "No files were analyzed" and the stderr warning are still printed. It is a
 command-line flag only: `.hefesto.yaml` cannot set it (an `allow_no_files` key
 is rejected as unknown, exit 2), so a shared config never turns this check off.
+
+A file that is not valid UTF-8 is read with the `latin-1` fallback and
+analyzed (its findings count); the text report lists it under "Decoded with
+fallback (latin-1)", `--output json` has it in `meta.decoded_with_fallback`,
+SARIF has a `warning` notification for it, and stderr warns about it.
+
+A file the run found but could not analyze (it could not be read, or its
+analyzer raised an error) is never dropped silently: the text report lists it
+under "Not analyzed" with the reason, `--output json` has it in
+`meta.not_analyzed` (`path`, `language`, `reason`: `read_error` or
+`analyzer_error`, `exception`), SARIF has an `error` notification for it in
+`invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
+with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
+N file(s) could not be analyzed (exit 1)", also when `--allow-no-files` is set.
+`--allow-not-analyzed` (the Action's `allow_not_analyzed: 'true'` input) opts
+out: the gate then judges only the findings, and the file is still listed and
+warned about. Like `--allow-no-files`, it is a command-line flag only.
 
 ---
 

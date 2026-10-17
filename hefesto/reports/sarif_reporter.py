@@ -21,7 +21,9 @@ Produces a SARIF log that GitHub code scanning accepts
   rule, and the serialized log is kept under 10 MB once gzipped. What was
   dropped is reported in ``invocations[0].toolExecutionNotifications``
   (level ``warning``), as are files left out as vendored JavaScript (level
-  ``note``).
+  ``note``), files that could not be analyzed (level ``error``) and files
+  decoded with the latin-1 fallback (level ``warning``), with the file as
+  location.
 
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
@@ -83,12 +85,17 @@ class SARIFReporter:
         self.root = Path(root).resolve() if root else _default_root()
         self.max_results = max_results
         self._lines: Dict[str, List[str]] = {}
+        self._not_analyzed: List[Dict[str, Any]] = []
+        self._decoded_with_fallback: List[Dict[str, Any]] = []
 
     def generate(self, report: AnalysisReport) -> str:
         """SARIF log as a JSON string."""
         return json.dumps(self.generate_dict(report), indent=2, ensure_ascii=False)
 
     def generate_dict(self, report: AnalysisReport) -> Dict[str, Any]:
+        meta = getattr(report, "meta", None) or {}
+        self._not_analyzed = list(meta.get("not_analyzed") or [])
+        self._decoded_with_fallback = list(meta.get("decoded_with_fallback") or [])
         issues = sorted(
             report.get_all_issues(),
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
@@ -125,7 +132,9 @@ class SARIFReporter:
         seen: Dict[str, int] = {}
         results = [self._result(issue, index, seen) for issue in self._stable_order(issues)]
         invocation: Dict[str, Any] = {"executionSuccessful": True}
-        notifications = [{"level": "warning", "message": {"text": text}} for text in notes]
+        notifications = self._not_analyzed_notifications()
+        notifications += self._fallback_notifications()
+        notifications += [{"level": "warning", "message": {"text": text}} for text in notes]
         notifications += [{"level": "note", "message": {"text": text}} for text in info]
         if notifications:
             invocation["toolExecutionNotifications"] = notifications
@@ -148,6 +157,34 @@ class SARIFReporter:
                     "results": results,
                 }
             ],
+        }
+
+    def _not_analyzed_notifications(self) -> List[Dict[str, Any]]:
+        """One ``error`` notification per found file that could not be analyzed."""
+        from hefesto.core.analyzer_engine import not_analyzed_message
+
+        return [
+            self._file_notification("error", not_analyzed_message(e), e) for e in self._not_analyzed
+        ]
+
+    def _fallback_notifications(self) -> List[Dict[str, Any]]:
+        """One ``warning`` per file that was analyzed after a fallback decode."""
+        from hefesto.core.analyzer_engine import decoded_with_fallback_message
+
+        return [
+            self._file_notification("warning", decoded_with_fallback_message(e), e)
+            for e in self._decoded_with_fallback
+        ]
+
+    def _file_notification(self, level: str, text: str, entry: Dict[str, Any]) -> Dict[str, Any]:
+        uri, base = self._uri(str(entry.get("path", "")))
+        location: Dict[str, Any] = {"uri": uri}
+        if base:
+            location["uriBaseId"] = base
+        return {
+            "level": level,
+            "message": {"text": text},
+            "locations": [{"physicalLocation": {"artifactLocation": location}}],
         }
 
     def _stable_order(self, issues: List[AnalysisIssue]) -> List[AnalysisIssue]:

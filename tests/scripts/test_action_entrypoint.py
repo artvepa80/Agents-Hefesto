@@ -153,6 +153,20 @@ def test_allow_no_files_passed_to_the_cli(tmp_path: Path, value: str) -> None:
     assert "Allow no files: yes (--allow-no-files)" in r["proc"].stdout
 
 
+@pytest.mark.parametrize("value", [None, "", "false", "0", "no"])
+def test_allow_not_analyzed_off_by_default(tmp_path: Path, value: Optional[str]) -> None:
+    r = _run(tmp_path, {"allow_not_analyzed": value})
+    assert "--allow-not-analyzed" not in r["hefesto_args"]
+    assert "Allow not analyzed: no" in r["proc"].stdout
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "1", " yes "])
+def test_allow_not_analyzed_passed_to_the_cli(tmp_path: Path, value: str) -> None:
+    r = _run(tmp_path, {"allow_not_analyzed": value})
+    assert "--allow-not-analyzed" in r["hefesto_args"]
+    assert "Allow not analyzed: yes (--allow-not-analyzed)" in r["proc"].stdout
+
+
 # ------------------------------------------------------------ SARIF (Phase 5)
 
 

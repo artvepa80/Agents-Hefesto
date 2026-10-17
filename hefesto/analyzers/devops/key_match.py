@@ -8,7 +8,8 @@ tokens sit together in the key (``api_key``, ``api-key``, ``apiKey``).
 from __future__ import annotations
 
 import re
-from typing import List, Sequence
+from functools import lru_cache
+from typing import List, Sequence, Tuple
 
 # Immediate children of these objects are package names mapped to versions.
 DEPENDENCY_MAP_KEYS = frozenset(
@@ -67,20 +68,45 @@ def _sequence_contains(sequence: Sequence[str], pattern_tokens: Sequence[str]) -
 
 
 def key_has_pattern(key: str, patterns: Sequence[str]) -> bool:
-    """True when ``key`` contains a pattern as whole tokens, not a substring."""
-    if any(char.isspace() for char in str(key)):
-        return False
-    primary = _tokens(str(key))
-    if not primary:
-        return False
-    sequences = [primary]
-    deplural = _with_plurals_stripped(primary)
-    if deplural != primary:
-        sequences.append(deplural)
+    """True when ``key`` contains a pattern as whole tokens, not a substring.
 
-    for pattern in patterns:
-        pattern_tokens = _tokens(pattern)
+    Memoized: a document repeats the same keys many times, and tokenizing is
+    pure, so each key and each pattern list is tokenized once.
+    """
+    return _key_has_pattern(str(key), tuple(patterns))
+
+
+@lru_cache(maxsize=8192)
+def _key_has_pattern(key: str, patterns: Tuple[str, ...]) -> bool:
+    sequences = _key_sequences(key)
+    for pattern_tokens in _pattern_tokens(patterns):
         for sequence in sequences:
             if _sequence_contains(sequence, pattern_tokens):
                 return True
     return False
+
+
+@lru_cache(maxsize=8192)
+def _key_sequences(key: str) -> Tuple[Tuple[str, ...], ...]:
+    """The key's tokens, plus a copy with plurals stripped when it differs."""
+    if any(char.isspace() for char in key):
+        return ()
+    primary = tuple(_tokens(key))
+    if not primary:
+        return ()
+    deplural = tuple(_with_plurals_stripped(primary))
+    if deplural != primary:
+        return (primary, deplural)
+    return (primary,)
+
+
+@lru_cache(maxsize=64)
+def _pattern_tokens(patterns: Tuple[str, ...]) -> Tuple[Tuple[str, ...], ...]:
+    return tuple(tuple(_tokens(pattern)) for pattern in patterns)
+
+
+def clear_caches() -> None:
+    """Drop the memoized results (tests that count tokenizer calls use it)."""
+    _key_has_pattern.cache_clear()
+    _key_sequences.cache_clear()
+    _pattern_tokens.cache_clear()

@@ -18,6 +18,10 @@ inputs:
     description: 'true: pass --allow-no-files to hefesto analyze, so a run that analyzes no files keeps exit 0 under fail_on (for intentionally empty targets). The "no files were analyzed" warning is still printed. Default false: an empty run fails the gate.'
     required: false
     default: 'false'
+  allow_not_analyzed:
+    description: 'true: pass --allow-not-analyzed to hefesto analyze, so a found file that could not be analyzed (read error or analyzer failure) does not fail the gate under fail_on. The file is still listed as "Not analyzed" and warned about. Default false: such a file fails the gate (since 4.20.1).'
+    required: false
+    default: 'false'
   min_severity:
     description: 'Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW). INFO is accepted for backward compatibility and treated as LOW.'
     required: false
@@ -78,6 +82,7 @@ runs:
         INPUT_TARGET: ${{ inputs.target }}
         INPUT_FAIL_ON: ${{ inputs.fail_on }}
         INPUT_ALLOW_NO_FILES: ${{ inputs.allow_no_files }}
+        INPUT_ALLOW_NOT_ANALYZED: ${{ inputs.allow_not_analyzed }}
         INPUT_MIN_SEVERITY: ${{ inputs.min_severity }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_SARIF: ${{ inputs.sarif }}

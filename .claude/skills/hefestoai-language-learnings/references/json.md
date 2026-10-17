@@ -30,3 +30,23 @@
 - **Verified:** 4.20.0
 - **Status:** Known limitation (by design)
 
+
+### Deeply nested JSON was dropped and the gate passed
+
+- **Symptom:** 4.20.0 printed "Found 2 file(s)", "Files analyzed: 1" and "Gate passed" (exit 0 with `--fail-on critical`) over a `config.json` with a hardcoded password next to an array nested 5000 levels deep. No warning.
+- **Cause:** the recursive checks in `JsonAnalyzer` raised `RecursionError` (on 3.10/3.11 `json.loads` itself raises), and `AnalyzerEngine._analyze_file` swallowed every exception with `except Exception: return None`.
+- **Fix:** `RecursionError` falls back to the regex analysis. Any file that still cannot be analyzed is listed as not analyzed (text, `meta.not_analyzed`, SARIF notification) and fails `--fail-on` unless `--allow-not-analyzed`. Never catch an analyzer exception without recording the file.
+- **Official source:** https://docs.python.org/3/library/sys.html#sys.setrecursionlimit
+- **PR/commit:** #132
+- **Verified:** 4.20.0 from PyPI vs the #132 branch, Python 3.13.5 (2026-10-16)
+- **Status:** Fixed in #132 (unreleased)
+
+### JSON analysis cost about 3 s per MB
+
+- **Symptom:** a 3.88 MB JSON file took 13.65 s in 4.20.0; 25 MB took 75 s.
+- **Cause:** `key_has_pattern` re-tokenized every pattern and every key on each call (`_tokens` ran 1.18 million times at 1 MB).
+- **Fix:** memoize tokenization per key and per pattern list (bounded LRU). Guard it with a call count, not a wall clock. Do not add a size cap: it brings back silent skips.
+- **Official source:** https://docs.python.org/3/library/functools.html#functools.lru_cache
+- **PR/commit:** #132
+- **Verified:** same machine and fixtures, 13.65 s → 0.64 s at 3.88 MB, findings identical (2026-10-16)
+- **Status:** Fixed in #132 (unreleased)
