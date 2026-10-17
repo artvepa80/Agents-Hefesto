@@ -22,12 +22,16 @@ always measured with ``yaml.parse`` (iterative events). A count of ``[``
 and ``{`` plus the longest line is not enough: block YAML can nest two
 collections in one indent column.
 
-A tab, a line that starts with ``%``, or a block-scalar header glued to
-``#`` (``[|>][0-9+-]*#``, yaml-test-suite X4QW ``block: ># comment``) is
-also parsed with the pure-Python loader. Those are the markers that
-separate the two loaders on the yaml-test-suite, apart from JR7V and
-WZ62. Any exception from a loader becomes that pure-Python error, which
-is what 4.20.1 reported while still returning the file's other findings.
+A tab, a line that starts with ``%``, a U+FEFF byte-order mark, a
+block-scalar header glued to ``#`` (``[|>][0-9+-]*#``, yaml-test-suite
+X4QW ``block: ># comment``), or an empty ``?`` key in a flow collection
+(``[?]]``, ``[ ?, , b]``) is also parsed with the pure-Python
+loader. Libyaml skips U+FEFF at the start of any line and drops an empty
+flow ``?`` key together with the next comma or bracket; ``SafeLoader``
+rejects both. A ``?`` or ``!`` inside a flow value (JR7V, WZ62, and the
+same shape) stays on ``CSafeLoader``. Any exception from a loader becomes
+that pure-Python error, which is what 4.20.1 reported while still
+returning the file's other findings.
 """
 
 from __future__ import annotations
@@ -60,6 +64,10 @@ _COLLECTION_END = frozenset({"SequenceEndEvent", "MappingEndEvent"})
 # ``>#``, ``|+2#``, ``|-#``: a block scalar indicator, optional chomp or
 # indent digits, then ``#`` with no space. X4QW is ``block: ># comment``.
 _BLOCK_SCALAR_HASH = re.compile(r"[|>][0-9+-]*#")
+
+# An empty ``?`` key eats the next comma or bracket: ``[?]]``, ``[ ?, , b]``.
+# A ``?`` inside a value (``a?``, ``/?a=1``) does not match.
+_EMPTY_FLOW_KEY = re.compile(r"(?:^|[\s\[{,])\?\s*[,\]}]")
 
 
 def yaml_installed() -> bool:
@@ -142,16 +150,20 @@ def _event_depth_exceeds(content: str, limit: int) -> bool:
 def _libyaml_markers(content: str) -> bool:
     """True when this text carries a known libyaml / SafeLoader split.
 
-    A tab anywhere, a line starting with ``%``, or :data:`_BLOCK_SCALAR_HASH`.
-    JR7V and WZ62 disagree too and match none of these; they stay on
-    ``CSafeLoader``, which accepts both.
+    A tab, U+FEFF anywhere (libyaml skips it at the start of every line,
+    and a leading mark hides a ``%`` directive), a line starting with
+    ``%``, :data:`_BLOCK_SCALAR_HASH`, or :data:`_EMPTY_FLOW_KEY`.
+    A ``?`` or ``!`` inside a flow value matches none of these and stays
+    on ``CSafeLoader``.
     """
-    if "\t" in content:
+    if "\t" in content or "\ufeff" in content:
         return True
     for line in content.splitlines():
         if line.startswith("%"):
             return True
-    return _BLOCK_SCALAR_HASH.search(content) is not None
+    if _BLOCK_SCALAR_HASH.search(content) is not None:
+        return True
+    return _EMPTY_FLOW_KEY.search(content) is not None
 
 
 def _loader_for(content: str) -> type:
