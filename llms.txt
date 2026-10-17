@@ -53,6 +53,10 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 - SEMANTIC_DRIFT (AI code deviates from intent)
 - DUPLICATE_CODE (ML-detected similar functions)
 
+## Telemetry
+
+- Privacy: the CLI and the GitHub Action analyze code where they run and do not upload it; the MCP analyze tool runs on the files you send and stores nothing. The CLI sends anonymous usage events to PostHog by default (no code, file paths or findings); turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless `telemetry: 1`. `hefesto analyze` also checks pypi.org for a newer version (cached 24 h); 4.20.1 has no switch to turn that check off.
+
 ## Supported Languages
 
 Python, TypeScript, JavaScript, Java, Go, Rust, C#, YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM Templates, Helm Charts, Serverless Framework.
