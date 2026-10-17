@@ -110,15 +110,16 @@ class TestEngineRecordsNotAnalyzed:
         assert entry["exception"] == "RuntimeError"
         assert entry["language"] == "toml"
 
-    def test_unreadable_file_is_recorded(self, tmp_path):
+    def test_non_utf8_file_is_analyzed_not_dropped(self, tmp_path):
         root = tmp_path / "latin1"
         root.mkdir()
         (root / "legacy.py").write_bytes(b"# caf\xe9\nx = 1\n")
         engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
-        engine.analyze_path(str(root))
-        entries = engine._build_meta()["not_analyzed"]
-        assert [e["reason"] for e in entries] == ["read_error"]
-        assert entries[0]["exception"] == "UnicodeDecodeError"
+        report = engine.analyze_path(str(root))
+        meta = engine._build_meta()
+        assert report.summary.files_analyzed == 1
+        assert "not_analyzed" not in meta
+        assert [e["encoding"] for e in meta["decoded_with_fallback"]] == ["latin-1"]
 
     def test_clean_run_has_no_not_analyzed_key(self, tmp_path):
         root = tmp_path / "clean"
@@ -217,6 +218,19 @@ class TestGateFailsClosed:
         assert result.returncode == 1
         assert "could not be analyzed" in result.stdout
 
+    def test_quiet_still_fails_and_warns(self, tmp_path):
+        result = _run(str(_project_with_toml(tmp_path)), "--fail-on", "CRITICAL", "--quiet")
+        assert result.returncode == 1
+        assert "could not be analyzed" in result.stderr
+
+    def test_no_files_warning_names_the_failed_file(self, tmp_path):
+        root = tmp_path / "only"
+        root.mkdir()
+        (root / "pyproject.toml").write_text('[tool.x]\nname = "x"\n')
+        result = _run(str(root), "--fail-on", "CRITICAL", "--allow-no-files")
+        assert result.returncode == 1
+        assert "1 file(s) could not be analyzed" in result.stderr
+
     def test_flag_is_cli_only(self):
         from hefesto.config.project_config import SUPPORTED_KEYS
 
@@ -244,17 +258,18 @@ class TestCounterexamples:
         if failed:
             assert "Gate passed" not in result.stdout + result.stderr
 
-    def test_quiet_still_fails_and_warns(self, tmp_path):
-        root = _project_with_deep_json(tmp_path)
-        (root / "legacy.py").write_bytes(b"# caf\xe9\nx = 1\n")
-        result = _run(str(root), "--fail-on", "CRITICAL", "--quiet")
-        assert result.returncode == 1
-        assert "could not be analyzed" in result.stderr
 
-    def test_no_files_warning_names_the_failed_file(self, tmp_path):
-        root = tmp_path / "onlylatin1"
-        root.mkdir()
-        (root / "legacy.py").write_bytes(b"# caf\xe9\nx = 1\n")
-        result = _run(str(root), "--fail-on", "CRITICAL", "--allow-no-files")
-        assert result.returncode == 1
-        assert "1 file(s) could not be analyzed" in result.stderr
+def test_os_error_on_read_is_still_read_error(tmp_path, monkeypatch):
+    root = tmp_path / "oserr"
+    root.mkdir()
+    (root / "a.py").write_text("x = 1\n")
+
+    def boom(self, path):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(AnalyzerEngine, "_read_source", boom)
+    engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+    engine.analyze_path(str(root))
+    [entry] = engine._build_meta()["not_analyzed"]
+    assert entry["reason"] == "read_error"
+    assert entry["exception"] == "PermissionError"
