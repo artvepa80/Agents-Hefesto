@@ -26,7 +26,17 @@ No code, file paths, findings, repository names, or IP address is included. `iss
 
 ## Newer version
 
-`hefesto analyze` asks PyPI (`https://pypi.org/pypi/hefesto-ai/json`) for the current release, with a 1.5s timeout. The version is cached for 24 hours in `~/.hefesto/.latest_version`. A failure is ignored. When the cached version is newer, the CLI prints `Hefesto <version> available (you have <current>). Upgrade: pip install --upgrade hefesto-ai`. This check is not a PostHog event and it still runs when usage events are turned off.
+`hefesto analyze` asks PyPI (`https://pypi.org/pypi/hefesto-ai/json`) for the current release, with a 1.5s timeout. The version is cached for 24 hours in `~/.hefesto/.latest_version`. A failure is ignored. When the cached version is newer, the CLI prints `Hefesto <version> available (you have <current>). Upgrade: pip install --upgrade hefesto-ai`. This check is not a PostHog event.
+
+The check is skipped, with no request and no cache write, when any of these holds:
+
+- `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`
+- `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off` (the same off values as usage events)
+- `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`
+
+Comparison ignores surrounding spaces and letter case. Usage events stay on by default. `HEFESTO_NO_UPDATE_CHECK` does not turn them off. `hefesto telemetry disable` (the `telemetry_disabled` file) turns events off and does not skip this check.
+
+The GitHub Action exports `HEFESTO_TELEMETRY=0` unless its `telemetry` input is `1` or `true` (`scripts/action_entrypoint.sh`). With that default the check does not run on the runner. `telemetry: 1` exports `HEFESTO_TELEMETRY=1`, and the check runs.
 
 The project key embedded in the client is a public write-only PostHog key. It is not a secret. Override it (including with an empty value, which sends nothing):
 
@@ -49,7 +59,7 @@ export HEFESTO_TELEMETRY=0
 export DO_NOT_TRACK=1
 ```
 
-`hefesto telemetry disable` writes `~/.hefesto/telemetry_disabled`. Delete that file to turn telemetry back on. `HEFESTO_TELEMETRY=0` also accepts `false`, `no`, and `off`.
+`hefesto telemetry disable` writes `~/.hefesto/telemetry_disabled`. Delete that file to turn telemetry back on. `HEFESTO_TELEMETRY=0` also accepts `false`, `no`, and `off`. Those off values, and `DO_NOT_TRACK`, also skip the PyPI version check. The disable file does not.
 
 Debug (prints the event on stderr, does not use the network):
 
@@ -63,7 +73,7 @@ Sending runs on a background thread with a short timeout and ignores errors. It 
 
 Hooks installed by `hefesto install-hooks` or `hefesto init` export `HEFESTO_SOURCE=hook` before `hefesto analyze`.
 
-The GitHub Action is unchanged. With `telemetry: 1` or `true` it still POSTs its own `event=action` body to `https://hefestoai.narapallc.com/api/telemetry` and exports `HEFESTO_TELEMETRY=1`, which lets the CLI send the PostHog events (`source` becomes `action` because `GITHUB_ACTIONS=true`). The default `telemetry: 0` exports `HEFESTO_TELEMETRY=0` and the Action sends nothing.
+The Action script is unchanged. With `telemetry: 1` or `true` it still POSTs its own `event=action` body to `https://hefestoai.narapallc.com/api/telemetry` and exports `HEFESTO_TELEMETRY=1`, which lets the CLI send the PostHog events (`source` becomes `action` because `GITHUB_ACTIONS=true`) and run the PyPI version check. The default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`: the Action sends nothing, and the CLI skips the PyPI version check on the runner.
 
 ## Upgrade notices
 

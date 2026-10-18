@@ -289,15 +289,32 @@ def persist_flag(name: str) -> None:
     _set_flag(name, True)
 
 
+def _version_check_disabled() -> bool:
+    """True when the PyPI check must not run and must not write a cache.
+
+    ``HEFESTO_NO_UPDATE_CHECK`` and ``DO_NOT_TRACK`` use the same truthy
+    tokens as the rest of the client. ``HEFESTO_TELEMETRY`` uses the same
+    off tokens. The ``telemetry_disabled`` file is not consulted: usage
+    events stay on unless one of their own switches is set.
+    """
+    if os.getenv("HEFESTO_NO_UPDATE_CHECK", "").strip().lower() in _TRUTHY:
+        return True
+    if os.getenv("DO_NOT_TRACK", "").strip().lower() in _TRUTHY:
+        return True
+    return os.getenv("HEFESTO_TELEMETRY", "").strip().lower() in _OPT_OUT
+
+
 def refresh_latest_version() -> None:
     """Cache the PyPI version of hefesto-ai for 24 hours. Never raises.
 
     A short timeout. A network or parse failure leaves the previous cache
     untouched. Skipped while the test runner is collecting other tests.
-    Independent of the usage-event opt-out: the upgrade line is not telemetry.
+    Skipped, with no request and no cache write, when
+    ``HEFESTO_NO_UPDATE_CHECK`` or ``DO_NOT_TRACK`` is truthy, or when
+    ``HEFESTO_TELEMETRY`` is off.
     """
     try:
-        if _suppressed_by_test_runner():
+        if _suppressed_by_test_runner() or _version_check_disabled():
             return
         if _read_version_cache() is not None:
             return
