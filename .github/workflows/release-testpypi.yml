@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-publish-testpypi:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -47,17 +47,35 @@ jobs:
         run: |
           python -m twine check dist/*
 
-      - name: Publish to TestPyPI
-        if: ${{ env.TWINE_PASSWORD != '' }}
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
-        run: |
-          python -m twine upload dist/*
+      - name: Upload dist
+        uses: actions/upload-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
 
-      - name: Skip Publish (Missing Credentials)
-        if: ${{ env.TWINE_PASSWORD == '' }}
-        run: |
-          echo "::warning::Skipping TestPyPI publish because TEST_PYPI_API_TOKEN is not set."
-          echo "Build artifacts are available in dist/"
+  # Trusted publishing (OIDC) to TestPyPI. id-token is set on this job only
+  # so the build job cannot mint a TestPyPI identity. Attestations stay at
+  # the action default (PEP 740).
+  # https://docs.pypi.org/trusted-publishers/using-a-publisher/
+  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.2/README.md
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/hefesto-ai
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          repository-url: https://test.pypi.org/legacy/
