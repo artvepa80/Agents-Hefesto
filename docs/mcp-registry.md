@@ -28,9 +28,10 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   `GET /v0.1/servers/{name}/versions/{version}?include_deleted=true` must return 404,
   and `GET /v0.1/servers/{name}/versions?include_deleted=true` lists every version,
   including deleted ones.
-- No `packages` entry. A PyPI package entry needs the owner's decision and an
-  `mcp-name: io.github.artvepa80/hefestoai` line in the README (registry
-  ownership check for PyPI).
+- No `packages` entry until a local MCP server exists (Arturo, 2026-10-18).
+  When that changes, the README will also need
+  `mcp-name: io.github.artvepa80/hefestoai` (registry ownership check for
+  PyPI).
 
 ## How to run it
 
@@ -42,11 +43,11 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
    summary shows the version to publish, the hosted versions, and the registry's
    current latest version.
 2. A real publish needs `publish` checked, the `main` branch, and a
-   `mcp-registry` environment with a required reviewer and deployment branches set
-   to "Selected branches" with only `main` (create it in Settings → Environments
-   before the first publish). The `environment-gate` job fails when that
-   environment is missing, has no reviewer, or allows any branch other than `main`,
-   so GitHub never auto-creates it unprotected. In publish mode an
+   `mcp-registry` environment that Arturo creates himself in Settings →
+   Environments, with himself as required reviewer and deployment branches set
+   to "Selected branches" with only `main`. The `environment-gate` job fails when
+   that environment is missing, has no reviewer, or allows any branch other than
+   `main`, so GitHub never auto-creates it unprotected. In publish mode an
    already-published version is an error.
 3. The `publish` job alone gets `id-token: write`. It checks that the entry is
    byte-for-byte the one validated, checks the registry again right before
@@ -55,13 +56,15 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
 
 ## Runbook
 
-- **Who:** Hefesto MCP runs the workflow after each hosted engine deploy.
+- **Who:** Hefesto MCP runs the workflow after each hosted engine deploy, once
+  production is verified.
 - **When:** only after the private `scripts/verify_hosted_engine.py` passes against
   production for that version.
 - **How:** first a dry run (`publish` unchecked) with `version` set to the deployed
   version, and read its job summary. Then the same version with `publish=true`.
-- **Approval:** the publish job waits on the `mcp-registry` environment. Arturo is
-  its required reviewer and approves each deployment.
+- **Approval:** Arturo creates the `mcp-registry` environment himself (required
+  reviewer: himself; `main` only). The publish job waits on that environment, and
+  he approves each deployment.
 - **First publish:** 4.20.2, once the 4.20.2 hosted engine deploy (planned for
   2026-10-19) passes `verify_hosted_engine`.
 - Registry state on 2026-10-18: 4.19.0 is latest (published 2026-10-16), with

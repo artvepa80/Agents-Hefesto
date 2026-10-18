@@ -10,7 +10,7 @@ Arturo's OK (relayed by Hefesto Growth, 08:34 Lima) to open a draft PR that publ
 ## Constraints (Hefesto MCP)
 - Canonical entry: the hosted landing's `server.json` (`https://hefestoai.narapallc.com/server.json`), remote streamable-http. This repository's `server.json` is never published.
 - Registry version tracks the hosted engine, not PyPI; registry versions are immutable.
-- No `packages` (PyPI) entry without the owner's decision and an `mcp-name:` README line.
+- No `packages` (PyPI) entry until a local MCP server exists (Arturo, 2026-10-18). An `mcp-name:` README line is required only if that changes.
 - Description "HefestoAI checks AI-generated code before you ship it."; `repository.url` stays on this repository.
 
 ## State on 2026-10-18
@@ -22,9 +22,11 @@ Arturo's OK (relayed by Hefesto Growth, 08:34 Lima) to open a draft PR that publ
 ## Why a separate workflow
 `release.yml` runs on version tags for PyPI. A registry version follows the hosted engine, which is deployed from another repository at another time, so tying it to the PyPI tag would publish the wrong version or the wrong document.
 
-## Open questions
-- PyPI `packages` entry (needs Arturo; also `mcp-name: io.github.artvepa80/hefestoai` in the README).
-- Who triggers the registry publish after a hosted-engine deploy (Hefesto MCP or PYTHIA), and whether the canonical file should move to a stable public artifact.
+## Decisions (Arturo, 2026-10-18 10:26 Lima, relayed by Grok Bot)
+- No PyPI `packages` entry until a local MCP server exists.
+- Arturo creates the `mcp-registry` environment himself, with himself as required reviewer (`main` only).
+- Hefesto MCP runs the workflow after each hosted engine deploy, once production is verified.
+- First publish: after the 4.20.2 hosted deploy.
 
 ## Update: Hefesto MCP review (2026-10-18)
 
@@ -46,3 +48,7 @@ Arturo's OK (relayed by Hefesto Growth, 08:34 Lima) to open a draft PR that publ
   `X.Y.Z`.
 - Side finding: the existing `pypi` environment has `deployment_branch_policy: null`
   (any branch). Not changed here.
+
+## Update: Arturo decisions (2026-10-18 10:26 Lima)
+
+Docs and PR body updated to record the three decisions above. No workflow change.
