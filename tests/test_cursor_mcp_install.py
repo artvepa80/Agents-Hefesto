@@ -15,7 +15,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 ENDPOINT = "https://hefestoai.narapallc.com/api/mcp-protocol"
 READMES = ["README.md", "README.ja.md", "README.zh-CN.md"]
-LINK = re.compile(r"(cursor://anysphere\.cursor-deeplink|https://cursor\.com/link)/mcp/install\?[^\s)`]+")
+LINK = re.compile(
+    r"(cursor://anysphere\.cursor-deeplink|https://cursor\.com/link)/mcp/install\?[^\s)`]+"
+)
 
 
 def test_root_mcp_json_is_the_hosted_remote_server():
