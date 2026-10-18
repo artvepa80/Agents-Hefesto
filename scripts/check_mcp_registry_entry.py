@@ -250,28 +250,36 @@ def write_summary(path: Path, version: str, mode: str, facts: Dict[str, str]) ->
         handle.write("\n".join(lines) + "\n")
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("server_json", type=Path)
     parser.add_argument("--expected-version", required=True)
     parser.add_argument("--mode", choices=("dry-run", "publish"), default="dry-run")
     parser.add_argument("--offline", action="store_true", help="skip the network checks")
     parser.add_argument("--summary", type=Path, help="append a Markdown summary to this file")
-    args = parser.parse_args(argv)
+    return parser
 
+
+def _report(facts: Dict[str, str], warnings: List[str], errors: List[str]) -> None:
+    lines = [f"{k}: {v}" for k, v in facts.items()]
+    lines += [f"WARNING: {w}" for w in warnings] + [f"ERROR: {e}" for e in errors]
+    for line in lines:
+        print(line)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = _parser().parse_args(argv)
     document = json.loads(args.server_json.read_text(encoding="utf-8"))
+    version = str(document.get("version"))
     errors = check_document(document, args.expected_version)
     warnings: List[str] = []
     facts: Dict[str, str] = {}
     if not args.offline:
-        more_errors, warnings, facts = network_findings(str(document.get("version")), args.mode)
+        more_errors, warnings, facts = network_findings(version, args.mode)
         errors += more_errors
     if args.summary:
-        write_summary(args.summary, str(document.get("version")), args.mode, facts)
-    for line in [f"{k}: {v}" for k, v in facts.items()]:
-        print(line)
-    for line in [f"WARNING: {w}" for w in warnings] + [f"ERROR: {e}" for e in errors]:
-        print(line)
+        write_summary(args.summary, version, args.mode, facts)
+    _report(facts, warnings, errors)
     if errors:
         return 1
     print(f"OK: {SERVER_NAME} {args.expected_version} ({args.mode})")
