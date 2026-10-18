@@ -188,6 +188,12 @@ HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
+**Add to Cursor (one click):**
+
+[![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)
+
+The button opens Cursor's install prompt through `cursor.com/link` (GitHub does not render `cursor://` links). Direct deeplink: `cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`. The same server is in `.mcp.json` at the repository root (`{"mcpServers":{"hefestoai":{"url":"https://hefestoai.narapallc.com/api/mcp-protocol"}}}`). No API key.
+
 **API Endpoints:**
 
 | Endpoint | Protocol | Path |

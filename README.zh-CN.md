@@ -69,6 +69,12 @@ AI 代理可以通过 MCP 调用 HefestoAI：
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
+一键添加到 Cursor：
+
+[![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)
+
+按钮通过 `cursor.com/link` 打开 Cursor 的安装提示（GitHub 不渲染 `cursor://` 链接）。直接深度链接：`cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`。同一服务器也写在仓库根目录的 `.mcp.json` 中。无需 API 密钥。
+
 MCP 端点：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP 的 `analyze` 工具运行开源引擎（托管的 MCP 运行近期的 hefesto-ai 版本），处理你发送的文件：最多 20 个文件，每个 100 KB，总计 256 KB，20 秒。不存储任何内容。分析整个仓库请在本地运行 `hefesto analyze .`。托管的 MCP 服务器为闭源，由 Narapa LLC 运营。
 
 ## 支持的语言

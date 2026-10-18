@@ -69,6 +69,12 @@ AI エージェントは MCP 経由で HefestoAI を呼び出せます：
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
+Cursor にワンクリックで追加：
+
+[![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)
+
+ボタンは `cursor.com/link` 経由で Cursor のインストール画面を開きます（GitHub は `cursor://` リンクを表示しません）。直接のディープリンク：`cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`。同じサーバーはリポジトリ直下の `.mcp.json` にもあります。API キーは不要です。
+
 MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP の `analyze` ツールは、送信されたファイルに対してオープンソースエンジンを実行します（ホスト型 MCP は最近の hefesto-ai リリースを実行します）。上限は 20 ファイル、各 100 KB、合計 256 KB、20 秒です。内容は保存されません。リポジトリ全体はローカルで `hefesto analyze .` を実行してください。ホスト型 MCP サーバーはクローズドソースで、Narapa LLC が運営しています。
 
 ## 対応言語
