@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CWE ids for Python security findings in SARIF.** One mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20) feeds both the GitHub code-scanning tag `external/cwe/cwe-N` (no zero-padding) and a SARIF 2.1.0 `run.taxonomies` CWE entry with `relationships` on each mapped rule. HARDCODED_SECRET → 798 (`equal`), SQL_INJECTION_RISK → 89 (`superset`), COMMAND_INJECTION → 78 (`superset`), EVAL_USAGE → 95 (`relevant`), BARE_EXCEPT → 396 (`equal`), PICKLE_USAGE → 502 (`relevant`, rule precision `low` because the detector flags the import only), ASSERT_IN_PRODUCTION → no CWE. An issue `metadata.cwe` still overrides the table; the COBOL tags `cwe-798` and `cwe-20` are unchanged. Handoff: `docs/worklog/2026-10-17-cwe-sarif.md`.
+
 ## [4.20.2] - 2026-10-17
 
 ### Fixed
@@ -49,10 +53,6 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 
 - **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
 
-
-### Added
-
-- **CWE ids for Python security findings in SARIF.** One mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20) feeds both the GitHub code-scanning tag `external/cwe/cwe-N` (no zero-padding) and a SARIF 2.1.0 `run.taxonomies` CWE entry with `relationships` on each mapped rule. HARDCODED_SECRET → 798 (`equal`), SQL_INJECTION_RISK → 89 (`superset`), COMMAND_INJECTION → 78 (`superset`), EVAL_USAGE → 95 (`relevant`), BARE_EXCEPT → 396 (`equal`), PICKLE_USAGE → 502 (`relevant`, rule precision `low` because the detector flags the import only), ASSERT_IN_PRODUCTION → no CWE. An issue `metadata.cwe` still overrides the table; the COBOL tags `cwe-798` and `cwe-20` are unchanged. Handoff: `docs/worklog/2026-10-17-cwe-sarif.md`.
 
 ## [4.20.1] - 2026-10-17
 
