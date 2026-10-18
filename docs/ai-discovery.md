@@ -58,4 +58,4 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 - **Official MCP Registry:** `io.github.artvepa80/hefestoai` (ACTIVE)
 - **Smithery:** `artvepa80/hefestoai` (PUBLIC)
 
-The hosted MCP server is closed-source and operated by Narapa LLC. The registry `repository` is this public repository, which contains the open-source `hefesto-ai` engine that `analyze` runs.
+The hosted MCP server is closed-source and operated by Narapa LLC. The registry `repository` is this public repository, which contains the open-source `hefesto-ai` engine that `analyze` runs. Publishing a new registry version is a manual workflow; see [mcp-registry.md](mcp-registry.md).
