@@ -35,7 +35,7 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.1` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.2` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/mo) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
@@ -94,7 +94,7 @@ Hefesto checks for these at pre-commit, at pre-push and in CI, so they surface b
 | HARDCODED_SECRET | CRITICAL | API keys, passwords in code |
 | SQL_INJECTION_RISK | HIGH | String concatenation in queries |
 | COMMAND_INJECTION | HIGH | Unsafe shell command execution |
-| PICKLE_USAGE | HIGH | `pickle` / `cPickle` imports (unsafe deserialization) |
+| PICKLE_USAGE | HIGH | `import pickle` / `cPickle` lines (the import is flagged; `pickle.loads()` calls are not reported separately) |
 | UNDECLARED_DEPENDENCY | MEDIUM | Import used but not in pyproject.toml |
 | PACKAGING_VERSION_DRIFT | MEDIUM | Version mismatch across pyproject/CHANGELOG/README |
 | CI_CONFIG_DRIFT | MEDIUM-HIGH | Local env vs CI configuration mismatch |
@@ -131,7 +131,7 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
-`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.20.1` (exact tags never move) or a commit SHA, and bump it yourself.
+`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.20.2` (exact tags never move) or a commit SHA, and bump it yourself.
 
 With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
 
@@ -168,7 +168,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
-| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends nothing; see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:
 
@@ -188,6 +188,12 @@ HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
+**Add to Cursor (one click):**
+
+[![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)
+
+The button opens Cursor's install prompt through `cursor.com/link` (GitHub does not render `cursor://` links). Direct deeplink: `cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`. The same server is in `.mcp.json` at the repository root (`{"mcpServers":{"hefestoai":{"url":"https://hefestoai.narapallc.com/api/mcp-protocol"}}}`). No API key.
+
 **API Endpoints:**
 
 | Endpoint | Protocol | Path |
@@ -200,7 +206,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 | Changelog | JSON | `/api/changelog.json` |
 | FAQ | JSON | `/api/faq.json` |
 
-The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`, hefesto-ai 4.19.0) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
+The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`; the hosted MCP runs a recent hefesto-ai release) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
@@ -309,7 +315,7 @@ pip install "hefesto-ai[format]"
 
 ---
 
-## CLI Reference (v4.20.1)
+## CLI Reference (v4.20.2)
 
 ```bash
 # Analyze code
@@ -358,7 +364,8 @@ hefesto analyze . --sarif-file out/hefesto.sarif   # any --output, plus a SARIF 
 SARIF 2.1.0 for every finding `hefesto analyze` reports (all analyzers it runs, COBOL included, plus Operational Truth and provider findings), validated against the OASIS schema in the tests:
 
 - one rule per rule ID (`COBOL004`, `DOCKER010`, ...; the issue type such as `HARDCODED_SECRET` when an analyzer has no ID) with name, description, help, help URI and a default level;
-- `level`: CRITICAL/HIGH -> `error`, MEDIUM -> `warning`, LOW -> `note`; security rules (secrets, injection, unsafe commands, ...) also get `security-severity` (9.5 / 8.0 / 5.5 / 3.0), so GitHub rates them Critical/High/Medium/Low, plus CWE tags when known;
+- `level`: CRITICAL/HIGH -> `error`, MEDIUM -> `warning`, LOW -> `note`; security rules (secrets, injection, unsafe commands, ...) also get `security-severity` (9.5 / 8.0 / 5.5 / 3.0), so GitHub rates them Critical/High/Medium/Low;
+- CWE, from one mapping (CWE list 4.20): GitHub code scanning reads the rule tag `external/cwe/cwe-N` (no zero-padding). The same id is a `run.taxonomies` CWE entry (organization MITRE) with a `relationships` kind on the rule (`equal`, `superset` or `relevant`). Python: secrets 798, SQL injection 89, command injection 78, eval/exec 95, bare except 396, pickle import 502 (`relevant`, precision `low`, because only the import is flagged). Assert has no CWE. A finding's `metadata.cwe` overrides the table; existing COBOL tags (`cwe-798`, `cwe-20`) stay as written. Table: [docs/ANALYSIS_RULES.md](docs/ANALYSIS_RULES.md#27-cwe-in-sarif);
 - repo-relative URIs (`%SRCROOT%`, the git top level of the current directory) and `partialFingerprints` built from the rule, the file and the text of the flagged line, so alerts keep their identity when code above them moves;
 - GitHub upload limits: at most 25,000 results (highest severity kept) and 10 MB gzipped; anything dropped is reported in the log's tool notifications.
 
@@ -578,7 +585,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.20.1
+    rev: v4.20.2
     hooks:
       - id: hefesto-analyze
 ```
@@ -716,7 +723,7 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 ## Telemetry
 
-The CLI sends anonymous usage events by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings, repository names, or IP). Turn it off with `hefesto telemetry disable`, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1. The GitHub Action sends nothing unless you set telemetry: 1. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
+The CLI sends anonymous usage events to PostHog by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings or repository names, and no IP field in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless you set `telemetry: 1`. Separately, `hefesto analyze` asks pypi.org for the latest version (1.5 s timeout, cached for 24 hours). That check runs even with telemetry off, and 4.20.1 has no setting to disable it. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
 
 The PyPI newer-version check is skipped, with no request and no cache write, when `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`, when `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off`, or when `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`. Usage events stay on by default. The Action's default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`, so that check does not run on runners.
 
