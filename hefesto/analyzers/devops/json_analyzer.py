@@ -15,6 +15,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.config_parse import load_json
 
 
 class JsonAnalyzer:
@@ -370,12 +371,14 @@ class JsonAnalyzer:
         """
         issues: List[AnalysisIssue] = []
 
-        # Try to parse JSON
-        try:
-            data = json.loads(content)
-        except (json.JSONDecodeError, RecursionError):
+        # Parsed once and shared with format detection (see config_parse.load_json).
+        loaded = load_json(content)
+        if isinstance(loaded.error, (json.JSONDecodeError, RecursionError)):
             # Invalid JSON, or nested deeper than the parser allows: regex fallback
             return self._fallback_regex_analysis(file_path, content)
+        if loaded.error is not None:
+            raise loaded.error
+        data = loaded.value
 
         # The checks walk the document recursively. Nesting just below the
         # parser's limit can still exceed the interpreter's recursion limit in
