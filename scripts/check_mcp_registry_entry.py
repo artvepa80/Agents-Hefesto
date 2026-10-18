@@ -31,7 +31,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Tuple
 
 SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 SERVER_NAME = "io.github.artvepa80/hefestoai"
@@ -45,30 +45,43 @@ REGISTRY_BASE = "https://registry.modelcontextprotocol.io"
 TIMEOUT_SECONDS = 90
 
 
+def _expected_fields(expected_version: str) -> List[Tuple[str, Tuple[str, ...], str]]:
+    """(label, key path, expected value) for the exact-match fields."""
+    return [
+        ("$schema", ("$schema",), SCHEMA_URL),
+        ("name", ("name",), SERVER_NAME),
+        ("description", ("description",), DESCRIPTION),
+        ("repository.url", ("repository", "url"), PUBLIC_REPOSITORY_URL),
+        ("version", ("version",), expected_version),
+    ]
+
+
+def _lookup(document: dict, path: Tuple[str, ...]) -> object:
+    value: object = document
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
+
+
+def _remote_errors(remotes: object) -> List[str]:
+    if not isinstance(remotes, list) or len(remotes) != 1:
+        return ["remotes must hold exactly one entry"]
+    first = remotes[0] if isinstance(remotes[0], dict) else {}
+    if (first.get("type"), first.get("url")) != (REMOTE_TYPE, REMOTE_URL):
+        return [f"remotes[0] must be {REMOTE_TYPE} at {REMOTE_URL}"]
+    return []
+
+
 def check_document(document: dict, expected_version: str) -> List[str]:
     """Field checks without network access."""
-    errors: List[str] = []
-    if document.get("$schema") != SCHEMA_URL:
-        errors.append(f"$schema must be {SCHEMA_URL}")
-    if document.get("name") != SERVER_NAME:
-        errors.append(f"name must be {SERVER_NAME}")
-    if document.get("description") != DESCRIPTION:
-        errors.append(f"description must be exactly {DESCRIPTION!r}")
-    repository = document.get("repository") or {}
-    if repository.get("url") != PUBLIC_REPOSITORY_URL:
-        errors.append(f"repository.url must be {PUBLIC_REPOSITORY_URL}")
+    errors = [
+        f"{label} is {_lookup(document, path)!r}, expected {expected!r}"
+        for label, path, expected in _expected_fields(expected_version)
+        if _lookup(document, path) != expected
+    ]
     if "packages" in document:
         errors.append("packages is not allowed (PyPI entry needs the owner's decision)")
-    remotes = document.get("remotes")
-    expected_remote = {"type": REMOTE_TYPE, "url": REMOTE_URL}
-    if not isinstance(remotes, list) or len(remotes) != 1:
-        errors.append("remotes must hold exactly one entry")
-    elif {k: remotes[0].get(k) for k in ("type", "url")} != expected_remote:
-        errors.append(f"remotes[0] must be {REMOTE_TYPE} at {REMOTE_URL}")
-    version = document.get("version")
-    if version != expected_version:
-        errors.append(f"version is {version!r}, expected {expected_version!r}")
-    return errors
+    return errors + _remote_errors(document.get("remotes"))
 
 
 def check_hosted_version(document: dict, hosted_latest: str) -> List[str]:
@@ -108,6 +121,16 @@ def fetch_published_versions(name: str = SERVER_NAME, base: str = REGISTRY_BASE)
     return [str(item.get("server", {}).get("version")) for item in page.get("servers", [])]
 
 
+def network_findings(version: str, mode: str) -> Tuple[List[str], List[str]]:
+    """(errors, warnings) from the hosted engine and the registry."""
+    document_version = {"version": version}
+    errors = check_hosted_version(document_version, fetch_hosted_latest())
+    already = check_not_published(version, fetch_published_versions())
+    if mode == "publish":
+        return errors + already, []
+    return errors, already
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("server_json", type=Path)
@@ -120,16 +143,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     errors = check_document(document, args.expected_version)
     warnings: List[str] = []
     if not args.offline:
-        errors += check_hosted_version(document, fetch_hosted_latest())
-        already = check_not_published(args.expected_version, fetch_published_versions())
-        if args.mode == "publish":
-            errors += already
-        else:
-            warnings += already
-    for warning in warnings:
-        print(f"WARNING: {warning}")
-    for error in errors:
-        print(f"ERROR: {error}")
+        more_errors, warnings = network_findings(str(document.get("version")), args.mode)
+        errors += more_errors
+    for line in [f"WARNING: {w}" for w in warnings] + [f"ERROR: {e}" for e in errors]:
+        print(line)
     if errors:
         return 1
     print(f"OK: {SERVER_NAME} {args.expected_version} ({args.mode})")
