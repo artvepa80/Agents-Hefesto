@@ -903,7 +903,7 @@ print(f"Explanation: {result.explanation}")
 **Rationale:**
 - **Reliability:** Static analysis is deterministic and fast
 - **Cost:** Running ML on every analysis is expensive
-- **Offline:** Static analysis works without internet
+- **Offline:** Static analysis needs no internet (the CLI still sends opt-out telemetry and a pypi.org version check)
 - **Explainability:** Static rules are easier to understand
 
 **Trade-offs:**
@@ -933,7 +933,7 @@ print(f"Explanation: {result.explanation}")
 - **Size:** 80MB model, runs on CPU
 - **Speed:** ~50ms per embedding
 - **Quality:** Good semantic understanding
-- **Offline:** No API calls needed
+- **Offline:** No API calls needed for the embedding model (the CLI still sends opt-out telemetry and a pypi.org version check)
 
 **Trade-offs:**
 - Not specialized for code (generic sentence model)

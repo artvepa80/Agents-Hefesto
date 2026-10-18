@@ -100,7 +100,7 @@ EXIT_CODE=${PIPESTATUS[0]}
 echo "::endgroup::"
 
 # Anonymous Action ping: sent ONLY when the `telemetry` input is enabled
-# (1/true). With the default `telemetry: 0` nothing leaves the runner (SEC-06).
+# (1/true). With the default `telemetry: 0` no telemetry leaves the runner (the CLI's pypi.org version check still runs).
 if [ "$TELEMETRY_ENABLED" = "1" ]; then
     HEFESTO_VERSION=$(hefesto --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "0.0.0")
     FILE_COUNT=$(grep -oE 'Files analyzed: [0-9]+' "$TMPOUT" | grep -oE '[0-9]+' || echo "0")

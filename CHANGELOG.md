@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`CLAUDE.md` deployment section** describes the TestPyPI trusted publisher (environment `testpypi`, no `TEST_PYPI_API_TOKEN`). `README.md` does not mention that secret, and the repository has no `RELEASING` document.
 
+- **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
+
 ## [4.20.1] - 2026-10-17
 
 ### Upgrading from 4.20.0 (`@v4` users get this automatically)
