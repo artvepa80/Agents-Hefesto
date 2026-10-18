@@ -1,5 +1,6 @@
-import json
 from typing import Any, Dict, List
+
+from hefesto.core.config_parse import load_json
 
 from ..detectors import SecretDetector
 from ..finding_schema import CloudFinding, CloudLocation
@@ -12,12 +13,12 @@ class ArmAnalyzer:
 
     def analyze(self, file_content: str, file_path: str) -> List[CloudFinding]:
         findings = []
-        try:
-            if not file_path.endswith(".json"):
-                return []
-            template = json.loads(file_content)
-        except Exception:
+        if not file_path.endswith(".json"):
             return []
+        loaded = load_json(file_content)
+        if loaded.error is not None:
+            return []
+        template = loaded.value
 
         if not isinstance(template, dict):
             return []

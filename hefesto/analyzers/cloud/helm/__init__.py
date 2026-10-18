@@ -1,10 +1,7 @@
 import os
 from typing import Any, List
 
-try:
-    import yaml  # type: ignore
-except ImportError:
-    yaml = None  # type: ignore
+from hefesto.core.config_parse import load_yaml, yaml_installed
 
 from ..detectors import SecretDetector
 from ..finding_schema import CloudFinding, CloudLocation
@@ -30,13 +27,12 @@ class HelmAnalyzer:
         ):
             return []
 
-        try:
-            if yaml:
-                values = yaml.safe_load(file_content)
-            else:
-                return []
-        except Exception:
+        if not yaml_installed():
             return []
+        stream = load_yaml(file_content)
+        if stream.error is not None or not stream.is_single:
+            return []
+        values = stream.single_document
 
         if not isinstance(values, dict):
             return []

@@ -9,14 +9,14 @@ on:
       - "!v4" # floating alias of the 4.x line, moved by the last step below
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -53,25 +53,55 @@ jobs:
         run: |
           python -m twine check dist/*
 
-      - name: Publish to PyPI
-        id: pypi
-        if: ${{ env.TWINE_PASSWORD != '' }}
-        continue-on-error: true
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          python -m twine upload dist/*
+      - name: Upload dist
+        uses: actions/upload-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
 
-      - name: PyPI publish status
-        run: |
-          if [ "${{ steps.pypi.outcome }}" = "success" ]; then
-            echo "::notice::PyPI publish succeeded."
-          elif [ "${{ steps.pypi.outcome }}" = "skipped" ]; then
-            echo "::warning::PyPI publish skipped (no PYPI_API_TOKEN)."
-          else
-            echo "::warning::PyPI publish failed. Check token and PyPI account email verification."
-          fi
+  # Trusted publishing (OIDC) to PyPI. id-token is set on this job only
+  # so the build job cannot mint a PyPI identity. Attestations stay at
+  # the action default (PEP 740). The action's default repository is PyPI.
+  # https://docs.pypi.org/trusted-publishers/using-a-publisher/
+  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.2/README.md
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hefesto-ai
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download dist
+        uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+
+  # GitHub Release and the floating v4 tag run only after publish succeeds.
+  # contents: write is limited to this job. checkout stays on v5 so the v4
+  # push keeps the persisted credentials that step already uses.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download dist
+        uses: actions/download-artifact@v7
+        with:
+          name: python-package-distributions
+          path: dist/
 
       - name: Create GitHub Release
         env:

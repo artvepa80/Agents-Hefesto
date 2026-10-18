@@ -86,7 +86,7 @@ Hefesto helps you avoid security issues in your code:
 - **Hardcoded Secret Detection** - Finds API keys, passwords, tokens in code
 - **SQL Injection Detection** - Identifies unsafe query construction
 - **eval() Usage Warnings** - Flags dangerous dynamic code execution
-- **Pickle Warnings** - Alerts on unsafe deserialization
+- **Pickle Warnings** - Flags `import pickle` / `cPickle` lines
 
 Run Hefesto on your code:
 ```bash

@@ -7,17 +7,11 @@ files a directory walk opens; this module only refines that guess.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, List, Optional
 
+from hefesto.core.config_parse import load_json, load_yaml
 from hefesto.core.languages.specs import Language
-
-try:
-    import yaml  # type: ignore
-except ImportError:
-    yaml = None  # type: ignore
-
 
 _SERVERLESS_NAMES = frozenset({"serverless.yml", "serverless.yaml"})
 _HELM_VALUE_NAMES = frozenset({"values.yaml", "values.yml"})
@@ -53,6 +47,21 @@ def _is_serverless(data: dict) -> bool:
     return "service" in data or "provider" in data
 
 
+def is_helm_template(file_path: Path, content: str) -> bool:
+    """True for a Helm chart template that contains ``{{ }}`` actions.
+
+    Files under ``<chart>/templates/`` (a directory next to ``Chart.yaml``)
+    are Go templates. They are not YAML until Helm renders them, so they are
+    not parsed.
+    """
+    if "{{" not in content:
+        return False
+    for parent in file_path.parents:
+        if parent.name == "templates" and (parent.parent / "Chart.yaml").is_file():
+            return True
+    return False
+
+
 def _is_helm_values_path(file_path: Path) -> bool:
     name = file_path.name.lower()
     if name not in _HELM_VALUE_NAMES and not (
@@ -63,12 +72,7 @@ def _is_helm_values_path(file_path: Path) -> bool:
 
 
 def _yaml_documents(content: str) -> Optional[List[Any]]:
-    if yaml is None:
-        return None
-    try:
-        return [doc for doc in yaml.safe_load_all(content) if doc is not None]
-    except Exception:
-        return None
+    return load_yaml(content).documents
 
 
 def _single_mapping(documents: Optional[List[Any]]) -> Optional[dict]:
@@ -80,11 +84,12 @@ def _single_mapping(documents: Optional[List[Any]]) -> Optional[dict]:
 def _refine_json(guessed: Language, content: Optional[str]) -> Language:
     if content is None:
         return Language.JSON if guessed != Language.ARM else guessed
-    try:
-        data = json.loads(content)
-    except (json.JSONDecodeError, ValueError, RecursionError):
-        # too deep to parse: stays plain JSON, whose analyzer falls back to regex
+    loaded = load_json(content)
+    if loaded.error is not None:
+        # too deep to parse, or not JSON: stays plain JSON, whose analyzer
+        # falls back to regex
         return Language.JSON
+    data = loaded.value
     if isinstance(data, dict):
         if _is_arm(data):
             return Language.ARM
@@ -95,6 +100,8 @@ def _refine_json(guessed: Language, content: Optional[str]) -> Language:
 
 def _refine_yaml(guessed: Language, file_path: Path, content: Optional[str]) -> Language:
     name = file_path.name.lower()
+    if content is not None and is_helm_template(file_path, content):
+        return Language.YAML
     documents = _yaml_documents(content) if content is not None else None
     mapping = _single_mapping(documents) if content is not None else None
     if mapping is not None and _is_cloudformation(mapping):
