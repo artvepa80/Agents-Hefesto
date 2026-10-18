@@ -106,6 +106,8 @@ def _validate_shipping(shipping):
 
 **Severity:** CRITICAL
 
+**CWE:** [CWE-798](https://cwe.mitre.org/data/definitions/798.html) (Use of Hard-coded Credentials). SARIF relationship kind `equal`. Tag `external/cwe/cwe-798`.
+
 **Description:** API keys, passwords, tokens hardcoded in source code.
 
 **Detection Patterns:**
@@ -177,6 +179,8 @@ Up to and including v4.14.0, any path containing the substring `test` or
 
 **Severity:** CRITICAL
 
+**CWE:** [CWE-89](https://cwe.mitre.org/data/definitions/89.html) (SQL Injection). SARIF relationship kind `superset`: the check is line-based and does not track taint, so it finds a subset of CWE-89. Tag `external/cwe/cwe-89`.
+
 **Description:** Dynamic SQL queries vulnerable to SQL injection attacks.
 
 **Example - BAD:**
@@ -218,6 +222,8 @@ def get_user(username):
 **Rule ID:** `SECURITY_003`
 
 **Severity:** CRITICAL
+
+**CWE:** [CWE-95](https://cwe.mitre.org/data/definitions/95.html) (Eval Injection). SARIF relationship kind `relevant`. Tag `external/cwe/cwe-95`.
 
 **Description:** Using `eval()` or `exec()` with untrusted input allows arbitrary code execution.
 
@@ -309,6 +315,8 @@ def load_data(filename):
 - Hard to detect malicious payloads
 - No safe way to unpickle untrusted data
 
+**CWE:** [CWE-502](https://cwe.mitre.org/data/definitions/502.html) (Deserialization of Untrusted Data). SARIF relationship kind `relevant`, and the rule precision is `low`. Hefesto flags the `import pickle` / `import cPickle` line only. The finding does not mean untrusted data was deserialized. Tag `external/cwe/cwe-502`.
+
 ---
 
 ### 2.5 Assert in Production
@@ -316,6 +324,8 @@ def load_data(filename):
 **Rule ID:** `SECURITY_005`
 
 **Severity:** MEDIUM
+
+**CWE:** none. [CWE-617](https://cwe.mitre.org/data/definitions/617.html) (Reachable Assertion) is about assertions that crash; this rule is about `assert` being removed by `python -O`. [CWE-703](https://cwe.mitre.org/data/definitions/703.html) is a Pillar and discouraged for mapping. SARIF emits no CWE tag and no relationship.
 
 **Description:** `assert` statements are removed when Python runs in optimized mode (`-O` flag).
 
@@ -364,6 +374,8 @@ contain `test`, such as `src/contest/app.py`, are checked.
 
 **Severity:** MEDIUM
 
+**CWE:** [CWE-396](https://cwe.mitre.org/data/definitions/396.html) (Declaration of Catch for Generic Exception). SARIF relationship kind `equal`. Tag `external/cwe/cwe-396`.
+
 **Description:** Catching all exceptions can hide bugs and security issues.
 
 **Example - BAD:**
@@ -404,6 +416,27 @@ def process_data(data):
 - Debugging nightmares
 - Masks underlying issues
 - Program can't be interrupted
+
+---
+
+### 2.7 CWE in SARIF
+
+Python security rules carry a CWE in SARIF 2.1.0 from one mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20, approved 2026-10-17). The same id is written two ways:
+
+- a rule tag `external/cwe/cwe-N`, which GitHub code scanning reads (no zero-padding, so CWE-89 is `cwe-89`);
+- a `run.taxonomies` entry named `CWE` (organization MITRE, version 4.20) and a `relationships` entry on the rule. The taxonomy lists only the ids used in that run.
+
+| Issue type | CWE | Relationship | Notes |
+|------------|-----|--------------|-------|
+| HARDCODED_SECRET | 798 | `equal` | Use of Hard-coded Credentials |
+| SQL_INJECTION_RISK | 89 | `superset` | Line-based; no taint tracking |
+| COMMAND_INJECTION | 78 | `superset` | OS command injection. Emitted by the security analyzer; no separate section above |
+| EVAL_USAGE | 95 | `relevant` | Eval Injection (`eval` / `exec`) |
+| PICKLE_USAGE | 502 | `relevant` | Precision `low`. Flags the `import pickle` / `cPickle` line only |
+| BARE_EXCEPT | 396 | `equal` | Declaration of Catch for Generic Exception |
+| ASSERT_IN_PRODUCTION | none | | No CWE. See [Assert in Production](#25-assert-in-production) |
+
+An issue field `metadata.cwe` overrides this table. COBOL rules that already set one keep the same tag text (`external/cwe/cwe-798`, `external/cwe/cwe-20`); those tags are not zero-padded.
 
 ---
 

@@ -8,9 +8,13 @@ Produces a SARIF log that GitHub code scanning accepts
   one, such as ``COBOL004`` or ``SC2086``; otherwise the issue type, such as
   ``HARDCODED_SECRET``) with name, short/full description, help text and
   markdown, a help URI, a default level and properties: tags (``security``
-  or ``maintainability``, plus ``external/cwe/cwe-N`` when known),
+  or ``maintainability``, plus ``external/cwe/cwe-N`` from
+  ``hefesto.reports.cwe_map`` or from ``metadata["cwe"]``, no zero-padding),
   ``precision``, ``problem.severity`` and, for security rules,
   ``security-severity`` (CRITICAL 9.5, HIGH 8.0, MEDIUM 5.5, LOW 3.0);
+* when any rule has a CWE, ``run.taxonomies`` holds one CWE tool component
+  (MITRE, the pinned list version, only the ids used in the run) and each
+  such rule has ``relationships`` pointing at it;
 * results with ``level`` (CRITICAL/HIGH -> error, MEDIUM -> warning,
   LOW -> note), the message, a repo-relative URI (``uriBaseId`` %SRCROOT%),
   the start line, ``partialFingerprints`` that survive line shifts (rule,
@@ -38,6 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 from hefesto.core.analysis_models import AnalysisIssue, AnalysisReport
+from hefesto.reports.cwe_map import CWE_NAMES, CWE_VERSION, links_for
 
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
@@ -138,25 +143,28 @@ class SARIFReporter:
         notifications += [{"level": "note", "message": {"text": text}} for text in info]
         if notifications:
             invocation["toolExecutionNotifications"] = notifications
+        rules = [_rule(rid, by_rule[rid]) for rid in order]
+        run: Dict[str, Any] = {
+            "tool": {
+                "driver": {
+                    "name": "HefestoAI",
+                    "informationUri": INFORMATION_URI,
+                    "version": _version(),
+                    "semanticVersion": _version(),
+                    "rules": rules,
+                }
+            },
+            "invocations": [invocation],
+            "columnKind": "utf16CodeUnits",
+        }
+        taxonomy = _cwe_taxonomy(rules)
+        if taxonomy:
+            run["taxonomies"] = [taxonomy]
+        run["results"] = results
         return {
             "$schema": SARIF_SCHEMA,
             "version": SARIF_VERSION,
-            "runs": [
-                {
-                    "tool": {
-                        "driver": {
-                            "name": "HefestoAI",
-                            "informationUri": INFORMATION_URI,
-                            "version": _version(),
-                            "semanticVersion": _version(),
-                            "rules": [_rule(rid, by_rule[rid]) for rid in order],
-                        }
-                    },
-                    "invocations": [invocation],
-                    "columnKind": "utf16CodeUnits",
-                    "results": results,
-                }
-            ],
+            "runs": [run],
         }
 
     def _not_analyzed_notifications(self) -> List[Dict[str, Any]]:
@@ -296,8 +304,8 @@ def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
     tags = ["security" if security else "maintainability"]
     if kind.startswith("COBOL_"):
         tags.append("cobol")
-    for other in issues:
-        tags += [tag for tag in _cwe_tags(other) if tag not in tags]
+    links = _cwe_links(issues)
+    _append_cwe_tags(tags, links)
     suggestions = ((i.suggestion or "").strip() for i in issues)
     suggestion = next((text for text in suggestions if text), "")
     help_uri = COBOL_HELP_URI if kind.startswith("COBOL_") else RULES_HELP_URI
@@ -305,12 +313,12 @@ def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
     severity = min((i.severity.value for i in issues), key=lambda s: _RANK.get(s, 4))
     properties: Dict[str, Any] = {
         "tags": tags[:MAX_TAGS],
-        "precision": _precision(issue.confidence),
+        "precision": _rule_precision(issues),
         "problem.severity": PROBLEM_SEVERITY.get(severity, "warning"),
     }
     if security:
         properties["security-severity"] = SECURITY_SEVERITY.get(severity, "5.5")
-    return {
+    rule: Dict[str, Any] = {
         "id": rid,
         "name": "".join(part.capitalize() for part in kind.split("_")),
         "shortDescription": {"text": title},
@@ -323,13 +331,96 @@ def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
         "defaultConfiguration": {"level": LEVELS.get(severity, "warning")},
         "properties": properties,
     }
+    _attach_cwe_relationships(rule, links)
+    return rule
 
 
-def _cwe_tags(issue: AnalysisIssue) -> List[str]:
-    cwe = (issue.metadata or {}).get("cwe")
-    if not isinstance(cwe, str):
-        return []
-    return [f"external/cwe/cwe-{n}" for n in _CWE.findall(cwe)]
+def _append_cwe_tags(tags: List[str], links: List[Tuple[str, str]]) -> None:
+    for digits, _kind in links:
+        tag = f"external/cwe/cwe-{digits}"
+        if tag not in tags:
+            tags.append(tag)
+
+
+def _attach_cwe_relationships(rule: Dict[str, Any], links: List[Tuple[str, str]]) -> None:
+    if not links:
+        return
+    rule["relationships"] = [
+        {
+            "target": {"id": digits, "toolComponent": {"name": "CWE", "index": 0}},
+            "kinds": [kind],
+        }
+        for digits, kind in links
+    ]
+
+
+def _cwe_for_issue(issue: AnalysisIssue) -> List[Tuple[str, str]]:
+    """(digit string, relationship kind). Metadata overrides the registry.
+
+    Digits are not zero-padded. A metadata value is copied as written, so
+    an existing ``CWE-20`` tag stays ``cwe-20``.
+    """
+    metadata = issue.metadata or {}
+    if "cwe" in metadata:
+        raw = metadata.get("cwe")
+        if not isinstance(raw, str):
+            return []
+        return [(digits, "relevant") for digits in _CWE.findall(raw)]
+    return [(str(row.cwe_id), row.kind) for row in links_for(issue.issue_type.value)]
+
+
+def _cwe_links(issues: List[AnalysisIssue]) -> List[Tuple[str, str]]:
+    """Unique CWE links for one rule, numeric id order (first kind wins)."""
+    found: Dict[str, str] = {}
+    for issue in issues:
+        for digits, kind in _cwe_for_issue(issue):
+            found.setdefault(digits, kind)
+    return [(digits, found[digits]) for digits in sorted(found, key=lambda d: (int(d), d))]
+
+
+def _rule_precision(issues: List[AnalysisIssue]) -> str:
+    """Confidence-derived precision, unless the mapping forces one.
+
+    PICKLE_USAGE forces ``low``: the detector flags the import only.
+    """
+    precision = _precision(issues[0].confidence)
+    for issue in issues:
+        for row in links_for(issue.issue_type.value):
+            if row.precision:
+                return row.precision
+    return precision
+
+
+def _cwe_taxonomy(rules: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """CWE tool component listing only the ids referenced by ``rules``."""
+    seen = set()
+    ids: List[str] = []
+    for rule in rules:
+        for relationship in rule.get("relationships") or []:
+            digits = str(relationship["target"]["id"])
+            if digits not in seen:
+                seen.add(digits)
+                ids.append(digits)
+    if not ids:
+        return None
+    ids.sort(key=lambda digits: (int(digits), digits))
+    return {
+        "name": "CWE",
+        "organization": "MITRE",
+        "version": CWE_VERSION,
+        "informationUri": "https://cwe.mitre.org/data/downloads.html",
+        "taxa": [_taxon(digits) for digits in ids],
+    }
+
+
+def _taxon(digits: str) -> Dict[str, Any]:
+    name = CWE_NAMES.get(int(digits), f"CWE-{digits}")
+    return {
+        "id": digits,
+        "name": name,
+        "shortDescription": {"text": name},
+        "helpUri": f"https://cwe.mitre.org/data/definitions/{digits}.html",
+    }
 
 
 def _precision(confidence: Optional[float]) -> str:

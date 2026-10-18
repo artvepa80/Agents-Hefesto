@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CWE ids for Python security findings in SARIF.** One mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20) feeds both the GitHub code-scanning tag `external/cwe/cwe-N` (no zero-padding) and a SARIF 2.1.0 `run.taxonomies` CWE entry with `relationships` on each mapped rule. HARDCODED_SECRET → 798 (`equal`), SQL_INJECTION_RISK → 89 (`superset`), COMMAND_INJECTION → 78 (`superset`), EVAL_USAGE → 95 (`relevant`), BARE_EXCEPT → 396 (`equal`), PICKLE_USAGE → 502 (`relevant`, rule precision `low` because the detector flags the import only), ASSERT_IN_PRODUCTION → no CWE. An issue `metadata.cwe` still overrides the table; the COBOL tags `cwe-798` and `cwe-20` are unchanged. Handoff: `docs/worklog/2026-10-17-cwe-sarif.md`.
+
 ## [4.20.2] - 2026-10-17
 
 ### Fixed
