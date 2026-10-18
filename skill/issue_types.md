@@ -38,7 +38,7 @@ Source: `hefesto/core/analysis_models.py` — `AnalysisIssueType` enum.
 | HARDCODED_SECRET | CRITICAL | API key, password, or token in source code |
 | SQL_INJECTION_RISK | CRITICAL | String interpolation in SQL query |
 | EVAL_USAGE | HIGH | Use of eval() or exec() — code injection risk |
-| PICKLE_USAGE | HIGH | Pickle deserialization of untrusted data |
+| PICKLE_USAGE | HIGH | `import pickle` / `cPickle` (flags the import line) |
 | ASSERT_IN_PRODUCTION | MEDIUM | Assert used for validation (stripped with -O) |
 | BARE_EXCEPT | MEDIUM | Except clause without specific exception type |
 
