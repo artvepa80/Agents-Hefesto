@@ -37,7 +37,7 @@
         "ai-generated-code"
       ],
       "examples": [
-        "Analyze this Python file for hardcoded secrets and unsafe pickle use."
+        "Analyze this Python file for hardcoded secrets and pickle imports."
       ]
     },
     {

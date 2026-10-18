@@ -35,9 +35,18 @@ One parse of the 1 MB file: `SafeLoader` 1.404 s, `CSafeLoader` 0.174 s, 2,808 d
 
 These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1 MB on 4.19.0 / 4.20.0 / 4.20.1, 31.7 s for 4 MB, and 3.62 s versus 0.44 s for one `SafeLoader` versus `CSafeLoader` parse. That profile was not from this machine (the 4.20.1 notes used an 8 vCPU Xeon and Python 3.13.5). The shape matches: 4.20.0 and 4.20.1 are much slower than 4.19.0, 4 MB is about four times 1 MB, and `CSafeLoader` is about eight times faster than `SafeLoader` with the same documents. 4.20.1 was not faster than 4.20.0 here; the two are within run-to-run noise. "Parsed twice" is the directory walk (`safe_load_all` 2 on 4.20.1). A single file on the command line was parsed three times (`safe_load_all` 1 on 4.19.0, 3 on 4.20.0 and 4.20.1). `safe_load` and `unsafe_load` stayed 0.
 
+### Changed
+
+- **TestPyPI publishes with PyPI Trusted Publishing (OIDC).** `.github/workflows/release-testpypi.yml` keeps the RC-tag trigger and the "Verify release tag" step. A `build` job still checks out, builds the sdist and wheel, and runs `twine check`, then uploads `dist/` as the `python-package-distributions` artifact (`actions/upload-artifact@v6`). A `publish` job downloads that artifact (`actions/download-artifact@v7`, the Node 24 release that uses the same `@actions/artifact` 5.x client as upload-artifact v6) and publishes with `pypa/gh-action-pypi-publish@v1.14.2` (latest release on 2026-10-17, published 2026-07-29) to `https://test.pypi.org/legacy/`. The publish job sets environment `testpypi` (`https://test.pypi.org/p/hefesto-ai`) and `permissions: id-token: write`. Workflow permissions stay `contents: read`. Digital attestations stay at the action default (PEP 740). The `TEST_PYPI_API_TOKEN` / `twine upload` step and the "Skip Publish (Missing Credentials)" step are removed, so a missing publisher or environment fails the job. Production `release.yml` is unchanged. The GitHub environment `testpypi` must exist in repository settings, matching the TestPyPI pending publisher. After the first successful publish, the owner can delete the `TEST_PYPI_API_TOKEN` secret.
+
 ### Documentation
 
 - **Language-learnings skill:** YAML double-parse entry in `.claude/skills/hefestoai-language-learnings/references/yaml-iac.md`, citing #139. Handoff: `docs/worklog/2026-10-17-yaml-single-parse.md`.
+
+- **`CLAUDE.md` deployment section** describes the TestPyPI trusted publisher (environment `testpypi`, no `TEST_PYPI_API_TOKEN`). `README.md` does not mention that secret, and the repository has no `RELEASING` document.
+
+- **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
+
 
 ## [4.20.1] - 2026-10-17
 

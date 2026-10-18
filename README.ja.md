@@ -57,7 +57,7 @@ jobs:
 | HARDCODED_SECRET（コード内の API キー、パスワード） | CRITICAL |
 | SQL_INJECTION_RISK | HIGH |
 | COMMAND_INJECTION | HIGH |
-| PICKLE_USAGE（安全でないデシリアライズ） | HIGH |
+| PICKLE_USAGE（`pickle` / `cPickle` の import 行。`pickle.loads()` の呼び出しは個別に指摘しません） | HIGH |
 | UNDECLARED_DEPENDENCY（import されているが pyproject.toml に未宣言） | MEDIUM |
 | PACKAGING_VERSION_DRIFT（pyproject、CHANGELOG、README のバージョン不一致） | MEDIUM |
 
@@ -69,12 +69,16 @@ AI エージェントは MCP 経由で HefestoAI を呼び出せます：
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
-MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP の `analyze` ツールは、送信されたファイルに対してオープンソースエンジン（hefesto-ai 4.19.0）を実行します。上限は 20 ファイル、各 100 KB、合計 256 KB、20 秒です。内容は保存されません。リポジトリ全体はローカルで `hefesto analyze .` を実行してください。ホスト型 MCP サーバーはクローズドソースで、Narapa LLC が運営しています。
+MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP の `analyze` ツールは、送信されたファイルに対してオープンソースエンジンを実行します（ホスト型 MCP は最近の hefesto-ai リリースを実行します）。上限は 20 ファイル、各 100 KB、合計 256 KB、20 秒です。内容は保存されません。リポジトリ全体はローカルで `hefesto analyze .` を実行してください。ホスト型 MCP サーバーはクローズドソースで、Narapa LLC が運営しています。
 
 ## 対応言語
 
 - コード：Python（ネイティブ AST、フルサポート）、TypeScript、JavaScript、Java、Go、Rust、C#（TreeSitter、`[multilang]` が必要）
 - `hefesto analyze` が実行する DevOps / クラウドフォーマット：YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL（無料ルール 16 個、COBOL001–COBOL016）、CloudFormation、ARM、Helm、Serverless。接尾辞が重なるときの優先順位は [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md)。
+
+## テレメトリ
+
+CLI は初期設定で匿名の利用データを PostHog に送信します（ランダムな ID。`analyze` ではファイル数、指摘数、実行時間、終了コード、バージョン、OS、Python のバージョンも送ります。コード、ファイルパス、指摘内容、リポジトリ名は含みません）。`hefesto telemetry disable`、`HEFESTO_TELEMETRY=0`、`DO_NOT_TRACK=1` のいずれかで止められます。GitHub Action は `telemetry: 1` を指定した場合のみ利用データを送ります。また `hefesto analyze` は pypi.org に最新バージョンを問い合わせます（タイムアウト 1.5 秒、24 時間キャッシュ）。この確認はテレメトリを止めても動き、4.20.1 には止める設定がありません。詳細：[docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md)
 
 ## 料金
 
