@@ -102,7 +102,10 @@ def check_not_published(version: str, published: Iterable[str]) -> List[str]:
 def _get_json(url: str) -> dict:
     request = urllib.request.Request(url, headers={"Accept": "application/json"})
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
-        return json.loads(response.read().decode("utf-8"))
+        payload = json.loads(response.read().decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{url} did not return a JSON object")
+    return payload
 
 
 def fetch_hosted_latest(url: str = HOSTED_CHANGELOG_URL) -> str:
