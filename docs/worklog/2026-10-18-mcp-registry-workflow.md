@@ -25,3 +25,24 @@ Arturo's OK (relayed by Hefesto Growth, 08:34 Lima) to open a draft PR that publ
 ## Open questions
 - PyPI `packages` entry (needs Arturo; also `mcp-name: io.github.artvepa80/hefestoai` in the README).
 - Who triggers the registry publish after a hosted-engine deploy (Hefesto MCP or PYTHIA), and whether the canonical file should move to a stable public artifact.
+
+## Update: Hefesto MCP review (2026-10-18)
+
+- Hosted version comes from the deployed engine: `initialize` `serverInfo.version`
+  == `engine.version` from a minimal `tools/call analyze` (same parsing as the private
+  `verify_hosted_engine.py`; the live response has no `engine` in
+  `structuredContent`, so the text JSON is parsed) == `changelog.json` `latest`
+  == `server.json` `version`.
+- Registry lookups moved to the documented v0.1 API (openapi.yaml):
+  `/versions/{version}?include_deleted=true` (404 = free) and
+  `/versions?include_deleted=true`. Live: 4.19.0 → 200, 4.20.2 → 404.
+- TOCTOU: the publish job checks the registry again in the step right before
+  `mcp-publisher publish`. A first draft built the URL with `jq -r ... | jq -sRr @uri`,
+  which encoded the trailing newline (`%0A`) and returned 404 even for the
+  published 4.19.0. It now encodes inside jq (`.name | @uri`), and a test pins this.
+- Nice-to-have: `?t=$GITHUB_RUN_ID` cache-bust with `--retry 3`; the gate requires
+  `deployment_branch_policy` = custom with exactly `branch:main`; the job summary
+  lists the version to publish and the registry latest; the docstring example uses
+  `X.Y.Z`.
+- Side finding: the existing `pypi` environment has `deployment_branch_policy: null`
+  (any branch). Not changed here.

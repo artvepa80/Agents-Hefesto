@@ -9,18 +9,23 @@ name: MCP Registry (manual)
 #   landing-page/server.json, as deployed at
 #   https://hefestoai.narapallc.com/server.json (remote, streamable-http).
 #   This repository's server.json is never published.
-# - The registry version tracks the hosted engine (landing changelog.json
-#   "latest"), not PyPI. Registry versions are immutable.
+# - The registry version tracks the deployed engine, not PyPI: it must equal
+#   the hosted initialize serverInfo.version, the engine.version of a minimal
+#   tools/call analyze, and changelog.json "latest". Registry versions are
+#   immutable, so the version must not exist yet (checked in validate and
+#   again right before publishing).
 # - A real publish needs publish=true, the main branch, and the
 #   `mcp-registry` environment with a required reviewer. The
-#   environment-gate job fails if that environment is missing, so GitHub
+#   environment-gate job fails if that environment is missing, has no
+#   required reviewer, or is not restricted to the main branch, so GitHub
 #   never auto-creates it without protection.
+# - Runbook: docs/mcp-registry.md.
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Hosted engine version to validate/publish (must equal server.json and changelog.json latest)"
+        description: "Hosted engine version to validate/publish (must equal server.json, the deployed engine and changelog.json latest)"
         required: true
         type: string
       publish:
@@ -62,7 +67,10 @@ jobs:
         id: entry
         run: |
           mkdir -p registry-entry
-          curl --fail --silent --show-error --location --proto '=https' "${CANONICAL_URL}" -o registry-entry/server.json
+          # Cache-bust the CDN copy; retry transient failures.
+          curl --fail --silent --show-error --location --proto '=https' \
+            --retry 3 --retry-all-errors --retry-delay 5 \
+            "${CANONICAL_URL}?t=${GITHUB_RUN_ID}" -o registry-entry/server.json
           cat registry-entry/server.json
           echo "sha256=$(sha256sum registry-entry/server.json | cut -d' ' -f1)" >> "${GITHUB_OUTPUT}"
 
@@ -72,7 +80,8 @@ jobs:
           MODE: ${{ inputs.publish && 'publish' || 'dry-run' }}
         run: |
           python scripts/check_mcp_registry_entry.py registry-entry/server.json \
-            --expected-version "${INPUT_VERSION}" --mode "${MODE}"
+            --expected-version "${INPUT_VERSION}" --mode "${MODE}" \
+            --summary "${GITHUB_STEP_SUMMARY}"
 
       - name: Install mcp-publisher (pinned, checksum verified)
         run: |
@@ -98,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Require a protected mcp-registry environment
+      - name: Require a protected mcp-registry environment (reviewer, main only)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -112,7 +121,19 @@ jobs:
             echo "::error::Environment mcp-registry has no required reviewer."
             exit 1
           fi
-          echo "mcp-registry environment has ${reviewers} required reviewer(s)."
+          policy=$(gh api "repos/${GITHUB_REPOSITORY}/environments/mcp-registry" \
+            --jq '.deployment_branch_policy | if . == null then "any" else "protected=\(.protected_branches) custom=\(.custom_branch_policies)" end')
+          if [ "${policy}" != "protected=false custom=true" ]; then
+            echo "::error::Environment mcp-registry must be restricted to selected branches (main only); found: ${policy}."
+            exit 1
+          fi
+          branches=$(gh api "repos/${GITHUB_REPOSITORY}/environments/mcp-registry/deployment-branch-policies" \
+            --jq '[.branch_policies[] | "\(.type // "branch"):\(.name)"] | sort | join(",")')
+          if [ "${branches}" != "branch:main" ]; then
+            echo "::error::Environment mcp-registry must allow only the main branch; found: ${branches:-none}."
+            exit 1
+          fi
+          echo "mcp-registry environment: ${reviewers} required reviewer(s), deployments from main only."
 
   publish:
     needs: [validate, environment-gate]
@@ -146,6 +167,21 @@ jobs:
 
       - name: Authenticate to MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
+
+      - name: Version still not in the registry (TOCTOU recheck)
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.version' registry-entry/server.json)
+          path=$(jq -r '"\(.name | @uri)/versions/\(.version | @uri)"' registry-entry/server.json)
+          url="https://registry.modelcontextprotocol.io/v0.1/servers/${path}?include_deleted=true"
+          code=$(curl --silent --show-error --proto '=https' --retry 3 --retry-delay 5 \
+            --output /dev/null --write-out '%{http_code}' "${url}")
+          if [ "${code}" != "404" ]; then
+            echo "::error::${version} is already in the MCP Registry or the lookup failed (HTTP ${code}); not publishing."
+            exit 1
+          fi
+          echo "${version} is not in the MCP Registry (HTTP 404); publishing."
+          echo "Publishing \`${version}\` (registry lookup right before publish: HTTP 404)." >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Publish server to MCP Registry
         run: ./mcp-publisher publish registry-entry/server.json

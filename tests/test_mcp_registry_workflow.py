@@ -51,6 +51,37 @@ def test_publish_is_gated_by_input_branch_environment_and_gate_job():
     assert "required_reviewers" in gate
 
 
+def test_gate_requires_the_environment_restricted_to_main():
+    gate = _workflow()["jobs"]["environment-gate"]["steps"][0]["run"]
+    assert '"protected=false custom=true"' in gate
+    assert "environments/mcp-registry/deployment-branch-policies" in gate
+    assert '"branch:main"' in gate
+
+
+def test_publish_rechecks_the_registry_right_before_publishing():
+    steps = _workflow()["jobs"]["publish"]["steps"]
+    names = [step.get("name", "") for step in steps]
+    recheck = next(i for i, n in enumerate(names) if "TOCTOU" in n)
+    publish = next(i for i, n in enumerate(names) if n == "Publish server to MCP Registry")
+    assert recheck == publish - 1
+    run = steps[recheck]["run"]
+    assert "registry.modelcontextprotocol.io/v0.1/servers/" in run
+    assert "include_deleted=true" in run
+    assert "(.name | @uri)/versions/\\(.version | @uri)" in run
+    assert '!= "404"' in run
+
+
+def test_canonical_entry_is_cache_busted_with_retries():
+    fetch = _workflow()["jobs"]["validate"]["steps"][2]["run"]
+    assert '"${CANONICAL_URL}?t=${GITHUB_RUN_ID}"' in fetch
+    assert "--retry 3" in fetch
+
+
+def test_validate_writes_the_job_summary():
+    validate = "\n".join(s.get("run", "") for s in _workflow()["jobs"]["validate"]["steps"])
+    assert '--summary "${GITHUB_STEP_SUMMARY}"' in validate
+
+
 def test_publisher_is_pinned_and_checksum_verified():
     data = _workflow()
     assert data["env"]["MCP_PUBLISHER_VERSION"] == "v1.8.1"
