@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -138,6 +140,47 @@ def test_ruff_still_fails_outside_excluded_paths(tmp_path: Path) -> None:
     assert MOD.run_changed_gate(tmp_path, ["app.py"]) != 0
 
 
+SHARED_CONFIG = "exclude:\n" "  - tests/fixtures/\n" "  - .github/action-smoke/\n"
+
+
+def _write_config(repo: Path, text: str = SHARED_CONFIG) -> Path:
+    path = repo / ".hefesto.yaml"
+    path.write_text(text)
+    return path
+
+
+def test_gate_excludes_come_from_hefesto_yaml(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    config = _write_config(tmp_path, "exclude:\n  - vendored_samples/\n")
+    excludes = MOD.gate_excludes(tmp_path)
+    assert excludes.patterns == ("vendored_samples/",)
+    assert excludes.source == config
+
+
+def test_gate_excludes_fall_back_when_config_absent(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    excludes = MOD.gate_excludes(tmp_path)
+    assert excludes.patterns == MOD.FALLBACK_EXCLUDES
+    assert excludes.source is None
+
+
+def test_config_without_exclude_key_gates_everything(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_config(tmp_path, "severity: medium\n")
+    excludes = MOD.gate_excludes(tmp_path)
+    assert excludes.patterns == ()
+
+
+def test_invalid_config_is_an_error(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_config(tmp_path, "exclude: [tests/fixtures/\n")
+    with pytest.raises(MOD.DogfoodError):
+        MOD.gate_excludes(tmp_path)
+
+
+SHARED_PATTERNS = ("tests/fixtures/", ".github/action-smoke/")
+
+
 @pytest.mark.parametrize(
     "name",
     [
@@ -147,9 +190,95 @@ def test_ruff_still_fails_outside_excluded_paths(tmp_path: Path) -> None:
     ],
 )
 def test_fixture_paths_are_excluded_from_gate(name: str) -> None:
-    kept, skipped = MOD.split_gate_files([name, "hefesto/core.py"])
+    kept, skipped = MOD.split_gate_files([name, "hefesto/core.py"], SHARED_PATTERNS)
     assert kept == ["hefesto/core.py"]
     assert skipped == [name]
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "hefesto/core/analyzer_engine.py",
+        "tests/test_fixtures_loader.py",
+        "tests/fixtures-old/secret.py",
+        "mytests/fixtures/secret.py",
+        "tests/fixtures",
+    ],
+)
+def test_normal_files_are_kept(name: str) -> None:
+    kept, skipped = MOD.split_gate_files([name], SHARED_PATTERNS)
+    assert kept == [name]
+    assert skipped == []
+
+
+def test_patterns_are_path_segments_at_any_depth() -> None:
+    """Same component matcher as ``hefesto analyze`` on a directory walk."""
+    kept, skipped = MOD.split_gate_files(
+        ["pkg/tests/fixtures/a.py", "tests/unit/fixtures/b.py"], SHARED_PATTERNS
+    )
+    assert skipped == ["pkg/tests/fixtures/a.py"]
+    assert kept == ["tests/unit/fixtures/b.py"]
+
+
+def test_glob_pattern_matches_nothing_and_warns(capsys: pytest.CaptureFixture[str]) -> None:
+    """``**`` is not a glob in hefesto 4.20.2: the matcher compares whole names."""
+    kept, skipped = MOD.split_gate_files(["tests/fixtures/x/secret.py"], ("tests/fixtures/**",))
+    assert kept == ["tests/fixtures/x/secret.py"]
+    assert skipped == []
+    MOD.warn_glob_patterns(("tests/fixtures/**", "build/"))
+    err = capsys.readouterr().err
+    assert "tests/fixtures/**" in err
+    assert "build/" not in err
+
+
+# The secret detector skips Python files under tests/, so the planted key
+# lives elsewhere to prove the gate (not the detector) skips it.
+PLANTED_KEY = 'AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n'
+
+
+def _repo_with_planted_key(repo: Path, config: str) -> str:
+    _init_repo(repo)
+    _write_config(repo, config)
+    base = _commit_all(repo, "base")
+    (repo / "planted").mkdir()
+    (repo / "planted" / "secret.py").write_text(PLANTED_KEY)
+    _commit_all(repo, "planted")
+    return base
+
+
+def test_config_exclude_applies_to_explicit_changed_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``hefesto analyze <file>`` ignores ``exclude``; the script filters itself."""
+    base = _repo_with_planted_key(tmp_path, "exclude:\n  - planted/\n")
+    direct = subprocess.run(
+        [sys.executable, "-m", "hefesto", "analyze", "planted/secret.py", "--fail-on", "critical"],
+        cwd=tmp_path,
+        env={**os.environ, "HEFESTO_TELEMETRY": "0"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert direct.returncode == 1  # the CLI does not filter an explicit path
+    assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 0
+    out = capsys.readouterr().out
+    assert "Gate excludes from .hefesto.yaml: planted/" in out
+    assert "excluded from the gate (1)" in out
+
+
+def test_config_without_matching_pattern_gates_the_file(tmp_path: Path) -> None:
+    """The config, not a hardcoded list, decides what is skipped."""
+    base = _repo_with_planted_key(tmp_path, "exclude:\n  - other/\n")
+    assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 1
+
+
+def test_invalid_config_fails_main_closed(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    (tmp_path / "README.md").write_text("x\n")
+    base = _commit_all(tmp_path, "base")
+    _write_config(tmp_path, "exclude: [tests/fixtures/\n")
+    _commit_all(tmp_path, "bad config")
+    assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 2
 
 
 def test_fixture_with_secret_does_not_fail_main(
@@ -158,12 +287,14 @@ def test_fixture_with_secret_does_not_fail_main(
     _init_repo(tmp_path)
     (tmp_path / "README.md").write_text("x\n")
     base = _commit_all(tmp_path, "base")
-    fixture = tmp_path / "tests" / "fixtures" / "secret.py"
+    fixture = tmp_path / ".github" / "action-smoke" / "secret.py"
     fixture.parent.mkdir(parents=True)
-    fixture.write_text('AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n')
+    fixture.write_text(PLANTED_KEY)
     _commit_all(tmp_path, "fixture")
     assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 0
-    assert "excluded from the gate" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "no .hefesto.yaml" in out and "built-in fallback" in out
+    assert "excluded from the gate" in out
 
 
 def test_non_fixture_secret_still_fails_main(tmp_path: Path) -> None:

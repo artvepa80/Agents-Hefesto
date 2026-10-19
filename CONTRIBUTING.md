@@ -58,7 +58,9 @@ python -m flake8 hefesto tests
 
 # Changed-file gate (CI: .github/workflows/dogfood.yml, job dogfood-hefesto).
 # ruff check --force-exclude (no --fix) on the changed .py files, then hefesto
-# on the changed files except tests/fixtures/ and .github/action-smoke/:
+# on the changed files except those matching `exclude` in .hefesto.yaml
+# (path components, not globs; the script filters explicit paths itself, and
+# falls back to tests/fixtures/ and .github/action-smoke/ without the file):
 HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
   --severity medium --fail-on critical --allow-no-files
 # Proves a planted CRITICAL fails and the current hefesto/ tree passes

@@ -16,6 +16,15 @@ feature) and no detector reads it. ``--exclude-types`` drops a whole issue
 type, which would silence every ``HARDCODED_SECRET``. The self-check therefore
 expects the one documented public key under ``hefesto/`` and does not hide it
 from the changed-file gate.
+
+Paths that are not gated come from the repository's ``.hefesto.yaml``
+``exclude`` list, read with the package's own ``load_config``, and are matched
+with the engine's ``path_is_excluded``: the same component matcher a full
+``hefesto analyze .`` uses. The script filters the changed paths itself,
+because ``hefesto analyze`` does not apply ``exclude`` to paths named on the
+command line. Patterns are whole path components (``tests/fixtures/``), not
+globs: ``tests/fixtures/**`` matches nothing. Without a config file the script
+falls back to ``FALLBACK_EXCLUDES`` and says so in the log.
 """
 
 from __future__ import annotations
@@ -26,7 +35,11 @@ import os
 import shlex
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import NamedTuple, Optional
+
+from hefesto.config.project_config import ConfigError, find_config, load_config
+from hefesto.core.analyzer_engine import path_is_excluded
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -40,9 +53,11 @@ DOCUMENTED_KEY_TYPE = "HARDCODED_SECRET"
 # Components relative to the analyzed directory ``hefesto/``.
 DOCUMENTED_KEY_EXCLUDE = "telemetry/client.py"
 
-# Test fixtures and the Action smoke fixture contain planted findings on
-# purpose. They are not gated; the self-check still analyzes PLANTED_CRITICAL.
-GATE_EXCLUDED_PREFIXES = ("tests/fixtures/", ".github/action-smoke/")
+# Used only when the repository has no .hefesto.yaml/.hefesto.yml. Test
+# fixtures and the Action smoke fixture contain planted findings on purpose;
+# the self-check still analyzes PLANTED_CRITICAL by name.
+FALLBACK_EXCLUDES = ("tests/fixtures/", ".github/action-smoke/")
+_GLOB_CHARS = frozenset("*?[")
 
 GATE_OPTIONS = [
     "--severity",
@@ -98,16 +113,75 @@ def changed_files(repo: Path, base: str, head: str) -> list[str]:
     return [name for name in names if (repo / name).is_file()]
 
 
-def split_gate_files(files: list[str]) -> tuple[list[str], list[str]]:
-    """Split changed files into (gated, excluded fixture paths)."""
+class GateExcludes(NamedTuple):
+    """Exclude patterns for the changed-file gate and the file they came from."""
+
+    patterns: tuple[str, ...]
+    source: Optional[Path]  # None: no config file, FALLBACK_EXCLUDES apply
+
+
+def gate_excludes(repo: Path) -> GateExcludes:
+    """``exclude`` from the repo's ``.hefesto.yaml``, or the fallback list.
+
+    Uses the same discovery and validation as ``hefesto analyze``. A config
+    without ``exclude`` gates every changed file. An invalid config is an
+    error (exit 2), not a silent fallback.
+    """
+    try:
+        path = find_config(repo)
+        if path is None:
+            return GateExcludes(FALLBACK_EXCLUDES, None)
+        values = load_config(path).values
+    except ConfigError as exc:
+        raise DogfoodError(f"cannot read project config: {exc}") from exc
+    raw = values.get("exclude", "")
+    patterns = tuple(part.strip() for part in str(raw).split(",") if part.strip())
+    return GateExcludes(patterns, path)
+
+
+def warn_glob_patterns(patterns: tuple[str, ...]) -> None:
+    """Warn about patterns written as globs; the matcher compares whole names."""
+    for pattern in patterns:
+        if _GLOB_CHARS & set(pattern):
+            print(
+                f"warning: exclude pattern {pattern!r} contains glob characters; "
+                "patterns are whole path components (write 'tests/fixtures/'), "
+                "so this one matches nothing",
+                file=sys.stderr,
+                flush=True,
+            )
+
+
+def split_gate_files(files: list[str], patterns: tuple[str, ...]) -> tuple[list[str], list[str]]:
+    """Split repo-relative changed files into (gated, excluded).
+
+    ``path_is_excluded`` is the engine's matcher, so a changed path is skipped
+    exactly when a directory walk from the repository root would skip it.
+    """
     kept: list[str] = []
     skipped: list[str] = []
     for name in files:
-        if name.startswith(GATE_EXCLUDED_PREFIXES):
+        if path_is_excluded(PurePosixPath(name).parts, patterns):
             skipped.append(name)
         else:
             kept.append(name)
     return kept, skipped
+
+
+def _print_excludes(repo: Path, excludes: GateExcludes) -> None:
+    listed = ", ".join(excludes.patterns) or "(none)"
+    if excludes.source is None:
+        print(
+            "Gate excludes: no .hefesto.yaml/.hefesto.yml in the repository; "
+            f"using the built-in fallback: {listed}",
+            flush=True,
+        )
+        return
+    try:
+        shown = excludes.source.resolve().relative_to(repo)
+    except ValueError:
+        shown = excludes.source
+    print(f"Gate excludes from {shown}: {listed}", flush=True)
 
 
 def _telemetry_env() -> dict[str, str]:
@@ -340,6 +414,7 @@ def main(argv: list[str] | None = None) -> int:
             print("error: --base is required unless --self-check", file=sys.stderr)
             return 2
         files = changed_files(repo, args.base, args.head)
+        excludes = gate_excludes(repo)
     except DogfoodError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -348,14 +423,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {name}", flush=True)
     if not files:
         print("  (none)", flush=True)
-    files, skipped = split_gate_files(files)
+    _print_excludes(repo, excludes)
+    warn_glob_patterns(excludes.patterns)
+    files, skipped = split_gate_files(files, excludes.patterns)
     if skipped:
-        print(
-            f"Fixture files excluded from the gate ({len(skipped)}; "
-            + ", ".join(GATE_EXCLUDED_PREFIXES)
-            + "):",
-            flush=True,
-        )
+        print(f"Files excluded from the gate ({len(skipped)}):", flush=True)
         for name in skipped:
             print(f"  {name}", flush=True)
     return run_changed_gate(repo, files)

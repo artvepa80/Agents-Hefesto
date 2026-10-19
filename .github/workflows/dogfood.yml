@@ -9,8 +9,10 @@
 # still required, so an empty diff does not invoke analyze).
 #
 # Ruff gets --force-exclude, so [tool.ruff] extend-exclude (scripts/,
-# examples/) applies to the changed files too. Files under tests/fixtures/ and
-# .github/action-smoke/ carry planted findings on purpose and are not gated.
+# examples/) applies to the changed files too. Changed files matching exclude
+# in .hefesto.yaml are not gated; the script filters them itself, because
+# hefesto analyze does not apply exclude to explicit paths. Without the file
+# it falls back to tests/fixtures/ and .github/action-smoke/ (planted findings).
 #
 # With those exclusions, two tracked files fail the gate when touched:
 # scripts/validate_aggregates_jsonl.py:48 (CRITICAL VERY_HIGH_COMPLEXITY,
