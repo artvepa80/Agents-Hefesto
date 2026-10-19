@@ -171,6 +171,8 @@ def test_non_fixture_secret_still_fails_main(tmp_path: Path) -> None:
     (tmp_path / "README.md").write_text("x\n")
     base = _commit_all(tmp_path, "base")
     (tmp_path / "config").mkdir()
-    (tmp_path / "config" / "prod_config.py").write_text('AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n')
+    (tmp_path / "config" / "prod_config.py").write_text(
+        'AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n'
+    )
     _commit_all(tmp_path, "secret")
     assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 1
