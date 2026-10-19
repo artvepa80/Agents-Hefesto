@@ -56,8 +56,13 @@ ruff check
 python -m mypy hefesto --ignore-missing-imports
 python -m flake8 hefesto tests
 
-# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.20.1)
-HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
+# Changed-file gate (CI: .github/workflows/dogfood.yml, job dogfood-hefesto).
+# ruff check (no --fix) on the changed .py files, then:
+HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
+  --severity medium --fail-on critical --allow-no-files
+# Proves a planted CRITICAL fails and the current hefesto/ tree passes
+# aside from the documented PostHog public key (no line-level suppression):
+python scripts/dogfood_changed.py --self-check
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
 # agent-card.json, SKILL.md, copilot-instructions.md — also runs in CI)
@@ -106,7 +111,8 @@ Dashboard > Plugins & MCPs; otherwise they use the CLI.
    `ruff check`
    `python -m mypy hefesto --ignore-missing-imports`
    `python -m flake8 hefesto tests`
-   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`
+   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> --severity medium --fail-on critical --allow-no-files`
+   `python scripts/dogfood_changed.py --self-check`
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request
