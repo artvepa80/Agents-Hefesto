@@ -5,16 +5,21 @@ Each notice is one stderr line, after the command result, at most once every
 7 days across all types, and at most 3 times per type. State lives in
 ``~/.hefesto/upsell.json``. A missing file starts empty. A read or parse
 failure shows nothing and leaves the file untouched.
+
+A suppressed notice logs ``upsell suppressed: <reason> (cta=<type>)`` on the
+``hefesto.cli.growth`` logger at DEBUG. The CLI configures no log handler, so
+nothing is printed unless the caller enables DEBUG logging.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import click
 
@@ -29,6 +34,8 @@ from hefesto.telemetry.client import (
 )
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+_log = logging.getLogger(__name__)
 
 UTM_SOURCE = "hefesto-cli"
 UTM_MEDIUM = "cli"
@@ -99,17 +106,44 @@ def stdout_is_tty() -> bool:
         return False
 
 
+def _no_upsell_env() -> bool:
+    return os.getenv("HEFESTO_NO_UPSELL", "").strip().lower() in _TRUTHY
+
+
+# Checked in order; the first match is the logged reason. Each entry looks
+# its function up at call time, so tests can patch ``stdout_is_tty``.
+_ENV_SUPPRESSIONS: tuple[tuple[str, Callable[[], bool]], ...] = (
+    ("ci", lambda: in_ci() or ci_vendor_detected()),
+    ("no_tty", lambda: not stdout_is_tty()),
+    ("telemetry_off", lambda: not telemetry_enabled()),
+    ("opt_out", _no_upsell_env),
+)
+
+
+def environment_suppression(*, quiet: bool, machine: bool) -> str | None:
+    """Why the environment hides notices, or ``None`` when it allows them.
+
+    Reasons: ``quiet``, ``machine_output``, ``ci``, ``no_tty``,
+    ``telemetry_off``, ``opt_out`` (``HEFESTO_NO_UPSELL``).
+    """
+    if quiet:
+        return "quiet"
+    if machine:
+        return "machine_output"
+    for reason, applies in _ENV_SUPPRESSIONS:
+        if applies():
+            return reason
+    return None
+
+
 def notices_allowed(*, quiet: bool, machine: bool) -> bool:
     """False in CI, without a TTY, for machine output, or when opted out."""
-    if quiet or machine:
-        return False
-    if in_ci() or ci_vendor_detected():
-        return False
-    if not stdout_is_tty():
-        return False
-    if not telemetry_enabled():
-        return False
-    return os.getenv("HEFESTO_NO_UPSELL", "").strip().lower() not in _TRUTHY
+    return environment_suppression(quiet=quiet, machine=machine) is None
+
+
+def _suppressed(reason: str, kind: str) -> bool:
+    _log.debug("upsell suppressed: %s (cta=%s)", reason, kind)
+    return False
 
 
 def _state_path() -> Path:
@@ -180,16 +214,21 @@ def is_analyze_milestone(count: int) -> bool:
 def show_notice(kind: str, line: str, *, quiet: bool = False, machine: bool = False) -> bool:
     """Print one notice and emit ``upgrade_cta_shown`` when telemetry can send."""
     if "\n" in line:
-        return False
-    if not notices_allowed(quiet=quiet, machine=machine):
-        return False
+        return _suppressed("multiline", kind)
+    reason = environment_suppression(quiet=quiet, machine=machine)
+    if reason is not None:
+        return _suppressed(reason, kind)
     state = load_upsell_state()
-    if state is None or _type_blocked(state, kind) or _week_blocked(state, time.time()):
-        return False
+    if state is None:
+        return _suppressed("state_corrupt", kind)
+    if _type_blocked(state, kind):
+        return _suppressed("max_per_type", kind)
+    if _week_blocked(state, time.time()):
+        return _suppressed("weekly_window", kind)
     state["counts"][kind] = int(state["counts"].get(kind, 0)) + 1
     state["last_shown_at"] = time.time()
     if not _save_upsell_state(state):
-        return False
+        return _suppressed("state_write_failed", kind)
     click.echo(line, err=True)
     if sends_this_process() and resolve_source() in {"hook", "cli"}:
         capture("upgrade_cta_shown", cta=kind)
