@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CWE ids for Python security findings in SARIF.** One mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20) feeds both the GitHub code-scanning tag `external/cwe/cwe-N` (no zero-padding) and a SARIF 2.1.0 `run.taxonomies` CWE entry with `relationships` on each mapped rule. HARDCODED_SECRET → 798 (`equal`), SQL_INJECTION_RISK → 89 (`superset`), COMMAND_INJECTION → 78 (`superset`), EVAL_USAGE → 95 (`relevant`), BARE_EXCEPT → 396 (`equal`), PICKLE_USAGE → 502 (`relevant`, rule precision `low` because the detector flags the import only), ASSERT_IN_PRODUCTION → no CWE. An issue `metadata.cwe` still overrides the table; the COBOL tags `cwe-798` and `cwe-20` are unchanged. Handoff: `docs/worklog/2026-10-17-cwe-sarif.md`.
 
+### Fixed
+
+- **`hefesto pr-review` missed function-level findings when only the function body changed.** Complexity, long-function and deep-nesting findings are reported on the `def` line, and the default (changed-lines) filter compared only that line with the diff. A PR that raised a function's complexity from 10 (MEDIUM) to 11 (HIGH) through body edits, without touching the `def` line, got no finding. These findings now count as in the hunk when any added line falls inside the function (`def` line to its last line; decorators and deletion-only hunks do not count). `line` stays the `def` line, so `dedup_key` does not change. Each finding has a new key, `anchor_line`: the added line an inline comment goes on (`line` itself for line-level findings, the first added line inside the function for function-level ones, `null` when `in_hunk` is false). `--post` and `examples/github-actions/hefesto-pr-review-deduped.yml` post on `anchor_line` and fall back to `line`. `hefesto analyze` output is unchanged. Long parameter lists and god classes still match on their own line only. Handoff: `docs/worklog/2026-10-19-pr-review-function-span.md`.
+
 ## [4.20.2] - 2026-10-17
 
 ### Fixed

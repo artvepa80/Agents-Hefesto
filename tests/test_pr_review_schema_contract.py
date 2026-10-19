@@ -45,6 +45,7 @@ PR_REVIEW_FINDING_KEYS = frozenset(
         "code_snippet",
         "dedup_key",
         "in_hunk",
+        "anchor_line",
         "engine",
         "rule_id",
     }
@@ -79,6 +80,7 @@ def _make_finding_dict() -> dict:
         "code_snippet": issue.code_snippet,
         "dedup_key": compute_dedup_key(issue, relative_path=rel_path),
         "in_hunk": True,
+        "anchor_line": issue.line,
         "engine": issue.engine,
         "rule_id": issue.rule_id,
     }
@@ -122,6 +124,44 @@ class TestPrReviewSchemaContract:
         assert isinstance(finding["dedup_key"], str)
         assert finding["dedup_key"].startswith("sha256:")
         assert isinstance(finding["in_hunk"], bool)
+        # anchor_line is Optional[int]: None exactly when in_hunk is False
+        assert finding["anchor_line"] is None or isinstance(finding["anchor_line"], int)
         assert isinstance(finding["engine"], str)
         # rule_id is Optional[str]
         assert finding["rule_id"] is None or isinstance(finding["rule_id"], str)
+
+
+def test_real_serializer_emits_contract_keys(tmp_path):
+    """``_make_finding_dict`` mirrors the serializer by hand; this test runs
+    the real ``_filter_and_serialize`` so an added or dropped key fails here
+    even when the mirror is not updated."""
+    from hefesto.core.analysis_models import AnalysisReport, AnalysisSummary, FileAnalysisResult
+    from hefesto.pr_review.orchestrator import _filter_and_serialize
+
+    issue = AnalysisIssue(
+        file_path=str(tmp_path / "app.py"),
+        line=3,
+        column=0,
+        issue_type=AnalysisIssueType.HIGH_COMPLEXITY,
+        severity=AnalysisIssueSeverity.HIGH,
+        message="Cyclomatic complexity too high (11)",
+        end_line=9,
+    )
+    report = AnalysisReport(
+        summary=AnalysisSummary(
+            files_analyzed=1,
+            total_issues=1,
+            critical_issues=0,
+            high_issues=1,
+            medium_issues=0,
+            low_issues=0,
+            total_loc=10,
+            duration_seconds=0.0,
+        ),
+        file_results=[FileAnalysisResult(str(tmp_path / "app.py"), [issue], 10, 0.0)],
+    )
+    out = _filter_and_serialize(report, tmp_path, {"app.py": {5}}, strict=False)
+    assert len(out) == 1
+    assert set(out[0].keys()) == PR_REVIEW_FINDING_KEYS
+    assert out[0]["line"] == 3
+    assert out[0]["anchor_line"] == 5
