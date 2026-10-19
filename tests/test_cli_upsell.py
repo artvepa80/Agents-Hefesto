@@ -308,6 +308,16 @@ def test_hook_notice_does_not_consume_the_shared_window(
     assert show_notice("init", INIT_LINE) is True
 
 
+def test_hook_notice_does_not_block_later_gated_notice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hook line must not delay a later init/gated notice (own window)."""
+    _at(monkeypatch, _T0)
+    assert show_upgrade_cta() is True
+    _at(monkeypatch, _T0 + _HOUR)
+    assert show_notice("gated_info", GATED_INFO_LINE) is True
+
+
 def test_hook_notice_keeps_three_per_type(monkeypatch: pytest.MonkeyPatch) -> None:
     results = []
     for week in range(5):
