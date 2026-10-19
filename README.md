@@ -188,6 +188,12 @@ HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
 
+**Add to Cursor (one click):**
+
+[![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)
+
+The button opens Cursor's install prompt through `cursor.com/link` (GitHub does not render `cursor://` links). Direct deeplink: `cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`. The same server is in `.mcp.json` at the repository root (`{"mcpServers":{"hefestoai":{"url":"https://hefestoai.narapallc.com/api/mcp-protocol"}}}`). No API key.
+
 **API Endpoints:**
 
 | Endpoint | Protocol | Path |
@@ -718,6 +724,8 @@ The full audit and refactor history are tracked internally in our private repo. 
 ## Telemetry
 
 The CLI sends anonymous usage events to PostHog by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings or repository names, and no IP field in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless you set `telemetry: 1`. Separately, `hefesto analyze` asks pypi.org for the latest version (1.5 s timeout, cached for 24 hours). That check runs even with telemetry off, and 4.20.1 has no setting to disable it. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
+
+The PyPI newer-version check is skipped, with no request and no cache write, when `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`, when `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off`, or when `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`. Usage events stay on by default. The Action's default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`, so that check does not run on runners.
 
 ## Changelog
 
