@@ -8,10 +8,16 @@
 # (hefesto analyze with --fail-on exits 1 when it analyzed nothing; PATHS is
 # still required, so an empty diff does not invoke analyze).
 #
-# hefesto/telemetry/client.py line 28 is a PostHog public write-only project
-# key (docs/telemetry.md) and is reported as CRITICAL HARDCODED_SECRET.
+# Ruff gets --force-exclude, so [tool.ruff] extend-exclude (scripts/,
+# examples/) applies to the changed files too. Files under tests/fixtures/ and
+# .github/action-smoke/ carry planted findings on purpose and are not gated.
+#
+# With those exclusions, the one tracked file that fails the gate when touched
+# is hefesto/telemetry/client.py: line 28 is a PostHog public write-only
+# project key (docs/telemetry.md), reported as CRITICAL HARDCODED_SECRET.
 # No line-level suppression exists, and this job does not drop HARDCODED_SECRET.
-# A pull request that touches that file fails until a suppression is designed.
+# A pull request that touches that file fails until a line-level suppression
+# is designed.
 # The self-check step proves a planted AKIA key fails and that the rest of
 # hefesto/ passes.
 
@@ -28,7 +34,9 @@ permissions:
 
 concurrency:
   group: dogfood-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded PR runs only; every push to main keeps its own run so
+  # each before..sha range is gated.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   dogfood-hefesto:
@@ -53,14 +61,18 @@ jobs:
       - name: Ruff and Hefesto on changed files
         env:
           HEFESTO_TELEMETRY: "0"
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE_SHA"
           else
-            BASE="${{ github.event.before }}"
+            BASE="$PUSH_BEFORE_SHA"
           fi
-          echo "event=${{ github.event_name }} base=${BASE} head=${{ github.sha }}"
-          python scripts/dogfood_changed.py --base "$BASE" --head "${{ github.sha }}"
+          echo "event=${EVENT_NAME} base=${BASE} head=${HEAD_SHA}"
+          python scripts/dogfood_changed.py --base "$BASE" --head "$HEAD_SHA"
 
       - name: Self-check the gate
         if: ${{ !cancelled() }}

@@ -57,11 +57,14 @@ python -m mypy hefesto --ignore-missing-imports
 python -m flake8 hefesto tests
 
 # Changed-file gate (CI: .github/workflows/dogfood.yml, job dogfood-hefesto).
-# ruff check (no --fix) on the changed .py files, then:
+# ruff check --force-exclude (no --fix) on the changed .py files, then hefesto
+# on the changed files except tests/fixtures/ and .github/action-smoke/:
 HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
   --severity medium --fail-on critical --allow-no-files
 # Proves a planted CRITICAL fails and the current hefesto/ tree passes
-# aside from the documented PostHog public key (no line-level suppression):
+# aside from the documented PostHog public key (no line-level suppression).
+# hefesto/telemetry/client.py is the only tracked file that fails the gate
+# when touched (client.py:28), until a line-level suppression is designed:
 python scripts/dogfood_changed.py --self-check
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,

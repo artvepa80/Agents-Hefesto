@@ -121,3 +121,56 @@ def test_self_check_fails_planted_and_passes_current_tree() -> None:
 
 def test_main_requires_base() -> None:
     assert MOD.main(["--repo", str(REPO_ROOT)]) == 2
+
+
+def test_ruff_respects_extend_exclude(tmp_path: Path) -> None:
+    """A changed file under an excluded path (scripts/) does not fail ruff."""
+    (tmp_path / "pyproject.toml").write_text('[tool.ruff]\nextend-exclude = ["scripts"]\n')
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "legacy.py").write_text("import os\n")
+    assert "--force-exclude" in MOD.ruff_argv(["scripts/legacy.py"])
+    assert MOD.run_changed_gate(tmp_path, ["scripts/legacy.py"]) == 0
+
+
+def test_ruff_still_fails_outside_excluded_paths(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[tool.ruff]\nextend-exclude = ["scripts"]\n')
+    (tmp_path / "app.py").write_text("import os\n")
+    assert MOD.run_changed_gate(tmp_path, ["app.py"]) != 0
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "tests/fixtures/devops_dispatch/json/config.json",
+        "tests/fixtures/x/secret.py",
+        ".github/action-smoke/critical_secret.py",
+    ],
+)
+def test_fixture_paths_are_excluded_from_gate(name: str) -> None:
+    kept, skipped = MOD.split_gate_files([name, "hefesto/core.py"])
+    assert kept == ["hefesto/core.py"]
+    assert skipped == [name]
+
+
+def test_fixture_with_secret_does_not_fail_main(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _init_repo(tmp_path)
+    (tmp_path / "README.md").write_text("x\n")
+    base = _commit_all(tmp_path, "base")
+    fixture = tmp_path / "tests" / "fixtures" / "secret.py"
+    fixture.parent.mkdir(parents=True)
+    fixture.write_text('AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n')
+    _commit_all(tmp_path, "fixture")
+    assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 0
+    assert "excluded from the gate" in capsys.readouterr().out
+
+
+def test_non_fixture_secret_still_fails_main(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    (tmp_path / "README.md").write_text("x\n")
+    base = _commit_all(tmp_path, "base")
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "prod_config.py").write_text('AWS_ACCESS_KEY_ID = "AKIA0123456789012345"\n')
+    _commit_all(tmp_path, "secret")
+    assert MOD.main(["--repo", str(tmp_path), "--base", base]) == 1

@@ -40,6 +40,10 @@ DOCUMENTED_KEY_TYPE = "HARDCODED_SECRET"
 # Components relative to the analyzed directory ``hefesto/``.
 DOCUMENTED_KEY_EXCLUDE = "telemetry/client.py"
 
+# Test fixtures and the Action smoke fixture contain planted findings on
+# purpose. They are not gated; the self-check still analyzes PLANTED_CRITICAL.
+GATE_EXCLUDED_PREFIXES = ("tests/fixtures/", ".github/action-smoke/")
+
 GATE_OPTIONS = [
     "--severity",
     "medium",
@@ -94,6 +98,18 @@ def changed_files(repo: Path, base: str, head: str) -> list[str]:
     return [name for name in names if (repo / name).is_file()]
 
 
+def split_gate_files(files: list[str]) -> tuple[list[str], list[str]]:
+    """Split changed files into (gated, excluded fixture paths)."""
+    kept: list[str] = []
+    skipped: list[str] = []
+    for name in files:
+        if name.startswith(GATE_EXCLUDED_PREFIXES):
+            skipped.append(name)
+        else:
+            kept.append(name)
+    return kept, skipped
+
+
 def _telemetry_env() -> dict[str, str]:
     env = os.environ.copy()
     env["HEFESTO_TELEMETRY"] = "0"
@@ -119,7 +135,9 @@ def _run(argv: list[str], repo: Path, *, capture: bool) -> subprocess.CompletedP
 
 
 def ruff_argv(py_files: list[str]) -> list[str]:
-    return [sys.executable, "-m", "ruff", "check", *py_files]
+    # --force-exclude: files passed explicitly still honour [tool.ruff]
+    # extend-exclude (scripts/, examples/), as they do on a tree walk.
+    return [sys.executable, "-m", "ruff", "check", "--force-exclude", *py_files]
 
 
 def hefesto_argv(paths: list[str], extra: list[str] | None = None) -> list[str]:
@@ -287,7 +305,7 @@ def _current_tree_must_pass(repo: Path) -> bool:
         f"{DOCUMENTED_KEY_EXCLUDE} excluded from this pass check only)",
         flush=True,
     )
-    return critical == 0
+    return bool(critical == 0)
 
 
 def self_check(repo: Path) -> int:
@@ -330,6 +348,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {name}", flush=True)
     if not files:
         print("  (none)", flush=True)
+    files, skipped = split_gate_files(files)
+    if skipped:
+        print(
+            f"Fixture files excluded from the gate ({len(skipped)}; "
+            + ", ".join(GATE_EXCLUDED_PREFIXES)
+            + "):",
+            flush=True,
+        )
+        for name in skipped:
+            print(f"  {name}", flush=True)
     return run_changed_gate(repo, files)
 
 
