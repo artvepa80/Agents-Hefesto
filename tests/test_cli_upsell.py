@@ -392,3 +392,32 @@ def test_corrupt_state_suppresses_the_hook_notice_silently(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == ""
+
+
+@pytest.mark.parametrize(
+    "counts",
+    (
+        [],
+        "x",
+        {"init": -1},
+        {"init": True},
+        {"init": 1.5},
+        {"init": "1"},
+        {"init": None},
+    ),
+)
+def test_malformed_counts_make_the_state_unreadable(tmp_path: Path, counts: object) -> None:
+    path = tmp_path / "upsell.json"
+    body = json.dumps({"last_shown_at": None, "counts": counts})
+    path.write_text(body, encoding="utf-8")
+    assert load_upsell_state() is None
+    assert show_notice("init", INIT_LINE) is False
+    assert path.read_text(encoding="utf-8") == body
+
+
+def test_valid_counts_are_kept_as_is(tmp_path: Path) -> None:
+    body = {"last_shown_at": None, "counts": {"init": 0, "hook_blocked": 2}}
+    (tmp_path / "upsell.json").write_text(json.dumps(body), encoding="utf-8")
+    state = load_upsell_state()
+    assert state is not None
+    assert state["counts"] == {"init": 0, "hook_blocked": 2}

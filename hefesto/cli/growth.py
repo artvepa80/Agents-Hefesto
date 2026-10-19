@@ -141,16 +141,9 @@ def load_upsell_state() -> dict[str, Any] | None:
     last = loaded.get("last_shown_at")
     if last is not None and (isinstance(last, bool) or not isinstance(last, (int, float))):
         return None
-    counts = loaded.get("counts", {})
-    if not isinstance(counts, dict):
+    clean = _clean_counts(loaded.get("counts", {}))
+    if clean is None:
         return None
-    clean: dict[str, int] = {}
-    for key, value in counts.items():
-        if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, int):
-            return None
-        if value < 0:
-            return None
-        clean[key] = value
     total = loaded.get("successful_analyses", 0)
     if isinstance(total, bool) or not isinstance(total, int) or total < 0:
         return None
@@ -163,6 +156,20 @@ def load_upsell_state() -> dict[str, Any] | None:
         "successful_analyses": total,
         "last_shown_by_type": times,
     }
+
+
+def _clean_counts(value: Any) -> dict[str, int] | None:
+    """``counts``: type -> times shown (int >= 0). ``None`` when invalid."""
+    if not isinstance(value, dict):
+        return None
+    clean: dict[str, int] = {}
+    for key, count in value.items():
+        if not isinstance(key, str) or isinstance(count, bool) or not isinstance(count, int):
+            return None
+        if count < 0:
+            return None
+        clean[key] = count
+    return clean
 
 
 def _clean_times(value: Any) -> dict[str, float] | None:
