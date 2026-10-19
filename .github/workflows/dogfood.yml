@@ -12,9 +12,11 @@
 # examples/) applies to the changed files too. Files under tests/fixtures/ and
 # .github/action-smoke/ carry planted findings on purpose and are not gated.
 #
-# With those exclusions, the one tracked file that fails the gate when touched
-# is hefesto/telemetry/client.py: line 28 is a PostHog public write-only
-# project key (docs/telemetry.md), reported as CRITICAL HARDCODED_SECRET.
+# With those exclusions, two tracked files fail the gate when touched:
+# scripts/validate_aggregates_jsonl.py:48 (CRITICAL VERY_HIGH_COMPLEXITY,
+# until that function is split) and hefesto/telemetry/client.py: line 28 is a
+# PostHog public write-only project key (docs/telemetry.md), reported as
+# CRITICAL HARDCODED_SECRET.
 # No line-level suppression exists, and this job does not drop HARDCODED_SECRET.
 # A pull request that touches that file fails until a line-level suppression
 # is designed.

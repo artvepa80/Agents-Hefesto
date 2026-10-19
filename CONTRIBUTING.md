@@ -63,8 +63,9 @@ HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
   --severity medium --fail-on critical --allow-no-files
 # Proves a planted CRITICAL fails and the current hefesto/ tree passes
 # aside from the documented PostHog public key (no line-level suppression).
-# hefesto/telemetry/client.py is the only tracked file that fails the gate
-# when touched (client.py:28), until a line-level suppression is designed:
+# Two tracked files fail the gate when touched: hefesto/telemetry/client.py:28
+# (until a line-level suppression is designed) and
+# scripts/validate_aggregates_jsonl.py:48 (VERY_HIGH_COMPLEXITY, until split):
 python scripts/dogfood_changed.py --self-check
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
