@@ -257,9 +257,7 @@ _LOGGER = "hefesto.cli.growth"
 
 def _reasons(caplog: pytest.LogCaptureFixture) -> list[str]:
     return [
-        r.getMessage()
-        for r in caplog.records
-        if r.name == _LOGGER and r.levelno == logging.DEBUG
+        r.getMessage() for r in caplog.records if r.name == _LOGGER and r.levelno == logging.DEBUG
     ]
 
 
