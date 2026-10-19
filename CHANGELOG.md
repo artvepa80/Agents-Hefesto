@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CWE ids for Python security findings in SARIF.** One mapping (`hefesto/reports/cwe_map.py`, CWE list 4.20) feeds both the GitHub code-scanning tag `external/cwe/cwe-N` (no zero-padding) and a SARIF 2.1.0 `run.taxonomies` CWE entry with `relationships` on each mapped rule. HARDCODED_SECRET → 798 (`equal`), SQL_INJECTION_RISK → 89 (`superset`), COMMAND_INJECTION → 78 (`superset`), EVAL_USAGE → 95 (`relevant`), BARE_EXCEPT → 396 (`equal`), PICKLE_USAGE → 502 (`relevant`, rule precision `low` because the detector flags the import only), ASSERT_IN_PRODUCTION → no CWE. An issue `metadata.cwe` still overrides the table; the COBOL tags `cwe-798` and `cwe-20` are unchanged. Handoff: `docs/worklog/2026-10-17-cwe-sarif.md`.
 
+### Changed
+
+- **The hook's `PRO $8/mo` notice has its own 7-day window.** `hook_blocked` was in the 7-day window shared by every notice type, so the `hefesto init` line (or a milestone or gated notice) hid the hook line for a week. `hook_blocked` now has its own window: at most once every 7 days, and it neither waits for nor resets the shared window. The other types still share one window (one of them every 7 days). Every type still prints at most 3 times. The TTY requirement and the CI, `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK`, `hefesto telemetry disable`, `HEFESTO_NO_UPSELL`, `--quiet`, `--output json` and `--output sarif` opt-outs are unchanged. `~/.hefesto/upsell.json` gains `last_shown_by_type` (type → epoch seconds). Files without it are still read; a malformed value shows nothing and leaves the file as it is. `docs/telemetry.md` is updated. Tests (`tests/test_cli_upsell.py`, mocked clock): init then hook 1 h later is shown, hook twice within 7 days is suppressed, an old state file still works, a corrupt file is suppressed silently.
+
 ## [4.20.2] - 2026-10-17
 
 ### Fixed
