@@ -1,0 +1,45 @@
+# Full-repository HefestoAI scan with results in Security > Code scanning.
+#
+# Non-blocking for now: the scan step has continue-on-error, so the job stays
+# green while two known CRITICAL findings remain on main
+# (hefesto/telemetry/client.py:28, the public PostHog key, and
+# scripts/validate_aggregates_jsonl.py:48, complexity 22). The SARIF upload
+# inside the Action runs even when the gate fails, so every finding still
+# reaches code scanning. To make this gate blocking, delete the
+# continue-on-error line. The blocking changed-file gate is dogfood.yml.
+#
+# Paths excluded from the scan live in .hefesto.yaml.
+
+name: Hefesto
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write  # upload SARIF to code scanning
+
+concurrency:
+  group: hefesto-scan-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  hefesto-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: HefestoAI full scan
+        # Floating major tag. Pin a commit if policy requires it:
+        # artvepa80/Agents-Hefesto@2b72fd0910edc46ab92afc6dbeb068d6856ae3a1 # v4.20.2
+        uses: artvepa80/Agents-Hefesto@v4
+        continue-on-error: true  # remove to make the gate blocking
+        with:
+          target: .
+          fail_on: CRITICAL
+          sarif: true
+          sarif_category: hefesto
