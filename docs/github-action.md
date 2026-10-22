@@ -13,7 +13,7 @@ findings to GitHub code scanning as SARIF 2.1.0.
 - Because it follows minors, `@v4` also receives behaviour changes, such as
   the 4.16.0 change that makes a run with no analyzed files fail the gate
   instead of passing (see "Runs that analyze no files" below).
-- If you need exact stability, pin an exact release tag such as `@v4.20.1`
+- If you need exact stability, pin an exact release tag such as `@v4.20.3`
   (exact tags never move) or a commit SHA, and bump it yourself.
 - The Action installs HefestoAI from its own checkout, not from PyPI, so a fix
   reaches a workflow only through a ref that contains it: `@v4.15.0` keeps the
