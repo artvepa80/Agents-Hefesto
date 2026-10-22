@@ -52,7 +52,7 @@
     {
       "id": "pricing",
       "name": "Pricing",
-      "description": "MCP tool pricing: returns current prices (Free $0, PRO: $8/month, OMEGA: $19/month). Static text.",
+      "description": "MCP tool pricing: returns current prices (Free $0, PRO $8/month per user, OMEGA $19/month). Static text.",
       "tags": [
         "pricing"
       ]
@@ -60,7 +60,7 @@
     {
       "id": "compare",
       "name": "Compare tools",
-      "description": "MCP tool compare: returns a short static comparison with sonarqube, snyk, github-advanced-security, semgrep or claude-code-security. No live lookup; no code is inspected.",
+      "description": "MCP tool compare: returns a short static comparison with sonarqube, snyk, github-advanced-security, semgrep, claude-code-security, coderabbit or qodo. No live lookup; no code is inspected.",
       "tags": [
         "comparison"
       ]
