@@ -196,6 +196,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 - **G-4 (MUST)** `omega-guardian run` passes before commit
 - **G-5 (MUST)** `hefesto analyze .` passes before commit
 - **G-6 (MUST)** Memory usage tests pass (< 2GB peak)
+- **G-7 (SHOULD)** Keep the full-repo scan clean: `.github/workflows/hefesto.yml` (job `hefesto-scan`) uploads SARIF to code scanning (category `hefesto`) on every push and PR to `main`; it is non-blocking (`continue-on-error: true`) until the two known CRITICAL findings are fixed. Excludes go only in the root `.hefesto.yaml`, written as path segments (`tests/fixtures/`), never globs (`tests/fixtures/**` matches nothing); paths passed explicitly are not filtered.
 
 ### 📊 **Performance Gates**
 - **G-7 (MUST)** Analysis latency < 5s for files < 1000 LOC
