@@ -1,0 +1,12 @@
+# HefestoAI project config, read by `hefesto analyze` (CLI and the Action).
+# Single source of truth for paths that are not gated.
+#
+# Exclude patterns are whole path components relative to the analyzed root,
+# not globs: `tests/fixtures/` matches; `tests/fixtures/**` matches nothing.
+# A file or directory passed explicitly to `hefesto analyze` is not filtered
+# by these patterns (the Action smoke test relies on that).
+exclude:
+  # Planted findings the analyzer's own tests assert on.
+  - tests/fixtures/
+  # Action smoke fixture: a fake AKIA key that must fail the smoke test.
+  - .github/action-smoke/
