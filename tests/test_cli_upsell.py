@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -244,3 +245,165 @@ def test_analyze_json_and_quiet_skip_the_milestone(
     assert as_json.exit_code == 0, as_json.output
     assert "hefesto-swarm" not in as_json.stderr
     assert as_json.stdout.lstrip().startswith("{")
+
+
+# --- Debug reason for a suppressed notice ------------------------------------
+# A suppressed notice logs "upsell suppressed: <reason> (cta=<type>)" on the
+# ``hefesto.cli.growth`` logger at DEBUG. Nothing is printed by default.
+
+_NOW = 1_700_000_000.0
+_LOGGER = "hefesto.cli.growth"
+
+
+def _reasons(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        r.getMessage() for r in caplog.records if r.name == _LOGGER and r.levelno == logging.DEBUG
+    ]
+
+
+def _suppressed(caplog: pytest.LogCaptureFixture, kind: str = "hook_blocked") -> str:
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        assert show_notice(kind, HOOK_BLOCKED_LINE) is False
+    messages = _reasons(caplog)
+    assert len(messages) == 1, messages
+    return messages[0]
+
+
+def _write_state(tmp_path: Path, state: dict) -> None:
+    (tmp_path / "upsell.json").write_text(json.dumps(state), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "reason"),
+    (
+        ("CI", "true", "ci"),
+        ("GITHUB_ACTIONS", "true", "ci"),
+        ("GITLAB_CI", "true", "ci"),
+        ("CIRCLECI", "true", "ci"),
+        ("JENKINS_URL", "http://jenkins.example", "ci"),
+        ("HEFESTO_TELEMETRY", "0", "telemetry_off"),
+        ("DO_NOT_TRACK", "1", "telemetry_off"),
+        ("HEFESTO_NO_UPSELL", "1", "opt_out"),
+        ("HEFESTO_NO_UPSELL", "yes", "opt_out"),
+    ),
+)
+def test_env_suppression_logs_the_reason(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    name: str,
+    value: str,
+    reason: str,
+) -> None:
+    monkeypatch.setenv(name, value)
+    assert _suppressed(caplog) == f"upsell suppressed: {reason} (cta=hook_blocked)"
+
+
+def test_telemetry_disable_file_logs_telemetry_off(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    (tmp_path / "telemetry_disabled").write_text("", encoding="utf-8")
+    assert _suppressed(caplog) == "upsell suppressed: telemetry_off (cta=hook_blocked)"
+
+
+def test_no_tty_logs_the_reason(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(growth, "stdout_is_tty", lambda: False)
+    assert _suppressed(caplog) == "upsell suppressed: no_tty (cta=hook_blocked)"
+
+
+def test_quiet_and_machine_log_the_reason(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        assert show_upgrade_cta(quiet=True) is False
+        assert show_upgrade_cta(machine=True) is False
+    assert _reasons(caplog) == [
+        "upsell suppressed: quiet (cta=hook_blocked)",
+        "upsell suppressed: machine_output (cta=hook_blocked)",
+    ]
+
+
+def test_weekly_window_logs_the_reason(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(growth.time, "time", lambda: _NOW)
+    _write_state(
+        tmp_path,
+        {"last_shown_at": _NOW - 3600, "counts": {"init": 1}, "successful_analyses": 0},
+    )
+    assert _suppressed(caplog) == "upsell suppressed: weekly_window (cta=hook_blocked)"
+    # Eight days later the same notice is shown and nothing is logged.
+    monkeypatch.setattr(growth.time, "time", lambda: _NOW + 8 * 24 * 60 * 60)
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        shown = show_upgrade_cta()
+    assert shown is True
+    assert _reasons(caplog) == []
+
+
+def test_max_per_type_logs_the_reason(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(growth.time, "time", lambda: _NOW)
+    _write_state(
+        tmp_path,
+        {
+            "last_shown_at": _NOW - 30 * 24 * 60 * 60,
+            "counts": {"hook_blocked": 3},
+            "successful_analyses": 0,
+        },
+    )
+    assert _suppressed(caplog) == "upsell suppressed: max_per_type (cta=hook_blocked)"
+
+
+def test_corrupt_state_logs_the_reason(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    (tmp_path / "upsell.json").write_text("{not json", encoding="utf-8")
+    assert _suppressed(caplog) == "upsell suppressed: state_corrupt (cta=hook_blocked)"
+    assert (tmp_path / "upsell.json").read_text(encoding="utf-8") == "{not json"
+
+
+def test_shown_notice_logs_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        shown = show_upgrade_cta()
+    assert shown is True
+    assert _reasons(caplog) == []
+
+
+def test_suppression_reason_is_not_printed_by_default(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("HEFESTO_NO_UPSELL", "1")
+    assert show_upgrade_cta() is False
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+def test_cli_hook_block_prints_no_reason(tmp_path: Path) -> None:
+    """End to end: a hook-style gate failure with the notice suppressed."""
+    import os
+    import subprocess
+    import sys
+
+    cfg = tmp_path / "c.json"
+    cfg.write_text(json.dumps({"api_key": "sk_live_" + "a1B2c3D4e5F6g7H8i9J0k1L2"}))
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("HEFESTO_") and k not in {"CI", "GITHUB_ACTIONS"}
+    }
+    env.update(
+        HOME=str(tmp_path),
+        HEFESTO_STATE_DIR=str(tmp_path / "state"),
+        HEFESTO_TELEMETRY="0",
+        HEFESTO_SOURCE="hook",
+    )
+    proc = subprocess.run(
+        [sys.executable, "-m", "hefesto.cli.main", "analyze", str(cfg), "--fail-on", "HIGH"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "upsell suppressed" not in proc.stdout
+    assert "upsell suppressed" not in proc.stderr
