@@ -178,8 +178,9 @@ class TextReporter:
             location += f":{issue.column}"
         lines.append(f"  📄 {location}")
 
-        # Issue details
-        lines.append(f"  ├─ Issue: {issue.message}")
+        # Issue details (rule id inline when the analyzer set one, e.g. [J001])
+        rule = f"[{issue.rule_id}] " if issue.rule_id else ""
+        lines.append(f"  ├─ Issue: {rule}{issue.message}")
 
         if issue.function_name:
             lines.append(f"  ├─ Function: {issue.function_name}")
