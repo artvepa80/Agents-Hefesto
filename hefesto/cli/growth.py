@@ -1,10 +1,13 @@
 """One-line PRO/OMEGA notices and their pricing links.
 
 Prices in this text are PRO $8/mo and OMEGA $19/mo. No trial and no discount.
-Each notice is one stderr line, after the command result, at most once every
-7 days across all types, and at most 3 times per type. State lives in
-``~/.hefesto/upsell.json``. A missing file starts empty. A read or parse
-failure shows nothing and leaves the file untouched.
+Each notice is one stderr line, after the command result, and at most 3 times
+per type. ``hook_blocked`` has its own 7-day window. Every other type shares
+one window: at most one of them every 7 days. State lives in
+``~/.hefesto/upsell.json`` (``last_shown_at`` for the shared window,
+``last_shown_by_type`` for per-type times; files written before
+``last_shown_by_type`` existed are still read). A missing file starts empty.
+A read or parse failure shows nothing and leaves the file untouched.
 
 A suppressed notice logs ``upsell suppressed: <reason> (cta=<type>)`` on the
 ``hefesto.cli.growth`` logger at DEBUG. The CLI configures no log handler, so
@@ -45,6 +48,9 @@ _LANDING = "https://hefestoai.narapallc.com/"
 _WEEK_SECONDS = 7 * 24 * 60 * 60
 _MAX_PER_TYPE = 3
 _STATE_NAME = "upsell.json"
+# Types with their own 7-day window. They neither wait for nor reset the
+# shared window, so an ``init`` or milestone notice does not hide them.
+_OWN_WINDOW_TYPES = frozenset({"hook_blocked"})
 
 # swarm/cli.py (PRO package): argparse description
 # "HefestoAI Swarm — security analysis pipeline", help text
@@ -154,7 +160,12 @@ def load_upsell_state() -> dict[str, Any] | None:
     """Empty state when the file is missing. ``None`` when it cannot be read."""
     path = _state_path()
     if not path.exists():
-        return {"last_shown_at": None, "counts": {}, "successful_analyses": 0}
+        return {
+            "last_shown_at": None,
+            "counts": {},
+            "successful_analyses": 0,
+            "last_shown_by_type": {},
+        }
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
@@ -164,20 +175,49 @@ def load_upsell_state() -> dict[str, Any] | None:
     last = loaded.get("last_shown_at")
     if last is not None and (isinstance(last, bool) or not isinstance(last, (int, float))):
         return None
-    counts = loaded.get("counts", {})
-    if not isinstance(counts, dict):
+    clean = _clean_counts(loaded.get("counts", {}))
+    if clean is None:
         return None
-    clean: dict[str, int] = {}
-    for key, value in counts.items():
-        if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, int):
-            return None
-        if value < 0:
-            return None
-        clean[key] = value
     total = loaded.get("successful_analyses", 0)
     if isinstance(total, bool) or not isinstance(total, int) or total < 0:
         return None
-    return {"last_shown_at": last, "counts": clean, "successful_analyses": total}
+    times = _clean_times(loaded.get("last_shown_by_type", {}))
+    if times is None:
+        return None
+    return {
+        "last_shown_at": last,
+        "counts": clean,
+        "successful_analyses": total,
+        "last_shown_by_type": times,
+    }
+
+
+def _clean_counts(value: Any) -> dict[str, int] | None:
+    """``counts``: type -> times shown (int >= 0). ``None`` when invalid."""
+    if not isinstance(value, dict):
+        return None
+    clean: dict[str, int] = {}
+    for key, count in value.items():
+        if not isinstance(key, str) or isinstance(count, bool) or not isinstance(count, int):
+            return None
+        if count < 0:
+            return None
+        clean[key] = count
+    return clean
+
+
+def _clean_times(value: Any) -> dict[str, float] | None:
+    """``last_shown_by_type``: type -> epoch seconds. ``None`` when invalid."""
+    if not isinstance(value, dict):
+        return None
+    times: dict[str, float] = {}
+    for key, when in value.items():
+        if not isinstance(key, str) or isinstance(when, bool):
+            return None
+        if not isinstance(when, (int, float)):
+            return None
+        times[key] = float(when)
+    return times
 
 
 def _save_upsell_state(state: dict[str, Any]) -> bool:
@@ -193,8 +233,11 @@ def _save_upsell_state(state: dict[str, Any]) -> bool:
     return True
 
 
-def _week_blocked(state: dict[str, Any], now: float) -> bool:
-    last = state.get("last_shown_at")
+def _week_blocked(state: dict[str, Any], now: float, kind: str = "") -> bool:
+    if kind in _OWN_WINDOW_TYPES:
+        last = state.get("last_shown_by_type", {}).get(kind)
+    else:
+        last = state.get("last_shown_at")
     if last is None:
         return False
     return (now - float(last)) < _WEEK_SECONDS
@@ -219,14 +262,17 @@ def show_notice(kind: str, line: str, *, quiet: bool = False, machine: bool = Fa
     if reason is not None:
         return _suppressed(reason, kind)
     state = load_upsell_state()
+    now = time.time()
     if state is None:
         return _suppressed("state_corrupt", kind)
     if _type_blocked(state, kind):
         return _suppressed("max_per_type", kind)
-    if _week_blocked(state, time.time()):
+    if _week_blocked(state, now, kind):
         return _suppressed("weekly_window", kind)
     state["counts"][kind] = int(state["counts"].get(kind, 0)) + 1
-    state["last_shown_at"] = time.time()
+    state["last_shown_by_type"][kind] = now
+    if kind not in _OWN_WINDOW_TYPES:
+        state["last_shown_at"] = now
     if not _save_upsell_state(state):
         return _suppressed("state_write_failed", kind)
     click.echo(line, err=True)
@@ -254,5 +300,5 @@ def show_milestone(count: int | None, *, quiet: bool, machine: bool) -> bool:
 
 
 def show_upgrade_cta(*, quiet: bool = False, machine: bool = False) -> bool:
-    """Hook-block notice. Same weekly cap as the other notices."""
+    """Hook-block notice. Its own 7-day window; at most 3 times."""
     return show_notice("hook_blocked", HOOK_BLOCKED_LINE, quiet=quiet, machine=machine)

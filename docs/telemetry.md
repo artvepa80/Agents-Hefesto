@@ -94,7 +94,7 @@ The CLI can print one extra stderr line after the command result. Prices in that
 
 The line is not printed when `CI=true`, when GitHub Actions, GitLab CI, Jenkins (`JENKINS_URL`), or CircleCI is detected, when stdout is not a TTY, with `--output json`, `--output sarif`, or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `HEFESTO_NO_UPSELL=1`. `HEFESTO_NO_UPSELL` also accepts `true`, `yes`, and `on`. `hefesto telemetry disable` hides the line as well, because usage events are off.
 
-At most one notice of any type is printed every 7 days. Each type is printed at most 3 times. The counters are in `~/.hefesto/upsell.json`. If that file cannot be read or is not valid JSON, nothing is printed and the file is left as it is.
+Each type is printed at most 3 times. `hook_blocked` has its own 7-day window: it is printed at most once every 7 days, and an `init`, milestone or gated notice neither delays it nor is delayed by it. All other types share one window: at most one of them every 7 days. This is intentional: the hook line only appears at a blocked commit, is capped at 3 times per type, is TTY-only, and uses the same opt-outs; seeing up to two notices in a 7-day period (the hook line plus one other) is expected, not a bug. The counters are in `~/.hefesto/upsell.json`: `counts` per type, `last_shown_at` for the shared window, and `last_shown_by_type` with the last time each type was printed. A file written by an older version, without `last_shown_by_type`, is still read: its counts and shared window stay, and `hook_blocked` starts with no window. If that file cannot be read, is not valid JSON, or has a malformed field, nothing is printed and the file is left as it is.
 
 ### Why a notice was not printed
 
