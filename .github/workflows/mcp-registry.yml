@@ -5,8 +5,8 @@ name: MCP Registry (manual)
 #
 # - Manual only (workflow_dispatch). The default run is a dry run:
 #   field checks plus `mcp-publisher validate`. Nothing is published.
-# - The entry sent is the canonical server.json from the private
-#   landing-page/server.json, as deployed at
+# - The entry sent is the canonical server.json served by the hosted
+#   landing page, as deployed at
 #   https://hefestoai.narapallc.com/server.json (remote, streamable-http).
 #   This repository's server.json is never published.
 # - The registry version tracks the deployed engine, not PyPI: it must equal

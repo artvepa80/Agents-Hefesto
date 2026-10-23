@@ -16,7 +16,7 @@ Summary:
 
 Issue block (one per finding):
   [file]:[line]:[column]
-  |- Issue: [message]
+  |- Issue: [rule_id] [message]   (rule id in brackets, e.g. [J001], only when the finding has one)
   |- Function: [function_name]
   |- Type: [issue_type]
   |- Severity: [severity]

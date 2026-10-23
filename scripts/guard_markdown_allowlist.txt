@@ -2,7 +2,7 @@
 #
 # Format: <path relative to the repo root> <rule id>   (# starts a comment)
 # Rule ids: memory-md, swarm-path, iris-path, hefesto-pro, private-repo,
-#           private-pr, private-path.
+#           private-repo-mention, private-pr, private-path, agent-name.
 #
 # An entry lets that one file contain that one rule. Paths under .claude/ and
 # .cursor/ (agent skills and rules) can never be listed: they must be clean.
@@ -13,30 +13,22 @@
 LICENSE-COMMERCIAL.md hefesto-pro
 README.md hefesto-pro
 docs/PRO_OPTIONAL_FEATURES.md hefesto-pro
-docs/worklog/2026-10-10-cli-activate-variable-entorno.md hefesto-pro
 
 # Release history: past entries are not rewritten.
 CHANGELOG.md hefesto-pro
 CHANGELOG.md memory-md
 CHANGELOG.md private-pr
 CHANGELOG.md private-repo
+CHANGELOG.md private-repo-mention
 
 # Contributor guide tells maintainers to read their local MEMORY.md (not in the repo).
 CLAUDE.md memory-md
 
-# Pre-existing docs and worklogs that name private paths for context.
+# Public statement that the gate's audit history is kept internally (2026-10-22).
+CLAUDE.md private-repo-mention
+README.md private-repo-mention
+
+# Pre-existing docs that name private paths for context.
 # Candidates for a later cleanup PR; kept so the scan can land without rewriting history.
 docs/INTEGRATION.md iris-path
 docs/telemetry.md swarm-path
-docs/worklog/2026-10-06-sec03-path-segments.md swarm-path
-docs/worklog/2026-10-06-sec05-html-report-xss.md private-path
-docs/worklog/2026-10-06-sec06-action-telemetry-optin.md private-path
-docs/worklog/2026-10-09-cobol-docs-honestidad.md private-path
-docs/worklog/2026-10-10-cobol-fase6-docs-publicos.md private-pr
-docs/worklog/2026-10-10-cobol-fase6-docs-publicos.md private-repo
-docs/worklog/2026-10-10-correcciones-precision-pr84-88.md memory-md
-docs/worklog/2026-10-10-path-y-release-truth-engine.md private-path
-docs/worklog/2026-10-11-preparacion-4.16.0.md memory-md
-docs/worklog/2026-10-15-cli-pro-notices.md swarm-path
-docs/worklog/2026-10-15-hosted-engine-docs.md private-path
-docs/worklog/2026-10-16-devops-analyzers-wiring.md private-path

@@ -94,6 +94,36 @@ The CLI can print one extra stderr line after the command result. Prices in that
 
 The line is not printed when `CI=true`, when GitHub Actions, GitLab CI, Jenkins (`JENKINS_URL`), or CircleCI is detected, when stdout is not a TTY, with `--output json`, `--output sarif`, or `--quiet`, or when `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `HEFESTO_NO_UPSELL=1`. `HEFESTO_NO_UPSELL` also accepts `true`, `yes`, and `on`. `hefesto telemetry disable` hides the line as well, because usage events are off.
 
-At most one notice of any type is printed every 7 days. Each type is printed at most 3 times. The counters are in `~/.hefesto/upsell.json`. If that file cannot be read or is not valid JSON, nothing is printed and the file is left as it is.
+Each type is printed at most 3 times. `hook_blocked` has its own 7-day window: it is printed at most once every 7 days, and an `init`, milestone or gated notice neither delays it nor is delayed by it. All other types share one window: at most one of them every 7 days. This is intentional: the hook line only appears at a blocked commit, is capped at 3 times per type, is TTY-only, and uses the same opt-outs; seeing up to two notices in a 7-day period (the hook line plus one other) is expected, not a bug. The counters are in `~/.hefesto/upsell.json`: `counts` per type, `last_shown_at` for the shared window, and `last_shown_by_type` with the last time each type was printed. A file written by an older version, without `last_shown_by_type`, is still read: its counts and shared window stay, and `hook_blocked` starts with no window. If that file cannot be read, is not valid JSON, or has a malformed field, nothing is printed and the file is left as it is.
+
+### Why a notice was not printed
+
+The line is often missing on purpose: the pre-commit.com framework and many GUI git clients run hooks without a TTY, telemetry opt-out also hides it, and the 7-day window is shared, so the `hefesto init` line can hide the first week of `hook_blocked` lines. A suppressed notice logs one line on the `hefesto.cli.growth` logger at DEBUG level:
+
+```
+upsell suppressed: <reason> (cta=<type>)
+```
+
+| reason | Cause |
+|---|---|
+| `quiet` | `--quiet` |
+| `machine_output` | `--output json` or `--output sarif` |
+| `ci` | `CI=true`, or GitHub Actions, GitLab CI, Jenkins or CircleCI detected |
+| `no_tty` | stdout is not a TTY |
+| `telemetry_off` | `HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `hefesto telemetry disable` |
+| `opt_out` | `HEFESTO_NO_UPSELL=1` |
+| `state_corrupt` | `~/.hefesto/upsell.json` cannot be read or is not valid |
+| `max_per_type` | this type was already printed 3 times |
+| `weekly_window` | a notice of any type was printed in the last 7 days |
+| `state_write_failed` | `~/.hefesto/upsell.json` could not be written |
+| `multiline` | internal guard: a notice line contained a newline |
+
+The checks run in that order and the first match is logged. The CLI configures no log handler, so this line is never printed by default and nothing else changes. To see it, run the CLI with DEBUG enabled for that logger, in the same terminal and environment as the hook:
+
+```bash
+python -c 'import logging; logging.basicConfig(level=logging.WARNING); logging.getLogger("hefesto.cli.growth").setLevel(logging.DEBUG); from hefesto.cli.main import cli; cli(["analyze", "FILE", "--fail-on", "HIGH"])'
+```
+
+The line goes to stderr, for example `DEBUG:hefesto.cli.growth:upsell suppressed: telemetry_off (cta=hook_blocked)`.
 
 `upgrade_cta_shown` is sent only when the line is printed and telemetry can send in this process (`source` is `hook` or `cli`). The notice process prints the line and does not send the event. `cta` is the type from the table.

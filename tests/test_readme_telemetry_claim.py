@@ -2,7 +2,7 @@
 
 The CLI is on by default (opt-out with HEFESTO_TELEMETRY=0, among other switches).
 The GitHub Action sends no usage events unless its ``telemetry`` input is 1/true.
-``hefesto analyze`` still asks pypi.org for the latest version; 4.20.1 has no switch.
+``hefesto analyze`` asks pypi.org for the latest version; 4.20.3 adds the switches that skip it.
 """
 
 from pathlib import Path
@@ -19,8 +19,8 @@ CLAIM = (
     "in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or "
     "`DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless you set `telemetry: 1`. "
     "Separately, `hefesto analyze` asks pypi.org for the latest version (1.5 s timeout, cached "
-    "for 24 hours). That check runs even with telemetry off, and 4.20.1 has no setting to "
-    "disable it."
+    "for 24 hours). `hefesto telemetry disable` does not stop that check. From 4.20.3 the "
+    "settings below skip it; 4.20.2 and earlier have no setting to disable it."
 )
 
 

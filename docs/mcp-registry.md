@@ -56,10 +56,10 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
 
 ## Runbook
 
-- **Who:** Hefesto MCP runs the workflow after each hosted engine deploy, once
+- **Who:** the maintainer runs the workflow after each hosted engine deploy, once
   production is verified.
-- **When:** only after the private `scripts/verify_hosted_engine.py` passes against
-  production for that version.
+- **When:** only after a hosted-engine check passes against production for that
+  version.
 - **How:** first a dry run (`publish` unchecked) with `version` set to the deployed
   version, and read its job summary. Then the same version with `publish=true`.
 - **Approval:** Arturo creates the `mcp-registry` environment himself (required

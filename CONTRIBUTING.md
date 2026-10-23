@@ -56,6 +56,9 @@ ruff check
 python -m mypy hefesto --ignore-missing-imports
 python -m flake8 hefesto tests
 
+# Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.20.3)
+HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
+
 # Changed-file gate (CI: .github/workflows/dogfood.yml, job dogfood-hefesto).
 # ruff check --force-exclude (no --fix) on the changed .py files, then hefesto
 # on the changed files except those matching `exclude` in .hefesto.yaml
@@ -135,6 +138,8 @@ test: Add tests
 refactor: Refactor code
 chore: Update dependencies
 ```
+
+Co-author trailers: your own `Co-authored-by` lines for people who worked on the change are welcome. Commits made with the maintainer's tooling carry only `Co-authored-by: HefestoAI <noreply@narapallc.com>`. CI rejects commits whose author or co-author names an internal automation identity (`python scripts/guard_public_repo.py --check-commits origin/main..HEAD`).
 
 ## 🔒 Security
 

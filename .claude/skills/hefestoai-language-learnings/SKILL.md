@@ -47,8 +47,9 @@ Every entry uses exactly these fields:
 
 ## Adding an entry
 
-1. Only add something that happened in these repos and is written down: a CHANGELOG entry, a
-   worklog in `docs/worklog/`, a PR or a commit. Do not add guesses or general advice.
+1. Only add something that happened in these repos and is written down: a CHANGELOG entry, a PR
+   or a commit. Do not add guesses or general advice. Internal work logs are kept outside this
+   repository and are not valid sources for the public copy.
 2. Open the source file or commit and check the claim before writing it. Cite it in **PR/commit**.
 3. Link the upstream documentation you used in **Official source**. If the behavior is our own
    code, say so.
@@ -58,7 +59,8 @@ Every entry uses exactly these fields:
    (Markdown is not a supported format, so the skill files themselves report 0 files).
 6. Public repo: run `python scripts/guard_public_repo.py`. Internal topics (the paid package, billing,
    landing, hosted engine), private file paths, private PR numbers and agent handoffs never go in the
-   public copy. Check the Markdown by hand too: the guard may not scan it.
+   public copy, and neither do internal agent names. The guard scans Markdown, code and config
+   files for these; still read the whole diff by hand.
 
 ## Reviewing at each release
 
@@ -69,12 +71,12 @@ Part of the release checklist, before tagging:
 2. For entries about third-party tools (actions, runners, PyPI), re-open the official source and
    check that it still says the same. Update **Verified** with the release version or date.
 3. Remove entries that no longer apply, and note the removal in the CHANGELOG.
-4. Keep the two copies in sync: the public repo is the source of truth; the private repo has the
-   same files plus `references/pro-internal.md`.
+4. Keep the two copies in sync: the public repo is the source of truth; the internal copy has the
+   same files plus one internal reference file.
 
 ## Sources used to seed this skill
 
-Public copy: `CHANGELOG.md`, `docs/cobol.md`, `docs/worklog/` and the public PRs and commits cited
+Public copy: `CHANGELOG.md`, `docs/cobol.md` and the public PRs and commits cited
 in each entry. Seeded 2026-10-16 with hefesto-ai 4.20.0. Every public entry must be checkable from
 this repository alone; private files, private PRs and agent handoffs outside the repo are not valid
 sources here.
@@ -91,7 +93,7 @@ so they are left out (same standard for all of them):
    observation, because its rate-limit check depends on a stable IP).
 5. pre-commit `types: [python]` behavior (no config file in the repo shows it).
 
-Add any of them only once a worklog, CHANGELOG entry, PR or commit records it.
+Add any of them only once a CHANGELOG entry, PR or commit records it.
 
 ## Where this skill lives
 

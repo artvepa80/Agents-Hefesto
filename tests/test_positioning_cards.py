@@ -1,11 +1,10 @@
 """Machine-readable positioning says "release truth engine" with verified figures.
 
 The agent card is served twice: from this repo (.well-known/agent-card.json)
-and by the landing (private repo, landing-page/api/agent-card.js). The private
-repo's tests/landing_js/agent-card-parity.test.mjs deep-compares its card with
-this file on main, so change both together. CANONICAL_DESCRIPTION is pinned
-here and in that private test. This PR cannot edit the private repo: the
-landing card must pick up "runs all 22" or that parity test fails.
+and by the hosted landing page. The landing's own parity test deep-compares
+its card with this file on main, so change both together.
+CANONICAL_DESCRIPTION is pinned here and in that parity test: the landing card
+must pick up "runs all 22" or that parity test fails.
 """
 
 import json
@@ -67,3 +66,29 @@ def test_headlines_say_release_truth_engine():
     readme_h1 = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[0]
     assert "release truth engine" in readme_h1.lower()
     assert "release truth engine" in (ROOT / "llms.txt").read_text(encoding="utf-8").lower()
+
+
+def _skill(skill_id):
+    return next(s for s in CARD["skills"] if s["id"] == skill_id)
+
+
+def test_compare_skill_lists_every_known_value():
+    # Same known values as the hosted MCP compare tool (served by the landing).
+    description = _skill("compare")["description"]
+    for value in (
+        "sonarqube",
+        "snyk",
+        "github-advanced-security",
+        "semgrep",
+        "claude-code-security",
+        "coderabbit",
+        "qodo",
+    ):
+        assert value in description, value
+
+
+def test_pricing_skill_says_pro_per_user():
+    # Arturo, 2026-10-19: "PRO $8/month per user".
+    description = _skill("pricing")["description"]
+    assert "PRO $8/month per user" in description
+    assert "OMEGA $19/month" in description

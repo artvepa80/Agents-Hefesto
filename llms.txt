@@ -27,7 +27,7 @@ hefesto analyze . --fail-on CRITICAL
 ## GitHub Action
 
 ```yaml
-- uses: artvepa80/Agents-Hefesto@v4   # floating major tag; exact pins like @v4.20.1 also work
+- uses: artvepa80/Agents-Hefesto@v4   # floating major tag; exact pins like @v4.20.3 also work
   with:
     target: '.'
     fail_on: 'CRITICAL'
@@ -55,7 +55,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 
 ## Telemetry
 
-- Privacy: the CLI and the GitHub Action analyze code where they run and do not upload it; the MCP analyze tool runs on the files you send and stores nothing. The CLI sends anonymous usage events to PostHog by default (no code, file paths or findings); turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless `telemetry: 1`. `hefesto analyze` also checks pypi.org for a newer version (cached 24 h); 4.20.1 has no switch to turn that check off.
+- Privacy: the CLI and the GitHub Action analyze code where they run and do not upload it; the MCP analyze tool runs on the files you send and stores nothing. The CLI sends anonymous usage events to PostHog by default (no code, file paths or findings); turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless `telemetry: 1`. `hefesto analyze` also checks pypi.org for a newer version (cached 24 h); from 4.20.3, `HEFESTO_NO_UPDATE_CHECK=1`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1` skips it (`hefesto telemetry disable` does not; 4.20.2 and earlier have no switch).
 
 ## Supported Languages
 
