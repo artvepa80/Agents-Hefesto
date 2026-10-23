@@ -57,7 +57,7 @@ Los tags exactos (`v4.15.1`, ...) siguen anotados y no se mueven nunca.
 
 - Tag `v4` creado sobre `579544f` (el commit de v4.15.1) y empujado después del merge, para
   que el filtro nuevo ya esté en `main`.
-- `/workspace/hefesto-cobol-ci-example` pasa a `@v4` (commit local, sin remoto).
+- El repositorio de ejemplo COBOL local pasa a `@v4` (commit local, sin remoto).
 
 ## Para mañana (no hecho)
 

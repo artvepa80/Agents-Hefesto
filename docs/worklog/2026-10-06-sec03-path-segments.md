@@ -88,8 +88,7 @@ GitHub Action smoke test could still find its fixture secret.
   full absolute path (a parent directory literally named `tests` would make
   them test code). Passing the project root from the engine to the analyzers
   would fix that, but it changes the analyzer interface.
-- Private repo: `swarm/agents/static_sec.py:83-89` has the same substring bug
-  (SEC-03 [pro]). The private CI consumes `hefesto-ai` from PyPI, so it picks
+- The paid add-on has the same substring bug (SEC-03 [pro]). Its CI consumes `hefesto-ai` from PyPI, so it picks
   this fix up only after a public release.
 - `CHANGELOG.md`: the SEC-05 and SEC-06 PRs also add entries under
   `[Unreleased]` → `### Security`. Whichever merges second hits a trivial

@@ -1,11 +1,11 @@
 # 2026-10-09: COBOL, Fase 0 del plan de pruebas (docs honestas, 7 reglas gratis)
 
-- **Contexto:** plan de pruebas COBOL (`/workspace/plan-pruebas-cobol.md`), Fase 0
+- **Contexto:** plan de pruebas COBOL (documento interno), Fase 0
   aprobada por Arturo: las 7 reglas COBOL quedan **FREE** y la documentación no
   debe prometer más de lo que hace el código.
 - **Rama:** `docs/cobol-honesty`, desde `main` @ `9044fb1`. Sin cambio de versión ni tag.
-- **PR relacionado (privado):** arreglo de la tool MCP `analyze` y de los textos
-  de precios/idiomas en `landing-page/api/`.
+- **Cambio relacionado (servidor hospedado):** arreglo de la tool MCP `analyze` y
+  de los textos de precios/idiomas de la landing.
 
 ## Qué se hizo
 

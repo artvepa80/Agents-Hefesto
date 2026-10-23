@@ -58,7 +58,8 @@ Every entry uses exactly these fields:
    (Markdown is not a supported format, so the skill files themselves report 0 files).
 6. Public repo: run `python scripts/guard_public_repo.py`. Internal topics (the paid package, billing,
    landing, hosted engine), private file paths, private PR numbers and agent handoffs never go in the
-   public copy. Check the Markdown by hand too: the guard may not scan it.
+   public copy, and neither do internal agent names. The guard scans Markdown, code and config
+   files for these; still read the whole diff by hand.
 
 ## Reviewing at each release
 
@@ -69,8 +70,8 @@ Part of the release checklist, before tagging:
 2. For entries about third-party tools (actions, runners, PyPI), re-open the official source and
    check that it still says the same. Update **Verified** with the release version or date.
 3. Remove entries that no longer apply, and note the removal in the CHANGELOG.
-4. Keep the two copies in sync: the public repo is the source of truth; the private repo has the
-   same files plus `references/pro-internal.md`.
+4. Keep the two copies in sync: the public repo is the source of truth; the internal copy has the
+   same files plus one internal reference file.
 
 ## Sources used to seed this skill
 

@@ -1,6 +1,6 @@
 # 2026-10-18 — Root .mcp.json and "Add to Cursor" button (draft PR, not merged)
 
-Approved by Arturo 2026-10-18 09:28 Lima (relayed by Grok Bot). Context: `handoffs/mcp-listings-cursor-claude-chatgpt-2026-10-18.md`.
+Approved by Arturo 2026-10-18 09:28 Lima.
 
 ## Sources opened
 - Cursor MCP docs: https://cursor.com/docs/context/mcp — remote server entry is `{"mcpServers":{"name":{"url":"…"}}}` (optional `headers`, `auth`); `type` is listed as required only for STDIO servers.

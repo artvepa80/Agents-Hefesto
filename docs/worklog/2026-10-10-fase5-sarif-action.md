@@ -63,7 +63,7 @@ y subirla con `github/codeql-action/upload-sarif`.
   nuevo `docs/github-action.md` (cómo funciona, permisos, forks, límites,
   cómo verificarlo en GitHub, repositorio de ejemplo), CHANGELOG.
 - Repositorio de ejemplo preparado en local
-  (`/workspace/hefesto-cobol-ci-example`, no creado en GitHub): programa
+  (no creado en GitHub): programa
   `PAYROLL.cbl` con 6 problemas sembrados (COBOL008, COBOL004 vía
   `COPY ... REPLACING` con ubicación relacionada en el copybook, COBOL003,
   COBOL011, COBOL012, COBOL014), `CUSTRPT.cbl` limpio, `.hefesto.yaml`,

@@ -8,5 +8,5 @@
   Arturo's merge OK covers that. Never delete a branch by hand without explicit OK."
 - Ruleset 15985908 aplicado hoy con OK de Arturo: 13 checks requeridos (4 multilang-smoke,
   4 lint-and-test, wheel-leak-check, smoke-test, readme-parity, capabilities-check,
-  corpus-baseline). Rollback: `/workspace/ruleset-15985908-actual.json` (fuera del repo).
+  corpus-baseline). Rollback: copia local del ruleset (fuera del repo).
 - Solo docs; no se mergea sin OK.

@@ -4,8 +4,7 @@
   plan `plan-arreglos-hefesto` (2026-10-02). SEC-06 was PARTIAL in the
   2026-10-06 status audit (docs only); BUG-13 was OPEN.
 - **Branch:** `fix/sec06-action-telemetry-optin`, cut from `main` @ `21cee2b` (v4.14.0).
-- **Scope:** public repo only. The private receiver (`landing-page/api/telemetry.js`:
-  no auth or rate limit, `Number(exit_code) ?? null`, table missing from
+- **Scope:** public repo only. The hosted telemetry receiver (no auth or rate limit, `Number(exit_code) ?? null`, table missing from
   `schema.sql`) is not touched.
 
 ## Context
@@ -91,7 +90,7 @@
   notice.
 - The README says the CLI collects anonymous usage data by default; that is
   still accurate.
-- Private repo: the `/api/telemetry` receiver hardening (SEC-06 [pro]).
+- Server side: the `/api/telemetry` receiver hardening (SEC-06 [pro]).
 - Releases: users pinned to `@v4.14.0` or older still get the
   unconditional ping until they upgrade to a release that contains this fix.
 - `CHANGELOG.md`: the SEC-03 and SEC-05 PRs also add entries under

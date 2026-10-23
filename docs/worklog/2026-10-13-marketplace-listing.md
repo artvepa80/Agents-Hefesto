@@ -1,6 +1,6 @@
 # 2026-10-13 — Listing del Marketplace (hefesto-code-guardian)
 
-Auditoría de Hefesto Growth (documento interno de auditoría), verificada punto por punto.
+Auditoría interna del listing, verificada punto por punto.
 
 ## Verificado y aplicado
 
