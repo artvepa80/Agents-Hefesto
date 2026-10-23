@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **This repository's code-scanning upload leaves out `tests/`.** `tests/` holds inputs that are vulnerable on purpose (SQL and command injection strings, long or complex functions) so the analyzer's tests can assert on them, and they showed up as code-scanning alerts. The `hefesto-scan` job in `.github/workflows/hefesto.yml` now appends `tests/` to the `exclude` list of `.hefesto.yaml` in its own checkout before the Action runs (the Action has no exclude input). The committed `exclude` list is unchanged, so `hefesto analyze .` run locally and the changed-file gate still analyze `tests/` (except `tests/fixtures/`); `.hefesto.yaml` only gains a comment that `exclude` must stay its last key. `hefesto/`, `scripts/` and every other path are scanned as before, with the same SARIF category (`hefesto`) and tool name. On the same 4.20.3 scanner, the findings outside `tests/` are identical by rule, file, line and level (276 in `hefesto/`, 28 in `scripts/`) and the 16 in `tests/` drop to 0. Open alerts in `tests/` close as fixed after the next scan of `main`.
+
 ### Documentation
 
 - **Internal work logs are kept outside the public repository.** `docs/worklog/` is removed (it stays in the git history), `scripts/guard_public_repo.py` lists `docs/worklog/` in `FORBIDDEN_PATH_PREFIXES` so the guard fails if the folder comes back, and the allowlist entries for those files are gone. `CLAUDE.md` and the `hefestoai-language-learnings` skill no longer point contributors at `docs/worklog/`; skill entries cite the PR and commit instead.

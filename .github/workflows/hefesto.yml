@@ -8,7 +8,8 @@
 # reaches code scanning. To make this gate blocking, delete the
 # continue-on-error line. The blocking changed-file gate is dogfood.yml.
 #
-# Paths excluded from the scan live in .hefesto.yaml.
+# Paths excluded from the scan live in .hefesto.yaml. This scan also leaves
+# out tests/ (step "Leave tests/ out of code scanning" below).
 
 name: Hefesto
 
@@ -32,6 +33,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # tests/ holds inputs that are vulnerable on purpose (SQL and command
+      # injection strings, long or complex functions) so the analyzer's own
+      # tests can assert on them. They are not findings in shipped code, so
+      # they stay out of code scanning. The Action has no exclude input, so
+      # tests/ is appended to the exclude list of .hefesto.yaml in this job's
+      # checkout only. The committed list is unchanged, so local runs and the
+      # changed-file gate still analyze tests/ (except tests/fixtures/).
+      # Patterns are whole path components: tests/ matches a directory named
+      # tests at any depth; hefesto/ has none.
+      - name: Leave tests/ out of code scanning
+        run: |
+          tail -n 1 .hefesto.yaml | grep -q '^  - ' || {
+            echo "::error::.hefesto.yaml must end with its exclude list"
+            exit 1
+          }
+          printf '  - tests/\n' >> .hefesto.yaml
+          cat .hefesto.yaml
 
       - name: HefestoAI full scan
         # Floating major tag. Pin a commit if policy requires it:
