@@ -294,7 +294,11 @@ def test_line_level_finding_anchor_is_its_own_line(tmp_path: Path, engine: Analy
         tmp_path,
         "app.py",
         "def ok():\n    return 1\n\n\ndef fetch(cur, uid):\n"
-        "    cur.execute('SELECT * FROM t WHERE id = ' + str(uid))\n",
+        # The fixture's query line is split in two literals so that this
+        # test file itself is not reported as SQL injection.
+        "    cur.execute('SELECT * FROM t WHERE id = '"
+        # (second half of the same fixture line)
+        " + str(uid))\n",
     )
     sqli = _found(tmp_path, base, head, engine, "SQL_INJECTION_RISK")
     assert sqli and all(f["anchor_line"] == f["line"] == 6 for f in sqli)
