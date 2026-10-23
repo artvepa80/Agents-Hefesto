@@ -6,7 +6,7 @@
 - **Cause:** Ruff's defaults (line-length 88, other rules, whole tree) are not `.flake8` (100, `extend-ignore = E203, W503`, only `hefesto tests`).
 - **Fix:** `[tool.ruff]` line-length 100, py310, `select = E, W, F`, ignore `E203`, `E226`, `E24`, `extend-exclude = ["scripts", "examples"]`. Ruff rejects selectors it does not implement (`E121`, `W503`, ...).
 - **Official source:** https://docs.astral.sh/ruff/configuration/ ; https://flake8.pycqa.org/en/latest/user/options.html
-- **PR/commit:** #122 (`90aea1c`); `docs/worklog/2026-10-16-prepush-ruff-mypy.md`
+- **PR/commit:** #122 (`90aea1c`)
 - **Verified:** 4.20.0
 - **Status:** Fixed
 

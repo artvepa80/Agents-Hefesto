@@ -6,7 +6,7 @@
 - **Cause:** `JsonAnalyzer` shipped as a module, but no `LanguageSpec` routed `*.json` to it.
 - **Fix:** 4.20.0 dispatches JSON (and eight more formats). After the release, `config.json` with fake secrets gives "Found 1 file(s)" and 2 CRITICAL `HARDCODED_SECRET` with rule id J001.
 - **Official source:** n/a, internal behavior
-- **PR/commit:** #124 (`4bb568f`), released in 4.20.0 (`ea260bc`); `docs/worklog/2026-10-16-release-4.20.0.md`
+- **PR/commit:** #124 (`4bb568f`), released in 4.20.0 (`ea260bc`, #126)
 - **Verified:** 4.20.0 from PyPI in a fresh venv (2026-10-16)
 - **Status:** Fixed
 

@@ -13,7 +13,6 @@
 LICENSE-COMMERCIAL.md hefesto-pro
 README.md hefesto-pro
 docs/PRO_OPTIONAL_FEATURES.md hefesto-pro
-docs/worklog/2026-10-10-cli-activate-variable-entorno.md hefesto-pro
 
 # Release history: past entries are not rewritten.
 CHANGELOG.md hefesto-pro
@@ -29,18 +28,7 @@ CLAUDE.md memory-md
 CLAUDE.md private-repo-mention
 README.md private-repo-mention
 
-# Pre-existing docs and worklogs that name private paths for context.
+# Pre-existing docs that name private paths for context.
 # Candidates for a later cleanup PR; kept so the scan can land without rewriting history.
 docs/INTEGRATION.md iris-path
 docs/telemetry.md swarm-path
-docs/worklog/2026-10-06-sec03-path-segments.md swarm-path
-docs/worklog/2026-10-10-correcciones-precision-pr84-88.md memory-md
-docs/worklog/2026-10-11-preparacion-4.16.0.md memory-md
-docs/worklog/2026-10-15-cli-pro-notices.md swarm-path
-
-# Worklogs that say only that a private repository exists ("repo privado"),
-# or use the words in GitHub's sense. No paths, PR numbers or names (2026-10-22).
-docs/worklog/2026-10-10-cli-activate-variable-entorno.md private-repo-mention
-docs/worklog/2026-10-12-release-4.16.0.md private-repo-mention
-docs/worklog/2026-10-13-cobol016-platform-layout.md private-repo-mention
-docs/worklog/2026-10-15-server-json-registro-mcp.md private-repo-mention

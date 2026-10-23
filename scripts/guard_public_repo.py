@@ -15,8 +15,15 @@ and the allowlist are not scanned: they hold the patterns themselves.
 
 Paths listed in FORBIDDEN_PATH_PREFIXES must not exist in the tree at all.
 
+With --check-commits <base>..<head> it checks commit metadata instead: the
+author, committer and every Co-authored-by line of each commit in the range
+must not name an internal agent (same name digests as the file scan). The
+allowed automation trailer is ALLOWED_TRAILER; human contributors' own
+trailers pass.
+
 Run in CI or locally:
   python scripts/guard_public_repo.py
+  python scripts/guard_public_repo.py --check-commits origin/main..HEAD
 """
 
 from __future__ import annotations
@@ -24,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import subprocess
 import sys
 import unicodedata
 from collections.abc import Iterator
@@ -212,9 +220,9 @@ GUARD_SELF_FILES = frozenset(
     }
 )
 
-# Repository-relative path prefixes that must not exist in the public tree
-# (for example internal logs). Empty for now; add a prefix to block it.
-FORBIDDEN_PATH_PREFIXES: tuple[str, ...] = ()
+# Repository-relative path prefixes that must not exist in the public tree.
+# Internal work logs and handoffs are kept outside the public repository.
+FORBIDDEN_PATH_PREFIXES: tuple[str, ...] = ("docs/worklog/",)
 
 SKIP_DIRS = {
     ".git",
@@ -336,7 +344,85 @@ def check_forbidden_paths(
     return errors
 
 
-def main() -> int:
+# Only co-author trailer used by the maintainer's automation in public commits.
+ALLOWED_TRAILER = "Co-authored-by: HefestoAI <noreply@narapallc.com>"
+
+# Commits pushed before the trailer rule (2026-10-22) that are not rewritten.
+PUBLISHED_BEFORE_TRAILER_RULE = frozenset({"71b844fe72a53588f49cf63d88adb5663280826c"})
+
+_COAUTHOR = re.compile(r"^\s*co-authored-by:\s*(.*?)\s*<([^>]*)>", re.IGNORECASE)
+_EMAIL_SEPARATORS = re.compile(r"[._+\-]+")
+_FIELD, _RECORD = "\x1f", "\x1e"
+
+
+def _identity_has_agent_name(name: str, email: str) -> bool:
+    local = email.split("@", 1)[0]
+    return any(find_agent_name(t) for t in (name, _EMAIL_SEPARATORS.sub(" ", local)))
+
+
+def _commit_identities(author: str, committer: str, body: str) -> Iterator[tuple[str, str]]:
+    yield "author", author
+    yield "committer", committer
+    for line in body.splitlines():
+        m = _COAUTHOR.match(line)
+        if m:
+            yield "Co-authored-by", f"{m.group(1)} <{m.group(2)}>"
+
+
+def check_commit_metadata(records: list[tuple[str, str, str, str]]) -> list[str]:
+    """Flag commits whose author, committer or co-author names an internal agent.
+
+    Each record is ``(sha, "name <email>" author, "name <email>" committer, body)``.
+    """
+    errors: list[str] = []
+    for sha, author, committer, body in records:
+        if sha in PUBLISHED_BEFORE_TRAILER_RULE:
+            continue
+        for role, ident in _commit_identities(author, committer, body):
+            name, _, email = ident.rpartition("<")
+            if _identity_has_agent_name(name.strip(), email.rstrip(">")):
+                errors.append(f"COMMIT {sha[:12]}: {role} names an internal agent")
+    return errors
+
+
+def read_commits(rev_range: str, cwd: Path = REPO_ROOT) -> list[tuple[str, str, str, str]]:
+    """Read ``(sha, author, committer, body)`` for every commit in ``rev_range``."""
+    fmt = _FIELD.join(["%H", "%an <%ae>", "%cn <%ce>", "%B"]) + _RECORD
+    out = subprocess.run(
+        ["git", "log", "--no-merges", f"--format={fmt}", rev_range, "--"],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    records = []
+    for chunk in out.split(_RECORD):
+        parts = chunk.strip("\n").split(_FIELD)
+        if len(parts) == 4:
+            records.append((parts[0], parts[1], parts[2], parts[3]))
+    return records
+
+
+def _report(errors: list[str], ok: str) -> int:
+    if errors:
+        print(f"\nFAILED — {len(errors)} leak(s) detected:\n")
+        for e in errors:
+            print(f"  - {e}")
+        print()
+        return 1
+    print(f"\n{ok}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    if args[:1] == ["--check-commits"] and len(args) == 2:
+        records = read_commits(args[1])
+        print(f"Checking {len(records)} commit(s) in {args[1]}")
+        return _report(check_commit_metadata(records), "PASSED — commit metadata is clean.")
+    if args:
+        print("usage: guard_public_repo.py [--check-commits <base>..<head>]")
+        return 2
     print("=" * 60)
     print("HEFESTO PUBLIC REPO GUARD")
     print("=" * 60)
@@ -347,16 +433,7 @@ def main() -> int:
     all_errors.extend(check_banned_identifiers())
     all_errors.extend(check_markdown_leaks())
     all_errors.extend(check_forbidden_paths())
-
-    if all_errors:
-        print(f"\nFAILED — {len(all_errors)} leak(s) detected:\n")
-        for e in all_errors:
-            print(f"  - {e}")
-        print()
-        return 1
-
-    print("\nPASSED — no paid code leaks detected.")
-    return 0
+    return _report(all_errors, "PASSED — no paid code leaks detected.")
 
 
 if __name__ == "__main__":

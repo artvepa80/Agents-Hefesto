@@ -40,6 +40,18 @@ jobs:
       - name: Guard (public repo boundary)
         run: python scripts/guard_public_repo.py
 
+      - name: Commit metadata (PR range)
+        # Commit authors and Co-authored-by trailers in the PR must not name
+        # internal agents. Fetch the base branch's commit history only (no
+        # trees or blobs) so the shallow checkout can compute the range.
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --unshallow --filter=tree:0 origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          python scripts/guard_public_repo.py --check-commits "origin/${BASE_REF}..${HEAD_SHA}"
+
       - name: Mypy (blocking)
         run: python -m mypy hefesto --ignore-missing-imports
 

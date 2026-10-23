@@ -16,6 +16,8 @@ On start of ANY task or session, the agent MUST read these files in order:
 5. `README.md` (public-facing docs, version badge, feature table)
 6. `task.md` and `walkthrough.md` (if present — task-specific context)
 
+Internal work logs and handoffs are kept outside this public repository; do not add them here (the guard rejects `docs/worklog/`).
+
 Do NOT skip this step. Do NOT guess project state from memory.
 
 ### Socratic-Adaptive Method (MSA)
@@ -55,7 +57,7 @@ After completing ANY non-trivial work:
 
 - [ ] Update impacted docs (at minimum `CHANGELOG.md`; `README.md` if version/features changed).
 - [ ] Run repo verification (the CI `lint-and-test` steps in the same order, with `pip install -e ".[dev,lint]"`; the "Check Docs Emails" grep step of CI is left out here): `python scripts/guard_public_repo.py && ruff check && python -m mypy hefesto --ignore-missing-imports && python -m black --check hefesto tests && python -m isort --check-only hefesto tests && python -m flake8 hefesto tests && python scripts/verify_capabilities.py && python scripts/verify_readme.py && python scripts/verify_server_json.py && HEFESTO_TELEMETRY=0 python -m pytest -q -m "not integration and not slow"`
-- [ ] Commit with Conventional Commits format, then push the branch.
+- [ ] Commit with Conventional Commits format, then push the branch. Commits made with the maintainer's tooling use the maintainer's GitHub noreply address as author and carry only the trailer `Co-authored-by: HefestoAI <noreply@narapallc.com>`; no other tool or automation co-author trailers (CI checks the PR's commits with `python scripts/guard_public_repo.py --check-commits <base>..<head>`).
 - [ ] Never run a destructive or irreversible operation without Arturo's explicit OK first, every time: moving or deleting tags; deleting or archiving repositories, branches, releases or tags; changing repository visibility. Do not request broader token scopes (e.g. `delete_repo`) to get around a refusal; stop and ask. For tags, the single exception is the tag `v4`, the floating alias of the 4.x line used as `artvepa80/Agents-Hefesto@v4`, which `release.yml` force-moves to each new v4.x.y release. No other tag moves: not exact version tags (`v4.15.1`, ...), and no other alias exists or may be created without explicit approval.
 - [ ] PR head branches are deleted by the repository's auto-delete setting when a PR is merged; Arturo's merge OK covers that. Never delete a branch by hand without explicit OK.
 - [ ] Update `MEMORY.md` if project status changed (new blockers, resolved items, version bumps).
@@ -315,7 +317,7 @@ If infrastructure (not the change under review) breaks a required check of the `
 2. Set the ruleset enforcement to disabled.
 3. Merge the fix PR (squash).
 4. Re-enable the ruleset right away and confirm it is active with the same required checks.
-5. Log it in the worklog: time (Lima), reason, PR, who approved, and when enforcement was restored.
+5. Log it in the internal work log (kept outside this repository): time (Lima), reason, PR, who approved, and when enforcement was restored.
 
 ---
 

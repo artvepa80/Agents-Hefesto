@@ -36,6 +36,6 @@
 - **Cause:** `import black as black_module` redefined the constructor parameter `black_module`.
 - **Fix:** load Black with `importlib.import_module("black")` inside `try/except ImportError`, returning `types.ModuleType`. No `# type: ignore` (if silenced, the first definition wins).
 - **Official source:** https://mypy.readthedocs.io/en/stable/error_code_list.html#check-that-each-name-is-defined-once-no-redef
-- **PR/commit:** #122 (`90aea1c`); `docs/worklog/2026-10-16-prepush-ruff-mypy.md`
+- **PR/commit:** #122 (`90aea1c`)
 - **Verified:** 4.20.0 (2026-10-16)
 - **Status:** Fixed
