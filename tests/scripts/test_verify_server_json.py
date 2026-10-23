@@ -63,7 +63,7 @@ def test_committed_document_names_the_public_repo_and_the_closed_server(mod, com
 def test_public_docs_state_the_hosted_server_is_closed_source():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     discovery = (ROOT / "docs" / "ai-discovery.md").read_text(encoding="utf-8")
-    integration = (ROOT / "skill" / "integration.md").read_text(encoding="utf-8")
+    integration = (ROOT / "skills" / "hefestoai" / "integration.md").read_text(encoding="utf-8")
     for text in (readme, discovery, integration):
         assert HOSTED_SENTENCE in text
     assert "keeps `repository` on this public repository" in readme
