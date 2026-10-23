@@ -230,7 +230,7 @@ hefesto pr-review --strict
 **How it works:**
 1. Parses `git diff` between base and head (auto-detects `origin/main` or `GITHUB_BASE_REF`)
 2. Runs the full analyzer suite on touched files only
-3. Filters findings to changed lines (default) or full files (`--strict`)
+3. Filters findings to changed lines (default) or full files (`--strict`). A function-level finding (complexity, long function, deep nesting) is reported on the `def` line and counts as changed when any added line falls inside the function. Its `line` stays on the `def` line, so the dedup key does not move, and `anchor_line` is the added line that inline comments go on (`null` outside a hunk)
 4. Emits JSON with SHA256 dedup keys for each finding
 
 **GitHub Actions workflow templates** are provided under [`examples/github-actions/`](examples/github-actions/):

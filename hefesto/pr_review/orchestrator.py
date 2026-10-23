@@ -11,7 +11,12 @@ Contract:
   enforcement against existing PR comments.
 
 Default filtering: findings are reported **only** when their line falls
-inside a hunk from the diff. Strict mode additionally surfaces findings
+inside a hunk from the diff. A function-level finding (complexity, long
+function, deep nesting) is reported on the ``def`` line and carries the
+function's last line as ``end_line``; it counts as in the hunk when any
+added line falls between the two. ``line`` stays the ``def`` line so the
+dedup key is stable, and ``anchor_line`` names the added line an inline
+comment is posted on. Strict mode additionally surfaces findings
 anywhere in the touched files (file-level context). Project-level
 findings (operational truth, CI parity) are filtered to the set of
 touched files to avoid leaking findings anchored to files the PR does
@@ -232,7 +237,8 @@ def _filter_and_serialize(
         diff_lines = changed_line_map.get(rel_path, set())
 
         for issue in file_result.issues:
-            in_hunk = issue.line in diff_lines
+            anchor_line = _hunk_anchor(issue, diff_lines)
+            in_hunk = anchor_line is not None
             if not in_hunk and not strict:
                 # Default policy: only changed-line findings surface.
                 # Strict mode additionally surfaces file-level context.
@@ -250,12 +256,29 @@ def _filter_and_serialize(
                     "code_snippet": issue.code_snippet,
                     "dedup_key": compute_dedup_key(issue, relative_path=rel_path),
                     "in_hunk": in_hunk,
+                    "anchor_line": anchor_line,
                     "engine": issue.engine,
                     "rule_id": issue.rule_id,
                 }
             )
 
     return out
+
+
+def _hunk_anchor(issue, diff_lines: set) -> Optional[int]:
+    """The added line an inline comment for ``issue`` goes on, else ``None``.
+
+    ``issue.line`` itself when it was added. For a function-level finding
+    (``end_line`` after ``line``), the first added line inside the
+    function. Deletions have no new-side line and never anchor.
+    """
+    if issue.line in diff_lines:
+        return int(issue.line)
+    end_line = getattr(issue, "end_line", None)
+    if not isinstance(end_line, int) or end_line <= issue.line:
+        return None
+    inside = [n for n in diff_lines if issue.line <= n <= end_line]
+    return min(inside) if inside else None
 
 
 def _relative_path(abs_path: str, project_root: Path) -> str:
