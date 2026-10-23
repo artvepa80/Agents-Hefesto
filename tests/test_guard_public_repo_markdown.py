@@ -133,11 +133,11 @@ def synthetic_agents(monkeypatch: pytest.MonkeyPatch) -> None:
     ],
 )
 def test_agent_names_are_flagged(tmp_path: Path, synthetic_agents: None, text: str) -> None:
-    _write(tmp_path, "docs/worklog/x.md", f"# Log\n\n{text}\n")
+    _write(tmp_path, "docs/notes/x.md", f"# Log\n\n{text}\n")
     errors = guard.check_markdown_leaks(tmp_path, allowlist=set())
     assert errors, text
     assert "'agent-name'" in errors[0]
-    assert "docs/worklog/x.md:3" in errors[0]
+    assert "docs/notes/x.md:3" in errors[0]
 
 
 @pytest.mark.parametrize(
@@ -206,6 +206,95 @@ def test_forbidden_path_prefixes(tmp_path: Path) -> None:
     assert guard.check_forbidden_paths(tmp_path, prefixes=()) == []
 
 
+def test_internal_logs_are_a_forbidden_path(tmp_path: Path) -> None:
+    assert "docs/worklog/" in guard.FORBIDDEN_PATH_PREFIXES
+    _write(tmp_path, "docs/worklog/2026-01-01-x.md", "notes\n")
+    _write(tmp_path, "docs/worklog.md", "not a log folder\n")
+    _write(tmp_path, "docs/guide.md", "see the work log\n")
+    errors = guard.check_forbidden_paths(tmp_path)
+    assert errors == ["FORBIDDEN PATH exists: docs/worklog/2026-01-01-x.md"]
+
+
+def test_allowlist_has_no_entries_under_forbidden_paths() -> None:
+    allow = guard.load_markdown_allowlist(guard.MARKDOWN_ALLOWLIST)
+    stale = sorted(rel for rel, _ in allow if rel.startswith(guard.FORBIDDEN_PATH_PREFIXES))
+    assert stale == []
+
+
 def test_agent_name_rule_can_be_allowlisted(tmp_path: Path, synthetic_agents: None) -> None:
     _write(tmp_path, "docs/x.md", "Zeta Relay\n")
     assert guard.check_markdown_leaks(tmp_path, allowlist={("docs/x.md", "agent-name")}) == []
+
+
+# --- commit metadata (--check-commits) ---------------------------------------
+
+MAINTAINER = "artvepa80 <218700788+artvepa80@users.noreply.github.com>"
+
+
+def _commit(body: str, author: str = MAINTAINER, sha: str = "a" * 40) -> tuple:
+    return (sha, author, MAINTAINER, body)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        f"docs: x\n\n{guard.ALLOWED_TRAILER}\n",
+        "fix: y\n\nCo-authored-by: Jane Doe <jane@example.com>\n",
+        "fix: z\n\nCo-authored-by: octo <12345+octo@users.noreply.github.com>\n",
+        "chore: no trailer\n",
+    ],
+)
+def test_allowed_commit_trailers_pass(synthetic_agents: None, body: str) -> None:
+    assert guard.check_commit_metadata([_commit(body)]) == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "docs: x\n\nCo-authored-by: Zeta Relay <bot@example.com>\n",
+        "docs: x\n\nco-authored-by: Someone <zeta.relay@users.noreply.github.com>\n",
+        "docs: x\n\nCo-Authored-By: QuokkaBot <noreply@example.com>\n",
+    ],
+)
+def test_agent_co_author_trailers_fail(synthetic_agents: None, body: str) -> None:
+    errors = guard.check_commit_metadata([_commit(body)])
+    assert errors == ["COMMIT aaaaaaaaaaaa: Co-authored-by names an internal agent"]
+
+
+def test_agent_author_fails(synthetic_agents: None) -> None:
+    errors = guard.check_commit_metadata([_commit("x\n", author="quokkabot <q@example.com>")])
+    assert errors == ["COMMIT aaaaaaaaaaaa: author names an internal agent"]
+
+
+def test_commits_published_before_the_rule_are_skipped(synthetic_agents: None) -> None:
+    (old,) = guard.PUBLISHED_BEFORE_TRAILER_RULE
+    body = "x\n\nCo-authored-by: Zeta Relay <bot@example.com>\n"
+    assert guard.check_commit_metadata([_commit(body, sha=old)]) == []
+
+
+def test_allowed_trailer_names_no_agent() -> None:
+    assert guard.check_commit_metadata([_commit(f"x\n\n{guard.ALLOWED_TRAILER}\n")]) == []
+
+
+def test_read_commits_and_cli(tmp_path: Path, synthetic_agents: None, monkeypatch) -> None:
+    import subprocess
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.name", "Dev")
+    git("config", "user.email", "dev@example.com")
+    git("commit", "-q", "--allow-empty", "-m", "base")
+    git("commit", "-q", "--allow-empty", "-m", "ok\n\nCo-authored-by: Jane <j@example.com>")
+    git("commit", "-q", "--allow-empty", "-m", "bad\n\nCo-authored-by: Zeta Relay <z@example.com>")
+    records = guard.read_commits("HEAD~2..HEAD", cwd=tmp_path)
+    assert [r[3].splitlines()[0] for r in records] == ["bad", "ok"]
+    assert records[0][1] == "Dev <dev@example.com>"
+    assert len(guard.check_commit_metadata(records)) == 1
+    assert guard.check_commit_metadata(guard.read_commits("HEAD~2..HEAD~1", cwd=tmp_path)) == []
+    monkeypatch.setattr(guard, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(guard.read_commits, "__defaults__", (tmp_path,))
+    assert guard.main(["--check-commits", "HEAD~2..HEAD"]) == 1
+    assert guard.main(["--check-commits", "HEAD~2..HEAD~1"]) == 0
+    assert guard.main(["--bogus"]) == 2

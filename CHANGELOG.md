@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Internal work logs are kept outside the public repository.** `docs/worklog/` is removed (it stays in the git history), `scripts/guard_public_repo.py` lists `docs/worklog/` in `FORBIDDEN_PATH_PREFIXES` so the guard fails if the folder comes back, and the allowlist entries for those files are gone. `CLAUDE.md` and the `hefestoai-language-learnings` skill no longer point contributors at `docs/worklog/`; skill entries cite the PR and commit instead.
+- **Commit trailer rule and check.** Public commits made with the maintainer's tooling carry only `Co-authored-by: HefestoAI <noreply@narapallc.com>` (`CLAUDE.md`, `CONTRIBUTING.md`, `docs/CLAUDE_HEFESTO.md`). `python scripts/guard_public_repo.py --check-commits <base>..<head>` fails when a commit's author, committer or `Co-authored-by` line names an internal automation identity (same hashed names as the file scan); human co-authors pass. New CI job `commit-metadata` runs it on pull requests over `origin/<base branch>..<PR head>` with full history. One commit pushed before the rule is listed in the guard and not rewritten.
+
 ## [4.20.3] - 2026-10-23
 
 ### Added

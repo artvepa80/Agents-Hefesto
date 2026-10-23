@@ -6,7 +6,7 @@
 - **Cause:** GitHub is moving runners to Node 24.
 - **Fix:** first Node 24 majors: `actions/checkout` v5, `actions/setup-python` v6, `actions/upload-artifact` v6 (v5 still defaulted to Node 20), `actions/cache` v5; `codecov/codecov-action` v5 is composite.
 - **Official source:** https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-- **PR/commit:** #127 (`fc9d072`); `docs/worklog/2026-10-16-node24-actions.md`
+- **PR/commit:** #127 (`fc9d072`)
 - **Verified:** 2026-10-16
 - **Status:** Fixed
 
@@ -26,7 +26,7 @@
 - **Cause:** runner-images rolls out 26.04 as `ubuntu-latest` from Oct 19 to Nov 19, 2026.
 - **Fix:** stay on `ubuntu-latest`; the 26.04 image has every Python in our matrices. Pin `ubuntu-24.04` only if a job breaks.
 - **Official source:** https://github.com/actions/runner-images/issues/14748
-- **PR/commit:** #127 (`fc9d072`); `docs/worklog/2026-10-16-node24-actions.md`
+- **PR/commit:** #127 (`fc9d072`)
 - **Verified:** 2026-10-16
 - **Status:** Open (watch the rollout)
 
@@ -36,7 +36,7 @@
 - **Cause:** the `gh` OAuth token lacked the `workflow` scope.
 - **Fix:** the owner grants it or pushes; agents do not request broader scopes themselves.
 - **Official source:** https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
-- **PR/commit:** `docs/worklog/2026-10-16-node24-actions.md`; #127
+- **PR/commit:** #127 (`fc9d072`)
 - **Verified:** 2026-10-16
 - **Status:** Workaround
 

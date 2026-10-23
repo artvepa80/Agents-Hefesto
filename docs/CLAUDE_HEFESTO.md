@@ -216,6 +216,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
   ```
 - **GH-2 (SHOULD NOT)** Refer to Claude/AI in commit messages
 - **GH-3 (MUST)** Include domain context in commit scope
+- **Commit trailers (MUST)** Public commits made with the maintainer's tooling carry only `Co-authored-by: HefestoAI <noreply@narapallc.com>` as co-author trailer; no other tool or automation trailers. CI checks this with `python scripts/guard_public_repo.py --check-commits <base>..<head>`.
 
 ### 🚀 **Deployment Requirements**
 - **GH-4 (MUST)** All releases require full test suite passing

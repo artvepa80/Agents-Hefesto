@@ -47,8 +47,9 @@ Every entry uses exactly these fields:
 
 ## Adding an entry
 
-1. Only add something that happened in these repos and is written down: a CHANGELOG entry, a
-   worklog in `docs/worklog/`, a PR or a commit. Do not add guesses or general advice.
+1. Only add something that happened in these repos and is written down: a CHANGELOG entry, a PR
+   or a commit. Do not add guesses or general advice. Internal work logs are kept outside this
+   repository and are not valid sources for the public copy.
 2. Open the source file or commit and check the claim before writing it. Cite it in **PR/commit**.
 3. Link the upstream documentation you used in **Official source**. If the behavior is our own
    code, say so.
@@ -75,7 +76,7 @@ Part of the release checklist, before tagging:
 
 ## Sources used to seed this skill
 
-Public copy: `CHANGELOG.md`, `docs/cobol.md`, `docs/worklog/` and the public PRs and commits cited
+Public copy: `CHANGELOG.md`, `docs/cobol.md` and the public PRs and commits cited
 in each entry. Seeded 2026-10-16 with hefesto-ai 4.20.0. Every public entry must be checkable from
 this repository alone; private files, private PRs and agent handoffs outside the repo are not valid
 sources here.
@@ -92,7 +93,7 @@ so they are left out (same standard for all of them):
    observation, because its rate-limit check depends on a stable IP).
 5. pre-commit `types: [python]` behavior (no config file in the repo shows it).
 
-Add any of them only once a worklog, CHANGELOG entry, PR or commit records it.
+Add any of them only once a CHANGELOG entry, PR or commit records it.
 
 ## Where this skill lives
 

@@ -124,6 +124,8 @@ refactor: Refactor code
 chore: Update dependencies
 ```
 
+Co-author trailers: your own `Co-authored-by` lines for people who worked on the change are welcome. Commits made with the maintainer's tooling carry only `Co-authored-by: HefestoAI <noreply@narapallc.com>`. CI rejects commits whose author or co-author names an internal automation identity (`python scripts/guard_public_repo.py --check-commits origin/main..HEAD`).
+
 ## 🔒 Security
 
 For security vulnerabilities:
