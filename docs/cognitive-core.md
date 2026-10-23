@@ -22,7 +22,7 @@ verification side.
 | Layer | In Hefesto terms | What it must do |
 |-------|------------------|-----------------|
 | **Core** | Decision and verification rules (analyzers, severities, exit codes, hooks) | Decide pass/fail from evidence; never invent green |
-| **Memory** | README, [`skill/SKILL.md`](../skill/SKILL.md), repo files, CI logs, analyze reports | Be looked up, not guessed |
+| **Memory** | README, [`skills/hefestoai/SKILL.md`](../skills/hefestoai/SKILL.md), repo files, CI logs, analyze reports | Be looked up, not guessed |
 
 Agents must **force lookup**: run `hefesto analyze` (and read the report) before
 claiming the tree is clean. That gate is now explicit in the public skill docs
@@ -33,7 +33,7 @@ truth check.
 
 ## Skills as cartridges
 
-Treat `skill/` as progressive-disclosure cartridges: a short task prompt plus
+Treat `skills/hefestoai/` as progressive-disclosure cartridges: a short task prompt plus
 pointers to truth files (`commands.md`, `issue_types.md`, analyzers, hooks).
 Load only what the task needs. Do not paste the whole catalog into every
 session. Same pattern as [#53]: discoverable frontmatter, then deeper docs on
@@ -71,5 +71,5 @@ positives.
 
 ## See also
 
-- [`skill/SKILL.md`](../skill/SKILL.md) — agent discovery + analyze-before-commit
+- [`skills/hefestoai/SKILL.md`](../skills/hefestoai/SKILL.md) — agent discovery + analyze-before-commit
 - [`docs/ai-discovery.md`](ai-discovery.md) — MCP / guardrail discovery surface

@@ -1,70 +1,17 @@
----
-name: HefestoAI
-description: >-
-  Run HefestoAI before committing AI-generated code: pre-commit / CI quality
-  gate for semantic drift, security, and reliability. Use when the user asks
-  about Hefesto, code quality gates, semantic drift, install hooks, or
-  validating Claude/Codex/Cursor output before commit.
----
+# HefestoAI skill: moved
 
-# HefestoAI — verify before commit
+The HefestoAI agent skill moved to [`skills/hefestoai/`](../skills/hefestoai/SKILL.md)
+(`name: hefestoai`, following the [Agent Skills specification](https://agentskills.io/specification)).
+Its reference docs (`commands.md`, `issue_types.md`, `integration.md`,
+`semantic_drift.md`, `reliability_drift.md` and `analysis/`) moved with it.
 
-HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
-code.
+The Hefesto Code Gate skills for Claude Code, Codex and Cursor now live in
+[artvepa80/hefesto-code-gate](https://github.com/artvepa80/hefesto-code-gate)
+(v1.0.0). Install in Claude Code:
 
-Package: `hefesto-ai` (PyPI) | Version: 4.20.3 | License: MIT | Python >= 3.10
+```text
+/plugin marketplace add artvepa80/hefesto-code-gate
+/plugin install hefesto-code-gate@hefestoai
+```
 
-## Required workflow (do this before commit)
-
-1. Ensure the tool is installed: `pip install hefesto-ai` (or confirm `hefesto` is on PATH).
-2. Analyze the repo or changed paths:
-   ```bash
-   hefesto analyze . --fail-on HIGH
-   ```
-3. If exit code is not `0`, fix the reported issues (or ask the user) before committing.
-4. Prefer a hook for every commit: add the `hefesto-analyze` pre-commit hook to the project's `.pre-commit-config.yaml` (it checks Python files only), then run `pre-commit install`:
-   ```yaml
-   repos:
-     - repo: https://github.com/artvepa80/Agents-Hefesto
-       rev: v4.20.3
-       hooks:
-         - id: hefesto-analyze
-   ```
-   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes the staged files (their working-tree copy) with the Python that installed it; it exits 1 if it installed nothing or `core.hooksPath` is set.
-
-Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
-
-## When this skill applies
-
-- User asks to commit, open a PR, or “ship” after AI edits
-- User mentions HefestoAI, semantic drift, pre-commit quality, or AI code review
-- Integrating with Claude Code, Cursor, Codex, or CI
-
-## Progressive docs (load only what you need)
-
-| File | Contents |
-|------|----------|
-| [commands.md](commands.md) | CLI flags, workflows, exit codes |
-| [issue_types.md](issue_types.md) | Issue catalog and severities |
-| [semantic_drift.md](semantic_drift.md) | Semantic drift detection |
-| [reliability_drift.md](reliability_drift.md) | RELIABILITY_* rules |
-| [integration.md](integration.md) | Hooks, CI/CD, MCP |
-| [analysis/SKILL.md](analysis/SKILL.md) | Interpret analyze output |
-
-## Architecture (short)
-
-**Phase 0 — static** (always): complexity, smells, security, best practices, resource safety; plus the DevOps and cloud analyzers `hefesto analyze` runs (YAML, Shell, Dockerfile, Terraform, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm, Serverless).
-
-**Phase 1 — ML semantic** (PRO/OMEGA): embeddings when `HEFESTO_TIER=professional` or `omega`.
-
-Languages: Python, JS/TS, Java, Go, Rust, C#, YAML, Shell, Dockerfile, Terraform/HCL, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, Serverless.
-
-## MCP (optional)
-
-Registry `io.github.artvepa80/hefestoai` · `npx @smithery/cli@latest mcp add artvepa80/hefestoai`
-
-## Rules
-
-- Never claim “all checks pass” without a fresh `hefesto analyze` exit `0`.
-- Do not skip the gate to manufacture a green commit.
-- Prefer dedicated Hefesto CLI over reinventing the same checks in the shell.
+Requires `hefesto-ai>=4.20.3,<5`.

@@ -1,6 +1,6 @@
 """The Claude Code integration guide must match what Claude Code and the CLI accept.
 
-``skill/integration.md`` used to tell users to put a ``streamable-http`` server in
+``skills/hefestoai/integration.md`` used to tell users to put a ``streamable-http`` server in
 ``~/.claude/mcp_servers.json``, which Claude Code does not read. These checks keep
 the corrected MCP config, and make sure every CLI flag the guide relies on exists.
 """
@@ -11,7 +11,7 @@ from pathlib import Path
 
 from hefesto.cli.main import cli
 
-DOC = Path(__file__).resolve().parent.parent / "skill" / "integration.md"
+DOC = Path(__file__).resolve().parent.parent / "skills" / "hefestoai" / "integration.md"
 
 
 def _text() -> str:

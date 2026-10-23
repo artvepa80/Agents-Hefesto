@@ -7,7 +7,7 @@ description: Verified lessons from building and running HefestoAI, grouped by la
 
 Short, verified notes on things that went wrong (or nearly did) in HefestoAI, with the fix and an
 official source. This is an engineering skill for contributors and agents. It is **not** the
-customer-facing product skill in `skill/` at the repo root; leave that one alone.
+customer-facing product skill in `skills/hefestoai/`; leave that one alone.
 
 ## When to use
 

@@ -46,7 +46,7 @@ _CURRENT_COPY = (
     "docs/telemetry.md",
     "hefesto/cli/main.py",
     "hefesto/cli/growth.py",
-    "skill/commands.md",
+    "skills/hefestoai/commands.md",
 )
 
 
