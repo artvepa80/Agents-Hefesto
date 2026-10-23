@@ -19,7 +19,7 @@ La activación real es la variable de entorno `HEFESTO_LICENSE_KEY`, que lee `he
 
 - Tests nuevos en `tests/test_cli_pro_required_message.py` (activate con y sin Pro, formato inválido, deactivate, status con y sin licencia, la clave nunca se imprime entera).
 - Prueba manual con el wheel 3.9.1 instalado: `status` muestra "Pro package: installed".
-- Va junto con el PR privado de entrega manual (#115), que ya no menciona `hefesto activate`.
+- Va junto con el cambio del email de entrega manual, que ya no menciona `hefesto activate`.
 
 ## Agregado: `GIT_DIR` en el hook pre-push
 

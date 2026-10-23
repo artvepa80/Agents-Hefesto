@@ -4,9 +4,8 @@
   public-repo part. Still open in the 2026-10-06 status audit
   (`html_reporter.py:263,270,274`).
 - **Branch:** `fix/sec05-html-report-xss`, cut from `main` @ `21cee2b` (v4.14.0).
-- **Scope:** `hefesto/reports/html_reporter.py` (public repo). The private
-  repo's part of SEC-05 (`landing-page/lib/resend.js`, `api/subscribe.js`) is
-  not touched here.
+- **Scope:** `hefesto/reports/html_reporter.py` (public repo). The server-side
+  part of SEC-05 (the subscribe email) is not touched here.
 
 ## Context
 
@@ -69,7 +68,7 @@ could also break out of an attribute.
   would be a second layer, left out to keep this change minimal.
 - The plan's alternative (Jinja2 with `autoescape=True`) was not used:
   `jinja2` is declared but unused (BUG-04), and `html.escape` is enough here.
-- Private repo SEC-05 (HTML injection in the subscribe email, rate limit
+- Server-side SEC-05 (HTML injection in the subscribe email, rate limit
   keyed on raw `x-forwarded-for`) is still open.
 - `CHANGELOG.md`: the SEC-03 and SEC-06 PRs also add entries under
   `[Unreleased]` → `### Security`. Whichever merges second hits a trivial

@@ -31,6 +31,6 @@ Los 6 JSON que ya no se abren en serverless son `package-lock.json`. Quedan HELM
 
 ## Qué queda fuera
 
-- La tarjeta del landing privado (`landing-page/api/agent-card.js`) compara este `.well-known/agent-card.json`. Hay que actualizarla o el test de paridad del repo privado falla. Este PR no puede tocar ese repo.
+- La tarjeta de la landing compara este `.well-known/agent-card.json`. Hay que actualizarla o su test de paridad falla. Este PR no toca la landing.
 - `ArmAnalyzer` sigue sin analizar YAML y sin recorrer `resources` como objeto (`languageVersion` 2.0).
 - No se inventó J003 ni el catálogo de PSScriptAnalyzer.

@@ -1,11 +1,10 @@
 """Machine-readable positioning says "release truth engine" with verified figures.
 
 The agent card is served twice: from this repo (.well-known/agent-card.json)
-and by the landing (private repo, landing-page/api/agent-card.js). The private
-repo's tests/landing_js/agent-card-parity.test.mjs deep-compares its card with
-this file on main, so change both together. CANONICAL_DESCRIPTION is pinned
-here and in that private test. This PR cannot edit the private repo: the
-landing card must pick up "runs all 22" or that parity test fails.
+and by the hosted landing page. The landing's own parity test deep-compares
+its card with this file on main, so change both together.
+CANONICAL_DESCRIPTION is pinned here and in that parity test: the landing card
+must pick up "runs all 22" or that parity test fails.
 """
 
 import json

@@ -72,7 +72,7 @@ def test_public_docs_state_the_hosted_server_is_closed_source():
 
 def test_check_document_rejects_a_private_repository(mod, committed):
     document = json.loads(json.dumps(committed))
-    document["repository"]["url"] = "https://github.com/artvepa80/Agents-Hefesto-Pro-Private"
+    document["repository"]["url"] = "https://github.com/example/closed-source-fork"
     errors = mod.check_document(document, "4.20.3")
     assert any("repository.url" in error for error in errors)
 

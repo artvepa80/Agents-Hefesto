@@ -14,9 +14,9 @@ Arturo aprobó el Path Y: el titular es "release truth engine", todo en inglés 
 - `CLAUDE.md`: nuevo H1.
 - Test nuevo, `tests/test_positioning_cards.py`: fija la descripción canónica, controla que las cifras sean 22/13 y que no aparezcan los claims retirados en los 4 archivos, y que los H1 digan release truth engine.
 
-## Paridad con el repo privado
+## Paridad con la landing
 
-La landing sirve su propia card (`landing-page/api/agent-card.js`). El PR privado de Path Y agrega `tests/landing_js/agent-card-parity.test.mjs`, que compara esa card completa con este archivo en `main`. Por eso este PR se mergea primero.
+La landing sirve su propia card. Un cambio aparte de Path Y le agrega un test de paridad que compara esa card completa con este archivo en `main`. Por eso este PR se mergea primero.
 
 ## Fuera de alcance
 

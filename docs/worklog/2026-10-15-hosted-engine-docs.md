@@ -4,7 +4,7 @@ Public repo only. Docs catch-up after the hosted engine moved to hefesto-ai 4.19
 
 ## What landed
 
-- README: the MCP `analyze` / `POST /api/analyze` line now says hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, merged and in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and `v4` points at that commit.
+- README: the MCP `analyze` / `POST /api/analyze` line now says hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (merged and in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and `v4` points at that commit.
 - README env-var comment: `HEFESTO_TELEMETRY=0` disables anonymous usage events. The CLI usage ping was removed in 4.18.0. The Telemetry section already said "usage events".
 - `action.yml` `telemetry` description: with `1` or `true`, one anonymous Action ping per run and the CLI usage events. It no longer says "CLI usage ping".
 - `llms.txt` and `.well-known/agent-card.json` security skill: dropped `PATH_TRAVERSAL` and `UNSAFE_DESERIALIZATION` (no analyzer emits them; the README table was corrected in 4.17.0). They name `PICKLE_USAGE`. The card uses `SQL_INJECTION_RISK`.
@@ -31,4 +31,4 @@ Ambiguous, so not edited:
 ## Not done
 
 - No merge. No tag. No release. PR #111 was not touched.
-- The private landing serves the same agent card (`landing-page/api/agent-card.js`). `tests/test_positioning_cards.py` says that copy is deep-compared with this file, so the security-skill description changed here needs the same edit there or that parity test fails. This PR does not touch the private repo.
+- The hosted landing page serves the same agent card. `tests/test_positioning_cards.py` says that copy is deep-compared with this file, so the security-skill description changed here needs the same edit there or that parity test fails. This PR does not touch the landing.

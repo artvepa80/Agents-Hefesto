@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.20.3] - 2026-10-20
+## [4.20.3] - 2026-10-23
 
 ### Added
 
@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **The README telemetry paragraph (en, ja, zh-CN) and `llms.txt` no longer say the PyPI version check cannot be turned off.** They said 4.20.1 had no setting for it, next to the paragraph that documents `HEFESTO_NO_UPDATE_CHECK`. They now say `hefesto telemetry disable` does not stop the check, that from 4.20.3 `HEFESTO_NO_UPDATE_CHECK=1`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1` skips it, and that 4.20.2 and earlier have no setting. `tests/test_readme_telemetry_claim.py` pins the new English sentence.
+- **Public docs no longer name internal tooling or private files.** Worklogs, `docs/mcp-registry.md`, a test docstring and a workflow comment use neutral wording. `scripts/guard_public_repo.py` now also scans `.py`, `.txt`, `.json`, `.yml`, `.yaml` and `.toml` files anywhere in the tree (code and config files get only the private repository, private PR and private path rules), flags "private repo" / "repo privado" mentions, "private repo PR #N" / "PR privado" references and internal agent names (matched against salted SHA-256 digests, so the names are not spelled out), skips its own files, and has an empty `FORBIDDEN_PATH_PREFIXES` list for blocking whole paths later. New allowlist entries are listed with a reason in `scripts/guard_markdown_allowlist.txt`.
 
 ## [4.20.2] - 2026-10-17
 
@@ -136,7 +137,7 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 - **Chinese and Japanese READMEs.** `README.zh-CN.md` and `README.ja.md` are short translations of `README.md` (install, quick start, GitHub Action, MCP, languages, plans). `README.md` stays the reference and links to both at the top.
 - **CONTRIBUTING lists the local pre-push commands:** `python scripts/guard_public_repo.py`, `ruff check`, `python -m mypy hefesto --ignore-missing-imports`, `python -m flake8 hefesto tests`, and a dogfood step, `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`.
 - **Handoff:** `docs/worklog/2026-10-16-prepush-ruff-mypy.md`.
-- **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (private repo PR #148, in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
+- **The hosted `analyze` engine is hefesto-ai 4.19.0.** The README line for the MCP `analyze` tool and `POST /api/analyze` now names hefesto-ai 4.19.0. The engine at https://hefestoai.narapallc.com runs that release (in production on 2026-10-15). PyPI `hefesto-ai` 4.19.0 is the current package release, and the `v4` tag points at that commit.
 - **Telemetry comments no longer call the CLI events a usage ping.** `HEFESTO_TELEMETRY=0` disables anonymous usage events. The Action `telemetry` input description matches the README: with `1` or `true`, the Action sends one anonymous ping per run and the CLI sends its usage events.
 - **`llms.txt` and the agent card no longer list PATH_TRAVERSAL or UNSAFE_DESERIALIZATION.** No analyzer emits those types (the README table was corrected in 4.17.0). They name `PICKLE_USAGE`, which is the emitted type. The agent-card security skill uses `SQL_INJECTION_RISK`.
 - **Hook docs match the hooks `install-hooks` writes.** `skill/integration.md` and `skill/commands.md` describe the package templates (staged files, `--fail-on HIGH`; the repository, `--fail-on CRITICAL`). `scripts/git-hooks/` is only for a clone of this repository.

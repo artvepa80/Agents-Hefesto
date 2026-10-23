@@ -5,7 +5,7 @@
 - pre-commit: `hefesto analyze <staged> --fail-on HIGH --allow-no-files`; pre-push: `hefesto analyze . --fail-on CRITICAL --allow-no-files`.
 - Prueba manual: repo nuevo, `install-hooks` (exit 0), commit de `app.py` con `eval(x)` → bloqueado (EVAL_USAGE CRITICAL, exit 1).
 - Tests: `tests/test_install_hooks_user_templates.py` (6) + los 5 existentes.
-- No incluye el fix de check-test-contradictions para llamadas sin argumentos (reservado para PYTHIA).
+- No incluye el fix de check-test-contradictions para llamadas sin argumentos (queda para un PR aparte).
 - Sin merge: mañana como pronto, con el OK de Arturo.
 
 ## Revisión de Arturo (2026-10-14 tarde)

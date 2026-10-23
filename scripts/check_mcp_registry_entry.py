@@ -3,8 +3,7 @@
 
 Used by ``.github/workflows/mcp-registry.yml``. It never publishes.
 
-The canonical ``server.json`` is the private repository's
-``landing-page/server.json``, deployed with the landing page and served at
+The canonical ``server.json`` is deployed with the hosted landing page and served at
 ``https://hefestoai.narapallc.com/server.json``. This public repository's
 ``server.json`` is never sent to the registry: its description and version
 (PyPI) differ from the hosted entry.
