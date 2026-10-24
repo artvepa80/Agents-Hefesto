@@ -24,6 +24,7 @@ import ast
 import logging
 import re
 import sys
+import warnings
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
@@ -91,6 +92,17 @@ EXCLUDED_DIRS = {
 
 def _normalize(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower().strip()
+
+
+def _parse_quietly(source: str, filename: str) -> ast.Module:
+    """Parse analyzed code without printing its SyntaxWarnings.
+
+    Warnings such as invalid escape sequences belong to the analyzed code,
+    not to this run, so they are ignored for this call only.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        return ast.parse(source, filename=filename)
 
 
 class ImportsVsDepsAnalyzer:
@@ -227,7 +239,7 @@ class ImportsVsDepsAnalyzer:
         imports: Set[str] = set()
         for py in self._iter_python_files(project_root):
             try:
-                tree = ast.parse(py.read_text(encoding="utf-8", errors="ignore"))
+                tree = _parse_quietly(py.read_text(encoding="utf-8", errors="ignore"), str(py))
             except Exception:
                 continue
             for node in self._iter_effective_imports(tree):
