@@ -44,7 +44,7 @@ def test_all_files_match_passes_with_exit_0(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -68,7 +68,7 @@ def test_llms_txt_drift_detected_on_action_ref(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.1\n",  # drift
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -96,7 +96,7 @@ def test_skill_md_version_case_insensitive_match(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Package: hefesto-ai | Version: 4.11.1 | License: MIT\n",
+            "skills/hefestoai/SKILL.md": "Package: hefesto-ai | Version: 4.11.1 | License: MIT\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -104,7 +104,7 @@ def test_skill_md_version_case_insensitive_match(tmp_path):
     )
     errors = mod.check_version_parity(repo, "4.11.4")
     assert len(errors) == 1
-    assert "skill/SKILL.md" in errors[0]
+    assert "skills/hefestoai/SKILL.md" in errors[0]
     assert "4.11.1" in errors[0]
 
 
@@ -123,7 +123,7 @@ def test_copilot_instructions_detects_both_version_header_and_action_ref(tmp_pat
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.1\n"  # drift 1: version header
                 "- uses: artvepa80/Agents-Hefesto@v4.11.2\n"  # drift 2: action ref
@@ -154,7 +154,7 @@ def test_multiple_drifts_in_same_file_all_reported(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -210,7 +210,7 @@ def test_historical_prose_ref_does_not_cause_false_positive(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -235,7 +235,7 @@ def test_script_ignores_files_not_in_version_references(tmp_path):
             "llms.txt": "- uses: artvepa80/Agents-Hefesto@v4.11.4\n",
             "server.json": '{"version": "4.11.4"}\n',
             ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-            "skill/SKILL.md": "Version: 4.11.4\n",
+            "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
             ".github/copilot-instructions.md": (
                 "- **Version:** 4.11.4\n" "- uses: artvepa80/Agents-Hefesto@v4.11.4\n"
             ),
@@ -260,7 +260,7 @@ def _files_with_action_ref(ref: str) -> dict:
         "llms.txt": f"- uses: artvepa80/Agents-Hefesto@{ref}\n",
         "server.json": '{"version": "4.11.4"}\n',
         ".well-known/agent-card.json": '{"version": "4.11.4"}\n',
-        "skill/SKILL.md": "Version: 4.11.4\n",
+        "skills/hefestoai/SKILL.md": "Version: 4.11.4\n",
         ".github/copilot-instructions.md": (
             "- **Version:** 4.11.4\n" f"- uses: artvepa80/Agents-Hefesto@{ref}\n"
         ),

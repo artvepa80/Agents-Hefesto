@@ -74,7 +74,7 @@ VERSION_REFERENCES = [
         ".well-known/agent-card.json",
         [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "A2A metadata")],
     ),
-    ("skill/SKILL.md", [(r"Version:\s*(\d+\.\d+\.\d+)(?![\d.])", "skill metadata")]),
+    ("skills/hefestoai/SKILL.md", [(r"Version:\s*(\d+\.\d+\.\d+)(?![\d.])", "skill metadata")]),
     (
         ".github/copilot-instructions.md",
         [
