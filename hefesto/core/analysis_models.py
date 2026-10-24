@@ -9,9 +9,14 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
+
+
+def _utc_now_naive() -> datetime:
+    """Current UTC time as a naive datetime, same as the deprecated utcnow()."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AnalysisIssueSeverity(str, Enum):
@@ -311,7 +316,7 @@ class AnalysisReport:
 
     summary: AnalysisSummary
     file_results: List[FileAnalysisResult]
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utc_now_naive)
     # Enterprise/Pro fields
     license_tier: str = "COMMUNITY"
     ml_enabled: bool = False
