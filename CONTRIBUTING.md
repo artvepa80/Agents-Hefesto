@@ -59,6 +59,20 @@ python -m flake8 hefesto tests
 # Dogfood the Python files this change touches (this repo's CLI, hefesto-ai 4.20.3)
 HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
 
+# Changed-file gate (CI: .github/workflows/dogfood.yml, job dogfood-hefesto).
+# ruff check --force-exclude (no --fix) on the changed .py files, then hefesto
+# on the changed files except those matching `exclude` in .hefesto.yaml
+# (path components, not globs; the script filters explicit paths itself, and
+# falls back to tests/fixtures/ and .github/action-smoke/ without the file):
+HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
+  --severity medium --fail-on critical --allow-no-files
+# Proves a planted CRITICAL fails and the current hefesto/ tree passes
+# aside from the documented PostHog public key (no line-level suppression).
+# Two tracked files fail the gate when touched: hefesto/telemetry/client.py:28
+# (until a line-level suppression is designed) and
+# scripts/validate_aggregates_jsonl.py:48 (VERY_HIGH_COMPLEXITY, until split):
+python scripts/dogfood_changed.py --self-check
+
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
 # agent-card.json, SKILL.md, copilot-instructions.md — also runs in CI)
 python scripts/verify_readme.py
@@ -106,7 +120,8 @@ Dashboard > Plugins & MCPs; otherwise they use the CLI.
    `ruff check`
    `python -m mypy hefesto --ignore-missing-imports`
    `python -m flake8 hefesto tests`
-   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW`
+   `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> --severity medium --fail-on critical --allow-no-files`
+   `python scripts/dogfood_changed.py --self-check`
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request
