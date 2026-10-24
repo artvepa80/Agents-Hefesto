@@ -21,10 +21,10 @@ Copyright (c) 2025 Narapa LLC, Miami, Florida
 from __future__ import annotations
 
 import ast
-import warnings
 import logging
 import re
 import sys
+import warnings
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
