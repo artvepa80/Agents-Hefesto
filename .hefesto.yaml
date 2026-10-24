@@ -5,6 +5,9 @@
 # not globs: `tests/fixtures/` matches; `tests/fixtures/**` matches nothing.
 # A file or directory passed explicitly to `hefesto analyze` is not filtered
 # by these patterns (the Action smoke test relies on that).
+#
+# Keep `exclude` as the last key: .github/workflows/hefesto.yml appends
+# tests/ to this list for the code-scanning upload only.
 exclude:
   # Planted findings the analyzer's own tests assert on.
   - tests/fixtures/
