@@ -669,6 +669,13 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
   --include-vendored)`; `meta.vendored_skipped` in JSON, a tool notification in
   SARIF).
 
+- **`exclude` entries are path segments, not globs.** Each entry matches
+  whole path components below the analyzed path (`tests/fixtures/` skips
+  `tests/fixtures/...`); `*` and `**` are taken literally, so
+  `tests/fixtures/**` or `*.json` match nothing even though "Excluding: ..."
+  lists them. A file or directory given explicitly on the command line is
+  not filtered by `exclude`.
+
 - **Discovery:** Hefesto starts at the first path given to `hefesto analyze`
   (its directory if it is a file) and walks up to the repository root (the
   first directory containing `.git`), or to the filesystem root outside a
