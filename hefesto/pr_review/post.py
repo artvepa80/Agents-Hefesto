@@ -48,6 +48,10 @@ def post_findings(
             continue
 
         body = _format_comment_body(finding)
+        # ``anchor_line`` is a changed line; ``line`` can be the ``def``
+        # line of a function-level finding, which GitHub rejects (422)
+        # when it is outside the diff. Older JSON has no ``anchor_line``.
+        line = finding.get("anchor_line") or finding["line"]
         args = [
             "gh",
             "api",
@@ -61,7 +65,7 @@ def post_findings(
             "-f",
             f"path={finding['file']}",
             "-F",
-            f"line={finding['line']}",
+            f"line={line}",
             "-f",
             "side=RIGHT",
         ]
@@ -79,7 +83,7 @@ def post_findings(
             logger.warning(
                 "gh api POST failed for %s:%s (rc=%s): %s",
                 finding["file"],
-                finding["line"],
+                line,
                 result.returncode,
                 result.stderr.strip(),
             )

@@ -80,6 +80,7 @@ class CodeSmellAnalyzer:
                                 "line_start": node.line_start,
                                 "line_end": node.line_end,
                             },
+                            end_line=node.line_end,
                         )
                     )
 
@@ -153,6 +154,7 @@ class CodeSmellAnalyzer:
                                 "max_depth": max_depth,
                                 "threshold": DEEP_NESTING_THRESHOLD,
                             },
+                            end_line=node.line_end,
                         )
                     )
 

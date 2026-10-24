@@ -19,8 +19,12 @@ appends another batch of identical comments to the same lines.
 ## How dedup works
 
 Every Hefesto finding carries a deterministic `dedup_key` computed as
-`sha256(relative_path | line | issue_type | normalized_message)`. The
-deduped template:
+`sha256(relative_path | line | issue_type | normalized_message)`. For a
+function-level finding (complexity, long function, deep nesting) `line`
+is the `def` line, even when only the function body changed, so the key
+does not move when the body is edited. Such a finding also carries
+`anchor_line`, the added line inside the function that the comment is
+posted on. The deduped template:
 
 1. Runs `hefesto pr-review` with no `--post` to get JSON.
 2. Calls `gh api ... /pulls/<N>/comments` to list existing comments.
@@ -35,10 +39,14 @@ lets you replace the posting layer without patching Hefesto.
 
 ## Troubleshooting
 
-- **`gh api` 422 errors on `line`**: make sure the finding's line
-  number falls inside a changed hunk on the head commit. The deduped
-  template already filters with `.in_hunk == true`; the simple
-  template skips non-hunk findings inside `post_findings`.
+- **`gh api` 422 errors on `line`**: make sure the line you post on
+  falls inside a changed hunk on the head commit. Post on
+  `anchor_line` (fall back to `line` for JSON from older versions):
+  for a function-level finding `line` is the `def` line, which can be
+  outside the diff. The deduped template filters with
+  `.in_hunk == true` and posts on `.anchor_line // .line`; the simple
+  template skips non-hunk findings inside `post_findings` and also
+  posts on `anchor_line`.
 - **Comments keep duplicating**: you are using the simple template.
   Switch to the deduped one.
 - **No comments posted**: check the `Generate findings JSON` step

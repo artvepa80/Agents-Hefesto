@@ -167,6 +167,8 @@ class AnalysisIssue:
     - rule_id: External rule ID (SC2086, DL3000, etc.)
     - confidence: Detection confidence (0.0-1.0)
     - source: Code context (code, string_literal, template_literal, comment)
+
+    end_line: last line of the function for function-level findings.
     """
 
     file_path: str
@@ -185,6 +187,12 @@ class AnalysisIssue:
     rule_id: Optional[str] = None
     confidence: Optional[float] = None
     source: Optional[Literal["code", "string_literal", "template_literal", "comment"]] = None
+
+    # Last line of the reported construct for function-level findings
+    # (complexity, long function, deep nesting), whose ``line`` is the
+    # ``def`` line. ``hefesto pr-review`` uses it to tell whether a diff
+    # hunk touches the function. Not part of ``to_dict``.
+    end_line: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
