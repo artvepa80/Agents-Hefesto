@@ -59,6 +59,7 @@ class ComplexityAnalyzer:
                         function_name=node.name,
                         suggestion=self._get_suggestion(complexity),
                         metadata={"complexity": complexity},
+                        end_line=node.line_end,
                     )
                     issues.append(issue)
 

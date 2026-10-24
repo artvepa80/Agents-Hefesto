@@ -83,7 +83,9 @@ jobs:
               (if .suggestion then "\n\n> \(.suggestion)" else "" end)
             ' <<< "$finding")
             path=$(jq -r '.file' <<< "$finding")
-            line=$(jq -r '.line' <<< "$finding")
+            # anchor_line is a changed line; line can be the def line of a
+            # function-level finding, outside the diff.
+            line=$(jq -r '.anchor_line // .line' <<< "$finding")
             gh api \
               --method POST \
               "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" \
