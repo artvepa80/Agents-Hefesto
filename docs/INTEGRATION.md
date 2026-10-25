@@ -50,7 +50,6 @@ Hefesto uses a **3-phase analysis pipeline** to ensure high-quality, accurate co
 │  • Semantic Code Analysis                               │
 │  • Duplicate Detection (similar code patterns)          │
 │  • Confidence Boosting (learn from codebase)           │
-│  • BigQuery Analytics Integration                       │
 │                                                         │
 │  Output: Enhanced analysis with ML insights             │
 └─────────────────────────────────────────────────────────┘
@@ -499,7 +498,9 @@ def learn_patterns(
 - Documentation styles
 - Test patterns
 
-#### 5. BigQuery Analytics Integration
+#### 5. BigQuery Analytics Integration (historical design, not shipped)
+
+> This section is an early design sketch. PRO does not ship BigQuery analytics. IRIS telemetry storage is provider-agnostic: you choose where the data lives. Today's adapters are in-memory, file (JSONL) and BigQuery (optional); more are planned.
 
 ```python
 def upload_analysis_results(

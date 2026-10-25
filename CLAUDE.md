@@ -80,7 +80,7 @@ After completing ANY non-trivial work:
 ### Deployment
 - Paquete PyPI: `hefesto-ai`
 - Comando de instalación: `pip install hefesto-ai[pro]` o `pip install hefesto-ai[omega]`
-- Publicación: `python3 -m build && twine upload dist/*`
+- Publicación: push a `vX.Y.Z` tag; `release.yml` builds and publishes to PyPI with Trusted Publishing (OIDC) after the required review on the `pypi` environment. No `twine upload`, no API tokens.
 
 ### Estructura del Proyecto
 - **Core**: `/hefesto/core/` (engine, scanner)
@@ -122,7 +122,6 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 **Current Status (v4.20.3)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
-- BigQuery integration
 - IRIS Agent production monitoring
 - 507 tests passing (CI green)
 - 22 language/format analyzers
@@ -426,11 +425,10 @@ The full audit and refactor history are tracked internally in our private repo. 
 - CLI commands
 - Pre-push hooks
 
-### PRO Tier ($8/mo)
+### PRO Tier ($8/mo per user)
 - SemanticAnalyzer (AI/ML)
 - Advanced security scanning
 - REST API (2 endpoints: `GET /health`, `POST /analyze`; see docs/rest-api.md)
-- BigQuery integration
 - Duplicate detection
 
 ### OMEGA Guardian ($19/mo)
@@ -502,7 +500,7 @@ Releases are automated via GitHub Actions:
     with PyPI Trusted Publishing (OIDC): environment `testpypi`,
     `pypa/gh-action-pypi-publish` pinned to a release tag, repository
     `https://test.pypi.org/legacy/`. Authentication is the GitHub OIDC token
-    for that environment; `TEST_PYPI_API_TOKEN` is retired on this workflow.
+    for that environment; There is no `TEST_PYPI_API_TOKEN`.
     The GitHub environment `testpypi` must exist under repository Settings →
     Environments (the name registered on the TestPyPI pending publisher).
     Production publishes go through `release.yml` (item 2).
@@ -510,7 +508,7 @@ Releases are automated via GitHub Actions:
 2.  **PyPI (Production)**
     ```bash
     # Update version in pyproject.toml FIRST
-    # Push final tag (triggers release.yml + Cloud Run Prod)
+    # Push final tag (triggers release.yml)
     git tag v4.7.1
     git push origin v4.7.1
     ```
@@ -519,10 +517,9 @@ Releases are automated via GitHub Actions:
     `pypa/gh-action-pypi-publish` pinned to a release tag. The action's default
     repository is PyPI; attestations stay at the action default (PEP 740).
     Authentication is the GitHub OIDC token for that environment;
-    `PYPI_API_TOKEN` is retired on this workflow. The GitHub environment `pypi`
-    must exist under repository Settings → Environments (the name registered
-    on the PyPI trusted publisher). After the first successful production
-    publish, the owner can delete the `PYPI_API_TOKEN` secret.
+    there is no `PYPI_API_TOKEN`. The GitHub environment `pypi` (the name
+    registered on the PyPI trusted publisher) has the maintainer as required
+    reviewer, so every production publish waits for that approval.
     Release-candidate publishes go through `release-testpypi.yml` (item 1).
 
 3.  **GitHub Release** (automatic)

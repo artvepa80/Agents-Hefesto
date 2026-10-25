@@ -1,6 +1,6 @@
 # Telemetry
 
-Hefesto sends anonymous usage events to [PostHog Cloud](https://posthog.com) (US region, `https://us.i.posthog.com`) so we can see whether the CLI is used. It is **on by default**.
+Hefesto sends pseudonymous usage events (keyed to a random install ID) to [PostHog Cloud](https://posthog.com) (US region, `https://us.i.posthog.com`) so we can see whether the CLI is used. It is **on by default**.
 
 The first time a send would happen, Hefesto prints a notice on stderr and does **not** send anything in that process. Events start on a later run.
 

@@ -4,7 +4,6 @@
 
 - Python 3.10 or higher
 - pip (Python package manager)
-- Google Cloud Project (for BigQuery tracking, optional)
 - Gemini API key (get from https://aistudio.google.com/app/apikey)
 
 ## Installation Methods
@@ -69,13 +68,9 @@ docker run -p 8080:8080 \
 export GEMINI_API_KEY='your_gemini_api_key_here'
 ```
 
-### 2. Configure GCP (Optional)
+### 2. Telemetry storage (OMEGA, optional)
 
-For BigQuery tracking and cost monitoring:
-
-```bash
-export GCP_PROJECT_ID='your-project-id'
-```
+IRIS telemetry storage is provider-agnostic: you choose where the data lives. Today's adapters are in-memory, file (JSONL) and BigQuery (optional); more are planned.
 
 ### 3. Set Budget Limits (Optional)
 
@@ -147,16 +142,11 @@ export HEFESTO_LICENSE_KEY='hef_your_key'
 hefesto info  # Should show "Pro Features: ✅ Enabled"
 ```
 
-### BigQuery permission errors
+### BigQuery permission errors (optional BigQuery adapter only)
 
-**Solution**:
-```bash
-# Authenticate with GCP
-gcloud auth application-default login
-
-# Or use service account
-export GOOGLE_APPLICATION_CREDENTIALS='/path/to/key.json'
-```
+Only relevant if you chose the BigQuery adapter: give its credentials
+(`GOOGLE_APPLICATION_CREDENTIALS`) read/write access to the dataset. The default
+adapters (in-memory, file/JSONL) need no cloud credentials.
 
 ## Uninstallation
 

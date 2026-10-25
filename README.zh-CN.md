@@ -84,7 +84,7 @@ MCP 端点：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0�
 
 ## 遥测
 
-CLI 默认向 PostHog 发送匿名使用数据（随机 ID；`analyze` 还会发送文件数、问题数、耗时、退出码、版本、操作系统和 Python 版本；不含代码、文件路径、检查结果和仓库名）。可用 `hefesto telemetry disable`、`HEFESTO_TELEMETRY=0` 或 `DO_NOT_TRACK=1` 关闭。GitHub Action 只有设置 `telemetry: 1` 才发送使用数据。另外，`hefesto analyze` 会向 pypi.org 查询最新版本（超时 1.5 秒，缓存 24 小时），`hefesto telemetry disable` 不会停止这项检查。从 4.20.3 起，设置 `HEFESTO_NO_UPDATE_CHECK=1`、`HEFESTO_TELEMETRY=0` 或 `DO_NOT_TRACK=1` 即可跳过（4.20.2 及更早版本没有关闭它的设置）。详情：[docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md)
+CLI 默认向 PostHog 发送假名化使用数据（随机安装 ID）（随机 ID；`analyze` 还会发送文件数、问题数、耗时、退出码、版本、操作系统和 Python 版本；不含代码、文件路径、检查结果和仓库名）。可用 `hefesto telemetry disable`、`HEFESTO_TELEMETRY=0` 或 `DO_NOT_TRACK=1` 关闭。GitHub Action 只有设置 `telemetry: 1` 才发送使用数据。另外，`hefesto analyze` 会向 pypi.org 查询最新版本（超时 1.5 秒，缓存 24 小时），`hefesto telemetry disable` 不会停止这项检查。从 4.20.3 起，设置 `HEFESTO_NO_UPDATE_CHECK=1`、`HEFESTO_TELEMETRY=0` 或 `DO_NOT_TRACK=1` 即可跳过（4.20.2 及更早版本没有关闭它的设置）。详情：[docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md)
 
 ## 价格
 

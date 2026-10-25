@@ -292,10 +292,9 @@ git push --no-verify
    ```
 
 5. **Explore PRO Features** (optional)
-   - PRO $8/mo or OMEGA $19/mo: [https://hefestoai.narapallc.com/#pricing](https://hefestoai.narapallc.com/#pricing)
+   - PRO $8/mo per user or OMEGA $19/mo: [https://hefestoai.narapallc.com/#pricing](https://hefestoai.narapallc.com/#pricing)
    - Get ML-powered semantic analysis
    - Duplicate code detection
-   - BigQuery analytics
 
 ### 📚 Further Reading
 
