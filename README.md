@@ -669,6 +669,11 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
   --include-vendored)`; `meta.vendored_skipped` in JSON, a tool notification in
   SARIF).
 
+- **`critical_tests` (preview):** an optional section that maps requirements
+  to pytest tests for the critical-test regression guard. `hefesto analyze`
+  validates it and otherwise ignores it; see
+  [docs/critical-tests.md](docs/critical-tests.md).
+
 - **`exclude` entries are path segments, not globs.** Each entry matches
   whole path components below the analyzed path (`tests/fixtures/` skips
   `tests/fixtures/...`); `*` and `**` are taken literally, so
