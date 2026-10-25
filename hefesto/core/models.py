@@ -21,9 +21,15 @@ OMEGA Sports Analytics Foundation
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+
+def _utc_now_naive() -> datetime:
+    """Current UTC time as a naive datetime, same as the deprecated utcnow()."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 
 # ============================================================================
 # ENUMS - Classification Types
@@ -328,7 +334,7 @@ class SuggestionFeedback:
     confidence_score: Optional[float] = None
     validation_passed: Optional[bool] = None
     similarity_score: Optional[float] = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utc_now_naive)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -550,7 +556,7 @@ class CodeEmbedding:
     embedding: List[float]
     language: str = "python"
     model: str = "code-embeddings-v1"
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utc_now_naive)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -607,7 +613,7 @@ class DeploymentFeedback:
     deployment_id: str
     environment: str
     success: bool
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utc_now_naive)
     error_message: Optional[str] = None
     rollback_required: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -643,7 +649,7 @@ class TestFeedback:
     coverage_before: Optional[float] = None
     coverage_after: Optional[float] = None
     duration_seconds: Optional[float] = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utc_now_naive)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
