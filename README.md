@@ -37,7 +37,7 @@ jobs:
 
 Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.3` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
 
-Free and MIT. PRO ($8/month per user) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
+Free and MIT. PRO ($8/mo per user) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
 ---
 
@@ -479,7 +479,7 @@ The hook runs two gates:
 
 ## Features by Tier
 
-| Feature | FREE | PRO ($8/month per user) | OMEGA ($19/mo) |
+| Feature | FREE | PRO ($8/mo per user) | OMEGA ($19/mo) |
 |---------|------|-------------|----------------|
 | Static Analysis | Yes | Yes | Yes |
 | Security Scanning | Basic | Advanced | Advanced |
@@ -491,7 +491,7 @@ The hook runs two gates:
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
-- **PRO** ($8/month per user) and **OMEGA** ($19/mo): [plans and checkout](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_features_by_tier#pricing)
+- **PRO** ($8/mo per user) and **OMEGA** ($19/mo): [plans and checkout](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_features_by_tier#pricing)
 
 ### Hefesto PRO Optional Features
 
