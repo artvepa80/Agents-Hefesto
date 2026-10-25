@@ -32,6 +32,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.safe_parse import parse_or_none
 
 _ENGINE = "internal:resource_safety_v1"
 _CONFIDENCE = 0.85
@@ -73,9 +74,8 @@ class ResourceSafetyAnalyzer:
         if not file_path.endswith(".py"):
             return []
 
-        try:
-            py_tree = ast.parse(code, filename=file_path)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return []
 
         issues: List[AnalysisIssue] = []

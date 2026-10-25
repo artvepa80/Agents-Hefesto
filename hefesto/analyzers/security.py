@@ -24,6 +24,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueType,
 )
 from hefesto.core.ast.generic_ast import GenericAST
+from hefesto.core.safe_parse import parse_or_none
 
 # Directory names that mark test or example code. Matched against whole path
 # segments (case-insensitive), never as substrings: ``tests/`` counts, but
@@ -320,9 +321,8 @@ class SecurityAnalyzer:
         import ast as python_ast
 
         issues: List[AnalysisIssue] = []
-        try:
-            py_tree = python_ast.parse(code)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return issues
 
         sql_kw_re = re.compile(
@@ -481,8 +481,9 @@ class SecurityAnalyzer:
         if tree.language == "python":
             import ast as python_ast
 
-            try:
-                py_tree = python_ast.parse(code)
+            # A file with a syntax error has no AST-based eval findings.
+            py_tree = parse_or_none(code, file_path)
+            if py_tree is not None:
                 for node in python_ast.walk(py_tree):
                     if isinstance(node, python_ast.Call):
                         func = node.func
@@ -502,9 +503,6 @@ class SecurityAnalyzer:
                                     metadata={"function": func.id},
                                 )
                             )
-            except SyntaxError:
-                # If AST parsing fails, fall back to regex
-                pass
         else:
             for line_num, func_name in find_eval_calls(tree, code):
                 issues.append(
@@ -544,9 +542,8 @@ class SecurityAnalyzer:
 
         import ast as python_ast
 
-        try:
-            py_tree = python_ast.parse(code)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return issues
 
         def _report(line: int, col: int) -> None:
@@ -606,9 +603,8 @@ class SecurityAnalyzer:
 
         import ast as python_ast
 
-        try:
-            py_tree = python_ast.parse(code)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return issues
 
         for node in python_ast.walk(py_tree):
@@ -650,9 +646,8 @@ class SecurityAnalyzer:
 
         import ast as python_ast
 
-        try:
-            py_tree = python_ast.parse(code)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return issues
 
         for node in python_ast.walk(py_tree):

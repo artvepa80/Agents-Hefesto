@@ -24,7 +24,6 @@ import ast
 import logging
 import re
 import sys
-import warnings
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Set, Tuple
 
@@ -33,6 +32,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+from hefesto.core.safe_parse import safe_parse
 
 logger = logging.getLogger(__name__)
 
@@ -92,17 +92,6 @@ EXCLUDED_DIRS = {
 
 def _normalize(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower().strip()
-
-
-def _parse_quietly(source: str, filename: str) -> ast.Module:
-    """Parse analyzed code without printing its SyntaxWarnings.
-
-    Warnings such as invalid escape sequences belong to the analyzed code,
-    not to this run, so they are ignored for this call only.
-    """
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", SyntaxWarning)
-        return ast.parse(source, filename=filename)
 
 
 class ImportsVsDepsAnalyzer:
@@ -239,8 +228,12 @@ class ImportsVsDepsAnalyzer:
         imports: Set[str] = set()
         for py in self._iter_python_files(project_root):
             try:
-                tree = _parse_quietly(py.read_text(encoding="utf-8", errors="ignore"), str(py))
+                source = py.read_text(encoding="utf-8", errors="ignore")
             except Exception:
+                continue
+            # Files that cannot be parsed for any reason are skipped.
+            tree = safe_parse(source, str(py)).tree
+            if tree is None:
                 continue
             for node in self._iter_effective_imports(tree):
                 if isinstance(node, ast.Import):
