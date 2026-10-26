@@ -94,8 +94,7 @@ def _resolve(module: ast.Module, qualname: str) -> Optional[List[ast.stmt]]:
         if node is None or (last != isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))):
             return None
         chain.append(node)
-        if not last:
-            assert isinstance(node, ast.ClassDef)
+        if isinstance(node, ast.ClassDef):
             scope = node
     return chain
 
@@ -106,10 +105,7 @@ def _resolve(module: ast.Module, qualname: str) -> Optional[List[ast.stmt]]:
 def _dotted(node: ast.AST) -> str:
     if isinstance(node, ast.Call):
         node = node.func
-    try:
-        return ast.unparse(node)
-    except Exception:  # pragma: no cover - unparse handles every expression
-        return ""
+    return ast.unparse(node)
 
 
 def _is_skip_marker(node: ast.expr) -> bool:
@@ -131,14 +127,19 @@ def _scope_signals(scope: _Scope) -> List[str]:
     if isinstance(scope, ast.ClassDef):
         signals.extend(ast.unparse(d) for d in scope.decorator_list if _is_skip_marker(d))
     for node in scope.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        names = [t.id for t in node.targets if isinstance(t, ast.Name)]
-        if "pytestmark" in names:
-            signals.extend(ast.unparse(m) for m in _marks_in(node.value) if _is_skip_marker(m))
-        if "__test__" in names and isinstance(node.value, ast.Constant):
-            if not node.value.value:
-                signals.append("__test__ = False")
+        if isinstance(node, ast.Assign):
+            signals.extend(_assign_signals(node))
+    return signals
+
+
+def _assign_signals(node: ast.Assign) -> List[str]:
+    """Skip signals from a ``pytestmark = ...`` or ``__test__ = False`` assignment."""
+    names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+    signals: List[str] = []
+    if "pytestmark" in names:
+        signals.extend(ast.unparse(m) for m in _marks_in(node.value) if _is_skip_marker(m))
+    if "__test__" in names and _falsy_constant(node.value):
+        signals.append("__test__ = False")
     return signals
 
 
@@ -166,8 +167,7 @@ def _skip_signals(module: ast.Module, chain: Sequence[ast.stmt]) -> Counter:
     for node in chain:
         if isinstance(node, ast.ClassDef):
             signals.extend(_scope_signals(node))
-        else:
-            assert isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             signals.extend(_function_signals(node))
     return Counter(signals)
 
@@ -178,20 +178,31 @@ def _platform_only(expr: ast.expr) -> bool:
         return True
     if isinstance(expr, (ast.Name, ast.Attribute)):
         return _dotted(expr) in _PLATFORM_NAMES
-    if isinstance(expr, ast.BoolOp):
-        return all(_platform_only(value) for value in expr.values)
-    if isinstance(expr, ast.UnaryOp):
-        return _platform_only(expr.operand)
-    if isinstance(expr, ast.Compare):
-        return all(_platform_only(part) for part in [expr.left, *expr.comparators])
     if isinstance(expr, ast.Call):
-        if expr.keywords or not all(isinstance(a, ast.Constant) for a in expr.args):
-            return False
-        if _dotted(expr.func) in _PLATFORM_NAMES:  # platform.system()
-            return True
-        func = expr.func  # sys.platform.startswith("win")
-        return isinstance(func, ast.Attribute) and _dotted(func.value) in _PLATFORM_NAMES
-    return False
+        return _platform_call(expr)
+    parts = _operands(expr)
+    return parts is not None and all(_platform_only(part) for part in parts)
+
+
+def _operands(expr: ast.expr) -> Optional[List[ast.expr]]:
+    """Sub-expressions of a boolean, unary or comparison expression, else None."""
+    if isinstance(expr, ast.BoolOp):
+        return list(expr.values)
+    if isinstance(expr, ast.UnaryOp):
+        return [expr.operand]
+    if isinstance(expr, ast.Compare):
+        return [expr.left, *expr.comparators]
+    return None
+
+
+def _platform_call(expr: ast.Call) -> bool:
+    """``platform.system()`` or ``sys.platform.startswith("win")`` with constant args."""
+    if expr.keywords or not all(isinstance(a, ast.Constant) for a in expr.args):
+        return False
+    if _dotted(expr.func) in _PLATFORM_NAMES:
+        return True
+    func = expr.func
+    return isinstance(func, ast.Attribute) and _dotted(func.value) in _PLATFORM_NAMES
 
 
 def _reads_platform(expr: ast.expr) -> bool:
@@ -245,18 +256,30 @@ def _blocks(stmt: ast.stmt) -> List[List[ast.stmt]]:
 
 def _header_calls(stmt: ast.stmt) -> int:
     """Assertion-like calls outside the nested blocks (an expression, an if test)."""
-    total = 0
+    return sum(_assert_calls_in(root) for root in _header_roots(stmt))
+
+
+def _header_roots(stmt: ast.stmt) -> List[ast.AST]:
+    roots: List[ast.AST] = []
     for field, value in ast.iter_fields(stmt):
-        if field in _BLOCK_FIELDS:
-            continue
-        values = value if isinstance(value, list) else [value]
-        for root in values:
-            if not isinstance(root, ast.AST):
-                continue
-            for node in ast.walk(root):
-                if isinstance(node, ast.Call) and _is_assert_call(node):
-                    total += 1
-    return total
+        if field not in _BLOCK_FIELDS:
+            values = value if isinstance(value, list) else [value]
+            roots.extend(v for v in values if isinstance(v, ast.AST))
+    return roots
+
+
+def _assert_calls_in(root: ast.AST) -> int:
+    return sum(1 for node in ast.walk(root) if isinstance(node, ast.Call) and _is_assert_call(node))
+
+
+def _count_stmt(stmt: ast.stmt) -> int:
+    if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return 0
+    if isinstance(stmt, ast.Assert):
+        return 0 if isinstance(stmt.test, ast.Constant) else 1
+    if isinstance(stmt, ast.If) and _falsy_constant(stmt.test):
+        return _count(stmt.orelse)
+    return _header_calls(stmt) + sum(_count(block) for block in _blocks(stmt))
 
 
 def _count(statements: Sequence[ast.stmt]) -> int:
@@ -264,16 +287,7 @@ def _count(statements: Sequence[ast.stmt]) -> int:
     for stmt in statements:
         if isinstance(stmt, ast.Return):
             break  # nothing after a top-level return runs
-        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            continue
-        if isinstance(stmt, ast.Assert):
-            total += 0 if isinstance(stmt.test, ast.Constant) else 1
-            continue
-        if isinstance(stmt, ast.If) and _falsy_constant(stmt.test):
-            total += _count(stmt.orelse)
-            continue
-        total += _header_calls(stmt)
-        total += sum(_count(block) for block in _blocks(stmt))
+        total += _count_stmt(stmt)
     return total
 
 
@@ -295,24 +309,41 @@ def _compare_one(qualname: str, base: ast.Module, head: Optional[ast.Module]) ->
     if head_chain is None:
         return [TestChange(DELETED, qualname, f"{qualname}: no definition in the head")]
 
-    changes: List[TestChange] = []
-    new_signals = _skip_signals(head, head_chain) - _skip_signals(base, base_chain)
-    if new_signals:
-        added = sorted(new_signals.elements())
-        changes.append(
-            TestChange(
-                SKIPPED,
-                qualname,
-                f"{qualname}: newly skipped or disabled by {', '.join(added)}",
-                warn_only=all(_is_platform_skipif(s) for s in added),
-            )
-        )
+    changes = _skip_changes(qualname, base, base_chain, head, head_chain)
+    changes.extend(_assertion_changes(qualname, base_chain[-1], head_chain[-1]))
+    return changes
 
-    base_func = base_chain[-1]
-    head_func = head_chain[-1]
-    assert isinstance(base_func, (ast.FunctionDef, ast.AsyncFunctionDef))
-    assert isinstance(head_func, (ast.FunctionDef, ast.AsyncFunctionDef))
-    before, after = count_assertions(base_func), count_assertions(head_func)
+
+def _skip_changes(
+    qualname: str,
+    base: ast.Module,
+    base_chain: Sequence[ast.stmt],
+    head: ast.Module,
+    head_chain: Sequence[ast.stmt],
+) -> List[TestChange]:
+    new_signals = _skip_signals(head, head_chain) - _skip_signals(base, base_chain)
+    if not new_signals:
+        return []
+    added = sorted(new_signals.elements())
+    return [
+        TestChange(
+            SKIPPED,
+            qualname,
+            f"{qualname}: newly skipped or disabled by {', '.join(added)}",
+            warn_only=all(_is_platform_skipif(s) for s in added),
+        )
+    ]
+
+
+def _assertions(node: ast.stmt) -> int:
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return count_assertions(node)
+    return 0  # _resolve always ends a chain with a function
+
+
+def _assertion_changes(qualname: str, base_func: ast.stmt, head_func: ast.stmt) -> List[TestChange]:
+    changes: List[TestChange] = []
+    before, after = _assertions(base_func), _assertions(head_func)
     if before > 0 and after == 0:
         changes.append(
             TestChange(

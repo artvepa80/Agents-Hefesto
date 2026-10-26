@@ -148,6 +148,28 @@ def _parse_entry(index: int, raw: Any, default: str) -> CriticalTestEntry:
     )
 
 
+def _entry_list(raw_entries: Any) -> List[Any]:
+    if raw_entries is None:
+        raise _err("", "'entries' is required")
+    if not isinstance(raw_entries, list):
+        raise _err("", "'entries' must be a list")
+    if not raw_entries:
+        raise _err("", "'entries' must have at least one entry")
+    return raw_entries
+
+
+def _parse_entries(raw_entries: Any, default: str) -> List[CriticalTestEntry]:
+    entries: List[CriticalTestEntry] = []
+    seen = set()
+    for index, raw in enumerate(_entry_list(raw_entries)):
+        entry = _parse_entry(index, raw, default)
+        if entry.id in seen:
+            raise _err("", f"duplicate id '{entry.id}'")
+        seen.add(entry.id)
+        entries.append(entry)
+    return entries
+
+
 def parse_critical_tests(data: Any) -> Optional[CriticalTestsPolicy]:
     """Return the validated policy, or None when the section is null."""
     if data is None:
@@ -156,21 +178,7 @@ def parse_critical_tests(data: Any) -> Optional[CriticalTestsPolicy]:
         raise _err("", "must be a mapping with 'entries' (and optional 'enforcement')")
     _check_keys("", data, _SECTION_KEYS)
     default = _enforcement("", data.get("enforcement"), DEFAULT_ENFORCEMENT)
-    if "entries" not in data or data["entries"] is None:
-        raise _err("", "'entries' is required")
-    raw_entries = data["entries"]
-    if not isinstance(raw_entries, list):
-        raise _err("", "'entries' must be a list")
-    if not raw_entries:
-        raise _err("", "'entries' must have at least one entry")
-    entries: List[CriticalTestEntry] = []
-    seen = set()
-    for index, raw in enumerate(raw_entries):
-        entry = _parse_entry(index, raw, default)
-        if entry.id in seen:
-            raise _err("", f"duplicate id '{entry.id}'")
-        seen.add(entry.id)
-        entries.append(entry)
+    entries = _parse_entries(data.get("entries"), default)
     return CriticalTestsPolicy(enforcement=default, entries=tuple(entries))
 
 
