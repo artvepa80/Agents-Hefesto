@@ -367,7 +367,7 @@ ruff check || exit 1
 
 ---
 
-**Remember**: We're building the **AI-Powered Code Quality Guardian** - enterprise-grade, reliable, and trusted by development teams worldwide.
+**Remember**: We're building the **release truth engine for AI-generated code** - enterprise-grade, reliable, and trusted by development teams worldwide.
 
 ---
 

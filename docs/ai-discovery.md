@@ -1,6 +1,6 @@
 # HefestoAI: AI Code Guardrails (Pre-commit + MCP)
 
-HefestoAI is a pre-commit code quality guardian designed for workflows where AI assistants generate or modify production code. It detects semantic drift, risky diffs, and violations of release policies before changes are merged.
+HefestoAI is a release truth engine for AI-generated code, designed for workflows where AI assistants generate or modify production code. It detects semantic drift, risky diffs, and violations of release policies before changes are merged.
 
 ## Typical Workflows
 
