@@ -29,6 +29,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence, Union
 
+from hefesto.core.safe_parse import safe_parse
+
 DELETED = "DELETED"
 SKIPPED = "SKIPPED"
 TRIVIALIZED = "TRIVIALIZED"
@@ -68,10 +70,11 @@ class TestChange:
 
 
 def _parse(source: str, side: str) -> ast.Module:
-    try:
-        return ast.parse(source)
-    except SyntaxError as exc:
+    result = safe_parse(source)
+    if result.tree is None:
+        exc = result.exception
         raise SourceParseError(f"cannot parse {side} source: {exc}") from exc
+    return result.tree
 
 
 def _last_def(scope: _Scope, name: str) -> Optional[ast.stmt]:
@@ -215,7 +218,10 @@ def _reads_platform(expr: ast.expr) -> bool:
 def _is_platform_skipif(signal: str) -> bool:
     if not signal.startswith("pytest.mark.skipif("):
         return False
-    node = ast.parse(signal, mode="eval").body
+    tree = safe_parse(signal).tree
+    if tree is None or len(tree.body) != 1 or not isinstance(tree.body[0], ast.Expr):
+        return False
+    node = tree.body[0].value
     if not isinstance(node, ast.Call) or not node.args:
         return False
     condition = node.args[0]
