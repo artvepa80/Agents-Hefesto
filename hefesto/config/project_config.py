@@ -6,7 +6,11 @@ walk up the directory tree and use the first ``.hefesto.yaml`` or
 ``.hefesto.yml`` found. The walk stops after the repository root (the first
 directory containing ``.git``) or at the filesystem root.
 
-Every supported key maps 1:1 to an existing ``hefesto analyze`` option.
+Every supported key maps 1:1 to an existing ``hefesto analyze`` option, except
+``critical_tests``: an optional section for the critical-test regression guard
+(``hefesto.critical_tests.policy``). It is validated on load and returned as
+``ProjectConfig.critical_tests``, never as an ``analyze`` option, so adding it
+changes nothing for ``hefesto analyze``.
 Precedence is: explicit CLI flag > config file > built-in default. The CLI
 decides what was explicit (click's parameter source); this module only finds,
 parses and validates the file.
@@ -44,6 +48,8 @@ class ProjectConfig:
 
     path: Optional[Path] = None
     values: Dict[str, Any] = field(default_factory=dict)
+    # Parsed ``critical_tests`` section (CriticalTestsPolicy), None when absent.
+    critical_tests: Optional[Any] = None
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +175,9 @@ _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
 
 SUPPORTED_KEYS = tuple(_VALIDATORS)
 
+# Sections that are validated but are not ``hefesto analyze`` options.
+CRITICAL_TESTS_KEY = "critical_tests"
+
 _UNSUPPORTED_HINTS = {
     "rules": "rule thresholds are not configurable yet",
     "format_check": "this hefesto version has no --format-check option",
@@ -219,10 +228,22 @@ def validate_config(data: Any, allowed_keys: Optional[Iterable[str]] = None) -> 
     values: Dict[str, Any] = {}
     seen: set = set()
     for raw_key, raw_value in data.items():
+        if raw_key == CRITICAL_TESTS_KEY:
+            parse_critical_tests_section(data)
+            continue
         entry = _validate_entry(raw_key, raw_value, seen, supported)
         if entry is not None:
             values[entry[0]] = entry[1]
     return values
+
+
+def parse_critical_tests_section(data: Any) -> Optional[Any]:
+    """Return the validated ``critical_tests`` policy, or None when absent or null."""
+    if not isinstance(data, dict) or data.get(CRITICAL_TESTS_KEY) is None:
+        return None
+    from hefesto.critical_tests.policy import parse_critical_tests
+
+    return parse_critical_tests(data[CRITICAL_TESTS_KEY])
 
 
 def load_config(path: Path, allowed_keys: Optional[Iterable[str]] = None) -> ProjectConfig:
@@ -244,7 +265,9 @@ def load_config(path: Path, allowed_keys: Optional[Iterable[str]] = None) -> Pro
     values = validate_config(data, allowed_keys)
     if "copybook_paths" in values:
         values["copybook_paths"] = _resolve_dirs(values["copybook_paths"], path.parent)
-    return ProjectConfig(path=path, values=values)
+    return ProjectConfig(
+        path=path, values=values, critical_tests=parse_critical_tests_section(data)
+    )
 
 
 def _resolve_dirs(entries: List[str], base: Path) -> Tuple[str, ...]:
@@ -262,11 +285,13 @@ def _resolve_dirs(entries: List[str], base: Path) -> Tuple[str, ...]:
 
 __all__ = [
     "CONFIG_FILENAMES",
+    "CRITICAL_TESTS_KEY",
     "SUPPORTED_KEYS",
     "ConfigError",
     "ProjectConfig",
     "discover_config",
     "find_config",
     "load_config",
+    "parse_critical_tests_section",
     "validate_config",
 ]
