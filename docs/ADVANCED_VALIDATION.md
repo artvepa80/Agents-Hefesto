@@ -121,7 +121,7 @@ hefesto check-ci-parity --project-root /path/to/project
 --------------------------------------------------------------------------------
 
 📋 Python Version
-   Message: Local Python 3.9 not in CI matrix ['3.10', '3.11', '3.12']
+   Message: Local Python 3.9 not in CI matrix ['3.10', '3.11', '3.12', '3.13', '3.14']
    Local:   3.9
    CI:      3.10, 3.11, 3.12
    Fix:     Consider testing with Python 3.10 locally: pyenv install 3.10
@@ -533,7 +533,7 @@ $ hefesto check-ci-parity
 --------------------------------------------------------------------------------
 
 📋 Python Version
-   Message: Local Python 3.9 not in CI matrix ['3.10', '3.11', '3.12']
+   Message: Local Python 3.9 not in CI matrix ['3.10', '3.11', '3.12', '3.13', '3.14']
    Local:   3.9
    CI:      3.10, 3.11, 3.12
    Fix:     Consider testing with Python 3.10 locally: pyenv install 3.10

@@ -84,7 +84,7 @@ MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`�
 
 ## テレメトリ
 
-CLI は初期設定で匿名の利用データを PostHog に送信します（ランダムな ID。`analyze` ではファイル数、指摘数、実行時間、終了コード、バージョン、OS、Python のバージョンも送ります。コード、ファイルパス、指摘内容、リポジトリ名は含みません）。`hefesto telemetry disable`、`HEFESTO_TELEMETRY=0`、`DO_NOT_TRACK=1` のいずれかで止められます。GitHub Action は `telemetry: 1` を指定した場合のみ利用データを送ります。また `hefesto analyze` は pypi.org に最新バージョンを問い合わせます（タイムアウト 1.5 秒、24 時間キャッシュ）。`hefesto telemetry disable` ではこの確認は止まりません。4.20.3 からは `HEFESTO_NO_UPDATE_CHECK=1`、`HEFESTO_TELEMETRY=0`、`DO_NOT_TRACK=1` のいずれかで止められます（4.20.2 以前には止める設定がありません）。詳細：[docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md)
+CLI は初期設定で仮名化された利用データ（ランダムなインストール ID）を PostHog に送信します（ランダムな ID。`analyze` ではファイル数、指摘数、実行時間、終了コード、バージョン、OS、Python のバージョンも送ります。コード、ファイルパス、指摘内容、リポジトリ名は含みません）。`hefesto telemetry disable`、`HEFESTO_TELEMETRY=0`、`DO_NOT_TRACK=1` のいずれかで止められます。GitHub Action は `telemetry: 1` を指定した場合のみ利用データを送ります。また `hefesto analyze` は pypi.org に最新バージョンを問い合わせます（タイムアウト 1.5 秒、24 時間キャッシュ）。`hefesto telemetry disable` ではこの確認は止まりません。4.20.3 からは `HEFESTO_NO_UPDATE_CHECK=1`、`HEFESTO_TELEMETRY=0`、`DO_NOT_TRACK=1` のいずれかで止められます（4.20.2 以前には止める設定がありません）。詳細：[docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md)
 
 ## 料金
 

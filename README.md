@@ -487,7 +487,6 @@ The hook runs two gates:
 | Language & format support ([details](#language-support)) | Yes | Yes | Yes |
 | ML Enhancement | No | Yes | Yes |
 | REST API | No | Yes | Yes |
-| BigQuery Analytics | No | Yes | Yes |
 | IRIS Monitoring | No | No | Yes |
 | Production Correlation | No | No | Yes |
 
@@ -613,7 +612,7 @@ format.
 
 ```bash
 # Telemetry (see Telemetry below)
-export HEFESTO_TELEMETRY=0                            # Disable anonymous usage events
+export HEFESTO_TELEMETRY=0                            # Disable usage events
 
 # PRO/OMEGA only (read by the private distribution, ignored by the FREE tier)
 export HEFESTO_LICENSE_KEY="your-key"

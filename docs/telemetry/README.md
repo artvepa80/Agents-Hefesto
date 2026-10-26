@@ -41,7 +41,7 @@ python scripts/validate_aggregates_jsonl.py docs/telemetry/examples/aggregates.s
   DeployOutcomeEvent      <-- stored for learning risk model
 ```
 
-**Telemetry is pluggable. GCP is one adapter.** The core IRIS labeler uses
+**Telemetry is pluggable. BigQuery is one optional adapter.** The core IRIS labeler uses
 stdlib only — no cloud lock-in.
 
 ## Enterprise Features (PRO)

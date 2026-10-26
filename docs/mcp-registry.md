@@ -65,10 +65,9 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
 - **Approval:** Arturo creates the `mcp-registry` environment himself (required
   reviewer: himself; `main` only). The publish job waits on that environment, and
   he approves each deployment.
-- **First publish:** 4.20.2, once the 4.20.2 hosted engine deploy (planned for
-  2026-10-19) passes `verify_hosted_engine`.
-- Registry state on 2026-10-18: 4.19.0 is latest (published 2026-10-16), with
-  4.17.0, 4.13.1 and 4.9.3 before it. 4.20.1 was never published and is skipped.
+- Registry state on 2026-10-24: 4.20.3 is latest (published 2026-10-24), with
+  4.20.2, 4.19.0, 4.17.0, 4.13.1 and 4.9.3 before it. 4.20.1 was never
+  published.
 
 `mcp-publisher` is pinned to `v1.8.1` and its tarball is checked against the
 sha256 from that release's `registry_1.8.1_checksums.txt`. To upgrade, change

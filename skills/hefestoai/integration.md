@@ -177,8 +177,8 @@ For pull requests, `hefesto pr-review` emits the same JSON scoped to the diff.
 |----------|---------|-------------|
 | HEFESTO_TIER | (none) | License tier: professional, omega |
 | SKIP_HEFESTO_HOOKS | 0 | Set to 1 to bypass git hooks |
-| IRIS_BQ_PROJECT | (none) | GCP project for IRIS telemetry |
-| IRIS_BQ_DATASET | omega_audit | BigQuery dataset for IRIS |
+| IRIS_BQ_PROJECT | (none) | GCP project, only for the optional BigQuery adapter |
+| IRIS_BQ_DATASET | omega_audit | Dataset for the optional BigQuery adapter |
 
 ## Default Excludes
 

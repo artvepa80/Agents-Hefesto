@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
+from hefesto.core.safe_parse import SYNTAX, safe_parse
+
 
 @dataclass
 class TestAssertion:
@@ -347,10 +349,16 @@ class TestContradictionDetector:
         """
         try:
             source = file_path.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(file_path))
-        except (SyntaxError, UnicodeDecodeError) as exc:
+        except UnicodeDecodeError as exc:
             self.skipped_files.append((file_path, f"{type(exc).__name__}: {exc}"))
             return
+        result = safe_parse(source, str(file_path))
+        if result.error == SYNTAX:
+            self.skipped_files.append((file_path, f"{result.error_type}: {result.error_message}"))
+            return
+        if result.tree is None:
+            result.reraise()
+        tree = result.tree
         self.checked_files += 1
 
         for node in ast.walk(tree):

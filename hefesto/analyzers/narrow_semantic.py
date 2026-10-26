@@ -29,6 +29,7 @@ from hefesto.core.analysis_models import (
     AnalysisIssueType,
 )
 from hefesto.core.ast.generic_ast import GenericAST
+from hefesto.core.safe_parse import parse_or_none
 
 
 class NarrowSemanticAnalyzer:
@@ -42,9 +43,8 @@ class NarrowSemanticAnalyzer:
         if tree.language != "python" or not code:
             return []
 
-        try:
-            py_tree = python_ast.parse(code)
-        except SyntaxError:
+        py_tree = parse_or_none(code, file_path)
+        if py_tree is None:
             return []
 
         issues: List[AnalysisIssue] = []

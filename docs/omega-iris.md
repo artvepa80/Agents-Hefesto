@@ -10,8 +10,8 @@ Production monitoring that correlates code issues with production failures.
 
 - **IRIS Agent**: Real-time production monitoring
 - **Auto-Correlation**: Links code changes to incidents
-- **Real-Time Alerts**: Pub/Sub notifications
-- **BigQuery Analytics**: Track correlations over time
+- **Real-Time Alerts**: alert notifications
+- **Storage you choose**: IRIS telemetry storage is provider-agnostic: you choose where the data lives. Today's adapters are in-memory, file (JSONL) and BigQuery (optional); more are planned.
 
 ---
 
