@@ -14,9 +14,9 @@ from hefesto.critical_tests.git_diff import (
     GitError,
     changed_files,
     merge_base,
+    pair_test_files,
     parse_name_status,
     read_file_at,
-    pair_test_files,
 )
 
 
