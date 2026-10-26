@@ -1,9 +1,8 @@
 # Full-repository HefestoAI scan with results in Security > Code scanning.
 #
 # Non-blocking for now: the scan step has continue-on-error, so the job stays
-# green while two known CRITICAL findings remain on main
-# (hefesto/telemetry/client.py:28, the public PostHog key, and
-# scripts/validate_aggregates_jsonl.py:48, complexity 22). The SARIF upload
+# green while a known CRITICAL finding remains on main
+# (scripts/validate_aggregates_jsonl.py:48, complexity 22). The SARIF upload
 # inside the Action runs even when the gate fails, so every finding still
 # reaches code scanning. To make this gate blocking, delete the
 # continue-on-error line. The blocking changed-file gate is dogfood.yml.

@@ -166,6 +166,55 @@ def _has_dynamic_concatenation(line: str) -> bool:
     return False
 
 
+# Key prefixes that vendors document as safe to ship in client code:
+# PostHog project tokens (https://posthog.com/docs/api) and Stripe publishable
+# keys (https://docs.stripe.com/keys). Secret keys from the same vendors
+# (``phx_``, ``phs_``, ``sk_``, ``rk_``) are not listed and stay CRITICAL.
+_PUBLIC_CLIENT_KEY = re.compile(r"(?:phc_|pk_live_|pk_test_)[A-Za-z0-9]+")
+
+# Only generic name-based matches are downgraded. A public-looking value
+# assigned to ``secret_key`` or ``password`` is reported as CRITICAL.
+_DOWNGRADABLE_SECRET_TYPES = frozenset({"API key", "Token"})
+
+
+def _is_public_client_key(match: "re.Match[str]", secret_type: str) -> bool:
+    """Return True if *match* captured a known public client key as the whole value."""
+    if secret_type not in _DOWNGRADABLE_SECRET_TYPES or match.lastindex is None:
+        return False
+    return _PUBLIC_CLIENT_KEY.fullmatch(match.group(1)) is not None
+
+
+def _secret_issue(
+    file_path: str, line_num: int, line: str, match: "re.Match[str]", secret_type: str
+) -> AnalysisIssue:
+    column = line.find(match.group(0))
+    if _is_public_client_key(match, secret_type):
+        return AnalysisIssue(
+            file_path=file_path,
+            line=line_num,
+            column=column,
+            issue_type=AnalysisIssueType.HARDCODED_SECRET,
+            severity=AnalysisIssueSeverity.LOW,
+            message=f"Hardcoded {secret_type} is a known public client key "
+            "(PostHog project token or Stripe publishable key)",
+            suggestion="Public client keys are designed to be exposed. Confirm the "
+            "value is the public key and not a secret key from the same vendor.",
+            metadata={"secret_type": secret_type, "public_client_key": True},
+        )
+    return AnalysisIssue(
+        file_path=file_path,
+        line=line_num,
+        column=column,
+        issue_type=AnalysisIssueType.HARDCODED_SECRET,
+        severity=AnalysisIssueSeverity.CRITICAL,
+        message=f"Hardcoded {secret_type} detected",
+        suggestion="Move to environment variable or secrets manager:\n"
+        f"Use: os.getenv('{secret_type.upper().replace(' ', '_')}')\n"
+        "Or use a secrets management service like AWS Secrets Manager",
+        metadata={"secret_type": secret_type},
+    )
+
+
 class SecurityAnalyzer:
     """Analyzes code for security vulnerabilities."""
 
@@ -212,20 +261,7 @@ class SecurityAnalyzer:
             for pattern, secret_type in self.SECRET_PATTERNS:
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
-                    issues.append(
-                        AnalysisIssue(
-                            file_path=file_path,
-                            line=line_num,
-                            column=line.find(match.group(0)),
-                            issue_type=AnalysisIssueType.HARDCODED_SECRET,
-                            severity=AnalysisIssueSeverity.CRITICAL,
-                            message=f"Hardcoded {secret_type} detected",
-                            suggestion="Move to environment variable or secrets manager:\n"
-                            f"Use: os.getenv('{secret_type.upper().replace(' ', '_')}')\n"
-                            "Or use a secrets management service like AWS Secrets Manager",
-                            metadata={"secret_type": secret_type},
-                        )
-                    )
+                    issues.append(_secret_issue(file_path, line_num, line, match, secret_type))
 
         return issues
 

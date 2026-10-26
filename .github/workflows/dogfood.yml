@@ -14,16 +14,12 @@
 # hefesto analyze does not apply exclude to explicit paths. Without the file
 # it falls back to tests/fixtures/ and .github/action-smoke/ (planted findings).
 #
-# With those exclusions, two tracked files fail the gate when touched:
+# With those exclusions, one tracked file fails the gate when touched:
 # scripts/validate_aggregates_jsonl.py:48 (CRITICAL VERY_HIGH_COMPLEXITY,
-# until that function is split) and hefesto/telemetry/client.py: line 28 is a
-# PostHog public write-only project key (docs/telemetry.md), reported as
-# CRITICAL HARDCODED_SECRET.
-# No line-level suppression exists, and this job does not drop HARDCODED_SECRET.
-# A pull request that touches that file fails until a line-level suppression
-# is designed.
-# The self-check step proves a planted AKIA key fails and that the rest of
-# hefesto/ passes.
+# until that function is split). The PostHog public project key in
+# hefesto/telemetry/client.py is reported as LOW (known public client key).
+# The self-check step proves a planted AKIA key fails and that hefesto/ has
+# no CRITICAL findings.
 
 name: Dogfood
 
