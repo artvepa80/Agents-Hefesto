@@ -115,16 +115,14 @@ class SuggestionValidator:
 #### 1. AST-Based Verification
 
 ```python
-import ast
+from hefesto.core.safe_parse import safe_parse
 
 def validate_syntax(code: str) -> bool:
     """Verify code is syntactically valid."""
-    try:
-        ast.parse(code)
-        return True
-    except SyntaxError:
-        return False
+    return safe_parse(code, "<suggested-fix>").tree is not None
 ```
+
+`safe_parse` returns the same tree as `ast.parse`, records compiler warnings (such as an invalid escape sequence) instead of printing them, and gives the same answer under `PYTHONWARNINGS=error`, where a bare `ast.parse` raises `SyntaxError` for code that only has a warning.
 
 **Use Cases:**
 - Verify suggested fixes are valid Python
