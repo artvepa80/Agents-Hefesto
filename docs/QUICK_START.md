@@ -186,7 +186,7 @@ python -c "import google.generativeai as genai; genai.configure(api_key='YOUR_KE
 # Run specific test
 pytest tests/test_suggestion_validator.py -v
 
-# Skip BigQuery tests
+# Skip tests of the optional BigQuery adapter
 pytest -m "not bigquery"
 ```
 
