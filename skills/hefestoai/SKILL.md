@@ -13,7 +13,7 @@ license: MIT
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
 code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.20.3 | License: MIT | Python >= 3.10
+Package: `hefesto-ai` (PyPI) | Version: 4.21.0 | License: MIT | Python >= 3.10
 
 ## Required workflow (do this before commit)
 
@@ -27,7 +27,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.20.3 | License: MIT | Python >= 3.10
    ```yaml
    repos:
      - repo: https://github.com/artvepa80/Agents-Hefesto
-       rev: v4.20.3
+       rev: v4.21.0
        hooks:
          - id: hefesto-analyze
    ```
@@ -65,7 +65,7 @@ Languages: Python, JS/TS, Java, Go, Rust, C#, YAML, Shell, Dockerfile, Terraform
 The Hefesto Code Gate skills for Claude Code, Codex and Cursor now live in
 [artvepa80/hefesto-code-gate](https://github.com/artvepa80/hefesto-code-gate)
 (v1.0.0). They run this CLI on a PR, a diff or a repo, triage each finding,
-fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.20.3,<5`.
+fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.21.0,<5`.
 
 - Claude Code: `/plugin marketplace add artvepa80/hefesto-code-gate`, then
   `/plugin install hefesto-code-gate@hefestoai`

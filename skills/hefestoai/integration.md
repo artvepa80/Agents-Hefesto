@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.20.3
+      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.21.0
         with:
           target: '.'
           fail_on: 'CRITICAL'

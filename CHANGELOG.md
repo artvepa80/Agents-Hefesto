@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.21.0] - 2026-10-27
+
 ### Added
 
 - **`critical_tests` section in `.hefesto.yaml` and the comparator core (preview, Refs #175).** An optional `critical_tests` section maps requirements to pytest node IDs: `enforcement` (`warn` by default, or `block`) for the section and per entry, and `entries` of `{id, requirement, tests, enforcement}`. Node IDs are `path.py::test` or `path.py::Class::test`, repo-relative with `/`, and without `[param]` suffixes. Unknown keys inside the section, duplicate ids, duplicate tests in an entry and an empty `entries` or `tests` list are config errors (exit 2 from `hefesto analyze`). `hefesto analyze` validates the section and otherwise ignores it, and a config without it behaves as before. `hefesto.critical_tests.comparator.compare_tests` compares one test file's base and head sources (no git) and reports, per mapped test present in the base: `DELETED` (no definition in the head, file deleted, or renamed), `SKIPPED` (a new skip/skipif/xfail marker, `pytest.skip()`/`pytest.xfail()` call, `pytestmark` or `__test__ = False` at function, class or module level; a `skipif` on the platform alone is warn-only), `TRIVIALIZED` (assertions in the base, none that can run in the head) and `ASSERTS_REDUCED` (fewer assertions, always warn-only). Nothing runs the check yet: `hefesto pr-review` integration, rename detection and enforcement come in later releases. Reference: `docs/critical-tests.md`.

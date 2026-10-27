@@ -27,7 +27,7 @@ hefesto analyze . --fail-on CRITICAL
 ## GitHub Action
 
 ```yaml
-- uses: artvepa80/Agents-Hefesto@v4   # floating major tag; exact pins like @v4.20.3 also work
+- uses: artvepa80/Agents-Hefesto@v4   # floating major tag; exact pins like @v4.21.0 also work
   with:
     target: '.'
     fail_on: 'CRITICAL'

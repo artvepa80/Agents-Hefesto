@@ -119,7 +119,7 @@ These rules ensure Hefesto achieves enterprise-grade quality, maintainability, s
 
 **CI scans of this repo:** `.github/workflows/hefesto.yml` (job `hefesto-scan`) scans the whole repo on push and PR to `main` with the Action `@v4` (`fail_on: CRITICAL`) and uploads SARIF to code scanning (category `hefesto`). It is non-blocking (`continue-on-error: true`) until the two known CRITICAL findings are fixed; the blocking gate on changed files is `dogfood.yml`. Excludes live only in the root `.hefesto.yaml` (`tests/fixtures/`, `.github/action-smoke/`). `exclude` entries are whole path segments, not globs (`tests/fixtures/**` matches nothing), and paths passed explicitly are not filtered.
 
-**Current Status (v4.20.3)**:
+**Current Status (v4.21.0)**:
 - 3-tier licensing (FREE/PRO/OMEGA)
 - 2 core REST endpoints (/health, /analyze) in hefesto/server.py. IRIS ingest sub-router (/v1/ingest/*) mounted conditionally when OMEGA tier is installed
 - IRIS Agent production monitoring
