@@ -66,10 +66,9 @@ HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed.py> --severity LOW
 # falls back to tests/fixtures/ and .github/action-smoke/ without the file):
 HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
   --severity medium --fail-on critical --allow-no-files
-# Proves a planted CRITICAL fails and the current hefesto/ tree passes
-# aside from the documented PostHog public key (no line-level suppression).
-# Two tracked files fail the gate when touched: hefesto/telemetry/client.py:28
-# (until a line-level suppression is designed) and
+# Proves a planted CRITICAL fails and the current hefesto/ tree has no
+# CRITICAL findings (the PostHog public key is reported as LOW).
+# One tracked file fails the gate when touched:
 # scripts/validate_aggregates_jsonl.py:48 (VERY_HIGH_COMPLEXITY, until split):
 python scripts/dogfood_changed.py --self-check
 
