@@ -5,21 +5,27 @@ from typing import List
 
 from hefesto.core.ast.generic_ast import GenericAST, GenericNode, NodeType
 from hefesto.core.parsers.base_parser import CodeParser
+from hefesto.core.safe_parse import SYNTAX, safe_parse
 
 
 class PythonParser(CodeParser):
     """Python parser using built-in ast module."""
 
     def parse(self, code: str, file_path: str) -> GenericAST:
-        """Parse Python code using ast module."""
-        try:
-            tree = ast.parse(code, filename=file_path)
+        """Parse Python code using ast module.
+
+        A ``SyntaxError`` yields an UNKNOWN root node. Any other parse
+        failure re-raises the original exception, so the engine reports the
+        file as not parsed.
+        """
+        result = safe_parse(code, file_path)
+        if result.tree is not None:
             # Pre-compute lines once for O(1) text extraction per node
             # (MiniMax Option B: avoids O(n) split per node)
             lines = code.split("\n")
-            root = self._convert_ast_to_generic(tree, lines)
+            root = self._convert_ast_to_generic(result.tree, lines)
             return GenericAST(root, "python", code)
-        except SyntaxError as e:
+        if result.error == SYNTAX:
             root = GenericNode(
                 type=NodeType.UNKNOWN,
                 name=None,
@@ -29,9 +35,10 @@ class PythonParser(CodeParser):
                 column_end=0,
                 text=code,
                 children=[],
-                metadata={"error": str(e)},
+                metadata={"error": result.error_message},
             )
             return GenericAST(root, "python", code)
+        result.reraise()
 
     def supports_language(self, language: str) -> bool:
         return language == "python"

@@ -88,6 +88,7 @@ python scripts/verify_server_json.py
 - **Type hints**: Required for all public functions
 - **Docstrings**: Google style
 - **Testing**: pytest with >80% coverage
+- **Parsing analyzed Python**: call `hefesto.core.safe_parse.safe_parse` (or `parse_or_none`), never `ast.parse` directly. It keeps compiler warnings off stderr and makes the result independent of `PYTHONWARNINGS` / `-W`; `tests/test_safe_parse.py` fails on any other `ast.parse(` call under `hefesto/`.
 
 ## 🧪 Testing Requirements
 
