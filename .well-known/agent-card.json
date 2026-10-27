@@ -1,7 +1,7 @@
 {
   "name": "HefestoAI",
   "description": "Release truth engine for AI-generated code. Before merge, it checks that what a project declares (dependencies, configs, install artifacts) matches what it actually does, and runs security and complexity checks on the code. Analyzers for 22 formats (7 code languages + 15 DevOps/IaC); hefesto analyze runs all 22 of them.",
-  "version": "4.21.0",
+  "version": "4.20.4",
   "supportedInterfaces": [
     {
       "url": "https://hefestoai.narapallc.com/api/mcp-protocol",
