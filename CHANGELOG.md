@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `critical_tests`: check a base...head range (part 3 of 4)
+
+`hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
+
 ### Added
 
 - **`critical_tests` git helpers: merge-base, changed files and renames (preview, Refs #175).** `hefesto.critical_tests.git_diff` adds `merge_base`, `changed_files` (`git diff -z --name-status -M --no-ext-diff`, returning `ADDED`, `MODIFIED`, `DELETED_FILE` or `RENAMED` with old and new paths and the similarity score), `read_file_at` and `pair_test_files`. A renamed test file is paired old path to new path, so its tests are compared by content instead of being reported as `DELETED`. Renames are detected even with `diff.renames=false` in the user's git config. Nothing runs the check on pull requests yet. Reference: `docs/critical-tests.md`.

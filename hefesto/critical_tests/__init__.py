@@ -4,11 +4,17 @@
 test file's base and head sources and reports deleted, skipped, trivialized or
 weakened tests. Both are pure: no git, no file system, no network.
 ``git_diff`` computes the merge-base and the changed files (with renames) and
-reads file contents at a commit.
+reads file contents at a commit. ``check`` runs both for a base...head range
+and attributes each change to its config entry.
 
 Copyright 2026 Narapa LLC, Miami, Florida
 """
 
+from hefesto.critical_tests.check import (
+    CheckResult,
+    CriticalTestFinding,
+    check_critical_tests,
+)
 from hefesto.critical_tests.comparator import (
     ASSERTS_REDUCED,
     DELETED,
@@ -42,7 +48,9 @@ __all__ = [
     "ENFORCEMENTS",
     "SKIPPED",
     "TRIVIALIZED",
+    "CheckResult",
     "CriticalTestEntry",
+    "CriticalTestFinding",
     "CriticalTestsPolicy",
     "FileChange",
     "GitError",
@@ -50,6 +58,7 @@ __all__ = [
     "TestChange",
     "TestRef",
     "changed_files",
+    "check_critical_tests",
     "compare_tests",
     "count_assertions",
     "merge_base",

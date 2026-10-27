@@ -1,7 +1,8 @@
 # Critical-test regression guard (`critical_tests`)
 
 > **Preview.** This release adds the config section, the comparator core and
-> the git helpers that find changed and renamed test files.
+> the git helpers that find changed and renamed test files, and
+> `check_critical_tests`, which runs them for a base...head range.
 > Nothing runs the check on pull requests yet: `hefesto pr-review`
 > integration and `block` enforcement are planned for later
 > releases. A config without `critical_tests` behaves exactly as before.
@@ -111,3 +112,20 @@ a rename, update `.hefesto.yaml` to the new path.
 - The config file is not a security boundary on its own. Enforcement is meant
   to read the policy from the base branch, and changes to `.hefesto.yaml`
   should require review (for example with CODEOWNERS and branch protection).
+
+## Checking a range
+
+`hefesto.critical_tests.check.check_critical_tests(repo, policy, base_ref,
+head_ref="HEAD")` compares from the merge-base of `base_ref` and `head_ref`.
+It reads each mapped test file the range touched on both sides (a renamed
+file is compared at its new path), runs the comparator and returns a
+`CheckResult`:
+
+- `findings`: one `CriticalTestFinding` per change and per entry that lists
+  the test, with `entry_id`, `requirement`, `enforcement`, `nodeid`,
+  `rule_id`, `kind`, `detail`, `warn_only`, `base_path` and `head_path`.
+- `errors`: `"path: message"` for a file that cannot be parsed on either side;
+  the other files are still checked.
+
+It prints nothing and sets no exit code; `hefesto pr-review` output and
+`block` enforcement come next.
