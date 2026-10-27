@@ -91,7 +91,7 @@ Hefesto checks for these at pre-commit, at pre-push and in CI, so they surface b
 
 | Issue | Severity | Description |
 |-------|----------|-------------|
-| HARDCODED_SECRET | CRITICAL | API keys, passwords in code |
+| HARDCODED_SECRET | CRITICAL | API keys, passwords in code (known public client keys such as PostHog `phc_` and Stripe `pk_live_`/`pk_test_` are reported as LOW) |
 | SQL_INJECTION_RISK | HIGH | String concatenation in queries |
 | COMMAND_INJECTION | HIGH | Unsafe shell command execution |
 | PICKLE_USAGE | HIGH | `import pickle` / `cPickle` lines (the import is flagged; `pickle.loads()` calls are not reported separately) |

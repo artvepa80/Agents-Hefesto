@@ -38,7 +38,7 @@ Comparison ignores surrounding spaces and letter case. Usage events stay on by d
 
 The GitHub Action exports `HEFESTO_TELEMETRY=0` unless its `telemetry` input is `1` or `true` (`scripts/action_entrypoint.sh`). With that default the check does not run on the runner. `telemetry: 1` exports `HEFESTO_TELEMETRY=1`, and the check runs.
 
-The project key embedded in the client is a public write-only PostHog key. It is not a secret. Override it (including with an empty value, which sends nothing):
+The project key embedded in the client is a public write-only PostHog key. It is not a secret, and `hefesto analyze` reports it as a LOW `HARDCODED_SECRET` (known public client key) rather than CRITICAL. Override it (including with an empty value, which sends nothing):
 
 - Environment: `HEFESTO_POSTHOG_KEY`, `HEFESTO_POSTHOG_HOST` (a set-but-empty value wins).
 - Config file `~/.hefesto/telemetry.json`:
