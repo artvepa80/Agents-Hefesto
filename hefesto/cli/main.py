@@ -52,7 +52,7 @@ def _exit(code: int) -> None:
 @click.pass_context
 def cli(ctx: click.Context) -> None:
     """
-    HEFESTO - AI-Powered Code Quality Guardian
+    HEFESTO - Release truth engine for AI-generated code
 
     Autonomous code analysis, refactoring, and quality assurance.
     """
