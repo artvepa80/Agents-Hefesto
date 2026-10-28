@@ -48,7 +48,7 @@ jobs:
           sarif: 'true'
 ```
 
-检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.20.3` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要使用 CLI 并安装 `hefesto-ai[multilang]`。
+检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.20.4` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要使用 CLI 并安装 `hefesto-ai[multilang]`。
 
 ## 检查内容（示例）
 

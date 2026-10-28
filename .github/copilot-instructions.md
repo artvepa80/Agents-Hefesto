@@ -40,13 +40,13 @@ PRO and OMEGA features ship in the private distribution, not in this tree.
 
 ## Key Facts
 
-- **Version:** 4.20.3
+- **Version:** 4.20.4
 - **Tests:** 531 across 38 test files
 - **Languages:** Python (native AST), TypeScript, JavaScript, Java, Go, Rust, C# (TreeSitter — requires `pip install "hefesto-ai[multilang]"`)
 - **DevOps:** YAML, Terraform, Shell, Dockerfile, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy
 - **Cloud:** CloudFormation, ARM Templates, Helm Charts, Serverless Framework
 - **PyPI:** `pip install hefesto-ai`
-- **GitHub Action:** `artvepa80/Agents-Hefesto@v4` (floating major tag; exact pins such as `@v4.20.3` also work)
+- **GitHub Action:** `artvepa80/Agents-Hefesto@v4` (floating major tag; exact pins such as `@v4.20.4` also work)
 - **MCP Server:** Registered in Smithery (AI agent ecosystem)
 - **License:** MIT (core), proprietary (PRO/OMEGA features)
 
