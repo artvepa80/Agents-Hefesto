@@ -1,8 +1,9 @@
 # Critical-test regression guard (`critical_tests`)
 
-> **Preview.** This release adds the config section and the comparator core.
+> **Preview.** This release adds the config section, the comparator core and
+> the git helpers that find changed and renamed test files.
 > Nothing runs the check on pull requests yet: `hefesto pr-review`
-> integration, rename detection and `block` enforcement are planned for later
+> integration and `block` enforcement are planned for later
 > releases. A config without `critical_tests` behaves exactly as before.
 
 A test suite can stay green while a change deletes, skips or empties the tests
@@ -73,11 +74,38 @@ constant), and nested functions or classes.
 When a name is defined more than once in a module or class, the last
 definition is used, as in Python. Formatting-only changes produce no report.
 
+## Changed and renamed test files
+
+`hefesto.critical_tests.git_diff` is the git side, used by the later
+`pr-review` integration:
+
+- `merge_base(repo, base_ref, head_ref="HEAD")` returns the commit to compare
+  against (`git merge-base`).
+- `changed_files(repo, base, head)` runs `git diff -z --name-status -M
+  --no-ext-diff` and returns `FileChange(status, old_path, new_path,
+  similarity)` with status `ADDED`, `MODIFIED` (also type changes),
+  `DELETED_FILE` or `RENAMED`. `-M` is passed explicitly, so a
+  `diff.renames=false` setting does not hide renames. Paths with spaces, tabs or
+  non-ASCII characters are kept as-is (`-z`).
+- `pair_test_files(changes, mapped_paths)` returns `(base_path, head_path)` for
+  each mapped test file the diff touched. A renamed file pairs the old path with
+  the new path, so its tests are compared by content instead of being reported
+  as `DELETED`. `head_path` is `None` for a deleted file. Untouched and added
+  files are left out.
+- `read_file_at(repo, ref, path)` returns the file's text at a commit, or
+  `None` when it does not exist there.
+
+Rename detection is git's similarity score (50% by default). A rename that
+also rewrites most of the file shows up as a deletion plus an addition, and
+its tests are reported as `DELETED`. Mapped node IDs keep the base path: after
+a rename, update `.hefesto.yaml` to the new path.
+
 ## Limits
 
 - Python and pytest only.
-- The comparator cannot tell a rename from a deletion; rename detection is
-  planned with the `pr-review` integration.
+- The comparator alone cannot tell a rename from a deletion; file renames are
+  followed through `git_diff`, a test function renamed inside a file is still
+  `DELETED`.
 - It counts assertions; it does not judge whether a changed assertion is
   weaker.
 - The config file is not a security boundary on its own. Enforcement is meant

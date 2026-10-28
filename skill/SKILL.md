@@ -14,4 +14,4 @@ The Hefesto Code Gate skills for Claude Code, Codex and Cursor now live in
 /plugin install hefesto-code-gate@hefestoai
 ```
 
-Requires `hefesto-ai>=4.20.3,<5`.
+Requires `hefesto-ai>=4.20.4,<5`.
