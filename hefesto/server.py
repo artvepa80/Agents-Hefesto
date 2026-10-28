@@ -46,7 +46,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Hefesto API",
         version=__version__,
-        description="AI-Powered Code Quality Guardian",
+        description="Release truth engine for AI-generated code",
     )
 
     @app.get("/health")

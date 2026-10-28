@@ -1,5 +1,5 @@
 """
-HEFESTO - AI-Powered Code Quality Guardian (Community Edition)
+HEFESTO - Release truth engine for AI-generated code (Community Edition)
 
 Static code analysis, security scanning, and quality assurance.
 
