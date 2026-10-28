@@ -46,12 +46,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Fake AKIA key committed for the Action smoke fixture. Not under tests/.
 PLANTED_CRITICAL = ".github/action-smoke/critical_secret.py"
 PACKAGE = "hefesto"
-# Public write-only PostHog project key. See docs/telemetry.md.
-DOCUMENTED_KEY_PATH = "hefesto/telemetry/client.py"
-DOCUMENTED_KEY_LINE = 28
-DOCUMENTED_KEY_TYPE = "HARDCODED_SECRET"
-# Components relative to the analyzed directory ``hefesto/``.
-DOCUMENTED_KEY_EXCLUDE = "telemetry/client.py"
 
 # Used only when the repository has no .hefesto.yaml/.hefesto.yml. Test
 # fixtures and the Action smoke fixture contain planted findings on purpose;
@@ -278,33 +272,6 @@ def critical_issues(repo: Path, paths: list[str]) -> list[dict[str, object]]:
     return found
 
 
-def _is_documented_key(repo: Path, issue: dict[str, object]) -> bool:
-    raw = issue.get("file")
-    if not isinstance(raw, str):
-        return False
-    try:
-        same_file = Path(raw).resolve() == (repo / DOCUMENTED_KEY_PATH).resolve()
-    except OSError:
-        return False
-    return (
-        same_file
-        and issue.get("line") == DOCUMENTED_KEY_LINE
-        and issue.get("type") == DOCUMENTED_KEY_TYPE
-    )
-
-
-def _documented_key_line(repo: Path) -> bool:
-    path = repo / DOCUMENTED_KEY_PATH
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return False
-    if len(lines) < DOCUMENTED_KEY_LINE:
-        return False
-    line = lines[DOCUMENTED_KEY_LINE - 1]
-    return "POSTHOG_API_KEY" in line and "phc_" in line
-
-
 def _print_issues(issues: list[dict[str, object]]) -> None:
     for issue in issues:
         print(
@@ -334,52 +301,17 @@ def _planted_must_fail(repo: Path) -> bool:
 
 def _current_tree_must_pass(repo: Path) -> bool:
     print("Self-check 2: current hefesto/ tree", flush=True)
-    if not _documented_key_line(repo):
-        print(
-            "SELF-CHECK FAILED: "
-            f"{DOCUMENTED_KEY_PATH}:{DOCUMENTED_KEY_LINE} is not the PostHog public key",
-            file=sys.stderr,
-        )
-        return False
     try:
         issues = critical_issues(repo, [PACKAGE])
     except (DogfoodError, KeyError, TypeError) as exc:
         print(f"SELF-CHECK FAILED: {exc}", file=sys.stderr)
         return False
-    known = [issue for issue in issues if _is_documented_key(repo, issue)]
-    if len(issues) != 1 or len(known) != 1:
-        print("SELF-CHECK FAILED: unexpected CRITICAL findings under hefesto/", file=sys.stderr)
+    if issues:
+        print("SELF-CHECK FAILED: CRITICAL findings under hefesto/", file=sys.stderr)
         _print_issues(issues)
         return False
-    print(
-        "sole CRITICAL under hefesto/ is "
-        f"{DOCUMENTED_KEY_TYPE} at {DOCUMENTED_KEY_PATH}:{DOCUMENTED_KEY_LINE} "
-        "(PostHog public write-only project key, docs/telemetry.md). "
-        "The pass check below excludes that file only. The changed-file gate does not.",
-        flush=True,
-    )
-    argv = hefesto_argv([PACKAGE], ["--exclude", DOCUMENTED_KEY_EXCLUDE, "--output", "json"])
-    print_command(argv, telemetry=True)
-    proc = _run(argv, repo, capture=True)
-    if proc.returncode != 0:
-        sys.stderr.write(proc.stdout[-4000:])
-        sys.stderr.write(proc.stderr[-4000:])
-        print(f"SELF-CHECK FAILED: current tree exit {proc.returncode}", file=sys.stderr)
-        return False
-    try:
-        summary = json.loads(proc.stdout)["summary"]
-    except (json.JSONDecodeError, KeyError) as exc:
-        print(f"SELF-CHECK FAILED: {exc}", file=sys.stderr)
-        return False
-    critical = summary.get("critical")
-    files = summary.get("files_analyzed")
-    print(
-        "current tree passed --fail-on critical "
-        f"(files {files}, critical {critical}; "
-        f"{DOCUMENTED_KEY_EXCLUDE} excluded from this pass check only)",
-        flush=True,
-    )
-    return bool(critical == 0)
+    print("current tree has no CRITICAL findings under hefesto/", flush=True)
+    return True
 
 
 def self_check(repo: Path) -> int:
