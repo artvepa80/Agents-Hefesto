@@ -99,3 +99,10 @@ def test_base_is_the_merge_base(repo: Path) -> None:
     _commit(repo, "main moves on")
     result = check_critical_tests(repo, POLICY, "main", "feature")
     assert [f.entry_id for f in result.findings] == ["authz"]
+
+
+def test_owners_by_test_keeps_every_entry_in_order():
+    from hefesto.critical_tests.check import _owners_by_test
+
+    refs = [("a", "test_x"), ("b", "test_y"), ("c", "test_x")]
+    assert _owners_by_test(refs) == {"test_x": ["a", "c"], "test_y": ["b"]}

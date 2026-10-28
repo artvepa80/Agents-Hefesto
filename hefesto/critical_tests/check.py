@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-from hefesto.critical_tests.comparator import SourceParseError, compare_tests
+from hefesto.critical_tests.comparator import SourceParseError, TestChange, compare_tests
 from hefesto.critical_tests.git_diff import (
     PathLike,
     changed_files,
@@ -22,7 +22,7 @@ from hefesto.critical_tests.git_diff import (
     pair_test_files,
     read_file_at,
 )
-from hefesto.critical_tests.policy import CriticalTestsPolicy
+from hefesto.critical_tests.policy import CriticalTestEntry, CriticalTestsPolicy
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,74 @@ class CheckResult:
     errors: List[str] = field(default_factory=list)
 
 
+def _owners_by_test(refs: List[Tuple[str, str]]) -> Dict[str, List[str]]:
+    """Map each qualname to the config entry ids that list it, in order."""
+    owners: Dict[str, List[str]] = {}
+    for entry_id, qualname in refs:
+        owners.setdefault(qualname, []).append(entry_id)
+    return owners
+
+
+def _findings_for_file(
+    test_changes: List[TestChange],
+    refs: List[Tuple[str, str]],
+    entries: Dict[str, CriticalTestEntry],
+    base_path: str,
+    head_path: Optional[str],
+) -> List[CriticalTestFinding]:
+    """Attribute each test change to every entry that lists the test."""
+    owners = _owners_by_test(refs)
+    return [
+        _make_finding(change, entries[entry_id], base_path, head_path)
+        for change in test_changes
+        for entry_id in owners.get(change.test, [])
+    ]
+
+
+def _make_finding(
+    change: TestChange,
+    entry: CriticalTestEntry,
+    base_path: str,
+    head_path: Optional[str],
+) -> CriticalTestFinding:
+    return CriticalTestFinding(
+        entry_id=entry.id,
+        requirement=entry.requirement,
+        enforcement=entry.enforcement,
+        nodeid=f"{base_path}::{change.test}",
+        rule_id=change.rule_id,
+        kind=change.kind,
+        detail=change.detail,
+        warn_only=change.warn_only,
+        base_path=base_path,
+        head_path=head_path,
+    )
+
+
+def _check_pair(
+    repo: PathLike,
+    base: str,
+    head_ref: str,
+    base_path: str,
+    head_path: Optional[str],
+    refs: List[Tuple[str, str]],
+    entries: Dict[str, CriticalTestEntry],
+    result: CheckResult,
+) -> None:
+    """Compare one (base_path, head_path) pair and add findings or an error."""
+    base_source = read_file_at(repo, base, base_path)
+    if base_source is None:
+        return
+    head_source = read_file_at(repo, head_ref, head_path) if head_path else None
+    qualnames = list(dict.fromkeys(q for _, q in refs))
+    try:
+        test_changes = compare_tests(base_source, head_source, qualnames)
+    except SourceParseError as exc:
+        result.errors.append(f"{base_path}: {exc}")
+        return
+    result.findings.extend(_findings_for_file(test_changes, refs, entries, base_path, head_path))
+
+
 def check_critical_tests(
     repo: PathLike,
     policy: CriticalTestsPolicy,
@@ -60,37 +128,16 @@ def check_critical_tests(
     entries = {entry.id: entry for entry in policy.entries}
     changes = changed_files(repo, base, head_ref)
     for base_path, head_path in pair_test_files(changes, by_file):
-        base_source = read_file_at(repo, base, base_path)
-        if base_source is None:
-            continue
-        head_source = read_file_at(repo, head_ref, head_path) if head_path else None
-        refs: List[Tuple[str, str]] = by_file[base_path]
-        qualnames = list(dict.fromkeys(q for _, q in refs))
-        try:
-            test_changes = compare_tests(base_source, head_source, qualnames)
-        except SourceParseError as exc:
-            result.errors.append(f"{base_path}: {exc}")
-            continue
-        owners: Dict[str, List[str]] = {}
-        for entry_id, qualname in refs:
-            owners.setdefault(qualname, []).append(entry_id)
-        for change in test_changes:
-            for entry_id in owners.get(change.test, []):
-                entry = entries[entry_id]
-                result.findings.append(
-                    CriticalTestFinding(
-                        entry_id=entry_id,
-                        requirement=entry.requirement,
-                        enforcement=entry.enforcement,
-                        nodeid=f"{base_path}::{change.test}",
-                        rule_id=change.rule_id,
-                        kind=change.kind,
-                        detail=change.detail,
-                        warn_only=change.warn_only,
-                        base_path=base_path,
-                        head_path=head_path,
-                    )
-                )
+        _check_pair(
+            repo,
+            base,
+            head_ref,
+            base_path,
+            head_path,
+            by_file[base_path],
+            entries,
+            result,
+        )
     return result
 
 
