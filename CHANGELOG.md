@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — docs: no bundled AI provider, working examples, no inline suppression
+
+- `capabilities.yml`, `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `.env.example` no longer say a Gemini API key is needed. No LLM provider is bundled; AI enrichment providers are brought by the user through the PRO `EnrichmentProvider` contract. The `ai_semantic_analysis` note now describes the real feature: `DUPLICATE_CODE` from local sentence-transformers embeddings, PRO only, with `HEFESTO_TIER=professional` or `omega`. Its `display` field is unchanged. The unused LLM budget variables and the nonexistent `/ping`, `/suggest/refactor` and `/budget` examples are gone from those docs.
+- `examples/basic_usage.py` imported functions that do not exist (`get_validator`, `get_feedback_logger`, `get_budget_tracker`, `BudgetTracker`). It now runs the real `AnalyzerEngine` on a sample file. `examples/pro_semantic_analysis.py` now uses `hefesto_pro.get_semantic_analyzer` and exits cleanly when PRO is not installed.
+- `llms.txt` and `skills/hefestoai/SKILL.md` no longer list `SEMANTIC_DRIFT` as a finding type, and say `DUPLICATE_CODE` uses local embeddings with PRO plus a paid tier. `skills/hefestoai/semantic_drift.md` is now "Patterns that often indicate drift", guidance only.
+- `docs/ANALYSIS_RULES.md` and `docs/INTEGRATION.md` no longer show `# hefesto: ignore` as working; there is no inline suppression. They point to `--exclude`, `--exclude-types` and `exclude` / `exclude_types` in `.hefesto.yaml`.
+- Behaviour is unchanged.
+
 ### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
 
 - `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.

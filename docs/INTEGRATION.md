@@ -218,12 +218,13 @@ def analyze_context(file_path: str, line_number: int) -> dict:
         end = min(len(lines), line_number + 3)
         context["surrounding_lines"] = "".join(lines[start:end])
 
-    # Check for special markers
-    if "# hefesto: ignore" in context["surrounding_lines"]:
-        context["suppressed"] = True
-
     return context
 ```
+
+Hefesto has no inline suppression marker (`# hefesto: ignore` is not
+read). To keep paths or issue types out of the results or the gate, use
+`--exclude`, `--exclude-types`, or `exclude` / `exclude_types` in
+`.hefesto.yaml`; see [Analysis Rules](ANALYSIS_RULES.md#excluding-paths-and-issue-types).
 
 **Context Factors:**
 - File location (test vs production)

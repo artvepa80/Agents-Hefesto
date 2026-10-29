@@ -4,7 +4,9 @@
 
 - Python 3.10 or higher
 - pip (Python package manager)
-- Gemini API key (get from https://aistudio.google.com/app/apikey)
+
+No AI provider or API key is needed. Hefesto does not bundle an LLM
+provider; see [AI providers](#ai-providers-none-bundled) below.
 
 ## Installation Methods
 
@@ -54,32 +56,30 @@ pip install -e ".[pro]"
 docker pull ghcr.io/artvepa80/hefesto:latest
 
 # Run server
-docker run -p 8080:8080 \
-  -e GEMINI_API_KEY='your_key' \
-  ghcr.io/artvepa80/hefesto:latest
+docker run -p 8080:8080 ghcr.io/artvepa80/hefesto:latest
 ```
 
 ## Configuration
 
-### 1. Set API Key
+### 1. AI providers (none bundled)
 
-```bash
-# Get key from: https://aistudio.google.com/app/apikey
-export GEMINI_API_KEY='your_gemini_api_key_here'
-```
+Hefesto does not bundle an LLM provider and needs no AI API key. The free
+analyzers are deterministic and run locally.
+
+Optional AI enrichment of findings is a PRO feature, and you bring the
+provider: it is a class you write (or install) that implements the PRO
+`EnrichmentProvider` contract. Hefesto ships no provider and sends nothing to
+any AI service unless you configure one.
+
+The PRO duplicate-function check (`DUPLICATE_CODE`) is not an external
+provider: it uses local `sentence-transformers` embeddings and runs only
+with `hefesto-ai[pro]` installed and `HEFESTO_TIER=professional` or `omega`.
 
 ### 2. Telemetry storage (OMEGA, optional)
 
 IRIS telemetry storage is provider-agnostic: you choose where the data lives. Today's adapters are in-memory, file (JSONL) and BigQuery (optional); more are planned.
 
-### 3. Set Budget Limits (Optional)
-
-```bash
-export HEFESTO_DAILY_BUDGET_USD='10.0'
-export HEFESTO_MONTHLY_BUDGET_USD='200.0'
-```
-
-### 4. Pro License (Phase 1)
+### 3. Pro License (Phase 1)
 
 ```bash
 # After purchasing Pro license
@@ -94,21 +94,13 @@ hefesto --version
 
 # Check installation
 hefesto check
-
-# Show configuration
-hefesto info
 ```
 
 ## Quick Test
 
 ```bash
-# Start server
-hefesto serve
-
-# In another terminal, test
-curl http://localhost:8080/ping
-
-# Expected: {"ok": true, "version": "3.5.0", ...}
+# Analyze the current directory
+hefesto analyze . --severity MEDIUM
 ```
 
 ## Troubleshooting
@@ -118,14 +110,6 @@ curl http://localhost:8080/ping
 **Solution**:
 ```bash
 pip install --upgrade hefesto-ai
-```
-
-### GEMINI_API_KEY not set
-
-**Solution**:
-```bash
-export GEMINI_API_KEY='your_key'
-# Get key: https://aistudio.google.com/app/apikey
 ```
 
 ### Pro features not working

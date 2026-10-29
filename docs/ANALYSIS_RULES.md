@@ -1191,15 +1191,26 @@ engine.register_analyzer(SecurityAnalyzer())
 # Skipped: CodeSmellAnalyzer, BestPracticesAnalyzer
 ```
 
-### Inline Suppressions
+### Excluding paths and issue types
 
-```python
-# hefesto: ignore
-API_KEY = "sk-test-123"  # Test key, not real
+Hefesto has no inline suppression comment: a `# hefesto: ignore` marker in
+the code is not read and changes nothing. Use these instead:
 
-# Or suppress specific rules (future feature)
-def long_function():  # hefesto: ignore SMELL_001
-    pass
+- `--exclude`: comma-separated path patterns that are not analyzed at all,
+  e.g. `hefesto analyze . --exclude tests/,docs/`.
+- `--exclude-types`: comma-separated issue types that do not fail the
+  `--fail-on` gate. The findings are still reported.
+  e.g. `hefesto analyze . --fail-on HIGH --exclude-types LONG_FUNCTION,VERY_HIGH_COMPLEXITY`.
+- `exclude` and `exclude_types` in `.hefesto.yaml` (or `.hefesto.yml`), the
+  config-file form of the two flags. Explicit flags win over the file.
+
+```yaml
+# .hefesto.yaml
+exclude:
+  - tests/
+  - docs/
+exclude_types:
+  - LONG_FUNCTION
 ```
 
 ---

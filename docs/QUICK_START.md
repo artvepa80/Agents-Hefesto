@@ -12,180 +12,109 @@ pip install hefesto-ai
 pip install "hefesto-ai[multilang]"
 ```
 
-## 2. Set API Key
+No API key is needed. Hefesto does not bundle an LLM provider: the free
+analyzers are deterministic and run locally. Optional AI enrichment is a PRO
+feature where you bring the provider, a class that implements the PRO
+`EnrichmentProvider` contract.
+
+## 2. Analyze your code
 
 ```bash
-export GEMINI_API_KEY='your_gemini_api_key'
-# Get key: https://aistudio.google.com/app/apikey
+# Analyze the current directory
+hefesto analyze .
+
+# Only HIGH and CRITICAL findings
+hefesto analyze . --severity HIGH
+
+# Machine-readable output
+hefesto analyze . --output json
 ```
 
-## 3. Start Server
+## 3. Use it as a gate
 
 ```bash
-hefesto serve
+# Exit code 1 if any HIGH or CRITICAL finding is present
+hefesto analyze . --fail-on HIGH
 ```
 
-Server starts at: **http://localhost:8080**
-
-## 4. Test the API
-
-### Health Check
+Leave out paths you do not want analyzed with `--exclude`, and keep
+specific issue types from failing the gate with `--exclude-types`:
 
 ```bash
-curl http://localhost:8080/ping
+hefesto analyze . --fail-on HIGH --exclude tests/,docs/ --exclude-types LONG_FUNCTION
 ```
 
-Expected response:
-```json
-{
-  "ok": true,
-  "version": "3.5.0",
-  "env": "production"
-}
+The same options can live in a `.hefesto.yaml` at the repository root:
+
+```yaml
+fail_on: HIGH
+exclude:
+  - tests/
+  - docs/
+exclude_types:
+  - LONG_FUNCTION
 ```
 
-### Get Refactoring Suggestion
-
-```bash
-curl -X POST http://localhost:8080/suggest/refactor \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "password = \"hardcoded123\"",
-    "issue": {
-      "type": "security",
-      "severity": "HIGH",
-      "line": 1,
-      "description": "Hardcoded password"
-    },
-    "file_path": "config.py"
-  }'
-```
-
-Expected response:
-```json
-{
-  "diff": "- password = \"hardcoded123\"\n+ password = os.environ.get('PASSWORD')",
-  "confidence": 0.95,
-  "safety_score": 0.82,
-  "auto_apply": false,
-  "reasoning": "Replaces hardcoded password with environment variable",
-  "validation_passed": true,
-  "suggestion_id": "SUG-A1B2C3D4E5F6"
-}
-```
-
-## 5. Python Integration
+## 4. Python integration
 
 ```python
-from hefesto import get_validator
+from hefesto.analyzers import ComplexityAnalyzer, SecurityAnalyzer
+from hefesto.core.analyzer_engine import AnalyzerEngine
 
-# Validate a suggestion
-validator = get_validator()
-result = validator.validate(
-    original_code="password = 'secret'",
-    suggested_code="password = os.environ.get('PASSWORD')",
-    issue_type="security"
-)
+engine = AnalyzerEngine(severity_threshold="MEDIUM", quiet=True)
+engine.register_analyzer(ComplexityAnalyzer())
+engine.register_analyzer(SecurityAnalyzer())
 
-print(f"Confidence: {result.confidence:.2%}")
-print(f"Safe: {result.safe_to_apply}")
+report = engine.analyze_path("src/")
+print(report.summary.total_issues, "issues")
 ```
 
-## 6. Monitor Budget
+See [examples/basic_usage.py](../examples/basic_usage.py) for a runnable version.
 
-```bash
-# Check budget usage
-curl http://localhost:8080/budget/usage?period=today
+## 5. Upgrade to Pro (Optional)
 
-# Check if budget available
-curl http://localhost:8080/budget/check?period=today
-```
-
-## 7. Upgrade to Pro (Optional)
-
-For ML-based semantic analysis and duplicate detection:
+PRO adds duplicate-function detection (`DUPLICATE_CODE`) from local
+`sentence-transformers` embeddings. It runs only with `hefesto-ai[pro]`
+installed and `HEFESTO_TIER=professional` or `omega`.
 
 ```bash
 # Purchase license
 # Visit: https://hefestoai.narapallc.com/#pricing
 
-# Install Pro features
 pip install hefesto-ai[pro]
-
-# Set license key
 export HEFESTO_LICENSE_KEY='hef_your_pro_key'
-
-# Verify
-hefesto info
-# Should show: "Pro Features: ✅ Enabled"
 ```
 
 ## Common Use Cases
 
 ### Pre-Commit Hook
 
-Add to `.git/hooks/pre-commit`:
-
 ```bash
-#!/bin/bash
-hefesto analyze --severity HIGH $(git diff --cached --name-only --diff-filter=ACM | grep '\.py$')
+hefesto install-hooks
 ```
 
-### CI/CD Pipeline
+Or add the `hefesto-analyze` hook to `.pre-commit-config.yaml`.
 
-Add to `.github/workflows/quality.yml`:
+### CI/CD Pipeline
 
 ```yaml
 - name: Code Quality
   run: |
     pip install hefesto-ai
-    hefesto serve &
-    sleep 5
-    # Your CI tests here
-```
-
-### Budget Monitoring
-
-```python
-from hefesto import get_budget_tracker
-
-tracker = get_budget_tracker(daily_limit_usd=10.0)
-
-if not tracker.check_budget_available():
-    print("⚠️  Budget exceeded, skipping LLM call")
+    hefesto analyze . --fail-on HIGH
 ```
 
 ## Next Steps
 
-- View live API schema (OpenAPI/Swagger) at `/docs` when running `hefesto serve` — generated automatically from code
-- Check [Examples](../examples/) for advanced usage
-- Read [Architecture](../README.md#architecture) to understand the system
+- Check [Examples](../examples/) for more usage
 
 ## Troubleshooting
 
-**Server won't start**:
-```bash
-# Check if port is in use
-lsof -i :8080
-
-# Use different port
-hefesto serve --port 9000
-```
-
-**LLM requests failing**:
-```bash
-# Verify API key
-echo $GEMINI_API_KEY
-
-# Test key
-python -c "import google.generativeai as genai; genai.configure(api_key='YOUR_KEY'); print('✅ Valid')"
-```
+**"No files were analyzed"**: for TypeScript, JavaScript, Java, Go, Rust or
+C# install the parsers with `pip install "hefesto-ai[multilang]"`.
 
 **Tests failing**:
 ```bash
-# Run specific test
-pytest tests/test_suggestion_validator.py -v
-
 # Skip tests of the optional BigQuery adapter
 pytest -m "not bigquery"
 ```
@@ -193,4 +122,3 @@ pytest -m "not bigquery"
 ---
 
 **Need help?** support@narapallc.com
-
