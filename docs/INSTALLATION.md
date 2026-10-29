@@ -83,7 +83,7 @@ IRIS telemetry storage is provider-agnostic: you choose where the data lives. To
 
 ```bash
 # After purchasing Pro license
-export HEFESTO_LICENSE_KEY='hef_your_pro_license_key'
+export HEFESTO_LICENSE_KEY=HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 ```
 
 ## Verify Installation
@@ -120,10 +120,15 @@ pip install --upgrade hefesto-ai
 pip install hefesto-ai[pro]
 
 # Set license key
-export HEFESTO_LICENSE_KEY='hef_your_key'
+export HEFESTO_LICENSE_KEY=HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 
-# Verify
-hefesto info  # Should show "Pro Features: ✅ Enabled"
+# Verify: both lines must say installed / set
+hefesto status
+# Pro package:  installed
+# License key:  set (HFST-XXXX-...)
+
+# Duplicate-function detection also needs the tier variable
+export HEFESTO_TIER=professional   # or omega
 ```
 
 ### BigQuery permission errors (optional BigQuery adapter only)

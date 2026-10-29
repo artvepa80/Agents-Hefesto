@@ -1218,7 +1218,7 @@ exclude_types:
 ## 📚 Related Documentation
 
 - **[Getting Started](GETTING_STARTED.md)** - Quick tutorial
-- **[Integration Guide](INTEGRATION.md)** - Phase 0+1 architecture
+- **[Integration Guide](INTEGRATION.md)** - CLI, JSON output and Python API
 - **[CLI Reference](CLI_REFERENCE.md)** - All commands
 - **Live API Schema (OpenAPI/Swagger)** - Available at `/docs` when running `hefesto serve`. Generated automatically from code.
 

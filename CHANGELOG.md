@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — docs: real integration API, real PRO check, real license format
+
+- `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
+- `docs/INSTALLATION.md` "Pro features not working" now verifies with `hefesto status` (Pro package and license key) and mentions `HEFESTO_TIER`; `hefesto info` never printed "Pro Features: Enabled".
+- License key placeholders in `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `examples/pro_semantic_analysis.py` use the real format `HFST-XXXX-XXXX-XXXX-XXXX-XXXX` instead of `hef_your_key`.
+
 ### Changed — docs: no bundled AI provider, working examples, no inline suppression
 
 - `capabilities.yml`, `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `.env.example` no longer say a Gemini API key is needed. No LLM provider is bundled; AI enrichment providers are brought by the user through the PRO `EnrichmentProvider` contract. The `ai_semantic_analysis` note now describes the real feature: `DUPLICATE_CODE` from local sentence-transformers embeddings, PRO only, with `HEFESTO_TIER=professional` or `omega`. Its `display` field is unchanged. The unused LLM budget variables and the nonexistent `/ping`, `/suggest/refactor` and `/budget` examples are gone from those docs.

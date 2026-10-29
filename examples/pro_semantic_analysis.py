@@ -9,7 +9,7 @@ DUPLICATE_CODE check only when ``hefesto-ai[pro]`` is installed and
 
 Requires:
     pip install hefesto-ai[pro]
-    export HEFESTO_LICENSE_KEY='hef_your_key'
+    export HEFESTO_LICENSE_KEY=HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 
 Purchase: https://hefestoai.narapallc.com/#pricing
 """
@@ -23,7 +23,7 @@ def main() -> int:
     except ImportError as exc:
         print(f"PRO is not available ({exc}).")
         print("Install: pip install hefesto-ai[pro]")
-        print("Set:     export HEFESTO_LICENSE_KEY='hef_your_key'")
+        print("Set:     export HEFESTO_LICENSE_KEY=HFST-XXXX-XXXX-XXXX-XXXX-XXXX")
         return 0
 
     analyzer = get_semantic_analyzer()
