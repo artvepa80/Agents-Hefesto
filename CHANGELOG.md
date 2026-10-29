@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a broken PRO install no longer crashes `hefesto analyze`
+
+`hefesto/pro_optional.py` caught only `ModuleNotFoundError`, so a `hefesto_pro` that was installed but failed to import (for example an `ImportError` from an incomplete or mismatched install) stopped `hefesto analyze` even when no PRO feature was used. Each PRO block (scope gating, multi-language discovery, enrichment, API hardening) now catches `ImportError`, prints one warning on stderr naming the feature and the error, and falls back as if PRO were absent. A missing PRO (the missing module is `hefesto_pro` or one of its submodules) or a missing license (`ProLicenseRequired`) still falls back silently. A `ModuleNotFoundError` for one of PRO's own dependencies now warns too, so a PRO user does not lose features without notice. Test: `tests/test_pro_optional_broken_install.py`.
+
+### Added — enrichment providers from entry points, with limits
+
+`hefesto analyze --enrich ... --enrich-provider NAME` now loads the provider registered as `NAME` in the `hefesto.enrichment_providers` entry-point group; before, the orchestrator always got an empty provider list, so enrichment was always skipped. Only the requested names are imported. A provider is used only if it implements the PRO `EnrichmentProvider` protocol and its `name` equals the entry-point name; a missing, failing or invalid provider is reported on stderr and skipped. The orchestrator now gets the cache built from `--enrich-cache-ttl` / `--enrich-cache-max`. New `--enrich-min-severity` (default `MEDIUM`) and `--enrich-max-findings` (default `50`, highest severity first, `0` = none) bound how many sequential provider calls a run makes. Enrichment still never changes findings, severities or the exit code. If two installed packages register the same provider name, a stderr warning names both distributions and the first by distribution name is used, the same on every run. Requires `hefesto-pro >= 3.10.1` (pending release): with older PRO releases `--enrich-timeout` does not stop the wait and `--enrich local` skips every provider; `--enrich local` runs only providers with `is_local = True`. Not wired into `hefesto serve`, the GitHub Action or `pr-review`. Docs: `docs/enrichment-providers.md`.
+
 ### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
 
 - `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.
