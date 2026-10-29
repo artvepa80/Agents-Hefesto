@@ -82,7 +82,7 @@ installed and `HEFESTO_TIER=professional` or `omega`.
 # Visit: https://hefestoai.narapallc.com/#pricing
 
 pip install hefesto-ai[pro]
-export HEFESTO_LICENSE_KEY='hef_your_pro_key'
+export HEFESTO_LICENSE_KEY=HFST-XXXX-XXXX-XXXX-XXXX-XXXX
 ```
 
 ## Common Use Cases
