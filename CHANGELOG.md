@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
 
+### Fixed — COBOL REDEFINES analysis time was quadratic
+
+COBOL004/COBOL016 copied every data item after a REDEFINES on each layout check (`_members` and `_is_bms_input_map` in `hefesto/analyzers/devops/cobol_program_rules.py` iterated over a list slice, about 19 copies per REDEFINES), so time grew with the square of the program's data items. A program with 8,000 REDEFINES over `COMP-3` fields took 3.7 s and one with 50,000 took about 6 minutes; they now take 0.55 s and 3.7 s. Both functions now walk the list by index. Findings are unchanged: `scripts/cobol_corpus_baseline.py compare` reports no finding changes on CardDemo, GenApp and zopeneditor-sample, and seeded recall stays 39/41. `tests/test_cobol_phase4_performance.py` adds a many-REDEFINES program to the linear-growth check (it fails at about 13x on the old code).
+
 ## [4.20.4] - 2026-10-27
 
 ### Added
