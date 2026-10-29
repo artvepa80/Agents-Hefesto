@@ -24,7 +24,7 @@ cd "$ROOT"
 if command -v hefesto >/dev/null 2>&1; then
   echo "[hefesto] Running code analysis..."
   export HEFESTO_SOURCE=hook
-  hefesto analyze . --severity HIGH \
+  hefesto analyze . --fail-on HIGH \
     --exclude tests/ --exclude docs/ --exclude build/ \
     --exclude dist/ --exclude .git/ --exclude htmlcov/ || {
     echo "[hefesto] Found CRITICAL/HIGH issues."

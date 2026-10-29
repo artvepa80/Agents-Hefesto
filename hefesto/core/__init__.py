@@ -20,7 +20,6 @@ from hefesto.core.models import (
     IssueSeverity,
     LicenseInfo,
     LLMEvent,
-    LLMModel,
     RefactoringRequest,
     RefactoringResponse,
     SimilarityResult,
@@ -50,7 +49,6 @@ __all__ = [
     "IssueSeverity",
     "ValidationStatus",
     "BudgetStatus",
-    "LLMModel",
     "SuggestionAction",
     # Validation Models
     "ValidationResult",

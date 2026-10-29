@@ -102,16 +102,6 @@ class BudgetStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class LLMModel(str, Enum):
-    """Supported LLM models."""
-
-    GEMINI_2_FLASH_EXP = "gemini-2.0-flash-exp"
-    GEMINI_2_FLASH = "gemini-2.0-flash"
-    GEMINI_1_5_FLASH = "gemini-1.5-flash"
-    GEMINI_1_5_FLASH_8B = "gemini-1.5-flash-8b"
-    GEMINI_1_5_PRO = "gemini-1.5-pro"
-
-
 class SuggestionAction(str, Enum):
     """User actions on suggestions."""
 
@@ -747,7 +737,6 @@ __all__ = [
     "IssueSeverity",
     "ValidationStatus",
     "BudgetStatus",
-    "LLMModel",
     "SuggestionAction",
     # Validation Models
     "ValidationResult",

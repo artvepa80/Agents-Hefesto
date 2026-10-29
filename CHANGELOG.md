@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — telemetry closes its HTTP responses; repo hook flag; unused Gemini model list removed
+
+- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. Requests, timeouts and payloads are unchanged.
+- `scripts/git-hooks/pre-commit` (the repository's own hook) now runs `hefesto analyze . --fail-on HIGH`, the same gate flag as the pre-commit hook that `hefesto install-hooks` installs. It already blocked on HIGH findings; this aligns the flags.
+- Removed: `hefesto.core.models.LLMModel` (also re-exported from `hefesto.core`). It listed only Gemini model names and nothing used it; no LLM provider is bundled. Code that imported `LLMModel` must drop the import.
+
 ### Changed — docs: real integration API, real PRO check, real license format
 
 - `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
