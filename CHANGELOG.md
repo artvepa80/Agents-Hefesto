@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — one MF002 / GJ002 finding per line (#155)
+
+`MF002` (Makefile) and `GJ002` (Jenkinsfile) each had two overlapping patterns, so one `curl ... | sh` line was reported twice. Each analyzer now keeps one finding per line and rule, the one with the highest confidence: `MF002` keeps "Downloading and piping to (sudo) shell is a high-confidence RCE." (0.98) and `GJ002` keeps "Downloading and piping to shell in pipeline is RCE risk." (0.97) when the line is an `sh`/`bat` step, otherwise the generic message (0.95). CRITICAL counts and SARIF results for these files go down; which lines are flagged, and pass/fail, are unchanged. Other rules are not deduplicated.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.

