@@ -3,7 +3,7 @@
 Detects Python ``import`` statements that reference third-party
 distributions not declared in ``pyproject.toml`` or ``requirements.txt``.
 
-Scope decisions (conservative, aimed at <5% FP per CLAUDE.md BP-7):
+Scope decisions (conservative, aimed at a <5% false-positive rate):
 - Only the *undeclared* direction is emitted here. "Declared but unused"
   has high FP risk from dev extras, plugins, and indirect uses; a
   separate pass may add it later under an explicit flag.

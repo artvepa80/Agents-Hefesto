@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — maintainer agent guides `CLAUDE.md` and `docs/CLAUDE_HEFESTO.md`
+
+- The two maintainer tooling guides are no longer kept in this repository. Contributors follow `CONTRIBUTING.md`.
+- `scripts/guard_public_repo.py` adds both paths to `BANNED_FILES`, so they cannot be re-added (test: `tests/test_guard_banned_files.py`). Their entries in `scripts/guard_markdown_allowlist.txt` are gone, the positioning and `hefesto init` copy tests no longer read `CLAUDE.md`, and a docstring in `imports_vs_deps.py` and a comment in `release.yml` no longer cite it. Behaviour is unchanged.
+
 ### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
 
 - `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.

@@ -114,8 +114,7 @@ jobs:
             --verify-tag
 
       # The GitHub Action is used as @v4: move that floating alias of the 4.x
-      # line to this release. v4 is the only tag that ever moves (see
-      # CLAUDE.md); a future v5 alias needs its own decision. Lightweight, like
+      # line to this release. v4 is the only tag that ever moves; a future v5 alias needs its own decision. Lightweight, like
       # actions/checkout's major tags. An older patch never moves v4 back.
       - name: Move floating v4 tag
         env:
