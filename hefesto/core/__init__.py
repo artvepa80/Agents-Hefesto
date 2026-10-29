@@ -83,3 +83,12 @@ __all__ = [
 # Add AnalyzerEngine if available
 if _has_analyzer:
     __all__.append("AnalyzerEngine")
+
+
+def __getattr__(name: str) -> object:
+    # Deprecated names are resolved lazily so that only their use warns.
+    if name == "LLMModel":
+        from hefesto.core import models
+
+        return getattr(models, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

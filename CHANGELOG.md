@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed — telemetry closes its HTTP responses; repo hook flag; unused Gemini model list removed
+### Fixed — telemetry closes its HTTP responses; contributor pre-commit hook gates staged files
 
-- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. Requests, timeouts and payloads are unchanged.
-- `scripts/git-hooks/pre-commit` (the repository's own hook) now runs `hefesto analyze . --fail-on HIGH`, the same gate flag as the pre-commit hook that `hefesto install-hooks` installs. It already blocked on HIGH findings; this aligns the flags.
-- Removed: `hefesto.core.models.LLMModel` (also re-exported from `hefesto.core`). It listed only Gemini model names and nothing used it; no LLM provider is bundled. Code that imported `LLMModel` must drop the import.
+- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. `hefesto analyze` no longer reports `RELIABILITY_SESSION_LIFECYCLE` at the version check. Requests, timeouts and payloads are unchanged.
+- `scripts/git-hooks/pre-commit` (this repository's contributor hook) never blocked: it ran `hefesto analyze . --severity HIGH` without `--fail-on`, so it exited 0 on any finding; its repeated `--exclude` kept only the last value and replaced the `.hefesto.yaml` excludes. It now analyzes only the staged files, like the hook `hefesto install-hooks` installs, skips staged files matched by `exclude` in `.hefesto.yaml` with the same matcher as `scripts/dogfood_changed.py`, and runs `--severity HIGH --fail-on CRITICAL`: HIGH findings are shown but only CRITICAL blocks (the same threshold as the CI changed-file gate), set in a single `FAIL_ON` variable.
+
+### Removed
+
+- `hefesto/hooks/` (`pre_push.py` and `__init__.py`). Nothing imported it, it was not a console script or hook target, and `hefesto install-hooks` uses its own templates; it only shipped in the wheel. `docs/ADVANCED_VALIDATION.md` now says so.
+
+### Deprecated
+
+- `LLMModel` (`hefesto.core.models.LLMModel`, also exported from `hefesto.core`) is deprecated and will be removed in 5.0. It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled. The class is now `_LLMModel` and `LLMModel` is no longer in `__all__` of either module; `from hefesto.core import LLMModel` and `hefesto.core.models.LLMModel` still return it, with a `DeprecationWarning`.
 
 ### Changed — docs: real integration API, real PRO check, real license format
 

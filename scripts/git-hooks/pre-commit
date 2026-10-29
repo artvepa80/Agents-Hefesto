@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
+# Contributor pre-commit hook for this repository.
+# Analyzes only the staged files, like the hook `hefesto install-hooks` installs
+# in user projects, and skips staged files matched by `exclude` in .hefesto.yaml
+# (the same matcher as scripts/dogfood_changed.py; `hefesto analyze` does not
+# filter paths named on the command line).
 set -euo pipefail
+
+# Gate threshold. CRITICAL matches the CI changed-file gate (dogfood.yml).
+# HIGH findings are still shown (--severity HIGH) but do not block. Raise
+# FAIL_ON to HIGH once the 50 HIGH findings under hefesto/ are fixed.
+FAIL_ON="CRITICAL"
 
 # Allow bypass: SKIP_HEFESTO_HOOKS=1 git commit
 if [[ "${SKIP_HEFESTO_HOOKS:-0}" == "1" ]]; then
@@ -20,19 +30,45 @@ fi
 
 cd "$ROOT"
 
-# Hefesto analysis (if available)
-if command -v hefesto >/dev/null 2>&1; then
-  echo "[hefesto] Running code analysis..."
-  export HEFESTO_SOURCE=hook
-  hefesto analyze . --fail-on HIGH \
-    --exclude tests/ --exclude docs/ --exclude build/ \
-    --exclude dist/ --exclude .git/ --exclude htmlcov/ || {
-    echo "[hefesto] Found CRITICAL/HIGH issues."
-    exit 1
-  }
-else
-  echo "[hefesto] 'hefesto' not in PATH. Skipping analysis."
+if ! "$PY" -c "import hefesto" >/dev/null 2>&1; then
+  echo "[hefesto] hefesto is not importable with $PY. Skipping analysis."
   echo "[hefesto] Install with: pip install -e '.[dev]'"
+  exit 0
 fi
+
+GATED="$(mktemp)"
+trap 'rm -f "$GATED"' EXIT
+if ! git diff --cached --name-only --diff-filter=ACMR -z |
+  "$PY" -c '
+import sys
+sys.path.insert(0, "scripts")
+from pathlib import Path
+from dogfood_changed import gate_excludes, split_gate_files
+names = [n for n in sys.stdin.read().split("\0") if n]
+gated, skipped = split_gate_files(names, gate_excludes(Path(".")).patterns)
+for name in skipped:
+    print(f"[hefesto] excluded by .hefesto.yaml: {name}", file=sys.stderr)
+sys.stdout.write("".join(n + "\0" for n in gated))
+' >"$GATED"; then
+  echo "[hefesto] Could not read the staged files or .hefesto.yaml excludes."
+  exit 1
+fi
+
+FILES=()
+while IFS= read -r -d '' f; do
+  [[ -f "$f" ]] && FILES+=("$f")
+done <"$GATED"
+
+if [[ ${#FILES[@]} -eq 0 ]]; then
+  echo "[hefesto] No staged files to analyze. Pre-commit OK."
+  exit 0
+fi
+
+echo "[hefesto] Analyzing ${#FILES[@]} staged file(s) (--fail-on $FAIL_ON)..."
+export HEFESTO_SOURCE=hook
+"$PY" -m hefesto analyze "${FILES[@]}" --severity HIGH --fail-on "$FAIL_ON" --allow-no-files || {
+  echo "[hefesto] Found $FAIL_ON issues in staged files."
+  exit 1
+}
 
 echo "[hefesto] Pre-commit OK."

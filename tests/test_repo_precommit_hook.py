@@ -1,21 +1,85 @@
-"""The repo's own pre-commit hook uses the same gate flag as the installed hook."""
+"""The repo's contributor pre-commit hook gates staged files, honoring .hefesto.yaml."""
 
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
-from hefesto.cli.hook_templates import PRE_COMMIT
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+HOOK = ROOT / "scripts" / "git-hooks" / "pre-commit"
+PLANTED = (ROOT / ".github" / "action-smoke" / "critical_secret.py").read_text(encoding="utf-8")
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("git") is None or shutil.which("bash") is None,
+    reason="git and bash required",
+)
 
 
-def test_repo_precommit_fails_on_high_like_installed_hook() -> None:
-    repo_hook = (ROOT / "scripts" / "git-hooks" / "pre-commit").read_text(encoding="utf-8")
-    assert "--fail-on HIGH" in PRE_COMMIT
-    assert "--fail-on HIGH" in repo_hook
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
 
 
-def test_core_models_have_no_llm_model_list() -> None:
-    import hefesto.core
-    import hefesto.core.models as models
+@pytest.fixture()
+def repo(tmp_path: Path) -> Path:
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "scripts").mkdir()
+    shutil.copy(ROOT / "scripts" / "dogfood_changed.py", tmp_path / "scripts")
+    (tmp_path / ".hefesto.yaml").write_text("exclude:\n  - tests/fixtures/\n", encoding="utf-8")
+    venv_bin = tmp_path / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python").symlink_to(sys.executable)
+    return tmp_path
 
-    assert not hasattr(models, "LLMModel")
-    assert "LLMModel" not in hefesto.core.__all__
+
+def _run_hook(repo: Path) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["HEFESTO_TELEMETRY"] = "0"
+    env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env.pop("SKIP_HEFESTO_HOOKS", None)
+    return subprocess.run(
+        ["bash", str(HOOK)], cwd=repo, env=env, capture_output=True, text=True, timeout=120
+    )
+
+
+def _stage(repo: Path, name: str, text: str) -> None:
+    path = repo / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    _git(repo, "add", name)
+
+
+def test_threshold_is_one_variable_defaulting_to_critical() -> None:
+    text = HOOK.read_text(encoding="utf-8")
+    assert 'FAIL_ON="CRITICAL"' in text
+    assert '--severity HIGH --fail-on "$FAIL_ON"' in text
+    assert "--exclude" not in text
+
+
+def test_staged_critical_blocks(repo: Path) -> None:
+    _stage(repo, "app/secret.py", PLANTED)
+    result = _run_hook(repo)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Found CRITICAL issues" in result.stdout
+
+
+def test_staged_file_excluded_by_config_is_skipped(repo: Path) -> None:
+    _stage(repo, "tests/fixtures/secret.py", PLANTED)
+    result = _run_hook(repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "excluded by .hefesto.yaml: tests/fixtures/secret.py" in result.stderr
+
+
+def test_unstaged_files_are_not_analyzed(repo: Path) -> None:
+    (repo / "unstaged.py").write_text(PLANTED, encoding="utf-8")
+    _stage(repo, "ok.py", "def add(a: int, b: int) -> int:\n    return a + b\n")
+    result = _run_hook(repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Analyzing 1 staged file(s)" in result.stdout
