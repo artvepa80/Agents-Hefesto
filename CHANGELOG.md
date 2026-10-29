@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
+
+- `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
+- Output is unchanged: same messages, same order, same exceptions on wrongly typed values. `tests/scripts/test_validate_aggregates_jsonl.py` pins the error list for valid rows, every error type, and `strict` on and off; it passed before and after the split.
+- With this change, that full-tree scan reports no CRITICAL finding, and touching the script no longer fails the changed-file gate (`dogfood-hefesto`). `hefesto.yml` still has `continue-on-error: true`; making it blocking is a separate change.
+
+### Changed — docs: real integration API, real PRO check, real license format
+
+- `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
+- `docs/INSTALLATION.md` "Pro features not working" now verifies with `hefesto status` (Pro package and license key) and mentions `HEFESTO_TIER`; `hefesto info` never printed "Pro Features: Enabled".
+- License key placeholders in `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `examples/pro_semantic_analysis.py` use the real format `HFST-XXXX-XXXX-XXXX-XXXX-XXXX` instead of `hef_your_key`.
+
+### Changed — docs: no bundled AI provider, working examples, no inline suppression
+
+- `capabilities.yml`, `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `.env.example` no longer say a Gemini API key is needed. No LLM provider is bundled; AI enrichment providers are brought by the user through the PRO `EnrichmentProvider` contract. The `ai_semantic_analysis` note now describes the real feature: `DUPLICATE_CODE` from local sentence-transformers embeddings, PRO only, with `HEFESTO_TIER=professional` or `omega`. Its `display` field is unchanged. The unused LLM budget variables and the nonexistent `/ping`, `/suggest/refactor` and `/budget` examples are gone from those docs.
+- `examples/basic_usage.py` imported functions that do not exist (`get_validator`, `get_feedback_logger`, `get_budget_tracker`, `BudgetTracker`). It now runs the real `AnalyzerEngine` on a sample file. `examples/pro_semantic_analysis.py` now uses `hefesto_pro.get_semantic_analyzer` and exits cleanly when PRO is not installed.
+- `llms.txt` and `skills/hefestoai/SKILL.md` no longer list `SEMANTIC_DRIFT` as a finding type, and say `DUPLICATE_CODE` uses local embeddings with PRO plus a paid tier. `skills/hefestoai/semantic_drift.md` is now "Patterns that often indicate drift", guidance only.
+- `docs/ANALYSIS_RULES.md` and `docs/INTEGRATION.md` no longer show `# hefesto: ignore` as working; there is no inline suppression. They point to `--exclude`, `--exclude-types` and `exclude` / `exclude_types` in `.hefesto.yaml`.
+- Behaviour is unchanged.
+
+### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
+
+- `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.
+
+### Changed — docs: which rules skip test paths, and what complexity counts (#154, #159)
+
+- `docs/ANALYSIS_RULES.md` now says that only two rules skip test paths (SEC-03): Python hardcoded secrets (test and example paths) and `assert` in production (test paths only). The JSON, TOML and IaC secret rules (for example `J001`, `T001`, `TF011`) and the DevOps, cloud and COBOL rules still report under `tests/`, on purpose, since a real credential in a fixture is still leaked. It points to `--exclude tests/` or `exclude` in `.hefesto.yaml`. Behaviour is unchanged.
+- `docs/ANALYSIS_RULES.md` lists the decision points the cyclomatic complexity rule really counts. In Python: `if`/`elif`, `for`, `async for`, `while` and one per `try`. `and`, `or`, `with`, `except` clauses, conditional expressions, comprehensions, `match` and `assert` are not counted, so scores are lower than radon's. The two examples now show the scores Hefesto reports (12 and 5, not 15 and 4). The metric is unchanged.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
