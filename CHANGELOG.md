@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
+
+The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
