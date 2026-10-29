@@ -182,10 +182,15 @@ file-name conventions, never from substrings:
 Up to and including v4.14.0, any path containing the substring `test` or
 `example` was skipped (SEC-03).
 
-**Only two rules skip test paths.** The skip applies to this rule (Python
-hardcoded secrets, test and example paths) and to
-[Assert in Production](#25-assert-in-production) (test paths only). Every other
-rule still reports under `tests/`, including the secret rules for JSON, TOML
+**Only three rules skip test paths.** The skip applies to this rule (Python
+hardcoded secrets, test and example paths), to
+[Assert in Production](#25-assert-in-production) (test paths only) and to
+`OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`), which does not scan Python files
+under any `tests/`, `test/`, `testing/`, `docs/`, `examples/` or `example/`
+directory (nor build, virtualenv and cache directories such as `build/`,
+`dist/`, `venv/`, `.venv/` or `node_modules/`), since test and docs
+dependencies are usually development-only. Every other rule still reports
+under `tests/`, including the secret rules for JSON, TOML
 and IaC files (for example `J001`, `T001` and `TF011`) and the rules of the
 DevOps, cloud and COBOL analyzers. This is on purpose: a real
 credential committed in a test fixture is still leaked. To leave test code out

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
+
+- `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.
+
 ### Changed — docs: which rules skip test paths, and what complexity counts (#154, #159)
 
 - `docs/ANALYSIS_RULES.md` now says that only two rules skip test paths (SEC-03): Python hardcoded secrets (test and example paths) and `assert` in production (test paths only). The JSON, TOML and IaC secret rules (for example `J001`, `T001`, `TF011`) and the DevOps, cloud and COBOL rules still report under `tests/`, on purpose, since a real credential in a fixture is still leaked. It points to `--exclude tests/` or `exclude` in `.hefesto.yaml`. Behaviour is unchanged.
