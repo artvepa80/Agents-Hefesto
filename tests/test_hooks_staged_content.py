@@ -143,3 +143,34 @@ def test_temp_copy_is_removed(hook_repo, tmp_path: Path) -> None:
     )
     assert result.returncode == 1, _out(result)
     assert list(tmpdir.iterdir()) == []
+
+
+@pytest.mark.parametrize("trailing", ["", "/"], ids=["no-slash", "trailing-slash"])
+def test_symlinked_tmpdir(hook_repo, tmp_path: Path, trailing: str) -> None:
+    """Reproduces a real bug: TMPDIR behind a symlink leaked the temp-copy path.
+
+    hefesto prints resolved paths (findings, and the ``Config:`` line), so with
+    TMPDIR behind a symlink the output showed ``.../real/hefesto-staged.XXXX/...``
+    instead of the repository path, because the hook stripped only the
+    unresolved prefix. It happens with and without a trailing '/'. Likely on
+    macOS, where TMPDIR is under /var -> /private/var (not verified on a Mac).
+    Fixed by resolving the copy's path with ``pwd -P`` in both hooks.
+    """
+    _, repo, hook = hook_repo
+    real = tmp_path / "real-tmp"
+    real.mkdir()
+    link = tmp_path / "link-tmp"
+    link.symlink_to(real, target_is_directory=True)
+    _stage(repo, "src/leak.py", PLANTED)
+    result = subprocess.run(
+        ["bash", str(hook)],
+        cwd=repo,
+        env=_env(TMPDIR=str(link) + trailing),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 1, _out(result)
+    assert "src/leak.py" in _out(result)
+    assert "hefesto-staged" not in _out(result)
+    assert list(real.glob("hefesto-staged.*")) == []

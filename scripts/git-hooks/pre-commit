@@ -84,6 +84,7 @@ rm -f "$GATED"
 # rules (test paths, excludes) still apply, and report the real paths.
 STAGED="$(mktemp -d "${TMPDIR:-/tmp}/hefesto-staged.XXXXXX")"
 trap 'rm -rf "$STAGED"' EXIT
+STAGED="$(cd "$STAGED" && pwd -P)"  # resolved, as hefesto prints it
 mkdir "$STAGED/.git"  # config lookup stops at the copy's root
 git ls-files -z -- ':(glob)**/.hefesto.yaml' ':(glob)**/.hefesto.yml' |
   git checkout-index --stdin -z --prefix="$STAGED/"
