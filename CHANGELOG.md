@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — docs: which rules skip test paths, and what complexity counts (#154, #159)
+
+- `docs/ANALYSIS_RULES.md` now says that only two rules skip test paths (SEC-03): Python hardcoded secrets (test and example paths) and `assert` in production (test paths only). The JSON, TOML and IaC secret rules (for example `J001`, `T001`, `TF011`) and the DevOps, cloud and COBOL rules still report under `tests/`, on purpose, since a real credential in a fixture is still leaked. It points to `--exclude tests/` or `exclude` in `.hefesto.yaml`. Behaviour is unchanged.
+- `docs/ANALYSIS_RULES.md` lists the decision points the cyclomatic complexity rule really counts. In Python: `if`/`elif`, `for`, `async for`, `while` and one per `try`. `and`, `or`, `with`, `except` clauses, conditional expressions, comprehensions, `match` and `assert` are not counted, so scores are lower than radon's. The two examples now show the scores Hefesto reports (12 and 5, not 15 and 4). The metric is unchanged.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.

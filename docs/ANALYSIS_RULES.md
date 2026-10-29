@@ -23,15 +23,26 @@
 **Description:** Functions with too many decision points become hard to understand, test, and maintain.
 
 **Detection Logic:**
-- Counts decision points: `if`, `while`, `for`, `and`, `or`, `elif`, `except`, `with`
-- Each decision point adds +1 to complexity score
+- Complexity = 1 + one point per decision point in the function body.
+- Python: each `if` and `elif` (an `elif` is a nested `if`), `for`, `async for`,
+  `while`, and each `try` statement (one point per `try`, however many `except`
+  clauses it has).
+- Not counted in Python: `and`, `or`, `with`, `except` clauses, conditional
+  expressions (`x if c else y`), comprehension loops and filters, `match`/`case`,
+  and `assert`.
+- Other languages: `if`, `switch`/`match`, loops, `try`, and `catch` clauses;
+  JavaScript and TypeScript also count conditional (`?:`) expressions.
+- A nested function's decision points also count toward the enclosing function,
+  and the nested function gets its own score.
+- The score is lower than tools such as radon, which also count boolean
+  operators: radon scores `if a and b and c:` as 3, Hefesto as 1.
 
 **Severity Levels:**
 - **MEDIUM:** Complexity 6-10
 - **HIGH:** Complexity 11-20
 - **CRITICAL:** Complexity 21+
 
-**Example - BAD (Complexity = 15):**
+**Example - BAD (Hefesto complexity = 12):**
 
 ```python
 def process_order(order, user, payment, shipping):
@@ -53,7 +64,7 @@ def process_order(order, user, payment, shipping):
     return False
 ```
 
-**Example - GOOD (Complexity = 4):**
+**Example - GOOD (Hefesto complexity = 5 for `process_order`, 1 for each helper):**
 
 ```python
 def process_order(order, user, payment, shipping):
@@ -170,6 +181,17 @@ file-name conventions, never from substrings:
 
 Up to and including v4.14.0, any path containing the substring `test` or
 `example` was skipped (SEC-03).
+
+**Only two rules skip test paths.** The skip applies to this rule (Python
+hardcoded secrets, test and example paths) and to
+[Assert in Production](#25-assert-in-production) (test paths only). Every other
+rule still reports under `tests/`, including the secret rules for JSON, TOML
+and IaC files (for example `J001`, `T001` and `TF011`) and the rules of the
+DevOps, cloud and COBOL analyzers. This is on purpose: a real
+credential committed in a test fixture is still leaked. To leave test code out
+of a run, pass `--exclude tests/` or list it under `exclude` in
+`.hefesto.yaml` (entries are path segments, such as `tests/fixtures/`, not
+globs).
 
 ---
 
