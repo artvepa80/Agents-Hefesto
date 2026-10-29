@@ -347,3 +347,28 @@ def test_missing_provider_cli_warns_and_exit_code_unchanged(fake_pro, tmp_path):
     )
     assert res.exit_code == code_off
     assert "'absent' is not installed" in res.stderr
+
+
+def _ep_from(dist_name: str, value: str) -> EntryPoint:
+    ep = EntryPoint("good", value, ENTRY_POINT_GROUP)
+    return ep._for(types.SimpleNamespace(name=dist_name))  # type: ignore[arg-type]
+
+
+class OtherGood(GoodProvider):
+    pass
+
+
+@pytest.mark.parametrize("order", [("zeta-pkg", "alpha-pkg"), ("alpha-pkg", "zeta-pkg")])
+def test_duplicate_name_warns_and_uses_first_deterministically(
+    fake_pkg, monkeypatch, capsys, order
+):
+    sys.modules["fake_enrich_pkg"].OtherGood = OtherGood
+    value = {"alpha-pkg": "fake_enrich_pkg:GoodProvider", "zeta-pkg": "fake_enrich_pkg:OtherGood"}
+    eps = [_ep_from(d, value[d]) for d in order]
+    monkeypatch.setattr(ep_mod, "_entry_points", lambda: eps)
+    providers = _load(["good"])
+    assert len(providers) == 1
+    assert type(providers[0]) is GoodProvider  # alpha-pkg wins regardless of discovery order
+    err = capsys.readouterr().err
+    assert "'good' is registered by more than one package (alpha-pkg, zeta-pkg)" in err
+    assert "using alpha-pkg" in err

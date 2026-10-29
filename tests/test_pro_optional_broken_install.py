@@ -52,3 +52,30 @@ def test_license_required_stays_silent(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr
     assert "HAS_ENRICHMENT False" in proc.stdout
     assert "enrichment failed to import" not in proc.stderr
+
+
+def test_missing_pro_dependency_warns(tmp_path: Path) -> None:
+    # PRO is installed but one of its own dependencies is missing: warn, not silent.
+    _fake_pro(tmp_path, "import some_missing_pro_dependency_xyz  # noqa\n")
+    proc = _import_pro_optional(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert "HAS_ENRICHMENT False" in proc.stdout
+    assert "hefesto_pro is installed but enrichment failed to import" in proc.stderr
+    assert "some_missing_pro_dependency_xyz" in proc.stderr
+
+
+def test_missing_pro_submodule_stays_silent(tmp_path: Path) -> None:
+    # A hefesto_pro submodule that is not shipped counts as "not installed".
+    (tmp_path / "hefesto_pro").mkdir()
+    (tmp_path / "hefesto_pro" / "__init__.py").write_text("")
+    proc = _import_pro_optional(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert "HAS_ENRICHMENT False" in proc.stdout
+    assert "failed to import" not in proc.stderr
+
+
+def test_pro_not_installed_stays_silent(tmp_path: Path) -> None:
+    proc = _import_pro_optional(tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    assert "HAS_ENRICHMENT False" in proc.stdout
+    assert "failed to import" not in proc.stderr

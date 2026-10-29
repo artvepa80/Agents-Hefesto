@@ -16,7 +16,7 @@ from __future__ import annotations
 import inspect
 import sys
 from importlib.metadata import EntryPoint, entry_points
-from typing import Any, Callable, List, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 ENTRY_POINT_GROUP = "hefesto.enrichment_providers"
 
@@ -27,6 +27,16 @@ def _warn(message: str) -> None:
 
 def _entry_points() -> Sequence[EntryPoint]:
     return list(entry_points(group=ENTRY_POINT_GROUP))
+
+
+def _dist_name(ep: EntryPoint) -> str:
+    dist = getattr(ep, "dist", None)
+    name = getattr(dist, "name", None) if dist is not None else None
+    return str(name) if name else f"<unknown: {ep.value}>"
+
+
+def _sort_key(ep: EntryPoint) -> Tuple[str, str]:
+    return (_dist_name(ep), ep.value)
 
 
 def load_enrichment_providers(
@@ -47,10 +57,17 @@ def load_enrichment_providers(
 
     providers: List[Any] = []
     for name in wanted:
-        matches = [ep for ep in available if ep.name == name]
+        # Sorted by distribution name, so a duplicate name resolves the same way every run.
+        matches = sorted((ep for ep in available if ep.name == name), key=_sort_key)
         if not matches:
             _warn(f"'{name}' is not installed (no '{ENTRY_POINT_GROUP}' entry point)")
             continue
+        if len(matches) > 1:
+            dists = [_dist_name(ep) for ep in matches]
+            _warn(
+                f"'{name}' is registered by more than one package ({', '.join(dists)}); "
+                f"using {dists[0]}"
+            )
         try:
             obj = matches[0].load()
             provider = obj() if inspect.isclass(obj) else obj

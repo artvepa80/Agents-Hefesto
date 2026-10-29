@@ -2,6 +2,10 @@
 
 Enrichment adds an optional, metadata-only note to findings (`issue.metadata["enrichment"]`).
 It needs Hefesto PRO and a provider package you install yourself. Hefesto ships no provider.
+
+**Requires `hefesto-pro >= 3.10.1` (pending release).** With older PRO releases the
+`--enrich-timeout` limit does not stop the wait for a slow provider, and `--enrich local`
+skips every provider.
 Enrichment never changes the finding list, severities or the exit code.
 
 ## 1. Write a provider
@@ -63,7 +67,12 @@ running in the background, and a paid remote provider may still bill for it.
 
 `--enrich local` runs only providers that declare `is_local = True` (set it only if the provider
 never sends data off the machine). Providers without the attribute are treated as remote and
-skipped. Older PRO releases skip every provider in local mode.
+skipped. PRO releases before 3.10.1 skip every provider in local mode.
+
+## Duplicate provider names
+
+If two installed packages register the same entry-point name, Hefesto prints a warning to stderr
+naming both packages and uses the first one in alphabetical order of package name.
 
 ## Not covered
 
