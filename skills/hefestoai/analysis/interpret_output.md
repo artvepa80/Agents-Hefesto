@@ -49,7 +49,7 @@ Run with `--output json`. Non-JSON text goes to stderr, stdout is pure JSON.
           "column": 4,
           "type": "HIGH_COMPLEXITY",
           "severity": "MEDIUM",
-          "message": "Cyclomatic complexity too high (8)",
+          "message": "Cyclomatic complexity too high (8, threshold 6 for MEDIUM)",
           "function": "_load_template",
           "suggestion": "Consider simplifying the logic",
           "code_snippet": null,
