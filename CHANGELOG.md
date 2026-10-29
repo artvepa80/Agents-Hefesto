@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — SQL and command injection rules skip code inside Python string literals (#156)
+
+In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report code that is data inside a string literal, such as a code template in a triple-quoted string or `'os.system("ls " + cmd)'` in a snippet. The analyzer finds string literals with `tokenize`. A command sink (`os.system`, `os.popen`, `subprocess.*`) inside a literal is skipped. A line that starts inside a literal is not checked for SQL, and text inside literals no longer counts as a `def` or an `.execute(` sink. Real findings are unchanged, including `tests/fixtures/sqli_safe_patterns/true_positive_concat.py`. Files that do not tokenize, and other languages, are checked line by line as before. Finding counts can go down.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
