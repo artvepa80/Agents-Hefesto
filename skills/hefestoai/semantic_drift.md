@@ -22,7 +22,7 @@ These run in the free tier on Python files:
 - **ASSERT_IN_PRODUCTION** (MEDIUM): an `assert` guarding an invariant. Python
   removes asserts when run with `-O`, so the check silently disappears.
 
-### Duplicate functions (PRO plus a paid tier)
+### Phase 1 — ML Semantic Analysis (local embeddings, PRO only, HEFESTO_TIER=professional|omega)
 
 **DUPLICATE_CODE** flags two Python functions that are nearly the same, which
 can mean one copy was updated and the other was not. It uses local
@@ -52,9 +52,9 @@ is something a person has to confirm by reading the diff.
 ## CI gate
 
 ```bash
-# Fail on MEDIUM or higher (includes BARE_EXCEPT and ASSERT_IN_PRODUCTION;
-# INCOMPLETE_TODO is LOW and only fails with --fail-on LOW)
-hefesto analyze . --fail-on MEDIUM --exclude tests/
+# Fail on any HIGH or CRITICAL finding. There is no drift-specific filter:
+# --fail-on applies to every finding type.
+hefesto analyze . --fail-on HIGH --exclude tests/
 ```
 
 Exit code 1 = gate failure (findings at or above the threshold).
