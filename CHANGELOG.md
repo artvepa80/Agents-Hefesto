@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
 - `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
 
+### Changed — CI gate on new line suppressions
+
+- The changed-file gate (`.github/workflows/dogfood.yml`) now passes `--fail-on-new-suppressions` on pull requests. `scripts/dogfood_changed.py` accepts a new suppression only when the PR body has the line `Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for that exact file and line (one line per suppression), read from the event payload at `GITHUB_EVENT_PATH` with no token. It always appends the new suppressions and their approval status to `$GITHUB_STEP_SUMMARY` when set. The workflow also runs on `edited` pull requests so an added approval line re-runs the gate. Pushes to `main` only list new suppressions.
+
 ### Changed — docs: real integration API, real PRO check, real license format
 
 - `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.

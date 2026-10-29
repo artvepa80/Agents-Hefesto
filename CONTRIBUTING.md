@@ -80,6 +80,24 @@ python scripts/verify_readme.py
 python scripts/verify_server_json.py
 ```
 
+### New line suppressions in pull requests
+
+On pull requests the changed-file gate runs with `--fail-on-new-suppressions`:
+each `# hefesto: ignore[TYPE] reason` comment the diff adds fails the job unless
+the PR body has a maintainer approval line for that exact file and line, one
+line per suppression:
+
+```text
+Suppression approved by Arturo on YYYY-MM-DD: path/to/file.py:12
+```
+
+Only the maintainer adds these lines; contributors and automated agents do not.
+The gate reads the PR body from the Actions event payload (`GITHUB_EVENT_PATH`),
+so it needs no token, and editing the body re-runs the job. If the suppression
+moves to another line, the approval has to name the new line. The job summary
+lists every new suppression and whether it is approved. Pushes to `main` only
+list them.
+
 ## 📝 Code Style
 
 - **Formatter**: Black (line length: 100)
