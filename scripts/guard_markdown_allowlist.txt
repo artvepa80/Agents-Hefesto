@@ -21,11 +21,7 @@ CHANGELOG.md private-pr
 CHANGELOG.md private-repo
 CHANGELOG.md private-repo-mention
 
-# Contributor guide tells maintainers to read their local MEMORY.md (not in the repo).
-CLAUDE.md memory-md
-
 # Public statement that the gate's audit history is kept internally (2026-10-22).
-CLAUDE.md private-repo-mention
 README.md private-repo-mention
 
 # Pre-existing docs that name private paths for context.
