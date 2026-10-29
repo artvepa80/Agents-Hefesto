@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
+
+- `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
+- Output is unchanged: same messages, same order, same exceptions on wrongly typed values. `tests/scripts/test_validate_aggregates_jsonl.py` pins the error list for valid rows, every error type, and `strict` on and off; it passed before and after the split.
+- With this change, that full-tree scan reports no CRITICAL finding, and touching the script no longer fails the changed-file gate (`dogfood-hefesto`). `hefesto.yml` still has `continue-on-error: true`; making it blocking is a separate change.
+
 ### Changed — docs: real integration API, real PRO check, real license format
 
 - `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
