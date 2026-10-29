@@ -33,17 +33,31 @@ def repo(tmp_path: Path) -> Path:
     (tmp_path / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "dogfood_changed.py", tmp_path / "scripts")
     (tmp_path / ".hefesto.yaml").write_text("exclude:\n  - tests/fixtures/\n", encoding="utf-8")
-    venv_bin = tmp_path / ".venv" / "bin"
-    venv_bin.mkdir(parents=True)
-    (venv_bin / "python").symlink_to(sys.executable)
+    _make_venv(tmp_path / ".venv")
     return tmp_path
 
 
-def _run_hook(repo: Path) -> subprocess.CompletedProcess[str]:
+def _make_venv(path: Path) -> None:
+    venv_bin = path / "bin"
+    venv_bin.mkdir(parents=True)
+    (venv_bin / "python").symlink_to(sys.executable)
+
+
+def _bare_path() -> str:
+    """PATH with git and bash, but no hefesto. Used with an empty PYTHONPATH."""
+    dirs = {str(Path(shutil.which(tool) or "").parent) for tool in ("git", "bash")}
+    return os.pathsep.join(sorted(dirs))
+
+
+def _run_hook(repo: Path, **extra: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["HEFESTO_TELEMETRY"] = "0"
     env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
     env.pop("SKIP_HEFESTO_HOOKS", None)
+    env.pop("VIRTUAL_ENV", None)
+    env.update(extra)
+    if env.get("PYTHONPATH") == "":
+        del env["PYTHONPATH"]
     return subprocess.run(
         ["bash", str(HOOK)], cwd=repo, env=env, capture_output=True, text=True, timeout=120
     )
@@ -83,3 +97,41 @@ def test_unstaged_files_are_not_analyzed(repo: Path) -> None:
     result = _run_hook(repo)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "Analyzing 1 staged file(s)" in result.stdout
+
+
+def test_no_interpreter_blocks_instead_of_skipping(repo: Path) -> None:
+    shutil.rmtree(repo / ".venv")
+    _stage(repo, "ok.py", "x = 1\n")
+    result = _run_hook(repo, PATH=_bare_path(), PYTHONPATH="")
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Commit blocked" in result.stderr
+    assert "SKIP_HEFESTO_HOOKS=1" in result.stderr
+    assert "Skipping" not in result.stdout + result.stderr
+
+
+def test_skip_env_still_bypasses_without_interpreter(repo: Path) -> None:
+    shutil.rmtree(repo / ".venv")
+    result = _run_hook(repo, PATH=_bare_path(), SKIP_HEFESTO_HOOKS="1")
+    assert result.returncode == 0
+
+
+@pytest.mark.parametrize("where", ["venv", "virtual_env", "hefesto_on_path"])
+def test_interpreter_is_found_without_dot_venv(repo: Path, tmp_path_factory, where: str) -> None:
+    shutil.rmtree(repo / ".venv")
+    extra = {"PATH": _bare_path(), "PYTHONPATH": ""}
+    if where == "venv":
+        _make_venv(repo / "venv")
+    elif where == "virtual_env":
+        outside = tmp_path_factory.mktemp("active-venv")
+        _make_venv(outside)
+        extra["VIRTUAL_ENV"] = str(outside)
+    else:
+        bindir = tmp_path_factory.mktemp("bin")
+        script = bindir / "hefesto"
+        script.write_text(f"#!{sys.executable}\nimport hefesto.cli.main\n", encoding="utf-8")
+        script.chmod(0o755)
+        extra["PATH"] = str(bindir) + os.pathsep + extra["PATH"]
+    _stage(repo, "app/secret.py", PLANTED)
+    result = _run_hook(repo, **extra)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Found CRITICAL issues" in result.stdout

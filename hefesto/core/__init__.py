@@ -86,9 +86,14 @@ if _has_analyzer:
 
 
 def __getattr__(name: str) -> object:
-    # Deprecated names are resolved lazily so that only their use warns.
+    # Deprecated names are resolved lazily so that only their use warns. The
+    # warning is raised here, not in models.__getattr__, so that stacklevel=2
+    # points at the caller and Python shows it by default in user scripts.
     if name == "LLMModel":
+        import warnings
+
         from hefesto.core import models
 
-        return getattr(models, name)
+        warnings.warn(models._DEPRECATED[name][1], DeprecationWarning, stacklevel=2)
+        return models._LLMModel
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

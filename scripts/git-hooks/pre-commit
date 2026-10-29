@@ -19,21 +19,40 @@ fi
 
 ROOT="$(git rev-parse --show-toplevel)"
 
-# Prefer local venv if present
-if [[ -x "$ROOT/.venv/bin/python" ]]; then
-  PY="$ROOT/.venv/bin/python"
-elif command -v python3 >/dev/null 2>&1; then
-  PY="python3"
-else
-  PY="python"
-fi
-
 cd "$ROOT"
 
-if ! "$PY" -c "import hefesto" >/dev/null 2>&1; then
-  echo "[hefesto] hefesto is not importable with $PY. Skipping analysis."
-  echo "[hefesto] Install with: pip install -e '.[dev]'"
-  exit 0
+# Find a Python that can import hefesto: $ROOT/.venv, $ROOT/venv (CONTRIBUTING.md),
+# $VIRTUAL_ENV, then the interpreter of `hefesto` on PATH. Never skip silently.
+_has_hefesto() {
+  [[ -n "$1" && -x "$1" ]] && "$1" -c "import hefesto" >/dev/null 2>&1
+}
+
+PY=""
+for candidate in "$ROOT/.venv/bin/python" "$ROOT/venv/bin/python" \
+  "${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/python}"; do
+  if _has_hefesto "$candidate"; then
+    PY="$candidate"
+    break
+  fi
+done
+if [[ -z "$PY" ]] && HEFESTO_BIN="$(command -v hefesto 2>/dev/null)"; then
+  SHEBANG="$(head -n 1 "$HEFESTO_BIN" 2>/dev/null || true)"
+  if [[ "$SHEBANG" == "#!"* ]]; then
+    read -r candidate arg _ <<<"${SHEBANG#\#!}"
+    if [[ "$candidate" == */env && -n "${arg:-}" ]]; then
+      candidate="$(command -v "$arg" 2>/dev/null || true)"
+    fi
+    if _has_hefesto "$candidate"; then
+      PY="$candidate"
+    fi
+  fi
+fi
+if [[ -z "$PY" ]]; then
+  echo "[hefesto] No Python with hefesto installed was found in .venv/, venv/," >&2
+  echo "[hefesto] \$VIRTUAL_ENV or from 'hefesto' on PATH. Commit blocked." >&2
+  echo "[hefesto] Fix: python -m venv venv && venv/bin/pip install -e '.[dev,lint]'" >&2
+  echo "[hefesto] Bypass once: SKIP_HEFESTO_HOOKS=1 git commit" >&2
+  exit 1
 fi
 
 GATED="$(mktemp)"
