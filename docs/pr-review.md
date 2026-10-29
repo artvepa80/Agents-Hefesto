@@ -24,6 +24,26 @@ JSON findings with stable dedup keys, ready to post as inline review comments.
 | `in_hunk` | `true` when the finding touches an added line of the diff. |
 | `anchor_line` | The added line an inline comment should be posted on, or `null` when `in_hunk` is `false`. |
 
+## Line suppressions
+
+Python findings suppressed with `# hefesto: ignore[TYPE] reason` (up to HIGH,
+never CRITICAL; see `docs/ANALYSIS_RULES.md`) are not in `findings`.
+`diagnostics.suppressed` counts them and `diagnostics.suppression_warnings`
+lists directives that suppressed nothing.
+
+So that a suppression cannot land unnoticed, the output lists every
+suppression comment the diff adds to a `.py` file, also on stderr:
+
+```json
+"new_suppressions": [
+  {"file": "pkg/cache.py", "line": 12, "types": ["PICKLE_USAGE"], "reason": "signed cache"}
+]
+```
+
+A malformed one also carries `problem`. `--fail-on-new-suppressions` exits 1
+when the list is not empty (after printing the JSON), so a CI job can require
+a review for new suppressions.
+
 ## `anchor_line`
 
 GitHub rejects review comments (HTTP 422) on lines outside the diff. A

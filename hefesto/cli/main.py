@@ -444,8 +444,11 @@ def analyze(
 
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
         _run_format_check(format_check, all_file_results, source_cache, quiet, json_mode)
+        suppression_warnings = _apply_line_suppressions(all_file_results, source_cache)
 
         meta = engine._build_meta() if hasattr(engine, "_build_meta") else {}
+        if suppression_warnings:
+            meta["suppression_warnings"] = suppression_warnings
         if budget_result is not None:
             meta["dynamic_budget_results"] = budget_result.to_dict()
 
@@ -757,7 +760,12 @@ def check_test_contradictions(test_directory: str):
     default=None,
     help="PR number to post to when --post is used; auto-detected via gh if omitted",
 )
-def pr_review(project_root, base, head, strict, post, repo, pr):
+@click.option(
+    "--fail-on-new-suppressions",
+    is_flag=True,
+    help="Exit 1 when the diff adds a `# hefesto: ignore[TYPE] reason` comment",
+)
+def pr_review(project_root, base, head, strict, post, repo, pr, fail_on_new_suppressions):
     """Generate a Hefesto PR review for the current diff.
 
     Default output is JSON on stdout, suitable for piping into the
@@ -789,8 +797,11 @@ def pr_review(project_root, base, head, strict, post, repo, pr):
         _exit(1)
         return
 
+    _echo_new_suppressions(result.new_suppressions)
     if not post:
         click.echo(json.dumps(result.to_dict(), indent=2))
+        if fail_on_new_suppressions and result.new_suppressions:
+            _exit(1)
         return
 
     from hefesto.pr_review.post import detect_repo_and_pr, post_findings
@@ -828,6 +839,8 @@ def pr_review(project_root, base, head, strict, post, repo, pr):
         f"({counters['failed']} failed, {counters['skipped_no_hunk']} skipped)"
     )
     if counters["failed"] > 0:
+        _exit(1)
+    if fail_on_new_suppressions and result.new_suppressions:
         _exit(1)
 
 
@@ -1196,6 +1209,30 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
     return all_file_results, total_loc, total_duration, source_cache
 
 
+def _echo_new_suppressions(new_suppressions):
+    """List suppression comments a diff adds, on stderr (stdout stays JSON)."""
+    if not new_suppressions:
+        return
+    click.echo(f"New line suppressions ({len(new_suppressions)}):", err=True)
+    for item in new_suppressions:
+        types = ", ".join(item.get("types") or [])
+        problem = f" (malformed: {item['problem']})" if item.get("problem") else ""
+        click.echo(f"  {item['file']}:{item['line']} [{types}] {item['reason']}{problem}", err=True)
+
+
+def _apply_line_suppressions(all_file_results, source_cache):
+    """Apply ``# hefesto: ignore[TYPE] reason`` (Python files) after analysis.
+
+    Warnings for ignored directives always go to stderr, even with --quiet.
+    """
+    from hefesto.core.suppressions import apply_suppressions
+
+    warnings = apply_suppressions(all_file_results, source_cache)
+    for item in warnings:
+        click.echo(f"Warning: {item['file']}:{item['line']}: {item['message']}", err=True)
+    return warnings
+
+
 def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
     """Run ML-powered semantic duplication analysis (OMEGA/PRO only)."""
     import os
@@ -1288,6 +1325,7 @@ def _generate_report(all_file_results, total_loc, total_duration, output, save_h
         low_issues=sum(1 for i in all_issues if i.severity.value == "LOW"),
         total_loc=total_loc,
         duration_seconds=total_duration,
+        suppressed_issues=sum(len(r.suppressed_issues) for r in all_file_results),
     )
 
     combined_report = AnalysisReport(

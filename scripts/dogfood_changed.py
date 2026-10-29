@@ -10,12 +10,11 @@ it and exits 0. A diff whose files are all unsupported still invokes it, with
 ``--allow-no-files``, which keeps that empty run at exit 0. Without the flag
 the same run exits 1.
 
-No line-level suppression exists. ``# hefesto: ignore`` is an example in
-``docs/ANALYSIS_RULES.md`` (specific-rule suppression is marked as a future
-feature) and no detector reads it. ``--exclude-types`` drops a whole issue
-type, which would silence every ``HARDCODED_SECRET``. The self-check therefore
-expects the one documented public key under ``hefesto/`` and does not hide it
-from the changed-file gate.
+Python files support ``# hefesto: ignore[TYPE] reason`` (up to HIGH, never
+CRITICAL). Every such comment the diff adds is listed with its reason, and
+``--fail-on-new-suppressions`` turns any new one into exit 1. ``--exclude-types``
+drops a whole issue type, which would silence every ``HARDCODED_SECRET``, so it
+is not used.
 
 Paths that are not gated come from the repository's ``.hefesto.yaml``
 ``exclude`` list, read with the package's own ``load_config``, and are matched
@@ -333,6 +332,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Prove a planted CRITICAL fails and the current hefesto/ tree passes",
     )
+    parser.add_argument(
+        "--fail-on-new-suppressions",
+        action="store_true",
+        help="Exit 1 when the diff adds a `# hefesto: ignore[TYPE] reason` comment",
+    )
     return parser.parse_args(argv)
 
 
@@ -362,7 +366,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Files excluded from the gate ({len(skipped)}):", flush=True)
         for name in skipped:
             print(f"  {name}", flush=True)
-    return run_changed_gate(repo, files)
+    exit_code = run_changed_gate(repo, files)
+    try:
+        new_count = report_new_suppressions(repo, args.base, args.head)
+    except DogfoodError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if new_count and args.fail_on_new_suppressions:
+        print("Gate failure: new line suppressions (--fail-on-new-suppressions)", flush=True)
+        exit_code = exit_code or 1
+    return exit_code
+
+
+def report_new_suppressions(repo: Path, base: str, head: str) -> int:
+    """Print each ``# hefesto: ignore`` comment the diff adds. Returns the count."""
+    from hefesto.core.suppressions import format_new_suppressions, new_suppressions_in_diff
+
+    base_rev = empty_tree(repo) if is_zero_rev(base) else base
+    proc = _git(repo, ["diff", "--no-color", "--unified=0", base_rev, head, "--", "*.py"])
+    if proc.returncode != 0:
+        raise DogfoodError(proc.stderr.strip() or f"git diff exited {proc.returncode}")
+    found = new_suppressions_in_diff(proc.stdout, repo)
+    print(f"New line suppressions ({len(found)}):", flush=True)
+    for line in format_new_suppressions(found):
+        print(f"  {line}", flush=True)
+    if not found:
+        print("  (none)", flush=True)
+    return len(found)
 
 
 if __name__ == "__main__":

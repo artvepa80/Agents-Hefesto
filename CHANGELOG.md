@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — line suppression comments (Python)
+
+- `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.
+- Findings up to HIGH can be suppressed; CRITICAL findings are never suppressed. A directive without a reason, without `[TYPE]`, whose type matches no finding on that line, or that targets a CRITICAL finding suppresses nothing and prints a warning on stderr (`meta.suppression_warnings` in JSON).
+- Suppressed findings do not count in the summary or for `--fail-on`. Text output shows `Suppressed: N`. JSON lists them per file under `suppressed_issues` with `"suppressed": true` and `"suppression_reason"`, plus `summary.suppressed`. SARIF keeps them as results with `suppressions` (`kind: inSource`, `justification`).
+- `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
+- `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
+
 ### Changed — docs: real integration API, real PRO check, real license format
 
 - `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
