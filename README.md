@@ -445,6 +445,11 @@ N file(s) could not be analyzed (exit 1)", also when `--allow-no-files` is set.
 `--allow-not-analyzed` (the Action's `allow_not_analyzed: 'true'` input) opts
 out: the gate then judges only the findings, and the file is still listed and
 warned about. Like `--allow-no-files`, it is a command-line flag only.
+`--allow-not-analyzed` does not cover a path where no file was analyzed at
+all (for example `hefesto analyze a.ts` without the TypeScript parser): that is
+the zero-files case, which still exits 1 with `--fail-on` unless
+`--allow-no-files` is set. When a missing parser is the cause, the warning says
+so: `parser unavailable for typescript (pip install "hefesto-ai[multilang]")`.
 
 ---
 

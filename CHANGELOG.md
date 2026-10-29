@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — the zero-files warning names a missing parser (#160)
+
+When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.
+
+### Fixed — `scripts/verify_readme.py` compiles under `python -W error` (#157)
+
+Its module docstring contained `\d` in a non-raw string; it is now a raw string. The engine-side SyntaxWarning leak was fixed in #171.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
