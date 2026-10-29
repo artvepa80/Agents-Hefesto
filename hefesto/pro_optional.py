@@ -73,6 +73,16 @@ except ModuleNotFoundError:
     EnrichmentInput = None  # type: ignore[assignment, misc]
     EnrichmentOrchestrator = None  # type: ignore[assignment, misc]
 
+# Optional extras: older PRO builds may not export these names.
+try:
+    from hefesto_pro.enrichment import EnrichmentCache  # type: ignore[import-untyped]
+except ImportError:
+    EnrichmentCache = None  # type: ignore[assignment, misc]
+try:
+    from hefesto_pro.enrichment import EnrichmentProvider  # type: ignore[import-untyped]
+except ImportError:
+    EnrichmentProvider = None  # type: ignore[assignment, misc]
+
 
 # ---------------------------------------------------------------------------
 # API Hardening (Patch C)

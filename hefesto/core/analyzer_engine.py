@@ -238,6 +238,14 @@ def _relative_parts(path: Path, root: Path) -> Tuple[str, ...]:
         return path.parts
 
 
+_SEVERITY_RANK = {
+    AnalysisIssueSeverity.LOW: 1,
+    AnalysisIssueSeverity.MEDIUM: 2,
+    AnalysisIssueSeverity.HIGH: 3,
+    AnalysisIssueSeverity.CRITICAL: 4,
+}
+
+
 class AnalyzerEngine:
     """Main analysis engine that orchestrates all analyzers."""
 
@@ -248,6 +256,8 @@ class AnalyzerEngine:
         scope_config: Any = None,
         enrich_config: Any = None,
         quiet: bool = False,
+        enrich_min_severity: str = "MEDIUM",
+        enrich_max_findings: int = 50,
     ):
         """
         Initialize analyzer engine.
@@ -258,6 +268,9 @@ class AnalyzerEngine:
             scope_config: Optional ScopeGatingConfig (PRO feature, None = no gating)
             enrich_config: Optional EnrichmentConfig (PRO feature, None = no enrichment)
             quiet: Suppress non-essential stderr output, including parser-skip warnings
+            enrich_min_severity: Only findings at or above this severity are enriched
+            enrich_max_findings: At most this many findings are enriched per run
+                (highest severity first; 0 disables enrichment calls)
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
         self.analyzers: List[Any] = []
@@ -269,6 +282,8 @@ class AnalyzerEngine:
         self._scope_config = scope_config
         self._enrich_config = enrich_config
         self._enrich_orchestrator: Any = None
+        self._enrich_min_severity = AnalysisIssueSeverity(enrich_min_severity)
+        self._enrich_max_findings = max(0, int(enrich_max_findings))
         self._scope_skipped: list = []
         self._multilang_skip_report: Any = None
         self._tsjs_parser: Any = None
@@ -294,10 +309,7 @@ class AnalyzerEngine:
 
         # Initialize enrichment orchestrator if config provided
         if enrich_config is not None:
-            from hefesto.pro_optional import HAS_ENRICHMENT, EnrichmentOrchestrator
-
-            if HAS_ENRICHMENT and EnrichmentOrchestrator is not None:
-                self._enrich_orchestrator = EnrichmentOrchestrator([])
+            self._enrich_orchestrator = self._build_enrich_orchestrator(enrich_config)
 
         # Initialize multilang parser + skip report if available
         from hefesto.pro_optional import HAS_MULTILANG, SkipReport, TsJsParser
@@ -1123,11 +1135,52 @@ class AnalyzerEngine:
             }
         }
 
-    def _enrich_findings(self, file_results: "List[FileAnalysisResult]") -> None:
-        """Attach enrichment metadata to each finding (EPIC 3).
+    @staticmethod
+    def _build_enrich_orchestrator(enrich_config: Any) -> Any:
+        """Build the PRO orchestrator with the providers named in the config.
 
-        Mutates ``issue.metadata["enrichment"]`` in-place.
+        Providers come from the ``hefesto.enrichment_providers`` entry points;
+        only names listed in ``enrich_config.providers`` are loaded.
+        """
+        from hefesto.core.enrichment_providers import load_enrichment_providers
+        from hefesto.pro_optional import (
+            HAS_ENRICHMENT,
+            EnrichmentCache,
+            EnrichmentOrchestrator,
+            EnrichmentProvider,
+        )
+
+        if not HAS_ENRICHMENT or EnrichmentOrchestrator is None:
+            return None
+        names = list(getattr(enrich_config, "providers", None) or [])
+        providers = load_enrichment_providers(names, EnrichmentProvider) if names else []
+        cache = None
+        if EnrichmentCache is not None:
+            cache = EnrichmentCache(
+                ttl=enrich_config.cache_ttl_seconds,
+                max_size=enrich_config.cache_max_size,
+            )
+        return EnrichmentOrchestrator(providers, cache=cache)
+
+    def _enrich_targets(self, file_results: "List[FileAnalysisResult]") -> List[Tuple[Any, Any]]:
+        """Findings to enrich: at or above the severity floor, capped, highest first."""
+        floor = _SEVERITY_RANK[self._enrich_min_severity]
+        candidates = [
+            (file_result, issue)
+            for file_result in file_results
+            for issue in file_result.issues
+            if _SEVERITY_RANK.get(issue.severity, 0) >= floor
+        ]
+        candidates.sort(key=lambda pair: -_SEVERITY_RANK.get(pair[1].severity, 0))
+        return candidates[: self._enrich_max_findings]
+
+    def _enrich_findings(self, file_results: "List[FileAnalysisResult]") -> None:
+        """Attach enrichment metadata to selected findings (EPIC 3).
+
+        Mutates ``issue.metadata["enrichment"]`` in-place. Only findings chosen
+        by ``_enrich_targets`` are sent; the others get no ``enrichment`` key.
         Orchestrator never raises — errors become status=error in the dict.
+        Enrichment never changes severities, the finding list, or the exit code.
         """
         from hefesto.pro_optional import EnrichmentInput
 
@@ -1137,16 +1190,15 @@ class AnalyzerEngine:
         orch = self._enrich_orchestrator
         config = self._enrich_config
 
-        for file_result in file_results:
-            for issue in file_result.issues:
-                inp = EnrichmentInput(
-                    file_path=issue.file_path,
-                    finding_summary=issue.message,
-                    language=file_result.language,
-                    snippet=issue.code_snippet,
-                )
-                result = orch.run(inp, config)
-                issue.metadata["enrichment"] = result.to_dict()
+        for file_result, issue in self._enrich_targets(file_results):
+            inp = EnrichmentInput(
+                file_path=issue.file_path,
+                finding_summary=issue.message,
+                language=file_result.language,
+                snippet=issue.code_snippet,
+            )
+            result = orch.run(inp, config)
+            issue.metadata["enrichment"] = result.to_dict()
 
     def _file_records(self) -> Dict[str, Any]:
         """Per-file records for ``meta``; empty lists are left out."""

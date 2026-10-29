@@ -141,6 +141,11 @@ Enrichment is metadata-only and must never affect gating decisions or determinis
 - `--enrich-timeout <seconds>` (default: `30`)
 - `--enrich-cache-ttl <seconds>` (default: `300`)
 - `--enrich-cache-max <entries>` (default: `500`)
+- `--enrich-min-severity LOW|MEDIUM|HIGH|CRITICAL` (default: `MEDIUM`)
+- `--enrich-max-findings <n>` (default: `50`, highest severity first)
+
+Providers are loaded from the `hefesto.enrichment_providers` entry-point group, by the names
+given to `--enrich-provider`. See [enrichment-providers.md](enrichment-providers.md).
 
 ### Output
 Enrichment attaches to each finding:

@@ -342,6 +342,18 @@ def _load_project_config(paths, config_path, option_names):
 )
 @click.option("--enrich-cache-ttl", type=int, default=300, help="Enrichment cache TTL in seconds")
 @click.option("--enrich-cache-max", type=int, default=500, help="Enrichment cache max entries")
+@click.option(
+    "--enrich-min-severity",
+    type=click.Choice(["LOW", "MEDIUM", "HIGH", "CRITICAL"], case_sensitive=False),
+    default="MEDIUM",
+    help="Only enrich findings at or above this severity (default: MEDIUM)",
+)
+@click.option(
+    "--enrich-max-findings",
+    type=click.IntRange(min=0),
+    default=50,
+    help="Enrich at most this many findings per run, highest severity first (default: 50)",
+)
 @_with_project_config
 def analyze(
     paths: Tuple[str, ...],
@@ -370,6 +382,8 @@ def analyze(
     enrich_timeout: int,
     enrich_cache_ttl: int,
     enrich_cache_max: int,
+    enrich_min_severity: str,
+    enrich_max_findings: int,
 ):
     """
     Analyze code files or directories.
@@ -418,7 +432,15 @@ def analyze(
     )
 
     try:
-        engine = _setup_analyzer_engine(severity, quiet, json_mode, scope_config, enrich_config)
+        engine = _setup_analyzer_engine(
+            severity,
+            quiet,
+            json_mode,
+            scope_config,
+            enrich_config,
+            enrich_min_severity=enrich_min_severity.upper(),
+            enrich_max_findings=enrich_max_findings,
+        )
         if not engine:
             _exit(1)
         if copybook_paths and hasattr(engine, "set_copybook_paths"):
@@ -1083,7 +1105,15 @@ def _mount_iris_ingest(app):
         pass  # IRIS not installed — skip silently
 
 
-def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, enrich_config=None):
+def _setup_analyzer_engine(
+    severity,
+    quiet,
+    json_mode=False,
+    scope_config=None,
+    enrich_config=None,
+    enrich_min_severity="MEDIUM",
+    enrich_max_findings=50,
+):
     from hefesto.analyzers import (
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
@@ -1108,6 +1138,8 @@ def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, 
             scope_config=scope_config,
             enrich_config=enrich_config,
             quiet=quiet,
+            enrich_min_severity=enrich_min_severity,
+            enrich_max_findings=enrich_max_findings,
         )
 
         # Register all analyzers

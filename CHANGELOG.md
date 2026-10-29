@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — enrichment providers from entry points, with limits
+
+`hefesto analyze --enrich ... --enrich-provider NAME` now loads the provider registered as `NAME` in the `hefesto.enrichment_providers` entry-point group; before, the orchestrator always got an empty provider list, so enrichment was always skipped. Only the requested names are imported. A provider is used only if it implements the PRO `EnrichmentProvider` protocol and its `name` equals the entry-point name; a missing, failing or invalid provider is reported on stderr and skipped. The orchestrator now gets the cache built from `--enrich-cache-ttl` / `--enrich-cache-max`. New `--enrich-min-severity` (default `MEDIUM`) and `--enrich-max-findings` (default `50`, highest severity first, `0` = none) bound how many sequential provider calls a run makes. Enrichment still never changes findings, severities or the exit code. `--enrich local` runs only providers with `is_local = True` (needs a PRO release with that support). Not wired into `hefesto serve`, the GitHub Action or `pr-review`. Docs: `docs/enrichment-providers.md`.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
