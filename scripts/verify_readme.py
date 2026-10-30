@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Verify that README.md accurately reflects installed analyzers
 and that all version references across the repo match pyproject.toml.
 

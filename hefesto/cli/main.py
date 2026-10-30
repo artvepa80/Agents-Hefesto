@@ -1175,6 +1175,15 @@ def _not_analyzed_hint(engine, before: int) -> str:
     return f"; {failed} file(s) could not be analyzed" if failed > 0 else ""
 
 
+def _missing_parser_hint(engine, before: int) -> str:
+    """'; parser unavailable for X (pip install ...)' when the last path hit one."""
+    failures = getattr(engine, "_parser_failures", [])[before:]
+    langs = sorted({f["language"] for f in failures if f.get("category") == "parser_unavailable"})
+    if not langs:
+        return ""
+    return f'; parser unavailable for {", ".join(langs)} (pip install "hefesto-ai[multilang]")'
+
+
 def _run_analysis_loop(engine, paths_list, exclude_patterns):
     all_file_results = []
     total_loc = 0
@@ -1187,6 +1196,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
     for path in paths_list:
         vendored_before = _vendored_skipped_count(engine)
         failed_before = len(getattr(engine, "_not_analyzed", []))
+        parser_before = len(getattr(engine, "_parser_failures", []))
         report = engine.analyze_path(path, exclude_patterns)
         if not report.file_results:
             # Always on stderr, even with --quiet: an empty run is never a pass.
@@ -1196,6 +1206,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
                 noun = "file" if vendored == 1 else "files"
                 hint = f"; {vendored} {noun} skipped as vendored (use --include-vendored)"
             hint += _not_analyzed_hint(engine, failed_before)
+            hint += _missing_parser_hint(engine, parser_before)
             click.echo(
                 f"Warning: no files were analyzed in {path} "
                 f"(no supported source files, or every file was excluded){hint}",
