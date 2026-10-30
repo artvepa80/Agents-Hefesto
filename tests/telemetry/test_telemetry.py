@@ -283,6 +283,12 @@ class _Body:
     def read(self) -> bytes:
         return self._payload
 
+    def __enter__(self) -> "_Body":
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
 
 def _pypi(version: str):
     def _open(request: object, timeout: float = 0) -> _Body:
