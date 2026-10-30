@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Suppressed findings do not count in the summary or for `--fail-on`. Text output shows `Suppressed: N`. JSON lists them per file under `suppressed_issues` with `"suppressed": true` and `"suppression_reason"`, plus `summary.suppressed`. SARIF keeps them as results with `suppressions` (`kind: inSource`, `justification`).
 - `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
 - `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
+### Changed — the complexity message names the threshold (#159)
+
+`HIGH_COMPLEXITY` and `VERY_HIGH_COMPLEXITY` findings now read `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)` instead of `Cyclomatic complexity too high (22)`; the threshold is the lowest score for the reported severity (MEDIUM 6, HIGH 11, CRITICAL 21). Scores and severities are unchanged. Text, JSON, HTML and SARIF output show the new message; anything that matches the exact old message text (scripts, saved reports) needs updating. Identity keys do not change: the `hefesto pr-review` `dedup_key` and the SARIF `partialFingerprints` fallback (used when the flagged line cannot be read) drop the threshold clause, so findings already commented on or tracked in code scanning keep their keys. The normal SARIF fingerprint never used the message.
+
 ### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
 
 The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
