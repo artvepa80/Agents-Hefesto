@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LLMModel` (`hefesto.core.models.LLMModel`, also exported from `hefesto.core`) is deprecated and will be removed in 5.0. It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled. The class is now `_LLMModel` and `LLMModel` is no longer in `__all__` of either module; `from hefesto.core import LLMModel` and `hefesto.core.models.LLMModel` still return it, with a `DeprecationWarning` attributed to the caller, so a plain script sees it without `-W` (`hefesto.core` raises the warning itself instead of delegating to `hefesto.core.models`).
 
+### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
+
+- `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
+- Output is unchanged: same messages, same order, same exceptions on wrongly typed values. `tests/scripts/test_validate_aggregates_jsonl.py` pins the error list for valid rows, every error type, and `strict` on and off; it passed before and after the split.
+- With this change, that full-tree scan reports no CRITICAL finding, and touching the script no longer fails the changed-file gate (`dogfood-hefesto`). `hefesto.yml` still has `continue-on-error: true`; making it blocking is a separate change.
+
 ### Changed — docs: real integration API, real PRO check, real license format
 
 - `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
@@ -50,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
+
+### Fixed — COBOL REDEFINES analysis time was quadratic
+
+COBOL004/COBOL016 copied every data item after a REDEFINES on each layout check (`_members` and `_is_bms_input_map` in `hefesto/analyzers/devops/cobol_program_rules.py` iterated over a list slice, about 19 copies per REDEFINES), so time grew with the square of the program's data items. A program with 8,000 REDEFINES over `COMP-3` fields took 3.7 s and one with 50,000 took about 6 minutes; they now take 0.55 s and 3.7 s. Both functions now walk the list by index. Findings are unchanged: `scripts/cobol_corpus_baseline.py compare` reports no finding changes on CardDemo, GenApp and zopeneditor-sample, and seeded recall stays 39/41. `tests/test_cobol_phase4_performance.py` adds a many-REDEFINES program to the linear-growth check (it fails at about 13x on the old code).
 
 ## [4.20.4] - 2026-10-27
 
@@ -148,7 +158,6 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 - **`CLAUDE.md` deployment section** describes the production trusted publisher (environment `pypi`, no `PYPI_API_TOKEN`). A failed publish fails the workflow: the GitHub Release is not created and the floating `v4` tag is not moved. After the first successful production publish, the owner can delete the `PYPI_API_TOKEN` secret.
 
 - **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
-
 
 ## [4.20.1] - 2026-10-17
 
@@ -1284,7 +1293,6 @@ Metadata-only release. No code, test, or behavior changes.
 - **GCP**: Stored PyPI token in Secret Manager for future CI/CD use.
 - **GitHub Action**: Added Docker-based Action support to allow usage via `uses: artvepa80/Agents-Hefesto@v4.8.5` (bypasses PyPI dependency).
 
-
 ## [4.8.4] - 2026-02-13 — Release Parity & CI Hardening
 ### Infrastructure
 - **CI/CD**: Hardened release workflows and updated capabilities verification (post-v4.8.3 fixes).
@@ -1391,8 +1399,6 @@ This release makes the REST API production-ready with layered security that is s
   - Optional `X-API-Key` header enforcement when `HEFESTO_API_KEY` is set
   - Health/ping endpoints bypass authentication
   - Returns `401 Unauthorized` with clear error message
-
-
 
 ## [4.6.0] - 2026-02-09 — Ola 3 Infrastructure & CI Guardrails
 
@@ -1731,7 +1737,6 @@ if TIER_HIERARCHY[user_tier] >= TIER_HIERARCHY[required_tier]:
 - Test coverage for OMEGA accessing PRO features
 - Test coverage for PRO accessing FREE features
 - Regression tests for license validation edge cases
-
 
 ## [4.3.0] - 2025-12-10 ✅ RELEASED
 
