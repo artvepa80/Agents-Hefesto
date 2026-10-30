@@ -107,6 +107,13 @@ def _validate_shipping(shipping):
 3. Replace nested conditionals with guard clauses
 4. Consider strategy pattern for complex branching
 
+**Message:** the finding names the score and the threshold it crossed, for
+example `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)`
+(MEDIUM from 6, HIGH from 11, CRITICAL from 21). Up to 4.20.4 the message was
+`Cyclomatic complexity too high (22)`. The `hefesto pr-review` dedup key and
+the SARIF fingerprint ignore the threshold clause, so they are the same as
+before.
+
 ---
 
 ## 2. Security Vulnerabilities

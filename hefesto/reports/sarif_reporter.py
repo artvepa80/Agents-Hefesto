@@ -42,6 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 from hefesto.core.analysis_models import AnalysisIssue, AnalysisReport
+from hefesto.core.complexity_message import strip_threshold_clause
 from hefesto.reports.cwe_map import CWE_NAMES, CWE_VERSION, links_for
 
 SARIF_VERSION = "2.1.0"
@@ -266,7 +267,7 @@ class SARIFReporter:
         """Hash of rule, file and flagged text (not the line number) + occurrence."""
         context = self._line_text(issue.file_path, issue.line)
         if not context:
-            context = _DIGITS.sub("#", issue.message)
+            context = _DIGITS.sub("#", strip_threshold_clause(issue.message))
         origin = (issue.metadata or {}).get("expanded_from")
         if isinstance(origin, dict) and origin.get("file"):
             copied = self._line_text(str(origin["file"]), int(origin.get("line") or 0))
