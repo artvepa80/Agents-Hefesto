@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
+
+The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
+
 ### Fixed — pre-commit hooks analyze the staged content
 
 - The pre-commit hook installed by `hefesto install-hooks` (`hefesto/cli/hook_templates.py`) and the contributor hook `scripts/git-hooks/pre-commit` analyzed the working-tree copy of the staged files. A secret that was staged and then removed on disk without `git add` passed and was committed; a clean staged file with a secret only on disk was blocked. Both hooks now export the staged files with `git checkout-index --prefix=<temp dir>/`, keeping repository-relative paths so path-based rules (test paths, `.hefesto.yaml` `exclude`) still apply, analyze that copy, report the real repository paths, and remove the copy on exit. `.hefesto.yaml`/`.hefesto.yml` are taken from the index (or the working tree when untracked). Paths with spaces and delete-only commits are handled. The copy's path is resolved (`pwd -P`) before it is stripped from the output, because hefesto prints resolved paths: with `TMPDIR` behind a symlink (likely macOS, where `/var` links to `/private/var`), findings and the `Config:` line showed the temp copy's path instead of the repository path. Run `hefesto install-hooks --force` to update an installed hook. The README limitation note is removed.

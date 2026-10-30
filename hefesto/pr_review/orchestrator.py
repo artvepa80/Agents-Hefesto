@@ -291,11 +291,13 @@ def _relative_path(abs_path: str, project_root: Path) -> str:
 def _build_default_engine() -> AnalyzerEngine:
     """Mirror ``hefesto/cli/main.py::_setup_analyzer_engine`` without the
     CLI-side click logging. Kept thin — any future analyzer registered
-    in the CLI setup should also be registered here."""
+    in the CLI setup should also be registered here (enforced by
+    ``tests/test_pr_review_engine_parity.py``)."""
     from hefesto.analyzers import (
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
         ComplexityAnalyzer,
+        NarrowSemanticAnalyzer,
         SecurityAnalyzer,
     )
     from hefesto.analyzers.operational_truth import (
@@ -313,6 +315,7 @@ def _build_default_engine() -> AnalyzerEngine:
     engine.register_analyzer(SecurityAnalyzer())
     engine.register_analyzer(BestPracticesAnalyzer())
     engine.register_analyzer(ResourceSafetyAnalyzer())
+    engine.register_analyzer(NarrowSemanticAnalyzer())
     engine.register_project_analyzer(ImportsVsDepsAnalyzer())
     engine.register_project_analyzer(DocsVsEntrypointsAnalyzer())
     engine.register_project_analyzer(PackagingParityAnalyzer())
