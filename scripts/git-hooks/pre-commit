@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contributor pre-commit hook for this repository.
-# Analyzes only the staged files, like the hook `hefesto install-hooks` installs
+# Analyzes only the staged (index) content, like the hook `hefesto install-hooks` installs
 # in user projects, and skips staged files matched by `exclude` in .hefesto.yaml
 # (the same matcher as scripts/dogfood_changed.py; `hefesto analyze` does not
 # filter paths named on the command line).
@@ -57,7 +57,7 @@ fi
 
 GATED="$(mktemp)"
 trap 'rm -f "$GATED"' EXIT
-if ! git diff --cached --name-only --diff-filter=ACMR -z |
+if ! git diff --cached --name-only --diff-filter=ACMR --ignore-submodules=all -z |
   "$PY" -c '
 import sys
 sys.path.insert(0, "scripts")
@@ -73,10 +73,33 @@ sys.stdout.write("".join(n + "\0" for n in gated))
   exit 1
 fi
 
-FILES=()
+NAMES=()
 while IFS= read -r -d '' f; do
-  [[ -f "$f" ]] && FILES+=("$f")
+  NAMES+=("$f")
 done <"$GATED"
+rm -f "$GATED"
+
+# Analyze the staged (index) content, not the working tree: export the staged
+# files to a temporary copy with their repository-relative paths, so path-based
+# rules (test paths, excludes) still apply, and report the real paths.
+STAGED="$(mktemp -d "${TMPDIR:-/tmp}/hefesto-staged.XXXXXX")"
+trap 'rm -rf "$STAGED"' EXIT
+STAGED="$(cd "$STAGED" && pwd -P)"  # resolved, as hefesto prints it
+mkdir "$STAGED/.git"  # config lookup stops at the copy's root
+git ls-files -z -- ':(glob)**/.hefesto.yaml' ':(glob)**/.hefesto.yml' |
+  git checkout-index --stdin -z --prefix="$STAGED/"
+for cfg in .hefesto.yaml .hefesto.yml; do
+  if [[ ! -e "$STAGED/$cfg" && -f "$ROOT/$cfg" ]]; then
+    cp "$ROOT/$cfg" "$STAGED/$cfg"
+  fi
+done
+if [[ ${#NAMES[@]} -gt 0 ]]; then
+  printf '%s\0' "${NAMES[@]}" | git checkout-index --stdin -z --prefix="$STAGED/"
+fi
+FILES=()
+for f in "${NAMES[@]+"${NAMES[@]}"}"; do
+  [[ -f "$STAGED/$f" ]] && FILES+=("$STAGED/$f")
+done
 
 if [[ ${#FILES[@]} -eq 0 ]]; then
   echo "[hefesto] No staged files to analyze. Pre-commit OK."
@@ -85,9 +108,14 @@ fi
 
 echo "[hefesto] Analyzing ${#FILES[@]} staged file(s) (--fail-on $FAIL_ON)..."
 export HEFESTO_SOURCE=hook
-"$PY" -m hefesto analyze "${FILES[@]}" --severity HIGH --fail-on "$FAIL_ON" --allow-no-files || {
+set +e
+"$PY" -m hefesto analyze "${FILES[@]}" --severity HIGH --fail-on "$FAIL_ON" --allow-no-files 2>&1 |
+  sed "s|$STAGED/||g"
+STATUS=${PIPESTATUS[0]}
+set -e
+if [[ $STATUS -ne 0 ]]; then
   echo "[hefesto] Found $FAIL_ON issues in staged files."
   exit 1
-}
+fi
 
 echo "[hefesto] Pre-commit OK."
