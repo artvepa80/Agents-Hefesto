@@ -29,6 +29,29 @@ if not USE_PREBUILT:
     from tree_sitter import Language, Parser
 
 
+_FUNCTION_EXPRESSIONS = frozenset({"arrow_function", "function_expression", "function"})
+_ANONYMOUS_CAPABLE = _FUNCTION_EXPRESSIONS | {"function_declaration", "method_definition"}
+_IDENTIFIER_PARENTS = frozenset({"variable_declarator", "assignment_expression"})
+_PROPERTY_PARENTS = frozenset({"pair", "property", "property_assignment"})
+_PROPERTY_KEY_TYPES = frozenset({"property_identifier", "identifier", "string"})
+_PARAMETERIZED_NODES = _ANONYMOUS_CAPABLE | {"method_declaration", "function_item"}
+_PARAMETER_LIST_TYPES = frozenset({"formal_parameters", "parameters", "parameter_list"})
+_PARAMETER_TYPES = frozenset(
+    {
+        "identifier",
+        "required_parameter",
+        "optional_parameter",
+        "rest_parameter",
+        "parameter",
+        "simple_parameter",
+        "typed_parameter",
+        "default_parameter",
+        "formal_parameter",
+        "spread_element",
+    }
+)
+
+
 class TreeSitterParser(CodeParser):
     """Universal parser using TreeSitter."""
 
@@ -212,66 +235,43 @@ class TreeSitterParser(CodeParser):
 
         return NodeType.UNKNOWN
 
+    @classmethod
+    def _first_child_text(cls, node, source: bytes, types) -> Optional[str]:
+        """Return the text of the first child whose type is in ``types``."""
+        for child in node.children:
+            if child.type in types:
+                return cls._node_text(child, source)
+        return None
+
+    def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
+        """Infer a function expression's name from its parent context."""
+        if parent.type in _IDENTIFIER_PARENTS:
+            # const NAME = () => {}  /  NAME = () => {}
+            return self._first_child_text(parent, source, ("identifier",))
+        if parent.type in _PROPERTY_PARENTS:
+            # { NAME: () => {} }; quotes are removed from string keys
+            name = self._first_child_text(parent, source, _PROPERTY_KEY_TYPES)
+            return None if name is None else name.strip("'\"")
+        return None
+
     def _extract_name(self, node, source: bytes, parent=None) -> Optional[str]:
         """
         Extract name from node with smart inference for arrow functions.
 
         Priority order:
         1. Direct identifier child (function foo() {})
-        2. Parent variable_declarator name (const foo = () => {})
-        3. Property name in object (foo: () => {})
-        4. Method name
-        5. '<anonymous>' for truly unnamed functions
+        2. Parent variable_declarator, pair/property or assignment name
+        3. Method name
+        4. '<anonymous>' for truly unnamed functions
         """
-        # 1. Direct identifier child (standard function declaration)
-        for child in node.children:
-            if child.type == "identifier":
-                return self._node_text(child, source)
-
-        # 2. For arrow functions, look at parent context
-        if node.type in ["arrow_function", "function_expression", "function"]:
-            if parent is not None:
-                # Check if parent is variable_declarator: const NAME = () => {}
-                if parent.type == "variable_declarator":
-                    for child in parent.children:
-                        if child.type == "identifier":
-                            return self._node_text(child, source)
-
-                # Check if parent is pair/property: { NAME: () => {} }
-                if parent.type in ["pair", "property", "property_assignment"]:
-                    for child in parent.children:
-                        if child.type in [
-                            "property_identifier",
-                            "identifier",
-                            "string",
-                        ]:
-                            name = self._node_text(child, source)
-                            # Remove quotes from string keys
-                            return name.strip("'\"")
-
-                # Check if parent is assignment: NAME = () => {}
-                if parent.type == "assignment_expression":
-                    for child in parent.children:
-                        if child.type == "identifier":
-                            return self._node_text(child, source)
-
-        # 3. Method definition name
-        if node.type == "method_definition":
-            for child in node.children:
-                if child.type == "property_identifier":
-                    return self._node_text(child, source)
-
-        # 4. Return '<anonymous>' instead of None for unnamed functions
-        if node.type in [
-            "arrow_function",
-            "function_expression",
-            "function",
-            "function_declaration",
-            "method_definition",
-        ]:
-            return "<anonymous>"
-
-        return None
+        name = self._first_child_text(node, source, ("identifier",))
+        if name is None and node.type in _FUNCTION_EXPRESSIONS and parent is not None:
+            name = self._name_from_parent(parent, source)
+        if name is None and node.type == "method_definition":
+            name = self._first_child_text(node, source, ("property_identifier",))
+        if name is None and node.type in _ANONYMOUS_CAPABLE:
+            name = "<anonymous>"
+        return name
 
     def _extract_parameter_count(self, node, source: bytes) -> int:
         """
@@ -279,40 +279,10 @@ class TreeSitterParser(CodeParser):
 
         Only counts parameters in function declarations, NOT in call expressions.
         """
-        if node.type not in [
-            "function_declaration",
-            "arrow_function",
-            "function_expression",
-            "function",
-            "method_definition",
-            "method_declaration",
-            "function_item",  # Rust
-        ]:
+        if node.type not in _PARAMETERIZED_NODES:
             return 0
-
-        # Find formal_parameters child
         for child in node.children:
-            if child.type in [
-                "formal_parameters",
-                "parameters",
-                "parameter_list",
-            ]:
+            if child.type in _PARAMETER_LIST_TYPES:
                 # Count actual parameter nodes, not commas
-                param_count = 0
-                for param in child.children:
-                    if param.type in [
-                        "identifier",
-                        "required_parameter",
-                        "optional_parameter",
-                        "rest_parameter",
-                        "parameter",
-                        "simple_parameter",
-                        "typed_parameter",
-                        "default_parameter",
-                        "formal_parameter",
-                        "spread_element",
-                    ]:
-                        param_count += 1
-                return param_count
-
+                return sum(1 for param in child.children if param.type in _PARAMETER_TYPES)
         return 0

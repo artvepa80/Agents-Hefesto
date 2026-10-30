@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The tree-sitter parser (Java, Go, Rust, C#, JavaScript, TypeScript) sliced the decoded source string with tree-sitter's byte offsets. After a UTF-8 BOM or any non-ASCII character (an accented comment, a string literal), function and class names in findings were cut or shifted, e.g. `Function 'pulate()' is too long` instead of `Populate`. The parser now encodes the source once and slices bytes before decoding. **Finding messages change** for files with non-ASCII text before a name: names are now correct. Line numbers, rule types and counts are unchanged. On Newtonsoft.Json 13.0.3, the C# findings with a wrong name went from 263 of 498 to 0.
 
+The name and parameter-count helpers in the same parser were split into small lookups (`_extract_name` went from complexity 18 and nesting 5 to below the MEDIUM threshold). Behavior is unchanged: Newtonsoft.Json findings are identical before and after, ignoring timing.
+
 ### Fixed — the zero-files warning names a missing parser (#160)
 
 When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.
