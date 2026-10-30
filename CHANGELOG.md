@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — telemetry closes its HTTP responses; contributor pre-commit hook gates staged files
+
+- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. `hefesto analyze` no longer reports `RELIABILITY_SESSION_LIFECYCLE` at the version check. Requests, timeouts and payloads are unchanged.
+- `scripts/git-hooks/pre-commit` (this repository's contributor hook) never blocked: it ran `hefesto analyze . --severity HIGH` without `--fail-on`, so it exited 0 on any finding; its repeated `--exclude` kept only the last value and replaced the `.hefesto.yaml` excludes. It now analyzes only the staged files, like the hook `hefesto install-hooks` installs, skips staged files matched by `exclude` in `.hefesto.yaml` with the same matcher as `scripts/dogfood_changed.py`, and runs `--severity HIGH --fail-on CRITICAL`: HIGH findings are shown but only CRITICAL blocks (the same threshold as the CI changed-file gate), set in a single `FAIL_ON` variable. It finds its interpreter in `.venv/`, then `venv/` (the directory `CONTRIBUTING.md` creates), then `$VIRTUAL_ENV`, then the interpreter of `hefesto` on PATH; if none can import `hefesto` it exits 1 with a message (bypass once with `SKIP_HEFESTO_HOOKS=1`) instead of printing "Skipping analysis" and letting the commit through.
+
+### Removed
+
+- `hefesto/hooks/` (`pre_push.py` and `__init__.py`). Nothing imported it, it was not a console script or hook target, and `hefesto install-hooks` uses its own templates; it only shipped in the wheel. `docs/ADVANCED_VALIDATION.md` now says so.
+
+### Deprecated
+
+- `LLMModel` (`hefesto.core.models.LLMModel`, also exported from `hefesto.core`) is deprecated and will be removed in 5.0. It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled. The class is now `_LLMModel` and `LLMModel` is no longer in `__all__` of either module; `from hefesto.core import LLMModel` and `hefesto.core.models.LLMModel` still return it, with a `DeprecationWarning` attributed to the caller, so a plain script sees it without `-W` (`hefesto.core` raises the warning itself instead of delegating to `hefesto.core.models`).
+
 ### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
 
 - `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
