@@ -517,3 +517,57 @@ def test_sysibm_catalog_is_a_system_reference_not_a_table():
     assert [(r["class"], r["target"], r["from"], r["op"]) for r in refs] == [
         ("system_service", "SYSIBM.SYSDUMMY1", "program:A", "SELECT")
     ]
+
+
+def test_keyword_lines_match_whole_words_only():
+    from hefesto.analyzers.devops.cobol_lineage import _keyword_lines
+
+    text = "\n".join(
+        [
+            "MOVE 1 TO A.",  # 0
+            "END-EXEC.",  # 1: END-EXEC is not EXEC
+            "MOVE CALLED TO RECALL-X.",  # 2: CALLED / RECALL-X are not CALL
+            "CALL 'B'.",  # 3
+            "MOVE WS-CALL TO EXEC-FLAG.",  # 4: hyphenated names are not keywords
+            "EXEC SQL",  # 5
+            "PROGRAM-ID. P.",  # 6
+            "MOVE PROGRAM-IDX TO CALL2.",  # 7: letters and digits after the keyword
+            "(CALL)",  # 8: punctuation around the keyword is fine
+        ]
+    )
+    assert _keyword_lines(text) == [3, 5, 6, 8]
+
+
+def test_sql_tables_keep_their_own_line_in_a_multi_line_statement():
+    src = prog(
+        "A",
+        "    EXEC SQL",
+        "      SELECT A, B",
+        "        INTO :WS-A, :WS-B",
+        "        FROM T1 X,",
+        "             T2 Y",
+        "        JOIN T3 Z ON Z.A = X.A",
+        "    END-EXEC.",
+        "    EXEC SQL UPDATE T4 SET A = 1 END-EXEC.",
+    )
+    refs = [(r.target, r.line, r.op) for r in extract(src).refs if r.kind == "SQL"]
+    assert refs == [
+        ("T1", 7, "SELECT"),
+        ("T2", 8, "SELECT"),
+        ("T3", 9, "SELECT"),
+        ("T4", 11, "UPDATE"),
+    ]
+
+
+def test_keyword_lines_equal_the_whole_word_regex_on_random_text():
+    import random
+
+    from hefesto.analyzers.devops.cobol_lineage import _keyword_lines
+
+    whole = re.compile(r"(?<![\w-])(?:CALL|EXEC|PROGRAM-ID)(?![\w-])")
+    parts = ["CALL", "EXEC", "PROGRAM-ID", "END-", "-", "_", "X", "9", "É", " ", ".", "'", "\n"]
+    rng = random.Random(7)
+    for _ in range(2000):
+        text = "".join(rng.choice(parts) for _ in range(rng.randint(0, 30)))
+        expected = sorted({text.count("\n", 0, m.start()) for m in whole.finditer(text)})
+        assert _keyword_lines(text) == expected, repr(text)

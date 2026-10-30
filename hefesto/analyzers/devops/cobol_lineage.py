@@ -49,6 +49,9 @@ _PROGRAM_ID = re.compile(r"(?<![\w-])PROGRAM-ID\s*\.?\s*", re.I)
 _NAME = re.compile(r"['\"]?([A-Za-z0-9][\w-]*)")
 _PROGRAM_OPT = re.compile(r"\bPROGRAM\s*\(\s*", re.I)
 _SQL_TOKEN = re.compile(r":?[A-Za-z0-9_#@$][\w#@$-]*(?:\.[A-Za-z0-9_#@$][\w#@$-]*)*|[(),]|\S")
+_HEAD_WORD = re.compile(r"\s*([A-Za-z]+)")
+_CICS_TARGET = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"|([^)]*)")
+_NAME_START = re.compile(r"[A-Z0-9_#@$]")
 _SEQ_AREA = re.compile(r"^[\d ]{6}")
 
 _SQL_NO_TABLES = {"INCLUDE", "WHENEVER", "OPEN", "CLOSE", "FETCH", "COMMIT", "ROLLBACK"}
@@ -117,17 +120,28 @@ class FileLineage:
 # ------------------------------------------------------------------ text
 
 
-_KEYWORD = re.compile(r"CALL|EXEC|PROGRAM-ID")  # searched in upper-cased text
+# Searched in upper-cased text. A plain alternation scans ~3x faster than one
+# with look-arounds, so whole-word matching is checked in _keyword_lines.
+_KEYWORD = re.compile(r"CALL|EXEC|PROGRAM-ID")
 _END_EXEC = re.compile(r"END-EXEC", re.I)
+
+
+def _word_char(char: str) -> bool:
+    """Same set as ``[\\w-]`` in ``re``: letters, digits, underscore and hyphen."""
+    return char.isalnum() or char in "_-"
 
 
 def _keyword_lines(text: str) -> List[int]:
     """0-based line indexes holding CALL, EXEC or PROGRAM-ID (``text`` upper-cased)."""
     found: List[int] = []
     line, last = 0, 0
+    end = len(text)
     for match in _KEYWORD.finditer(text):
-        line += text.count("\n", last, match.start())
-        last = match.start()
+        start, stop = match.start(), match.end()
+        if (start and _word_char(text[start - 1])) or (stop < end and _word_char(text[stop])):
+            continue  # END-EXEC, CALLED, WS-CALL: not the keyword
+        line += text.count("\n", last, start)
+        last = start
         if not found or found[-1] != line:
             found.append(line)
     return found
@@ -252,7 +266,7 @@ def _exec_refs(doc: _Text, match: "re.Match[str]") -> Iterable[Ref]:
 
 
 def _cics_refs(doc: _Text, body: str, base: int) -> List[Ref]:
-    words = re.match(r"\s*([A-Za-z]+)", body)
+    words = _HEAD_WORD.match(body)
     if not words or words.group(1).upper() not in ("LINK", "XCTL"):
         return []
     kind = words.group(1).upper()
@@ -261,7 +275,7 @@ def _cics_refs(doc: _Text, body: str, base: int) -> List[Ref]:
     if option is None:
         return [Ref(kind, line, expression=kind, reason="no_program_option")]
     start = base + option.end()
-    target = re.match(r"'([^'\n]*)'|\"([^\"\n]*)\"|([^)]*)", doc.code[start:])
+    target = _CICS_TARGET.match(doc.code[start:])
     if target and target.group(3) is None:
         literal = target.group(1) if target.group(1) is not None else target.group(2)
         return [Ref(kind, line, target=literal.strip().upper())]
@@ -273,39 +287,47 @@ def _cics_refs(doc: _Text, body: str, base: int) -> List[Ref]:
 
 
 def _sql_refs(doc: _Text, body: str, base: int) -> List[Ref]:
-    head = re.match(r"\s*([A-Za-z]+)", body)
+    head = _HEAD_WORD.match(body)
     if head and head.group(1).upper() in _SQL_NO_TABLES:
         return []  # cheap exit for INCLUDE, FETCH, OPEN, ... before tokenizing
-    upper = body.upper()
-    tokens = [(m.group(), m.start() + base) for m in _SQL_TOKEN.finditer(upper)]
+    # Tokens without offsets; only the line of a token is ever needed, and only
+    # for table names, so keep the body line of each token instead.
+    tokens: List[str] = []
+    token_lines: List[int] = []
+    for n, text in enumerate(body.upper().split("\n")):
+        found = _SQL_TOKEN.findall(text)
+        tokens.extend(found)
+        token_lines.extend([n] * len(found))
     if not tokens:
         return []
-    first = tokens[0][0]
+    starts = [0]
+    if token_lines[-1]:
+        for text in body.split("\n")[: token_lines[-1]]:
+            starts.append(starts[-1] + len(text) + 1)
+
+    def line(i: int) -> int:
+        return doc.line_of(base + starts[token_lines[i]])
+
+    first = tokens[0]
     if first in _SQL_DYNAMIC or (first == "DECLARE" and _declares_statement(tokens)):
-        line = doc.line_of(tokens[0][1])
-        return [
-            Ref("SQL", line, expression=" ".join(t for t, _ in tokens[:3]), reason="dynamic_sql")
-        ]
+        return [Ref("SQL", line(0), expression=" ".join(tokens[:3]), reason="dynamic_sql")]
     if first in _SQL_NO_TABLES or (first == "DECLARE" and not _declares_cursor(tokens)):
         return []
     op = _sql_op(tokens)
-    return [
-        Ref("SQL", doc.line_of(offset), target=name, op=op)
-        for name, offset in _table_tokens(tokens)
-    ]
+    return [Ref("SQL", line(i), target=tokens[i], op=op) for i in _table_tokens(tokens)]
 
 
-def _declares_cursor(tokens: List[Tuple[str, int]]) -> bool:
-    names = [t for t, _ in tokens[:8]]
+def _declares_cursor(tokens: List[str]) -> bool:
+    names = tokens[:8]
     return "CURSOR" in names and "TABLE" not in names[:4]
 
 
-def _declares_statement(tokens: List[Tuple[str, int]]) -> bool:
-    return len(tokens) > 2 and tokens[2][0] == "STATEMENT"
+def _declares_statement(tokens: List[str]) -> bool:
+    return len(tokens) > 2 and tokens[2] == "STATEMENT"
 
 
-def _sql_op(tokens: List[Tuple[str, int]]) -> str:
-    first = tokens[0][0]
+def _sql_op(tokens: List[str]) -> str:
+    first = tokens[0]
     if first == "DECLARE":
         return "SELECT"
     return first if first in ("SELECT", "INSERT", "UPDATE", "DELETE", "MERGE") else first
@@ -314,13 +336,13 @@ def _sql_op(tokens: List[Tuple[str, int]]) -> str:
 _TABLE_STARTERS = frozenset({"FROM", "JOIN", "UPDATE", "INTO"})
 
 
-def _table_tokens(tokens: List[Tuple[str, int]]) -> List[Tuple[str, int]]:
-    """Table names (token, offset) of one SQL statement."""
-    found: List[Tuple[str, int]] = []
+def _table_tokens(tokens: List[str]) -> List[int]:
+    """Indexes of the table names of one SQL statement."""
+    found: List[int] = []
     stack: List[bool] = []  # True = subquery parenthesis
-    for i, (tok, _) in enumerate(tokens):
+    for i, tok in enumerate(tokens):
         if tok == "(":
-            stack.append(i + 1 < len(tokens) and tokens[i + 1][0] == "SELECT")
+            stack.append(i + 1 < len(tokens) and tokens[i + 1] == "SELECT")
             continue
         if tok == ")":
             if stack:
@@ -332,9 +354,9 @@ def _table_tokens(tokens: List[Tuple[str, int]]) -> List[Tuple[str, int]]:
     return found
 
 
-def _tables_after(tokens: List[Tuple[str, int]], i: int) -> List[Tuple[str, int]]:
-    tok = tokens[i][0]
-    prev = tokens[i - 1][0] if i else ""
+def _tables_after(tokens: List[str], i: int) -> List[int]:
+    tok = tokens[i]
+    prev = tokens[i - 1] if i else ""
     if tok == "FROM":
         return _table_list(tokens, i + 1)
     if tok == "JOIN" or (tok == "UPDATE" and prev != "FOR"):
@@ -345,21 +367,19 @@ def _tables_after(tokens: List[Tuple[str, int]], i: int) -> List[Tuple[str, int]
 
 
 def _is_name(tok: str) -> bool:
-    return bool(re.match(r"[A-Z0-9_#@$]", tok)) and tok not in _SQL_KEYWORDS
+    return bool(_NAME_START.match(tok)) and tok not in _SQL_KEYWORDS
 
 
-def _table_list(
-    tokens: List[Tuple[str, int]], j: int, single: bool = False
-) -> List[Tuple[str, int]]:
+def _table_list(tokens: List[str], j: int, single: bool = False) -> List[int]:
     found = []
-    while j < len(tokens) and _is_name(tokens[j][0]):
-        found.append(tokens[j])
+    while j < len(tokens) and _is_name(tokens[j]):
+        found.append(j)
         j += 1
-        if j < len(tokens) and tokens[j][0] == "AS":
+        if j < len(tokens) and tokens[j] == "AS":
             j += 1
-        if j < len(tokens) and _is_name(tokens[j][0]):
+        if j < len(tokens) and _is_name(tokens[j]):
             j += 1  # correlation name
-        if single or j >= len(tokens) or tokens[j][0] != ",":
+        if single or j >= len(tokens) or tokens[j] != ",":
             break
         j += 1
     return found
