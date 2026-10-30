@@ -140,3 +140,22 @@ jobs:
         run: |
           pip install -e ".[multilang,dev]"
           python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py
+
+  multilang-smoke-required:
+    # Single required check for branch protection: depends on the whole
+    # matrix, so a Python version change does not require a ruleset edit.
+    if: always()
+    needs: [multilang-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed, was cancelled or skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needs results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::a required job finished with result '$r'"
+              exit 1
+            fi
+          done
