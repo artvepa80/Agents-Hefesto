@@ -1,0 +1,43 @@
+{
+  "summary": {
+    "files_analyzed": 4,
+    "total_issues": 0,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "total_loc": 31,
+    "duration_seconds": 0
+  },
+  "files": [
+    {
+      "file": "<ROOT>/MAINPGM.cbl",
+      "issues": [],
+      "loc": 18,
+      "duration_ms": 0,
+      "language": "cobol"
+    },
+    {
+      "file": "<ROOT>/SUBPGM.cbl",
+      "issues": [],
+      "loc": 11,
+      "duration_ms": 0,
+      "language": "cobol"
+    },
+    {
+      "file": "<ROOT>/cpy/SQLCPY.cpy",
+      "issues": [],
+      "loc": 1,
+      "duration_ms": 0,
+      "language": "cobol"
+    },
+    {
+      "file": "<ROOT>/cpy/UTILCPY.cpy",
+      "issues": [],
+      "loc": 1,
+      "duration_ms": 0,
+      "language": "cobol"
+    }
+  ],
+  "timestamp": "T"
+}
