@@ -316,16 +316,6 @@
   {
    "corpus": "carddemo",
    "kind": "SQL",
-   "from": "program:COTRTLIC",
-   "to": "table:SYSIBM.SYSDUMMY1",
-   "file": "app/app-transaction-type-db2/cpy/CSDB2RPY.cpy",
-   "line": 26,
-   "verdict": "TP",
-   "reason": "SELECT statement names table SYSIBM.SYSDUMMY1 at this line"
-  },
-  {
-   "corpus": "carddemo",
-   "kind": "SQL",
    "from": "program:COTRTUPC",
    "to": "table:CARDDEMO.TRANSACTION_TYPE",
    "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",

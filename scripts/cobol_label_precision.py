@@ -139,7 +139,8 @@ def lineage_conservation(report: dict) -> Dict[str, Dict[str, int]]:
         if edge["kind"] in PROGRAM_KINDS:
             out[_group(edge["kind"])]["program"] += 1
     for ref in lin["references"]:
-        out[_group(ref["kind"])][ref["class"]] += 1
+        if ref["kind"] in PROGRAM_KINDS:  # SQL system tables (SYSIBM.*) are not counted
+            out[_group(ref["kind"])][ref["class"]] += 1
     for item in lin["unresolved"]:
         if item["kind"] in PROGRAM_KINDS:
             out[_group(item["kind"])][item["reason"]] += 1

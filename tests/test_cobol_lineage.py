@@ -496,3 +496,24 @@ def test_sql_include_copybook_refs_belong_to_the_including_program(tmp_path):
     ]
     util = [e for e in lin["edges"] if e["source_file"].endswith("UTILCPY.cpy")]
     assert [(e["from"], e["to"]) for e in util] == [("program:MAINPGM", "program:SUBPGM")]
+
+
+def test_sysibm_catalog_is_a_system_reference_not_a_table():
+    # CardDemo CSDB2RPY.cpy: SELECT ... FROM SYSIBM.SYSDUMMY1, pulled in with EXEC SQL INCLUDE.
+    files = {
+        "A.cbl": prog("A", "    EXEC SQL INCLUDE RPY END-EXEC."),
+        "RPY.cpy": fixed(
+            "    EXEC SQL",
+            "        SELECT CURRENT DATE",
+            "        INTO :WS-DATE",
+            "        FROM SYSIBM.SYSDUMMY1",
+            "    END-EXEC.",
+        ),
+    }
+    out = lineage(files)
+    assert not any("SYSIBM" in n["id"] for n in out["nodes"])
+    assert not any(e["kind"] == "SQL" and "SYSIBM" in e["to"] for e in out["edges"])
+    refs = [r for r in out["references"] if r["kind"] == "SQL"]
+    assert [(r["class"], r["target"], r["from"], r["op"]) for r in refs] == [
+        ("system_service", "SYSIBM.SYSDUMMY1", "program:A", "SELECT")
+    ]

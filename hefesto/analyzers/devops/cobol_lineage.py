@@ -373,6 +373,11 @@ def is_system_service(name: str) -> bool:
     return upper in SYSTEM_SERVICES or upper.startswith(SYSTEM_SERVICE_PREFIXES)
 
 
+def is_system_table(name: str) -> bool:
+    """DB2 catalog and dummy tables (``SYSIBM.*``) are system references, not table nodes."""
+    return name.upper().startswith("SYSIBM.")
+
+
 def is_program_path(path: str) -> bool:
     return path.lower().endswith(_PROGRAM_SUFFIXES)
 
@@ -506,6 +511,17 @@ def _add_ref(
                     "reason": reason,
                     "file": path,
                     "line": ref.line,
+                }
+            )
+        elif ref.kind == "SQL" and is_system_table(ref.target):
+            graph.references.append(
+                {
+                    "kind": "SQL",
+                    "class": "system_service",
+                    "target": ref.target,
+                    "op": ref.op,
+                    "from": source,
+                    **place,
                 }
             )
         elif ref.kind == "SQL":
