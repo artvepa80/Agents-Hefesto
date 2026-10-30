@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Released as a minor version (4.21.0), not a major one: the change is breaking only for Python 3.10 users, who keep the releases already published.
 - Classifiers: 3.10 removed, 3.15 added. `ruff` `target-version`, `black` `target-version` and `mypy` `python_version` move to 3.11. The `tomli` dependency for `python_version < '3.11'` is dropped (never installed on 3.11+).
 - `hefesto check` (installation check) now reports an error below 3.11, and the 3.10 fallback that read `pyproject.toml` without `tomllib` is removed. `TomlAnalyzer` imports `tomllib` directly (no `tomli` fallback).
+### Changed — the complexity message names the threshold (#159)
+
+`HIGH_COMPLEXITY` and `VERY_HIGH_COMPLEXITY` findings now read `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)` instead of `Cyclomatic complexity too high (22)`; the threshold is the lowest score for the reported severity (MEDIUM 6, HIGH 11, CRITICAL 21). Scores and severities are unchanged. Text, JSON, HTML and SARIF output show the new message; anything that matches the exact old message text (scripts, saved reports) needs updating. Identity keys do not change: the `hefesto pr-review` `dedup_key` and the SARIF `partialFingerprints` fallback (used when the flagged line cannot be read) drop the threshold clause, so findings already commented on or tracked in code scanning keep their keys. The normal SARIF fingerprint never used the message.
+
 ### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
 
 The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
