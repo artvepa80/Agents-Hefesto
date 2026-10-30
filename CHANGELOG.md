@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — SQL and command injection rules skip code inside Python string literals (#156)
+
+In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report code that is data inside a string literal, such as a code template in a triple-quoted string or `'os.system("ls " + cmd)'` in a snippet. The analyzer finds string literals with `tokenize`. A command sink (`os.system`, `os.popen`, `subprocess.*`) inside a literal is skipped. A line that starts inside a literal is not checked for SQL, and text inside literals no longer counts as a `def` or an `.execute(` sink. Real findings are unchanged, including `tests/fixtures/sqli_safe_patterns/true_positive_concat.py`. Files that do not tokenize, and other languages, are checked line by line as before. Finding counts can go down.
+
 ### Fixed — the zero-files warning names a missing parser (#160)
 
 When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.
