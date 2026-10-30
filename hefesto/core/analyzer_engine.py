@@ -182,8 +182,23 @@ def decoded_with_fallback_message(entry: Dict[str, Any]) -> str:
 
 def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
     """One-line reason for a ``meta.not_analyzed`` entry."""
+    if entry.get("reason") == "grammar_unavailable":
+        return (
+            f"tree-sitter grammar '{entry.get('grammar')}' could not be loaded"
+            f" ({entry.get('exception')}; offline or empty grammar cache?)"
+        )
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
     return f"{what} ({entry.get('exception')})"
+
+
+def _is_grammar_pack_error(exc: BaseException) -> bool:
+    """True for an error raised by ``tree_sitter_language_pack`` itself."""
+    try:
+        import tree_sitter_language_pack as pack  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+    base = getattr(pack, "Error", None)
+    return isinstance(base, type) and isinstance(exc, base)
 
 
 def not_analyzed_message(entry: Dict[str, Any]) -> str:
@@ -781,17 +796,14 @@ class AnalyzerEngine:
 
             try:
                 parser = ParserFactory.get_parser(language)
+            except Exception as exc:
+                if not self._grammar_load_failed(file_path, language, exc):
+                    self._record_parser_failure(file_path, language, exc)
+                return None
+            try:
                 tree = parser.parse(code, str(file_path))
             except Exception as exc:
-                self._parser_failures.append(
-                    {
-                        "path": str(file_path),
-                        "language": language.value,
-                        "category": self._categorize_parser_failure(exc, language),
-                        "exception": type(exc).__name__,
-                    }
-                )
-                logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
+                self._record_parser_failure(file_path, language, exc)
                 return None
 
             # LOC already calculated above
@@ -942,6 +954,51 @@ class AnalyzerEngine:
         threshold_value = severity_order[self.severity_threshold]
 
         return [issue for issue in issues if severity_order[issue.severity] >= threshold_value]
+
+    def _record_parser_failure(self, file_path: Path, language: Language, exc: Exception) -> None:
+        """A parser could not be built or failed to parse: skipped, not gated."""
+        self._parser_failures.append(
+            {
+                "path": str(file_path),
+                "language": language.value,
+                "category": self._categorize_parser_failure(exc, language),
+                "exception": type(exc).__name__,
+            }
+        )
+        logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
+
+    def _grammar_load_failed(self, file_path: Path, language: Language, exc: Exception) -> bool:
+        """Record a supported file whose tree-sitter grammar could not be loaded.
+
+        With the grammar pack installed (``USE_PREBUILT``), an error of the
+        pack's own family while building the parser (``DownloadError``,
+        ``ChecksumMismatchError``, ``DynamicLoadError``, ...) means the grammar
+        itself could not be loaded or downloaded (empty cache, no network).
+        The file is a supported language that was not checked, so it goes to
+        ``meta.not_analyzed`` and fails ``--fail-on`` like any other file that
+        could not be analyzed.
+        Returns False (not handled) when the pack is missing altogether: that
+        stays a ``parser_unavailable`` skip with the ``[multilang]`` hint.
+        """
+        from hefesto.core.parsers.parser_factory import ParserFactory
+        from hefesto.core.parsers.treesitter_parser import USE_PREBUILT, TreeSitterParser
+
+        if not USE_PREBUILT or language not in ParserFactory.GRAMMAR_NAMES:
+            return False
+        if not _is_grammar_pack_error(exc):
+            return False
+        name = ParserFactory.GRAMMAR_NAMES[language]
+        self._not_analyzed.append(
+            {
+                "path": str(file_path),
+                "language": language.value,
+                "reason": "grammar_unavailable",
+                "grammar": TreeSitterParser.LANG_MAP.get(name, name),
+                "exception": type(exc).__name__,
+            }
+        )
+        logger.debug("Not analyzed: %s (grammar not loaded: %s)", file_path, exc)
+        return True
 
     def _categorize_parser_failure(
         self, exc: Exception, language: Optional["Language"] = None

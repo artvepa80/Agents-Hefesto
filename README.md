@@ -434,11 +434,13 @@ analyzed (its findings count); the text report lists it under "Decoded with
 fallback (latin-1)", `--output json` has it in `meta.decoded_with_fallback`,
 SARIF has a `warning` notification for it, and stderr warns about it.
 
-A file the run found but could not analyze (it could not be read, or its
-analyzer raised an error) is never dropped silently: the text report lists it
+A file the run found but could not analyze (it could not be read, its
+analyzer raised an error, or its tree-sitter grammar could not be loaded, for
+example offline with an empty grammar cache) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
-`meta.not_analyzed` (`path`, `language`, `reason`: `read_error` or
-`analyzer_error`, `exception`), SARIF has an `error` notification for it in
+`meta.not_analyzed` (`path`, `language`, `reason`: `read_error`,
+`analyzer_error` or `grammar_unavailable`, `exception`; a `grammar_unavailable`
+entry also names the `grammar`), SARIF has an `error` notification for it in
 `invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
 with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
 N file(s) could not be analyzed (exit 1)", also when `--allow-no-files` is set.
