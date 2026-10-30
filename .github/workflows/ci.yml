@@ -32,6 +32,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
+      - name: TEMPORARY deliberate failure (proves ci-required goes red)
+        if: matrix.python-version == '3.15'
+        run: exit 1
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
