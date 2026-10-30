@@ -2,7 +2,6 @@
 
 import json
 import re
-import shutil
 from pathlib import Path
 
 import pytest
@@ -331,10 +330,96 @@ def test_lineage_adds_no_findings(tmp_path):
 
 # ------------------------------------------------- opt-in (--lineage) contract
 
-LINEAGE_PROJECT = Path(__file__).parent / "fixtures" / "cobol" / "lineage_project"
-# JSON of `hefesto analyze <project> --output json` on main a089df3 (before lineage),
-# with run-dependent values (timestamp, durations) zeroed and files sorted by path.
-MAIN_GOLDEN = LINEAGE_PROJECT.with_name("lineage_project.main.json")
+# Small COBOL project: duplicate CALLs, a service, a variable CALL, a COPY with a
+# CALL, SQL, an EXEC SQL INCLUDE copybook with a variable CALL, and an XCTL.
+LINEAGE_PROJECT = {
+    "MAINPGM.cbl": fixed(
+        "IDENTIFICATION DIVISION.",
+        "PROGRAM-ID. MAINPGM.",
+        "DATA DIVISION.",
+        "WORKING-STORAGE SECTION.",
+        "01 WS-X PIC X(8).",
+        "01 WS-K PIC X(8).",
+        "PROCEDURE DIVISION.",
+        "    CALL 'SUBPGM' USING WS-X.",
+        "    CALL 'SUBPGM' USING WS-K.",
+        "    CALL 'CEEDAYS' USING WS-X.",
+        "    CALL WS-X.",
+        "    COPY UTILCPY.",
+        "    EXEC SQL",
+        "        SELECT A INTO :WS-K FROM ACCOUNTS WHERE B = 1",
+        "    END-EXEC.",
+        "    EXEC SQL INCLUDE SQLCPY END-EXEC.",
+        "    EXEC CICS XCTL PROGRAM('SUBPGM') END-EXEC.",
+        "    GOBACK.",
+    ),
+    "SUBPGM.cbl": fixed(
+        "IDENTIFICATION DIVISION.",
+        "PROGRAM-ID. SUBPGM.",
+        "DATA DIVISION.",
+        "WORKING-STORAGE SECTION.",
+        "01 WS-X PIC X(8).",
+        "01 WS-K PIC X(8).",
+        "PROCEDURE DIVISION.",
+        "    EXEC SQL",
+        "        UPDATE ACCOUNTS SET A = 1",
+        "    END-EXEC.",
+        "    GOBACK.",
+    ),
+    "cpy/SQLCPY.cpy": fixed(
+        "    CALL LIT-DSNTIAC USING WS-X.",
+    ),
+    "cpy/UTILCPY.cpy": fixed(
+        "    CALL 'SUBPGM' USING WS-X.",
+    ),
+}
+# `hefesto analyze <project> --output json --quiet` on main a089df3 (before lineage),
+# with timestamp and durations zeroed, files sorted by path, root shown as <ROOT>.
+MAIN_GOLDEN = (
+    "{\n"
+    '  "summary": {\n'
+    '    "files_analyzed": 4,\n'
+    '    "total_issues": 0,\n'
+    '    "critical": 0,\n'
+    '    "high": 0,\n'
+    '    "medium": 0,\n'
+    '    "low": 0,\n'
+    '    "total_loc": 31,\n'
+    '    "duration_seconds": 0\n'
+    "  },\n"
+    '  "files": [\n'
+    "    {\n"
+    '      "file": "<ROOT>/MAINPGM.cbl",\n'
+    '      "issues": [],\n'
+    '      "loc": 18,\n'
+    '      "duration_ms": 0,\n'
+    '      "language": "cobol"\n'
+    "    },\n"
+    "    {\n"
+    '      "file": "<ROOT>/SUBPGM.cbl",\n'
+    '      "issues": [],\n'
+    '      "loc": 11,\n'
+    '      "duration_ms": 0,\n'
+    '      "language": "cobol"\n'
+    "    },\n"
+    "    {\n"
+    '      "file": "<ROOT>/cpy/SQLCPY.cpy",\n'
+    '      "issues": [],\n'
+    '      "loc": 1,\n'
+    '      "duration_ms": 0,\n'
+    '      "language": "cobol"\n'
+    "    },\n"
+    "    {\n"
+    '      "file": "<ROOT>/cpy/UTILCPY.cpy",\n'
+    '      "issues": [],\n'
+    '      "loc": 1,\n'
+    '      "duration_ms": 0,\n'
+    '      "language": "cobol"\n'
+    "    }\n"
+    "  ],\n"
+    '  "timestamp": "T"\n'
+    "}\n"
+)
 
 
 def _normalized(text: str, root: Path) -> str:
@@ -347,7 +432,9 @@ def _normalized(text: str, root: Path) -> str:
 
 def _project(tmp_path: Path) -> Path:
     root = tmp_path / "proj"
-    shutil.copytree(LINEAGE_PROJECT, root)
+    for name, text in LINEAGE_PROJECT.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_text(text, encoding="utf-8")
     return root
 
 
@@ -356,14 +443,14 @@ def test_default_json_is_byte_identical_to_main_for_cobol(tmp_path):
     result = CliRunner().invoke(cli, ["analyze", str(root), "--output", "json", "--quiet"])
     assert result.exit_code in (0, 1), result.output
     assert "lineage" not in json.loads(result.output[result.output.index("{") :])
-    assert _normalized(result.output, root) == MAIN_GOLDEN.read_text(encoding="utf-8")
+    assert _normalized(result.output, root) == MAIN_GOLDEN
 
 
 def test_lineage_flag_only_adds_the_lineage_key(tmp_path):
     root = _project(tmp_path)
     data = _analyze_json(root)
     lin = data.pop("lineage")
-    assert _normalized(json.dumps(data), root) == MAIN_GOLDEN.read_text(encoding="utf-8")
+    assert _normalized(json.dumps(data), root) == MAIN_GOLDEN
     assert lin["schema_version"] == 1
 
 
