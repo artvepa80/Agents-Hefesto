@@ -68,8 +68,7 @@ HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> \
   --severity medium --fail-on critical --allow-no-files
 # Proves a planted CRITICAL fails and the current hefesto/ tree has no
 # CRITICAL findings (the PostHog public key is reported as LOW).
-# One tracked file fails the gate when touched:
-# scripts/validate_aggregates_jsonl.py:48 (VERY_HIGH_COMPLEXITY, until split):
+# With the exclusions above, no tracked file has a CRITICAL finding:
 python scripts/dogfood_changed.py --self-check
 
 # Verify version parity (pyproject.toml vs README, llms.txt, server.json,
