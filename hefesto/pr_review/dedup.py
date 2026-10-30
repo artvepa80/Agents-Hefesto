@@ -28,6 +28,7 @@ import hashlib
 import re
 
 from hefesto.core.analysis_models import AnalysisIssue
+from hefesto.core.complexity_message import strip_threshold_clause
 
 _WHITESPACE_RE = re.compile(r"\s+")
 _PATH_RE = re.compile(r"(?:/[\w.\-]+)+")
@@ -35,7 +36,8 @@ _NUMBER_RE = re.compile(r"\b\d+\b")
 
 
 def _normalize_message(message: str) -> str:
-    out = message.lower().strip()
+    # The complexity threshold clause is not part of a finding's identity (#159).
+    out = strip_threshold_clause(message).lower().strip()
     out = _PATH_RE.sub("<path>", out)
     out = _NUMBER_RE.sub("<n>", out)
     out = _WHITESPACE_RE.sub(" ", out)

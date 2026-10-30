@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed — CI gate on new line suppressions
 
 - The changed-file gate (`.github/workflows/dogfood.yml`) now passes `--fail-on-new-suppressions` on pull requests. `scripts/dogfood_changed.py` accepts a new suppression only when the PR body has the line `Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for that exact file and line (one line per suppression), read from the event payload at `GITHUB_EVENT_PATH` with no token. It always appends the new suppressions and their approval status to `$GITHUB_STEP_SUMMARY` when set. The workflow also runs on `edited` pull requests so an added approval line re-runs the gate. Pushes to `main` only list new suppressions.
+### Changed — the complexity message names the threshold (#159)
+
+`HIGH_COMPLEXITY` and `VERY_HIGH_COMPLEXITY` findings now read `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)` instead of `Cyclomatic complexity too high (22)`; the threshold is the lowest score for the reported severity (MEDIUM 6, HIGH 11, CRITICAL 21). Scores and severities are unchanged. Text, JSON, HTML and SARIF output show the new message; anything that matches the exact old message text (scripts, saved reports) needs updating. Identity keys do not change: the `hefesto pr-review` `dedup_key` and the SARIF `partialFingerprints` fallback (used when the flagged line cannot be read) drop the threshold clause, so findings already commented on or tracked in code scanning keep their keys. The normal SARIF fingerprint never used the message.
+
 ### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
 
 The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
