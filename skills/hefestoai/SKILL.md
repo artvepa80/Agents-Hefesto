@@ -31,7 +31,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.20.4 | License: MIT | Python >= 3.10
        hooks:
          - id: hefesto-analyze
    ```
-   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes the staged files (their working-tree copy) with the Python that installed it; it exits 1 if it installed nothing or `core.hooksPath` is set.
+   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes the staged (index) content of the staged files with the Python that installed it; it exits 1 if it installed nothing or `core.hooksPath` is set.
 
 Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
