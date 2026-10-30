@@ -9,7 +9,7 @@ A timestamp such as ``2001-13-01`` raises ValueError, which is not a
 yaml.YAMLError; 4.20.1 caught it and still reported the file's other
 findings.
 
-This module is collected on every CI Python (3.10 through 3.14). The deep
+This module is collected on every CI Python (3.11 and the latest stable). The deep
 cases run in a subprocess so a signal death fails the test instead of
 killing the suite.
 """

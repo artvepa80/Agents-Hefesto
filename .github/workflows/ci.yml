@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.11", "3.15"]
 
     steps:
       - name: Checkout
@@ -142,3 +142,22 @@ jobs:
           import hefesto.analyzers
           print('OSS_WHEEL_OK')
           "
+
+  ci-required:
+    # Single required check for branch protection: depends on the whole
+    # matrix, so a Python version change does not require a ruleset edit.
+    if: always()
+    needs: [lint-and-test, wheel-leak-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed, was cancelled or skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needs results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::a required job finished with result '$r'"
+              exit 1
+            fi
+          done

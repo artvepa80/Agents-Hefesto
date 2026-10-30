@@ -560,8 +560,8 @@ def check():
     # Check Python version
     py_version = sys.version_info
     click.echo(f"Python: {py_version.major}.{py_version.minor}.{py_version.micro}")
-    if py_version < (3, 10):
-        click.echo("   [ERROR] Python 3.10+ required", err=True)
+    if py_version < (3, 11):
+        click.echo("   [ERROR] Python 3.11+ required", err=True)
     else:
         click.echo("   [OK] Version OK")
 
@@ -938,13 +938,8 @@ def _is_hefesto_repo(repo_root) -> bool:
         text = pyproject.read_text(encoding="utf-8")
     except OSError:
         return False
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # Python 3.10: read the [project] table by hand
-        import re
+    import tomllib
 
-        section = re.search(r"^\[project\]\s*$(.*?)(?=^\[|\Z)", text, re.M | re.S)
-        return bool(section and re.search(r'^name\s*=\s*"hefesto-ai"\s*$', section.group(1), re.M))
     try:
         return bool(tomllib.loads(text).get("project", {}).get("name") == "hefesto-ai")
     except Exception:

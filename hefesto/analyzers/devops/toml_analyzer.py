@@ -6,6 +6,7 @@ Part of Ola 2 DevOps language support.
 """
 
 import re
+import tomllib as tomli  # stdlib since Python 3.11
 from typing import Any, List, Optional, Tuple
 
 from hefesto.analyzers.devops.key_match import DEPENDENCY_MAP_KEYS, key_has_pattern
@@ -14,14 +15,6 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
-
-try:
-    import tomllib as tomli  # Python >= 3.11
-except ImportError:
-    try:
-        import tomli  # Python 3.10
-    except ImportError:
-        tomli = None
 
 
 class TomlAnalyzer:
