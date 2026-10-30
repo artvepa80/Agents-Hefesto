@@ -23,15 +23,26 @@
 **Description:** Functions with too many decision points become hard to understand, test, and maintain.
 
 **Detection Logic:**
-- Counts decision points: `if`, `while`, `for`, `and`, `or`, `elif`, `except`, `with`
-- Each decision point adds +1 to complexity score
+- Complexity = 1 + one point per decision point in the function body.
+- Python: each `if` and `elif` (an `elif` is a nested `if`), `for`, `async for`,
+  `while`, and each `try` statement (one point per `try`, however many `except`
+  clauses it has).
+- Not counted in Python: `and`, `or`, `with`, `except` clauses, conditional
+  expressions (`x if c else y`), comprehension loops and filters, `match`/`case`,
+  and `assert`.
+- Other languages: `if`, `switch`/`match`, loops, `try`, and `catch` clauses;
+  JavaScript and TypeScript also count conditional (`?:`) expressions.
+- A nested function's decision points also count toward the enclosing function,
+  and the nested function gets its own score.
+- The score is lower than tools such as radon, which also count boolean
+  operators: radon scores `if a and b and c:` as 3, Hefesto as 1.
 
 **Severity Levels:**
 - **MEDIUM:** Complexity 6-10
 - **HIGH:** Complexity 11-20
 - **CRITICAL:** Complexity 21+
 
-**Example - BAD (Complexity = 15):**
+**Example - BAD (Hefesto complexity = 12):**
 
 ```python
 def process_order(order, user, payment, shipping):
@@ -53,7 +64,7 @@ def process_order(order, user, payment, shipping):
     return False
 ```
 
-**Example - GOOD (Complexity = 4):**
+**Example - GOOD (Hefesto complexity = 5 for `process_order`, 1 for each helper):**
 
 ```python
 def process_order(order, user, payment, shipping):
@@ -170,6 +181,22 @@ file-name conventions, never from substrings:
 
 Up to and including v4.14.0, any path containing the substring `test` or
 `example` was skipped (SEC-03).
+
+**Only three rules skip test paths.** The skip applies to this rule (Python
+hardcoded secrets, test and example paths), to
+[Assert in Production](#25-assert-in-production) (test paths only) and to
+`OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`), which does not scan Python files
+under any `tests/`, `test/`, `testing/`, `docs/`, `examples/` or `example/`
+directory (nor build, virtualenv and cache directories such as `build/`,
+`dist/`, `venv/`, `.venv/` or `node_modules/`), since test and docs
+dependencies are usually development-only. Every other rule still reports
+under `tests/`, including the secret rules for JSON, TOML
+and IaC files (for example `J001`, `T001` and `TF011`) and the rules of the
+DevOps, cloud and COBOL analyzers. This is on purpose: a real
+credential committed in a test fixture is still leaked. To leave test code out
+of a run, pass `--exclude tests/` or list it under `exclude` in
+`.hefesto.yaml` (entries are path segments, such as `tests/fixtures/`, not
+globs).
 
 ---
 
@@ -1164,15 +1191,26 @@ engine.register_analyzer(SecurityAnalyzer())
 # Skipped: CodeSmellAnalyzer, BestPracticesAnalyzer
 ```
 
-### Inline Suppressions
+### Excluding paths and issue types
 
-```python
-# hefesto: ignore
-API_KEY = "sk-test-123"  # Test key, not real
+Hefesto has no inline suppression comment: a `# hefesto: ignore` marker in
+the code is not read and changes nothing. Use these instead:
 
-# Or suppress specific rules (future feature)
-def long_function():  # hefesto: ignore SMELL_001
-    pass
+- `--exclude`: comma-separated path patterns that are not analyzed at all,
+  e.g. `hefesto analyze . --exclude tests/,docs/`.
+- `--exclude-types`: comma-separated issue types that do not fail the
+  `--fail-on` gate. The findings are still reported.
+  e.g. `hefesto analyze . --fail-on HIGH --exclude-types LONG_FUNCTION,VERY_HIGH_COMPLEXITY`.
+- `exclude` and `exclude_types` in `.hefesto.yaml` (or `.hefesto.yml`), the
+  config-file form of the two flags. Explicit flags win over the file.
+
+```yaml
+# .hefesto.yaml
+exclude:
+  - tests/
+  - docs/
+exclude_types:
+  - LONG_FUNCTION
 ```
 
 ---
@@ -1180,7 +1218,7 @@ def long_function():  # hefesto: ignore SMELL_001
 ## 📚 Related Documentation
 
 - **[Getting Started](GETTING_STARTED.md)** - Quick tutorial
-- **[Integration Guide](INTEGRATION.md)** - Phase 0+1 architecture
+- **[Integration Guide](INTEGRATION.md)** - CLI, JSON output and Python API
 - **[CLI Reference](CLI_REFERENCE.md)** - All commands
 - **Live API Schema (OpenAPI/Swagger)** - Available at `/docs` when running `hefesto serve`. Generated automatically from code.
 

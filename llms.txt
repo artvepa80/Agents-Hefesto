@@ -8,7 +8,7 @@ HefestoAI is a release truth engine for AI-generated code. The package ships ana
 
 ## Key Differentiator
 
-HefestoAI focuses on **semantic drift detection**: verifying that AI-generated code does what the developer intended, not just that it compiles or passes syntax checks. Traditional tools find bugs; HefestoAI validates intent.
+HefestoAI focuses on what a change actually does before merge: whether a project's declared behavior matches its code, plus security and complexity checks. It does not check a change against its author's intent; findings such as INCOMPLETE_TODO, BARE_EXCEPT and ASSERT_IN_PRODUCTION are places to look for drift, not proof of it.
 
 ## Installation
 
@@ -50,8 +50,7 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 - HIGH_COMPLEXITY (cyclomatic complexity > 10)
 - DEEP_NESTING (nesting > 4 levels)
 - GOD_CLASS (classes > 500 lines)
-- SEMANTIC_DRIFT (AI code deviates from intent)
-- DUPLICATE_CODE (ML-detected similar functions)
+- DUPLICATE_CODE (similar functions, from local sentence-transformers embeddings; PRO plus a paid tier only)
 
 ## Telemetry
 
