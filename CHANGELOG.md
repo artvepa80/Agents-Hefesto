@@ -11,9 +11,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 `HIGH_COMPLEXITY` and `VERY_HIGH_COMPLEXITY` findings now read `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)` instead of `Cyclomatic complexity too high (22)`; the threshold is the lowest score for the reported severity (MEDIUM 6, HIGH 11, CRITICAL 21). Scores and severities are unchanged. Text, JSON, HTML and SARIF output show the new message; anything that matches the exact old message text (scripts, saved reports) needs updating. Identity keys do not change: the `hefesto pr-review` `dedup_key` and the SARIF `partialFingerprints` fallback (used when the flagged line cannot be read) drop the threshold clause, so findings already commented on or tracked in code scanning keep their keys. The normal SARIF fingerprint never used the message.
 
+### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
+
+The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
+
+### Fixed — pre-commit hooks analyze the staged content
+
+- The pre-commit hook installed by `hefesto install-hooks` (`hefesto/cli/hook_templates.py`) and the contributor hook `scripts/git-hooks/pre-commit` analyzed the working-tree copy of the staged files. A secret that was staged and then removed on disk without `git add` passed and was committed; a clean staged file with a secret only on disk was blocked. Both hooks now export the staged files with `git checkout-index --prefix=<temp dir>/`, keeping repository-relative paths so path-based rules (test paths, `.hefesto.yaml` `exclude`) still apply, analyze that copy, report the real repository paths, and remove the copy on exit. `.hefesto.yaml`/`.hefesto.yml` are taken from the index (or the working tree when untracked). Paths with spaces and delete-only commits are handled. The copy's path is resolved (`pwd -P`) before it is stripped from the output, because hefesto prints resolved paths: with `TMPDIR` behind a symlink (likely macOS, where `/var` links to `/private/var`), findings and the `Config:` line showed the temp copy's path instead of the repository path. Run `hefesto install-hooks --force` to update an installed hook. The README limitation note is removed.
+
+### Fixed — telemetry closes its HTTP responses; contributor pre-commit hook gates staged files
+
+- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. `hefesto analyze` no longer reports `RELIABILITY_SESSION_LIFECYCLE` at the version check. Requests, timeouts and payloads are unchanged.
+- `scripts/git-hooks/pre-commit` (this repository's contributor hook) never blocked: it ran `hefesto analyze . --severity HIGH` without `--fail-on`, so it exited 0 on any finding; its repeated `--exclude` kept only the last value and replaced the `.hefesto.yaml` excludes. It now analyzes only the staged files, like the hook `hefesto install-hooks` installs, skips staged files matched by `exclude` in `.hefesto.yaml` with the same matcher as `scripts/dogfood_changed.py`, and runs `--severity HIGH --fail-on CRITICAL`: HIGH findings are shown but only CRITICAL blocks (the same threshold as the CI changed-file gate), set in a single `FAIL_ON` variable. It finds its interpreter in `.venv/`, then `venv/` (the directory `CONTRIBUTING.md` creates), then `$VIRTUAL_ENV`, then the interpreter of `hefesto` on PATH; if none can import `hefesto` it exits 1 with a message (bypass once with `SKIP_HEFESTO_HOOKS=1`) instead of printing "Skipping analysis" and letting the commit through.
+
+### Removed
+
+- `hefesto/hooks/` (`pre_push.py` and `__init__.py`). Nothing imported it, it was not a console script or hook target, and `hefesto install-hooks` uses its own templates; it only shipped in the wheel. `docs/ADVANCED_VALIDATION.md` now says so.
+
+### Deprecated
+
+- `LLMModel` (`hefesto.core.models.LLMModel`, also exported from `hefesto.core`) is deprecated and will be removed in 5.0. It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled. The class is now `_LLMModel` and `LLMModel` is no longer in `__all__` of either module; `from hefesto.core import LLMModel` and `hefesto.core.models.LLMModel` still return it, with a `DeprecationWarning` attributed to the caller, so a plain script sees it without `-W` (`hefesto.core` raises the warning itself instead of delegating to `hefesto.core.models`).
+
+### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
+
+- `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
+- Output is unchanged: same messages, same order, same exceptions on wrongly typed values. `tests/scripts/test_validate_aggregates_jsonl.py` pins the error list for valid rows, every error type, and `strict` on and off; it passed before and after the split.
+- With this change, that full-tree scan reports no CRITICAL finding, and touching the script no longer fails the changed-file gate (`dogfood-hefesto`). `hefesto.yml` still has `continue-on-error: true`; making it blocking is a separate change.
+
+### Changed — docs: real integration API, real PRO check, real license format
+
+- `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
+- `docs/INSTALLATION.md` "Pro features not working" now verifies with `hefesto status` (Pro package and license key) and mentions `HEFESTO_TIER`; `hefesto info` never printed "Pro Features: Enabled".
+- License key placeholders in `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `examples/pro_semantic_analysis.py` use the real format `HFST-XXXX-XXXX-XXXX-XXXX-XXXX` instead of `hef_your_key`.
+
+### Changed — docs: no bundled AI provider, working examples, no inline suppression
+
+- `capabilities.yml`, `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `.env.example` no longer say a Gemini API key is needed. No LLM provider is bundled; AI enrichment providers are brought by the user through the PRO `EnrichmentProvider` contract. The `ai_semantic_analysis` note now describes the real feature: `DUPLICATE_CODE` from local sentence-transformers embeddings, PRO only, with `HEFESTO_TIER=professional` or `omega`. Its `display` field is unchanged. The unused LLM budget variables and the nonexistent `/ping`, `/suggest/refactor` and `/budget` examples are gone from those docs.
+- `examples/basic_usage.py` imported functions that do not exist (`get_validator`, `get_feedback_logger`, `get_budget_tracker`, `BudgetTracker`). It now runs the real `AnalyzerEngine` on a sample file. `examples/pro_semantic_analysis.py` now uses `hefesto_pro.get_semantic_analyzer` and exits cleanly when PRO is not installed.
+- `llms.txt` and `skills/hefestoai/SKILL.md` no longer list `SEMANTIC_DRIFT` as a finding type, and say `DUPLICATE_CODE` uses local embeddings with PRO plus a paid tier. `skills/hefestoai/semantic_drift.md` is now "Patterns that often indicate drift", guidance only.
+- `docs/ANALYSIS_RULES.md` and `docs/INTEGRATION.md` no longer show `# hefesto: ignore` as working; there is no inline suppression. They point to `--exclude`, `--exclude-types` and `exclude` / `exclude_types` in `.hefesto.yaml`.
+- Behaviour is unchanged.
+
+### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
+
+- `docs/ANALYSIS_RULES.md` said only two rules skip test paths. A third one does: `OT-IMPORTS-001` (`UNDECLARED_DEPENDENCY`) does not scan Python files under `tests/`, `test/`, `testing/`, `docs/`, `examples/`, `example/` or build, virtualenv and cache directories. The doc now lists it. Behaviour is unchanged.
+
+### Changed — docs: which rules skip test paths, and what complexity counts (#154, #159)
+
+- `docs/ANALYSIS_RULES.md` now says that only two rules skip test paths (SEC-03): Python hardcoded secrets (test and example paths) and `assert` in production (test paths only). The JSON, TOML and IaC secret rules (for example `J001`, `T001`, `TF011`) and the DevOps, cloud and COBOL rules still report under `tests/`, on purpose, since a real credential in a fixture is still leaked. It points to `--exclude tests/` or `exclude` in `.hefesto.yaml`. Behaviour is unchanged.
+- `docs/ANALYSIS_RULES.md` lists the decision points the cyclomatic complexity rule really counts. In Python: `if`/`elif`, `for`, `async for`, `while` and one per `try`. `and`, `or`, `with`, `except` clauses, conditional expressions, comprehensions, `match` and `assert` are not counted, so scores are lower than radon's. The two examples now show the scores Hefesto reports (12 and 5, not 15 and 4). The metric is unchanged.
+
 ### Added — `critical_tests`: check a base...head range (part 3 of 4)
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
+
+### Fixed — COBOL REDEFINES analysis time was quadratic
+
+COBOL004/COBOL016 copied every data item after a REDEFINES on each layout check (`_members` and `_is_bms_input_map` in `hefesto/analyzers/devops/cobol_program_rules.py` iterated over a list slice, about 19 copies per REDEFINES), so time grew with the square of the program's data items. A program with 8,000 REDEFINES over `COMP-3` fields took 3.7 s and one with 50,000 took about 6 minutes; they now take 0.55 s and 3.7 s. Both functions now walk the list by index. Findings are unchanged: `scripts/cobol_corpus_baseline.py compare` reports no finding changes on CardDemo, GenApp and zopeneditor-sample, and seeded recall stays 39/41. `tests/test_cobol_phase4_performance.py` adds a many-REDEFINES program to the linear-growth check (it fails at about 13x on the old code).
 
 ## [4.20.4] - 2026-10-27
 
@@ -112,7 +166,6 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 - **`CLAUDE.md` deployment section** describes the production trusted publisher (environment `pypi`, no `PYPI_API_TOKEN`). A failed publish fails the workflow: the GitHub Release is not created and the floating `v4` tag is not moved. After the first successful production publish, the owner can delete the `PYPI_API_TOKEN` secret.
 
 - **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
-
 
 ## [4.20.1] - 2026-10-17
 
@@ -1248,7 +1301,6 @@ Metadata-only release. No code, test, or behavior changes.
 - **GCP**: Stored PyPI token in Secret Manager for future CI/CD use.
 - **GitHub Action**: Added Docker-based Action support to allow usage via `uses: artvepa80/Agents-Hefesto@v4.8.5` (bypasses PyPI dependency).
 
-
 ## [4.8.4] - 2026-02-13 — Release Parity & CI Hardening
 ### Infrastructure
 - **CI/CD**: Hardened release workflows and updated capabilities verification (post-v4.8.3 fixes).
@@ -1355,8 +1407,6 @@ This release makes the REST API production-ready with layered security that is s
   - Optional `X-API-Key` header enforcement when `HEFESTO_API_KEY` is set
   - Health/ping endpoints bypass authentication
   - Returns `401 Unauthorized` with clear error message
-
-
 
 ## [4.6.0] - 2026-02-09 — Ola 3 Infrastructure & CI Guardrails
 
@@ -1695,7 +1745,6 @@ if TIER_HIERARCHY[user_tier] >= TIER_HIERARCHY[required_tier]:
 - Test coverage for OMEGA accessing PRO features
 - Test coverage for PRO accessing FREE features
 - Regression tests for license validation edge cases
-
 
 ## [4.3.0] - 2025-12-10 ✅ RELEASED
 

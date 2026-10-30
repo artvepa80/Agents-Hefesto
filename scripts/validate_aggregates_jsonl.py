@@ -34,9 +34,7 @@ REQUIRED_METRICS = {"restart_count", "oom_kill_count", "error_rate"}
 OPTIONAL_METRICS = {"latency_p95_delta", "latency_p99_delta", "memory_rss_slope"}
 
 # ISO-8601 UTC pattern (accepts Z or +00:00 suffix)
-ISO8601_RE = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$"
-)
+ISO8601_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$")
 
 # repo format: org/repo (at least one slash)
 REPO_RE = re.compile(r"^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$")
@@ -45,11 +43,9 @@ REPO_RE = re.compile(r"^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$")
 SHA_RE = re.compile(r"^[0-9a-fA-F]{7,}$")
 
 
-def validate_row(row, lineno, strict=False):
-    """Validate a single JSONL row. Returns list of error strings."""
+def _check_identity(row, lineno):
+    """Required identity fields and their formats."""
     errors = []
-
-    # --- Identity fields ---
     for field in REQUIRED_IDENTITY:
         if field not in row:
             errors.append(f"line {lineno}: missing required field '{field}'")
@@ -69,35 +65,44 @@ def validate_row(row, lineno, strict=False):
     ts = row.get("ts", "")
     if ts and not ISO8601_RE.match(ts):
         errors.append(f"line {lineno}: 'ts' must be ISO-8601 UTC, got '{ts}'")
+    return errors
 
-    # --- Required metrics ---
+
+def _check_count(row, lineno, field):
+    """A count metric must be a non-negative int when present."""
+    value = row.get(field)
+    if value is not None and (not isinstance(value, int) or value < 0):
+        return [f"line {lineno}: '{field}' must be non-negative int, got {value}"]
+    return []
+
+
+def _check_error_rate(row, lineno):
+    """error_rate must be a number between 0.0 and 1.0 when present."""
+    er = row.get("error_rate")
+    if er is None:
+        return []
+    if not isinstance(er, (int, float)):
+        return [f"line {lineno}: 'error_rate' must be float, got {type(er).__name__}"]
+    if er < 0.0 or er > 1.0:
+        return [f"line {lineno}: 'error_rate' must be 0.0-1.0 (ratio, not percentage), got {er}"]
+    return []
+
+
+def _check_required_metrics(row, lineno):
+    """Required metrics: presence, counts and error_rate."""
+    errors = []
     for field in REQUIRED_METRICS:
         if field not in row:
             errors.append(f"line {lineno}: missing required metric '{field}'")
+    errors.extend(_check_count(row, lineno, "restart_count"))
+    errors.extend(_check_count(row, lineno, "oom_kill_count"))
+    errors.extend(_check_error_rate(row, lineno))
+    return errors
 
-    # restart_count: non-negative int
-    rc = row.get("restart_count")
-    if rc is not None:
-        if not isinstance(rc, int) or rc < 0:
-            errors.append(f"line {lineno}: 'restart_count' must be non-negative int, got {rc}")
 
-    # oom_kill_count: non-negative int
-    oom = row.get("oom_kill_count")
-    if oom is not None:
-        if not isinstance(oom, int) or oom < 0:
-            errors.append(f"line {lineno}: 'oom_kill_count' must be non-negative int, got {oom}")
-
-    # error_rate: float 0.0-1.0
-    er = row.get("error_rate")
-    if er is not None:
-        if not isinstance(er, (int, float)):
-            errors.append(f"line {lineno}: 'error_rate' must be float, got {type(er).__name__}")
-        elif er < 0.0 or er > 1.0:
-            errors.append(
-                f"line {lineno}: 'error_rate' must be 0.0-1.0 (ratio, not percentage), got {er}"
-            )
-
-    # --- Optional metrics ---
+def _check_optional_metrics(row, lineno):
+    """Optional metrics must be numeric when present."""
+    errors = []
     for field in ("latency_p95_delta", "latency_p99_delta"):
         val = row.get(field)
         if val is not None and not isinstance(val, (int, float)):
@@ -111,13 +116,25 @@ def validate_row(row, lineno, strict=False):
             f"line {lineno}: 'memory_rss_slope' must be numeric (MB/min), "
             f"got {type(slope).__name__}"
         )
+    return errors
 
-    # --- Strict mode: warn on missing optional metrics ---
+
+def _check_strict(row, lineno):
+    """Strict mode: report missing optional metrics."""
+    return [
+        f"line {lineno}: (strict) missing optional metric '{field}'"
+        for field in OPTIONAL_METRICS
+        if field not in row
+    ]
+
+
+def validate_row(row, lineno, strict=False):
+    """Validate a single JSONL row. Returns list of error strings."""
+    errors = _check_identity(row, lineno)
+    errors.extend(_check_required_metrics(row, lineno))
+    errors.extend(_check_optional_metrics(row, lineno))
     if strict:
-        for field in OPTIONAL_METRICS:
-            if field not in row:
-                errors.append(f"line {lineno}: (strict) missing optional metric '{field}'")
-
+        errors.extend(_check_strict(row, lineno))
     return errors
 
 

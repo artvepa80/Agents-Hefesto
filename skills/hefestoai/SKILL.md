@@ -31,7 +31,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.20.4 | License: MIT | Python >= 3.10
        hooks:
          - id: hefesto-analyze
    ```
-   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes the staged files (their working-tree copy) with the Python that installed it; it exits 1 if it installed nothing or `core.hooksPath` is set.
+   Without the pre-commit framework: `hefesto install-hooks` (from 4.17.1) installs a git pre-commit hook that analyzes the staged (index) content of the staged files with the Python that installed it; it exits 1 if it installed nothing or `core.hooksPath` is set.
 
 Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
@@ -47,7 +47,7 @@ Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 |------|----------|
 | [commands.md](commands.md) | CLI flags, workflows, exit codes |
 | [issue_types.md](issue_types.md) | Issue catalog and severities |
-| [semantic_drift.md](semantic_drift.md) | Semantic drift detection |
+| [semantic_drift.md](semantic_drift.md) | Patterns that often indicate drift (guidance, not a finding type) |
 | [reliability_drift.md](reliability_drift.md) | RELIABILITY_* rules |
 | [integration.md](integration.md) | Hooks, CI/CD, MCP |
 | [analysis/SKILL.md](analysis/SKILL.md) | Interpret analyze output |
@@ -56,7 +56,7 @@ Exit codes: `0` clean · `1` gate failure / error · `2` drift threshold.
 
 **Phase 0 — static** (always): complexity, smells, security, best practices, resource safety; plus the DevOps and cloud analyzers `hefesto analyze` runs (YAML, Shell, Dockerfile, Terraform, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm, Serverless).
 
-**Phase 1 — ML semantic** (PRO/OMEGA): embeddings when `HEFESTO_TIER=professional` or `omega`.
+**Phase 1 — duplicate functions** (PRO plus a paid tier): `DUPLICATE_CODE` from local sentence-transformers embeddings, only with `hefesto-ai[pro]` installed and `HEFESTO_TIER=professional` or `omega`.
 
 Languages: Python, JS/TS, Java, Go, Rust, C#, YAML, Shell, Dockerfile, Terraform/HCL, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy/Jenkins, CloudFormation, ARM, Helm, Serverless.
 
