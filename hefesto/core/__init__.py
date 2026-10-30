@@ -20,7 +20,6 @@ from hefesto.core.models import (
     IssueSeverity,
     LicenseInfo,
     LLMEvent,
-    LLMModel,
     RefactoringRequest,
     RefactoringResponse,
     SimilarityResult,
@@ -50,7 +49,6 @@ __all__ = [
     "IssueSeverity",
     "ValidationStatus",
     "BudgetStatus",
-    "LLMModel",
     "SuggestionAction",
     # Validation Models
     "ValidationResult",
@@ -85,3 +83,17 @@ __all__ = [
 # Add AnalyzerEngine if available
 if _has_analyzer:
     __all__.append("AnalyzerEngine")
+
+
+def __getattr__(name: str) -> object:
+    # Deprecated names are resolved lazily so that only their use warns. The
+    # warning is raised here, not in models.__getattr__, so that stacklevel=2
+    # points at the caller and Python shows it by default in user scripts.
+    if name == "LLMModel":
+        import warnings
+
+        from hefesto.core import models
+
+        warnings.warn(models._DEPRECATED[name][1], DeprecationWarning, stacklevel=2)
+        return models._LLMModel
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
