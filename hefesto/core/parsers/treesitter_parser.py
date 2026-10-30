@@ -66,14 +66,22 @@ class TreeSitterParser(CodeParser):
 
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
-        tree = self.parser.parse(bytes(code, "utf8"))
-        root = self._convert_treesitter_to_generic(tree.root_node, code, parent=None)
+        # tree-sitter offsets are byte offsets into this buffer: encode once and
+        # slice bytes, never the decoded str (a BOM or accented text shifts it).
+        data = code.encode("utf8")
+        tree = self.parser.parse(data)
+        root = self._convert_treesitter_to_generic(tree.root_node, data, parent=None)
         return GenericAST(root, self.language, code)
 
     def supports_language(self, language: str) -> bool:
         return language in self.LANG_MAP
 
-    def _convert_treesitter_to_generic(self, node, source: str, parent=None) -> GenericNode:
+    @staticmethod
+    def _node_text(node, source: bytes) -> str:
+        """Source text of ``node``: slice the UTF-8 bytes, then decode."""
+        return source[node.start_byte : node.end_byte].decode("utf8", errors="replace")
+
+    def _convert_treesitter_to_generic(self, node, source: bytes, parent=None) -> GenericNode:
         """Convert TreeSitter node to GenericNode."""
         node_type = self._map_node_type(node.type, self.language)
 
@@ -94,11 +102,7 @@ class TreeSitterParser(CodeParser):
             line_end=node.end_point[0] + 1,
             column_start=node.start_point[1],
             column_end=node.end_point[1],
-            text=(
-                source[node.start_byte : node.end_byte]
-                if node.start_byte < len(source.encode("utf8"))
-                else ""
-            ),
+            text=self._node_text(node, source) if node.start_byte < len(source) else "",
             children=children,
             metadata={
                 "treesitter_type": node.type,
@@ -208,7 +212,7 @@ class TreeSitterParser(CodeParser):
 
         return NodeType.UNKNOWN
 
-    def _extract_name(self, node, source: str, parent=None) -> Optional[str]:
+    def _extract_name(self, node, source: bytes, parent=None) -> Optional[str]:
         """
         Extract name from node with smart inference for arrow functions.
 
@@ -222,7 +226,7 @@ class TreeSitterParser(CodeParser):
         # 1. Direct identifier child (standard function declaration)
         for child in node.children:
             if child.type == "identifier":
-                return source[child.start_byte : child.end_byte]
+                return self._node_text(child, source)
 
         # 2. For arrow functions, look at parent context
         if node.type in ["arrow_function", "function_expression", "function"]:
@@ -231,7 +235,7 @@ class TreeSitterParser(CodeParser):
                 if parent.type == "variable_declarator":
                     for child in parent.children:
                         if child.type == "identifier":
-                            return source[child.start_byte : child.end_byte]
+                            return self._node_text(child, source)
 
                 # Check if parent is pair/property: { NAME: () => {} }
                 if parent.type in ["pair", "property", "property_assignment"]:
@@ -241,7 +245,7 @@ class TreeSitterParser(CodeParser):
                             "identifier",
                             "string",
                         ]:
-                            name = source[child.start_byte : child.end_byte]
+                            name = self._node_text(child, source)
                             # Remove quotes from string keys
                             return name.strip("'\"")
 
@@ -249,13 +253,13 @@ class TreeSitterParser(CodeParser):
                 if parent.type == "assignment_expression":
                     for child in parent.children:
                         if child.type == "identifier":
-                            return source[child.start_byte : child.end_byte]
+                            return self._node_text(child, source)
 
         # 3. Method definition name
         if node.type == "method_definition":
             for child in node.children:
                 if child.type == "property_identifier":
-                    return source[child.start_byte : child.end_byte]
+                    return self._node_text(child, source)
 
         # 4. Return '<anonymous>' instead of None for unnamed functions
         if node.type in [
@@ -269,7 +273,7 @@ class TreeSitterParser(CodeParser):
 
         return None
 
-    def _extract_parameter_count(self, node, source: str) -> int:
+    def _extract_parameter_count(self, node, source: bytes) -> int:
         """
         Extract the actual parameter count from formal_parameters.
 
