@@ -106,7 +106,7 @@ Verify HefestoAI installation and dependencies.
 hefesto check
 ```
 
-Checks: Python version (3.10+), click, pydantic, radon, bandit, vulture,
+Checks: Python version (3.11+), click, pydantic, radon, bandit, vulture,
 pylint, jinja2.
 
 ## check-ci-parity

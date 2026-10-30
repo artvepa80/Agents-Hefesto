@@ -43,7 +43,7 @@
     {
       "id": "install",
       "name": "Install",
-      "description": "MCP tool install: returns the install commands for the open-source package (pip install hefesto-ai, Python 3.10+). Installs nothing.",
+      "description": "MCP tool install: returns the install commands for the open-source package (pip install hefesto-ai, Python 3.11+). Installs nothing.",
       "tags": [
         "install",
         "pip"

@@ -384,7 +384,7 @@ This demonstrated the exact problem it was designed to solve: **catching local/C
 ### Prerequisites
 
 ```bash
-# Python 3.10+
+# Python 3.11+
 python --version
 
 # Hefesto installed
@@ -745,7 +745,7 @@ The pre-push hook caught **6 Flake8 errors** in the validator code itself:
 
 ### Q: What Python versions are supported?
 
-**A:** Python 3.10+ (same as Hefesto core)
+**A:** Python 3.11+ (same as Hefesto core)
 
 ---
 

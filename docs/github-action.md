@@ -27,7 +27,7 @@ The Action is a composite action with three steps:
    `pip install` of the Action's own checkout (the package is not pulled from
    PyPI; its dependencies are). The virtualenv is only on `PATH` inside the
    Action, so later steps of the job keep their own `python`. Needs `python3`
-   >= 3.10 on the runner; `ubuntu-latest` has it, otherwise add
+   >= 3.11 on the runner; `ubuntu-latest` has it, otherwise add
    `actions/setup-python` before the Action.
 2. **Run HefestoAI**: `scripts/action_entrypoint.sh` builds
    `hefesto analyze <target> --severity <min_severity> --fail-on <fail_on>

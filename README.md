@@ -9,7 +9,7 @@
 HefestoAI runs after your AI assistant writes the code and before it ships. It checks that what your project declares (dependencies, configs, install artifacts) matches what it actually does, and it runs security and complexity checks on the code itself.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
@@ -152,7 +152,7 @@ jobs:
           sarif: 'true'
 ```
 
-The Action is a composite action: it installs HefestoAI from the Action's own checkout into a private virtualenv (needs `python3` >= 3.10 on the runner; `ubuntu-latest` has it), runs `hefesto analyze`, and with `sarif: 'true'` uploads the SARIF file with `github/codeql-action/upload-sarif@v4`, also when the `fail_on` gate fails. Full reference: [docs/github-action.md](docs/github-action.md).
+The Action is a composite action: it installs HefestoAI from the Action's own checkout into a private virtualenv (needs `python3` >= 3.11 on the runner; `ubuntu-latest` has it), runs `hefesto analyze`, and with `sarif: 'true'` uploads the SARIF file with `github/codeql-action/upload-sarif@v4`, also when the `fail_on` gate fails. Full reference: [docs/github-action.md](docs/github-action.md).
 
 **Inputs**:
 

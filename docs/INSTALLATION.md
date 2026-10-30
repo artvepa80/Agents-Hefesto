@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - pip (Python package manager)
 
 No AI provider or API key is needed. Hefesto does not bundle an LLM

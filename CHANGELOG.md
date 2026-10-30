@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — Python 3.10 support (minimum is now Python 3.11)
+
+- **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life on 2026-10-01 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
+- The GitHub Action needs `python3` >= 3.11 on the runner (`ubuntu-latest` has it) and fails with a clear error otherwise.
+- CI (`ci.yml`, `multilang-smoke.yml`) now tests on Python 3.11 (oldest supported) and 3.15 (latest stable CPython, 3.15.2 at the time of the change). 3.10, 3.12, 3.13 and 3.14 are no longer in the matrix.
+- Classifiers: 3.10 removed, 3.15 added. `ruff` `target-version`, `black` `target-version` and `mypy` `python_version` move to 3.11. The `tomli` dependency for `python_version < '3.11'` is dropped (never installed on 3.11+).
+- `hefesto check` (installation check) now reports an error below 3.11, and the 3.10 fallback that read `pyproject.toml` without `tomllib` is removed. `TomlAnalyzer` imports `tomllib` directly (no `tomli` fallback).
+
 ### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
 
 - `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
