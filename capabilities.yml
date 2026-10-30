@@ -138,7 +138,7 @@ capabilities:
     - id: ai_semantic_analysis
       display: AI Analysis (semantic understanding)
       status: GA
-      notes: "Gemini provider for semantic code understanding (in-house integration)."
+      notes: "PRO only: duplicate-code detection (DUPLICATE_CODE) with local sentence-transformers embeddings; runs only with HEFESTO_TIER=professional or omega. No LLM provider is bundled; AI enrichment providers are brought by the user via the PRO EnrichmentProvider contract."
     - id: security_scanning
       display: Security Scanning
       status: GA
