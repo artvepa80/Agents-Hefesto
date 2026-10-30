@@ -1162,6 +1162,20 @@ def _not_analyzed_hint(engine, before: int) -> str:
     return f"; {failed} file(s) could not be analyzed" if failed > 0 else ""
 
 
+def _zero_files_cause(engine, before: int) -> str:
+    """Why the last path analyzed nothing: a missing grammar, else the generic cause."""
+    entries = getattr(engine, "_not_analyzed", [])[before:]
+    grammars = sorted(
+        {e.get("grammar") for e in entries if e.get("reason") == "grammar_unavailable"}
+    )
+    if grammars:
+        return (
+            f"tree-sitter grammar could not be loaded for {', '.join(grammars)};"
+            " offline or empty grammar cache?"
+        )
+    return "no supported source files, or every file was excluded"
+
+
 def _missing_parser_hint(engine, before: int) -> str:
     """'; parser unavailable for X (pip install ...)' when the last path hit one."""
     failures = getattr(engine, "_parser_failures", [])[before:]
@@ -1196,7 +1210,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
             hint += _missing_parser_hint(engine, parser_before)
             click.echo(
                 f"Warning: no files were analyzed in {path} "
-                f"(no supported source files, or every file was excluded){hint}",
+                f"({_zero_files_cause(engine, failed_before)}){hint}",
                 err=True,
             )
         all_file_results.extend(report.file_results)

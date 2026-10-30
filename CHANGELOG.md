@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a file whose grammar cannot be loaded fails `--fail-on` instead of passing
+
+With an empty grammar cache and no network, the Java, Go, Rust, C#, JavaScript and TypeScript grammars cannot be downloaded. Those files were counted as parse errors and skipped, so a repo with one Python file next to them printed "Gate passed" under `--fail-on` over files it never checked (the GitHub Action downloads grammars on each run, so a failed download gave a green step). Such a file now goes to `meta.not_analyzed` with `reason: grammar_unavailable` and the `grammar` name, the text report and stderr say "tree-sitter grammar 'java' could not be loaded", and the existing not-analyzed gate fails the run; `--allow-not-analyzed` still opts out. When no file of a path was analyzed for this reason, the zero-files warning names the grammars instead of "no supported source files, or every file was excluded". Without `--fail-on` the exit code stays 0. A missing grammar pack (`[multilang]` not installed) is unchanged: still a skip with the install hint.
+
 ### Fixed — the zero-files warning names a missing parser (#160)
 
 When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.

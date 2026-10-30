@@ -81,6 +81,13 @@ analyzed (exit 1)". In 4.20.0 such a file was dropped without a warning. Set
 `allow_not_analyzed: 'true'` to keep the old exit code; the file is still
 listed and warned about.
 
+A Java, Go, Rust, C#, JavaScript or TypeScript file whose tree-sitter grammar
+could not be loaded is in the same group. The Action image does not ship the
+grammars yet, so each run downloads them; if that download fails (an outage, a
+rate limit, a self-hosted runner without internet access), the file is listed
+as "tree-sitter grammar '<name>' could not be loaded" and fails the step
+instead of being skipped.
+
 A file that is not valid UTF-8 is not in this group: it is read with the
 `latin-1` fallback, analyzed, and listed as "decoded with fallback" (a
 `warning` notification in SARIF). Only its findings can fail the step.
