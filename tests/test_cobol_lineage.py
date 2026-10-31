@@ -373,9 +373,10 @@ LINEAGE_PROJECT = {
         "    CALL 'SUBPGM' USING WS-X.",
     ),
 }
-# `hefesto analyze <project> --output json --quiet` on main a089df3 (before lineage),
-# with timestamp and durations zeroed, files sorted by path, root shown as <ROOT>.
-MAIN_GOLDEN = (
+# Default JSON contract; update only on purpose, with a CHANGELOG entry.
+# `hefesto analyze <project> --output json --quiet` without `--lineage`, with
+# timestamp and durations zeroed, files sorted by path, root shown as <ROOT>.
+DEFAULT_JSON_GOLDEN = (
     "{\n"
     '  "summary": {\n'
     '    "files_analyzed": 4,\n'
@@ -385,7 +386,8 @@ MAIN_GOLDEN = (
     '    "medium": 0,\n'
     '    "low": 0,\n'
     '    "total_loc": 31,\n'
-    '    "duration_seconds": 0\n'
+    '    "duration_seconds": 0,\n'
+    '    "suppressed": 0\n'
     "  },\n"
     '  "files": [\n'
     "    {\n"
@@ -438,19 +440,21 @@ def _project(tmp_path: Path) -> Path:
     return root
 
 
-def test_default_json_is_byte_identical_to_main_for_cobol(tmp_path):
+def test_default_json_matches_the_contract_for_cobol(tmp_path):
     root = _project(tmp_path)
     result = CliRunner().invoke(cli, ["analyze", str(root), "--output", "json", "--quiet"])
     assert result.exit_code in (0, 1), result.output
     assert "lineage" not in json.loads(result.output[result.output.index("{") :])
-    assert _normalized(result.output, root) == MAIN_GOLDEN
+    assert _normalized(result.output, root) == DEFAULT_JSON_GOLDEN
 
 
 def test_lineage_flag_only_adds_the_lineage_key(tmp_path):
     root = _project(tmp_path)
+    plain = CliRunner().invoke(cli, ["analyze", str(root), "--output", "json", "--quiet"])
+    assert plain.exit_code in (0, 1), plain.output
     data = _analyze_json(root)
     lin = data.pop("lineage")
-    assert _normalized(json.dumps(data), root) == MAIN_GOLDEN
+    assert _normalized(json.dumps(data), root) == _normalized(plain.output, root)
     assert lin["schema_version"] == 1
 
 

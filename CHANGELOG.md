@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — line suppression comments (Python)
+
+- `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.
+- Findings up to HIGH can be suppressed; CRITICAL findings are never suppressed. A directive without a reason, without `[TYPE]`, whose type matches no finding on that line, or that targets a CRITICAL finding suppresses nothing and prints a warning on stderr (`meta.suppression_warnings` in JSON).
+- Suppressed findings do not count in the summary or for `--fail-on`. Text output shows `Suppressed: N`. JSON lists them per file under `suppressed_issues` with `"suppressed": true` (a boolean) and `"suppression_reason"`. `summary.suppressed` is a new key in the default JSON summary, always present: the count of suppressed findings (`0` when none). SARIF keeps them as results with `suppressions` (`kind: inSource`, `justification`).
+- `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
+- `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
+
 ### Added — COBOL: program lineage in the JSON report (`--lineage`)
 
 - `hefesto analyze --output json --lineage` adds a `lineage` section: program nodes, `CALL`/`LINK`/`XCTL` edges to programs of the scan, SQL table edges with their statement type, and direct `COPY`/`EXEC SQL INCLUDE` edges. One edge per (kind, from, to, op, file), with its source lines in `lines`. Targets outside the scan are listed under `references` (`system`: target provided by the system, not by the repo; `kind` says how it is referenced; or `external`; `SYSIBM.*` tables are `system` references, not table nodes); variable targets, ambiguous names and dynamic SQL are listed under `unresolved` with a reason and never become edges. References in a copybook, including one pulled in with `EXEC SQL INCLUDE`, belong to every program that copies it.

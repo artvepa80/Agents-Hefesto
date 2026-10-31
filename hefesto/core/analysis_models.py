@@ -199,6 +199,10 @@ class AnalysisIssue:
     # hunk touches the function. Not part of ``to_dict``.
     end_line: Optional[int] = None
 
+    # Set when a line suppression comment (hefesto/core/suppressions.py) hid this
+    # finding; the value is the reason written in the comment.
+    suppression_reason: Optional[str] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result = {
@@ -220,6 +224,9 @@ class AnalysisIssue:
             result["confidence"] = self.confidence
         if self.source:
             result["source"] = self.source
+        if self.suppression_reason is not None:
+            result["suppressed"] = True
+            result["suppression_reason"] = self.suppression_reason
         return result
 
 
@@ -261,6 +268,8 @@ class FileAnalysisResult:
     language: Optional[str] = None
     provider_results: List[ProviderResult] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Findings removed by a line suppression comment. Not counted anywhere.
+    suppressed_issues: List[AnalysisIssue] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -276,6 +285,8 @@ class FileAnalysisResult:
             result["providers"] = [pr.to_dict() for pr in self.provider_results]
         if self.metadata:
             result["file_meta"] = self.metadata
+        if self.suppressed_issues:
+            result["suppressed_issues"] = [i.to_dict() for i in self.suppressed_issues]
         return result
 
 
@@ -292,6 +303,7 @@ class AnalysisSummary:
     total_loc: int
     duration_seconds: float
     providers_used: List[str] = field(default_factory=list)
+    suppressed_issues: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -304,6 +316,7 @@ class AnalysisSummary:
             "low": self.low_issues,
             "total_loc": self.total_loc,
             "duration_seconds": self.duration_seconds,
+            "suppressed": self.suppressed_issues,
         }
         if self.providers_used:
             result["providers_used"] = self.providers_used
@@ -333,6 +346,13 @@ class AnalysisReport:
         for file_result in self.file_results:
             issues.extend(file_result.issues)
         return issues
+
+    def get_suppressed_issues(self) -> List[AnalysisIssue]:
+        """Findings removed by line suppression comments."""
+        out: List[AnalysisIssue] = []
+        for file_result in self.file_results:
+            out.extend(file_result.suppressed_issues)
+        return out
 
     def get_issues_by_severity(self, severity: AnalysisIssueSeverity) -> List[AnalysisIssue]:
         """Get all issues of a specific severity."""

@@ -1198,10 +1198,41 @@ engine.register_analyzer(SecurityAnalyzer())
 # Skipped: CodeSmellAnalyzer, BestPracticesAnalyzer
 ```
 
-### Excluding paths and issue types
+### Suppressing findings and excluding paths or types
 
-Hefesto has no inline suppression comment: a `# hefesto: ignore` marker in
-the code is not read and changes nothing. Use these instead:
+#### Line suppression (Python only)
+
+In Python files, a comment on the line a finding is reported on suppresses
+that finding:
+
+```python
+data = pickle.loads(blob)  # hefesto: ignore[PICKLE_USAGE] blob is our own HMAC-signed cache
+```
+
+- Syntax: `# hefesto: ignore[TYPE] reason`, or `ignore[TYPE_A, TYPE_B] reason`.
+  `TYPE` is the finding type (`type` in JSON). The reason is required.
+- Only `.py` files are read. Comments in other languages change nothing.
+- Findings up to HIGH can be suppressed. **CRITICAL findings are never
+  suppressed** (for example exposed secrets or complexity above 20): fix them,
+  exclude the path, or report a false positive.
+- A function-level finding (complexity, long function) is reported on the
+  `def` line, so the comment goes on that line.
+- A directive without a reason, without `[TYPE]`, whose `TYPE` matches no
+  finding on that line, or that targets a CRITICAL finding suppresses nothing
+  and prints a warning on stderr (`meta.suppression_warnings` in JSON).
+- Suppressed findings do not count in the summary or for `--fail-on`. The text
+  summary shows `Suppressed: N`. JSON lists them per file under
+  `suppressed_issues` with `"suppressed": true` and `"suppression_reason"`,
+  and `summary.suppressed` has the count. SARIF keeps them as results with
+  `suppressions: [{"kind": "inSource", "justification": "<reason>"}]`, so
+  GitHub code scanning shows them as suppressed.
+- `hefesto pr-review` lists every suppression comment the diff adds under
+  `new_suppressions` (and on stderr); `--fail-on-new-suppressions` exits 1 when
+  there is any, so a CI job can require review before new suppressions land.
+
+#### Excluding paths and issue types
+
+To silence findings for whole paths or types:
 
 - `--exclude`: comma-separated path patterns that are not analyzed at all,
   e.g. `hefesto analyze . --exclude tests/,docs/`.
