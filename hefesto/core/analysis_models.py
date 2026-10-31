@@ -324,6 +324,8 @@ class AnalysisReport:
     phase_1_enabled: bool = False
     # Optional metadata populated by PRO features (scope gating, multilang, etc.)
     meta: Dict[str, Any] = field(default_factory=dict)
+    # COBOL program lineage (only when the run analyzed COBOL; see cobol_lineage).
+    lineage: Optional[Dict[str, Any]] = None
 
     def get_all_issues(self) -> List[AnalysisIssue]:
         """Get all issues across all files."""
@@ -349,6 +351,8 @@ class AnalysisReport:
         }
         if self.meta:
             result["meta"] = self.meta
+        if self.lineage is not None:
+            result["lineage"] = self.lineage
         return result
 
 

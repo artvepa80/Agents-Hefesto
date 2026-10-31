@@ -260,6 +260,8 @@ class AnalyzerEngine:
             quiet: Suppress non-essential stderr output, including parser-skip warnings
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
+        # COBOL program lineage (``--lineage``); off by default so the default run is unchanged.
+        self.collect_lineage = False
         self.analyzers: List[Any] = []
         self._project_analyzers: List[Any] = []
         self.verbose = verbose
@@ -333,6 +335,14 @@ class AnalyzerEngine:
             self._cobol_index = index
             self._cobol_index_pinned = True
 
+    def cobol_lineage(self) -> Optional[Dict[str, Any]]:
+        """Program lineage of the last COBOL index (None without --lineage or COBOL)."""
+        if not self.collect_lineage or self._cobol_index is None:
+            return None
+        from hefesto.analyzers.devops.cobol_lineage import build_lineage
+
+        return build_lineage(self._cobol_index)
+
     def _build_cobol_index(
         self, files: List[Path], roots: List[Path], exclude_patterns: List[str]
     ) -> Any:
@@ -354,7 +364,10 @@ class AnalyzerEngine:
                 library_copybook_files(self._copybook_paths) if self._copybook_paths else {}
             )
         return CobolProjectIndex.from_paths(
-            cobol, extra, library_names=self._copybook_library_names
+            cobol,
+            extra,
+            library_names=self._copybook_library_names,
+            lineage=self.collect_lineage,
         )
 
     @staticmethod
