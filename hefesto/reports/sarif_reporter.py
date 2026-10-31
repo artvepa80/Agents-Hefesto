@@ -296,11 +296,19 @@ def _rule_id(issue: AnalysisIssue) -> str:
     return issue.rule_id or issue.issue_type.value
 
 
+# Display names that differ from the rule id. HIGH_COMPLEXITY also carries
+# MEDIUM findings (score 6 to 10), so "High complexity" misread as a severity.
+# The id stays HIGH_COMPLEXITY: code scanning matches alerts by rule id.
+_DISPLAY_NAMES: Dict[str, str] = {"HIGH_COMPLEXITY": "Complexity"}
+
+
 def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
     """Reporting descriptor for one rule (its highest severity is the default)."""
     issue = issues[0]
     kind = issue.issue_type.value
-    title = kind.replace("_", " ").capitalize().replace("Cobol ", "COBOL ", 1)
+    title = _DISPLAY_NAMES.get(kind) or (
+        kind.replace("_", " ").capitalize().replace("Cobol ", "COBOL ", 1)
+    )
     security = bool(_SECURITY_WORDS.search(kind))
     tags = ["security" if security else "maintainability"]
     if kind.startswith("COBOL_"):
@@ -321,7 +329,8 @@ def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
         properties["security-severity"] = SECURITY_SEVERITY.get(severity, "5.5")
     rule: Dict[str, Any] = {
         "id": rid,
-        "name": "".join(part.capitalize() for part in kind.split("_")),
+        "name": _DISPLAY_NAMES.get(kind, "").replace(" ", "")
+        or "".join(part.capitalize() for part in kind.split("_")),
         "shortDescription": {"text": title},
         "fullDescription": {"text": f"{title} ({rid}), reported by HefestoAI."},
         "help": {
