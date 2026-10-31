@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — neutral SARIF display name for `HIGH_COMPLEXITY`
+
+The SARIF rule `HIGH_COMPLEXITY` is now shown as `Complexity` (`name`, `shortDescription`, `fullDescription` and the help heading) instead of `High complexity`. The rule reports MEDIUM (score 6 to 10) as well as HIGH (11 to 20) findings, so the old title read like a severity. Definition: *Complexity: cyclomatic complexity at or above the MEDIUM threshold (6); the finding's severity says how far above.* The rule id (`HIGH_COMPLEXITY`), the issue type in text and JSON output, severities, messages and fingerprints are unchanged. `VERY_HIGH_COMPLEXITY` keeps its name.
+
 ### Fixed — the zero-files warning names a missing parser (#160)
 
 When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.
