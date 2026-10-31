@@ -288,6 +288,14 @@ def _load_project_config(paths, config_path, option_names):
     ),
 )
 @click.option(
+    "--lineage",
+    is_flag=True,
+    help=(
+        "COBOL: add a program lineage section (CALL/LINK/XCTL/SQL/COPY graph) "
+        "to the JSON report. JSON output only; other formats ignore it with a warning."
+    ),
+)
+@click.option(
     "--include-vendored",
     is_flag=True,
     help=(
@@ -357,6 +365,7 @@ def analyze(
     max_issues: Optional[int],
     exclude_types: str,
     copybook_paths: Tuple[str, ...],
+    lineage: bool,
     include_vendored: bool,
     enable_memory_budget_gate: bool,
     include_third_party: bool,
@@ -423,6 +432,7 @@ def analyze(
             _exit(1)
         if copybook_paths and hasattr(engine, "set_copybook_paths"):
             engine.set_copybook_paths(list(copybook_paths))
+        _enable_lineage(engine, lineage, output)
         if include_vendored and hasattr(engine, "set_include_vendored"):
             engine.set_include_vendored(True)
 
@@ -460,6 +470,7 @@ def analyze(
             save_html,
             meta=meta,
         )
+        combined_report.lineage = _lineage_section(engine)
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
         if sarif_file:
@@ -1094,6 +1105,26 @@ def _mount_iris_ingest(app):
             click.echo("  IRIS: ingest endpoints mounted (/v1/ingest/)")
     except ImportError:
         pass  # IRIS not installed — skip silently
+
+
+def _enable_lineage(engine, lineage: bool, output: str) -> None:
+    """``--lineage``: JSON only; with another --output it warns and is ignored."""
+    if not lineage:
+        return
+    if output != "json":
+        click.echo(
+            f"Warning: --lineage is JSON-only; ignored with --output {output}.",
+            err=True,
+        )
+        return
+    engine.collect_lineage = True
+
+
+def _lineage_section(engine):
+    """The ``lineage`` JSON section; None unless ``--lineage`` enabled it on the engine."""
+    if not getattr(engine, "collect_lineage", False):
+        return None
+    return engine.cobol_lineage()
 
 
 def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, enrich_config=None):
