@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from hefesto.core.analyzer_engine import AnalyzerEngine
+from hefesto.core.suppressions import apply_suppressions, new_suppressions_in_diff
 from hefesto.pr_review.dedup import compute_dedup_key
 from hefesto.pr_review.diff import parse_unified_diff
 
@@ -52,6 +53,8 @@ class PrReviewResult:
     findings: List[Dict[str, Any]]
     strict: bool = False
     diagnostics: Dict[str, Any] = field(default_factory=dict)
+    # Line suppression comments added by this diff (Python files only).
+    new_suppressions: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -183,6 +186,10 @@ def run_pr_review(
         engine = _build_default_engine()
 
     report = engine.analyze_files(abs_paths, project_root=str(project_root))
+    suppression_warnings = apply_suppressions(report.file_results)
+    new_suppressions = [
+        item.to_dict() for item in new_suppressions_in_diff(diff_text, project_root)
+    ]
 
     findings_json = _filter_and_serialize(
         report,
@@ -202,7 +209,10 @@ def run_pr_review(
             "files_scanned": len(abs_paths),
             "files_in_diff": len(changed_files),
             "raw_issues": len(report.get_all_issues()),
+            "suppressed": len(report.get_suppressed_issues()),
+            "suppression_warnings": suppression_warnings,
         },
+        new_suppressions=new_suppressions,
     )
 
 

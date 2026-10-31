@@ -10,12 +10,16 @@ it and exits 0. A diff whose files are all unsupported still invokes it, with
 ``--allow-no-files``, which keeps that empty run at exit 0. Without the flag
 the same run exits 1.
 
-No line-level suppression exists. ``# hefesto: ignore`` is an example in
-``docs/ANALYSIS_RULES.md`` (specific-rule suppression is marked as a future
-feature) and no detector reads it. ``--exclude-types`` drops a whole issue
-type, which would silence every ``HARDCODED_SECRET``. The self-check therefore
-expects the one documented public key under ``hefesto/`` and does not hide it
-from the changed-file gate.
+Python files support ``# hefesto: ignore[TYPE] reason`` (up to HIGH, never
+CRITICAL). Every such comment the diff adds is listed with its reason, and
+``--fail-on-new-suppressions`` turns any new one into exit 1 unless the pull
+request body has a maintainer approval line for that exact ``file:line``
+(``Suppression approved by Arturo on YYYY-MM-DD: path/to/file.py:12``, one line
+per suppression). The body comes from the event payload (``GITHUB_EVENT_PATH``);
+no token is used. When ``GITHUB_STEP_SUMMARY`` is set, the list of new
+suppressions and their approval status is always appended to it. ``--exclude-types``
+drops a whole issue type, which would silence every ``HARDCODED_SECRET``, so it
+is not used.
 
 Paths that are not gated come from the repository's ``.hefesto.yaml``
 ``exclude`` list, read with the package's own ``load_config``, and are matched
@@ -32,11 +36,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
-from typing import NamedTuple, Optional
+from typing import Mapping, NamedTuple, Optional, Set, Tuple
 
 from hefesto.config.project_config import ConfigError, find_config, load_config
 from hefesto.core.analyzer_engine import path_is_excluded
@@ -333,6 +338,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Prove a planted CRITICAL fails and the current hefesto/ tree passes",
     )
+    parser.add_argument(
+        "--fail-on-new-suppressions",
+        action="store_true",
+        help="Exit 1 when the diff adds a `# hefesto: ignore[TYPE] reason` comment",
+    )
     return parser.parse_args(argv)
 
 
@@ -362,7 +372,98 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Files excluded from the gate ({len(skipped)}):", flush=True)
         for name in skipped:
             print(f"  {name}", flush=True)
-    return run_changed_gate(repo, files)
+    exit_code = run_changed_gate(repo, files)
+    try:
+        unapproved = report_new_suppressions(repo, args.base, args.head)
+    except DogfoodError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if unapproved and args.fail_on_new_suppressions:
+        print(
+            "Gate failure: new line suppressions without an approval line"
+            " (--fail-on-new-suppressions)",
+            flush=True,
+        )
+        exit_code = exit_code or 1
+    return exit_code
+
+
+APPROVAL_RE = re.compile(
+    r"^[ \t]*Suppression approved by Arturo on (\d{4}-\d{2}-\d{2}): (\S+):(\d+)[ \t]*$"
+)
+
+
+def parse_suppression_approvals(body: Optional[str]) -> Set[Tuple[str, int]]:
+    """``(file, line)`` pairs approved in a pull request body, one per line."""
+    approved: Set[Tuple[str, int]] = set()
+    for raw in (body or "").splitlines():
+        match = APPROVAL_RE.match(raw.rstrip("\r"))
+        if match:
+            approved.add((match.group(2), int(match.group(3))))
+    return approved
+
+
+def pull_request_body(environ: Mapping[str, str]) -> Optional[str]:
+    """The pull request body from the Actions event payload, or None."""
+    event_path = environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return None
+    try:
+        payload = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    pull_request = payload.get("pull_request") if isinstance(payload, dict) else None
+    if not isinstance(pull_request, dict):
+        return None
+    body = pull_request.get("body")
+    return body if isinstance(body, str) else None
+
+
+def _write_step_summary(environ: Mapping[str, str], lines: list[str]) -> None:
+    summary = environ.get("GITHUB_STEP_SUMMARY")
+    if not summary:
+        return
+    with open(summary, "a", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+
+
+def report_new_suppressions(
+    repo: Path, base: str, head: str, environ: Optional[Mapping[str, str]] = None
+) -> int:
+    """List each ``# hefesto: ignore`` comment the diff adds.
+
+    Returns how many have no approval line in the pull request body.
+    """
+    from hefesto.core.suppressions import format_new_suppressions, new_suppressions_in_diff
+
+    env = os.environ if environ is None else environ
+    base_rev = empty_tree(repo) if is_zero_rev(base) else base
+    proc = _git(repo, ["diff", "--no-color", "--unified=0", base_rev, head, "--", "*.py"])
+    if proc.returncode != 0:
+        raise DogfoodError(proc.stderr.strip() or f"git diff exited {proc.returncode}")
+    found = new_suppressions_in_diff(proc.stdout, repo)
+    approvals = parse_suppression_approvals(pull_request_body(env))
+    rows = []
+    unapproved = []
+    for item, text in zip(found, format_new_suppressions(found)):
+        ok = (item.file, item.line) in approvals
+        rows.append((text, ok))
+        if not ok:
+            unapproved.append(text)
+    print(f"New line suppressions ({len(found)}):", flush=True)
+    for text, ok in rows:
+        print(f"  {text} ({'approved' if ok else 'not approved'})", flush=True)
+    if not found:
+        print("  (none)", flush=True)
+    print(f"Unapproved new line suppressions ({len(unapproved)}):", flush=True)
+    for text in unapproved:
+        print(f"  {text}", flush=True)
+    summary = ["### HefestoAI: new line suppressions", "", f"New line suppressions ({len(found)}):"]
+    summary += [f"- `{text}` ({'approved' if ok else 'not approved'})" for text, ok in rows]
+    if not found:
+        summary.append("- (none)")
+    _write_step_summary(env, summary)
+    return len(unapproved)
 
 
 if __name__ == "__main__":

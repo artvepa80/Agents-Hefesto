@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
+from hefesto.analyzers.devops.cobol_lineage import extract as extract_lineage
+
 COPYBOOK_EXTENSIONS = (".cpy",)
 # Copybook files that file discovery does not pick up: DB2 DCLGEN members,
 # other copybook extensions and extension-less copylib members. They are
@@ -185,6 +187,8 @@ class CobolProjectIndex:
     _lines_cache: Dict[str, Any] = field(default_factory=dict, repr=False)
     _lines_cached_chars: int = field(default=0, repr=False)
     expander: Any = field(default=None, repr=False)
+    # CALL/LINK/XCTL/SQL references per scanned file (program lineage).
+    lineage_by_file: Dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
     def from_sources(
@@ -193,8 +197,9 @@ class CobolProjectIndex:
         extra_copybooks: Iterable[Tuple[str, str]] = (),
         library_names: Iterable[str] = (),
         library_files: Optional[Dict[str, str]] = None,
+        lineage: bool = False,
     ) -> "CobolProjectIndex":
-        """Build the index.
+        """Build the index (with ``lineage``, also CALL/LINK/XCTL/SQL references).
 
         ``sources``: scanned COBOL files (path, text). ``extra_copybooks``:
         candidate copybook files without a COBOL extension (path, text); kept
@@ -208,6 +213,8 @@ class CobolProjectIndex:
         for path, text in sources:
             names = copy_names(text)
             index._copy_cache[str(path)] = names
+            if lineage:
+                index.lineage_by_file[str(path)] = extract_lineage(text)
             index.available.add(Path(path).stem.upper())
             index._add_file(str(path))
             index._record(str(path), names, direct, is_copybook_path(path))
@@ -221,6 +228,8 @@ class CobolProjectIndex:
                 index._add_file(str(path))
                 found = copy_names(text)
                 index._copy_cache[str(path)] = found
+                if lineage:
+                    index.lineage_by_file[str(path)] = extract_lineage(text)
                 index._record(str(path), found, direct, True)
         index._add_library(library_names, library_files or {})
         for program, copied in direct.items():
@@ -320,6 +329,7 @@ class CobolProjectIndex:
         extra_copybooks: Iterable[Path] = (),
         library_dirs: Iterable[Path] = (),
         library_names: Optional[Iterable[str]] = None,
+        lineage: bool = False,
     ) -> "CobolProjectIndex":
         """Index ``paths``.
 
@@ -336,6 +346,7 @@ class CobolProjectIndex:
             _read_all(p for p in extra_copybooks if _small_file(p)),
             library_names,
             files,
+            lineage=lineage,
         )
 
     def is_copybook_file(self, path: str) -> bool:

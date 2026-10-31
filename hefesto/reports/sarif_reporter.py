@@ -42,6 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 from hefesto.core.analysis_models import AnalysisIssue, AnalysisReport
+from hefesto.core.complexity_message import strip_threshold_clause
 from hefesto.reports.cwe_map import CWE_NAMES, CWE_VERSION, links_for
 
 SARIF_VERSION = "2.1.0"
@@ -101,8 +102,9 @@ class SARIFReporter:
         meta = getattr(report, "meta", None) or {}
         self._not_analyzed = list(meta.get("not_analyzed") or [])
         self._decoded_with_fallback = list(meta.get("decoded_with_fallback") or [])
+        suppressed: List[AnalysisIssue] = list(getattr(report, "get_suppressed_issues", list)())
         issues = sorted(
-            report.get_all_issues(),
+            [*report.get_all_issues(), *suppressed],
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
         )
         notes: List[str] = []
@@ -231,6 +233,10 @@ class SARIFReporter:
         if issue.confidence is not None:
             properties["confidence"] = issue.confidence
         result["properties"] = properties
+        if issue.suppression_reason is not None:
+            result["suppressions"] = [
+                {"kind": "inSource", "justification": issue.suppression_reason}
+            ]
         return result
 
     def _related(self, issue: AnalysisIssue) -> List[Dict[str, Any]]:
@@ -266,7 +272,7 @@ class SARIFReporter:
         """Hash of rule, file and flagged text (not the line number) + occurrence."""
         context = self._line_text(issue.file_path, issue.line)
         if not context:
-            context = _DIGITS.sub("#", issue.message)
+            context = _DIGITS.sub("#", strip_threshold_clause(issue.message))
         origin = (issue.metadata or {}).get("expanded_from")
         if isinstance(origin, dict) and origin.get("file"):
             copied = self._line_text(str(origin["file"]), int(origin.get("line") or 0))
