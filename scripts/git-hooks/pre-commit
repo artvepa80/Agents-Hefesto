@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
+# Contributor pre-commit hook for this repository.
+# Analyzes only the staged (index) content, like the hook `hefesto install-hooks` installs
+# in user projects, and skips staged files matched by `exclude` in .hefesto.yaml
+# (the same matcher as scripts/dogfood_changed.py; `hefesto analyze` does not
+# filter paths named on the command line).
 set -euo pipefail
+
+# Gate threshold. CRITICAL matches the CI changed-file gate (dogfood.yml).
+# HIGH findings are still shown (--severity HIGH) but do not block. Raise
+# FAIL_ON to HIGH once the 50 HIGH findings under hefesto/ are fixed.
+FAIL_ON="CRITICAL"
 
 # Allow bypass: SKIP_HEFESTO_HOOKS=1 git commit
 if [[ "${SKIP_HEFESTO_HOOKS:-0}" == "1" ]]; then
@@ -9,30 +19,103 @@ fi
 
 ROOT="$(git rev-parse --show-toplevel)"
 
-# Prefer local venv if present
-if [[ -x "$ROOT/.venv/bin/python" ]]; then
-  PY="$ROOT/.venv/bin/python"
-elif command -v python3 >/dev/null 2>&1; then
-  PY="python3"
-else
-  PY="python"
-fi
-
 cd "$ROOT"
 
-# Hefesto analysis (if available)
-if command -v hefesto >/dev/null 2>&1; then
-  echo "[hefesto] Running code analysis..."
-  export HEFESTO_SOURCE=hook
-  hefesto analyze . --severity HIGH \
-    --exclude tests/ --exclude docs/ --exclude build/ \
-    --exclude dist/ --exclude .git/ --exclude htmlcov/ || {
-    echo "[hefesto] Found CRITICAL/HIGH issues."
-    exit 1
-  }
-else
-  echo "[hefesto] 'hefesto' not in PATH. Skipping analysis."
-  echo "[hefesto] Install with: pip install -e '.[dev]'"
+# Find a Python that can import hefesto: $ROOT/.venv, $ROOT/venv (CONTRIBUTING.md),
+# $VIRTUAL_ENV, then the interpreter of `hefesto` on PATH. Never skip silently.
+_has_hefesto() {
+  [[ -n "$1" && -x "$1" ]] && "$1" -c "import hefesto" >/dev/null 2>&1
+}
+
+PY=""
+for candidate in "$ROOT/.venv/bin/python" "$ROOT/venv/bin/python" \
+  "${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/python}"; do
+  if _has_hefesto "$candidate"; then
+    PY="$candidate"
+    break
+  fi
+done
+if [[ -z "$PY" ]] && HEFESTO_BIN="$(command -v hefesto 2>/dev/null)"; then
+  SHEBANG="$(head -n 1 "$HEFESTO_BIN" 2>/dev/null || true)"
+  if [[ "$SHEBANG" == "#!"* ]]; then
+    read -r candidate arg _ <<<"${SHEBANG#\#!}"
+    if [[ "$candidate" == */env && -n "${arg:-}" ]]; then
+      candidate="$(command -v "$arg" 2>/dev/null || true)"
+    fi
+    if _has_hefesto "$candidate"; then
+      PY="$candidate"
+    fi
+  fi
+fi
+if [[ -z "$PY" ]]; then
+  echo "[hefesto] No Python with hefesto installed was found in .venv/, venv/," >&2
+  echo "[hefesto] \$VIRTUAL_ENV or from 'hefesto' on PATH. Commit blocked." >&2
+  echo "[hefesto] Fix: python -m venv venv && venv/bin/pip install -e '.[dev,lint]'" >&2
+  echo "[hefesto] Bypass once: SKIP_HEFESTO_HOOKS=1 git commit" >&2
+  exit 1
+fi
+
+GATED="$(mktemp)"
+trap 'rm -f "$GATED"' EXIT
+if ! git diff --cached --name-only --diff-filter=ACMR --ignore-submodules=all -z |
+  "$PY" -c '
+import sys
+sys.path.insert(0, "scripts")
+from pathlib import Path
+from dogfood_changed import gate_excludes, split_gate_files
+names = [n for n in sys.stdin.read().split("\0") if n]
+gated, skipped = split_gate_files(names, gate_excludes(Path(".")).patterns)
+for name in skipped:
+    print(f"[hefesto] excluded by .hefesto.yaml: {name}", file=sys.stderr)
+sys.stdout.write("".join(n + "\0" for n in gated))
+' >"$GATED"; then
+  echo "[hefesto] Could not read the staged files or .hefesto.yaml excludes."
+  exit 1
+fi
+
+NAMES=()
+while IFS= read -r -d '' f; do
+  NAMES+=("$f")
+done <"$GATED"
+rm -f "$GATED"
+
+# Analyze the staged (index) content, not the working tree: export the staged
+# files to a temporary copy with their repository-relative paths, so path-based
+# rules (test paths, excludes) still apply, and report the real paths.
+STAGED="$(mktemp -d "${TMPDIR:-/tmp}/hefesto-staged.XXXXXX")"
+trap 'rm -rf "$STAGED"' EXIT
+STAGED="$(cd "$STAGED" && pwd -P)"  # resolved, as hefesto prints it
+mkdir "$STAGED/.git"  # config lookup stops at the copy's root
+git ls-files -z -- ':(glob)**/.hefesto.yaml' ':(glob)**/.hefesto.yml' |
+  git checkout-index --stdin -z --prefix="$STAGED/"
+for cfg in .hefesto.yaml .hefesto.yml; do
+  if [[ ! -e "$STAGED/$cfg" && -f "$ROOT/$cfg" ]]; then
+    cp "$ROOT/$cfg" "$STAGED/$cfg"
+  fi
+done
+if [[ ${#NAMES[@]} -gt 0 ]]; then
+  printf '%s\0' "${NAMES[@]}" | git checkout-index --stdin -z --prefix="$STAGED/"
+fi
+FILES=()
+for f in "${NAMES[@]+"${NAMES[@]}"}"; do
+  [[ -f "$STAGED/$f" ]] && FILES+=("$STAGED/$f")
+done
+
+if [[ ${#FILES[@]} -eq 0 ]]; then
+  echo "[hefesto] No staged files to analyze. Pre-commit OK."
+  exit 0
+fi
+
+echo "[hefesto] Analyzing ${#FILES[@]} staged file(s) (--fail-on $FAIL_ON)..."
+export HEFESTO_SOURCE=hook
+set +e
+"$PY" -m hefesto analyze "${FILES[@]}" --severity HIGH --fail-on "$FAIL_ON" --allow-no-files 2>&1 |
+  sed "s|$STAGED/||g"
+STATUS=${PIPESTATUS[0]}
+set -e
+if [[ $STATUS -ne 0 ]]; then
+  echo "[hefesto] Found $FAIL_ON issues in staged files."
+  exit 1
 fi
 
 echo "[hefesto] Pre-commit OK."
