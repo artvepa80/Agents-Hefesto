@@ -44,6 +44,11 @@ A malformed one also carries `problem`. `--fail-on-new-suppressions` exits 1
 when the list is not empty (after printing the JSON), so a CI job can require
 a review for new suppressions.
 
+This repository's changed-file gate (`scripts/dogfood_changed.py`) applies the
+same flag to pull requests, but accepts a suppression when the PR body has
+`Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for it; see
+CONTRIBUTING.md.
+
 ## `anchor_line`
 
 GitHub rejects review comments (HTTP 422) on lines outside the diff. A

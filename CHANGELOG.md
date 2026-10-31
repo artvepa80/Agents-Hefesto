@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
 - `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
 
+### Changed — CI gate on new line suppressions
+
+- The changed-file gate (`.github/workflows/dogfood.yml`) now passes `--fail-on-new-suppressions` on pull requests. `scripts/dogfood_changed.py` accepts a new suppression only when the PR body has the line `Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for that exact file and line (one line per suppression), read from the event payload at `GITHUB_EVENT_PATH` with no token. It always appends the new suppressions and their approval status to `$GITHUB_STEP_SUMMARY` when set. The workflow also runs on `edited` pull requests so an added approval line re-runs the gate. Pushes to `main` only list new suppressions.
+
 ### Added — COBOL: program lineage in the JSON report (`--lineage`)
 
 - `hefesto analyze --output json --lineage` adds a `lineage` section: program nodes, `CALL`/`LINK`/`XCTL` edges to programs of the scan, SQL table edges with their statement type, and direct `COPY`/`EXEC SQL INCLUDE` edges. One edge per (kind, from, to, op, file), with its source lines in `lines`. Targets outside the scan are listed under `references` (`system`: target provided by the system, not by the repo; `kind` says how it is referenced; or `external`; `SYSIBM.*` tables are `system` references, not table nodes); variable targets, ambiguous names and dynamic SQL are listed under `unresolved` with a reason and never become edges. References in a copybook, including one pulled in with `EXEC SQL INCLUDE`, belong to every program that copies it.

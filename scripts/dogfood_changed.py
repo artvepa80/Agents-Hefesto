@@ -12,7 +12,12 @@ the same run exits 1.
 
 Python files support ``# hefesto: ignore[TYPE] reason`` (up to HIGH, never
 CRITICAL). Every such comment the diff adds is listed with its reason, and
-``--fail-on-new-suppressions`` turns any new one into exit 1. ``--exclude-types``
+``--fail-on-new-suppressions`` turns any new one into exit 1 unless the pull
+request body has a maintainer approval line for that exact ``file:line``
+(``Suppression approved by Arturo on YYYY-MM-DD: path/to/file.py:12``, one line
+per suppression). The body comes from the event payload (``GITHUB_EVENT_PATH``);
+no token is used. When ``GITHUB_STEP_SUMMARY`` is set, the list of new
+suppressions and their approval status is always appended to it. ``--exclude-types``
 drops a whole issue type, which would silence every ``HARDCODED_SECRET``, so it
 is not used.
 
@@ -31,11 +36,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
-from typing import NamedTuple, Optional
+from typing import Mapping, NamedTuple, Optional, Set, Tuple
 
 from hefesto.config.project_config import ConfigError, find_config, load_config
 from hefesto.core.analyzer_engine import path_is_excluded
@@ -368,31 +374,96 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {name}", flush=True)
     exit_code = run_changed_gate(repo, files)
     try:
-        new_count = report_new_suppressions(repo, args.base, args.head)
+        unapproved = report_new_suppressions(repo, args.base, args.head)
     except DogfoodError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    if new_count and args.fail_on_new_suppressions:
-        print("Gate failure: new line suppressions (--fail-on-new-suppressions)", flush=True)
+    if unapproved and args.fail_on_new_suppressions:
+        print(
+            "Gate failure: new line suppressions without an approval line"
+            " (--fail-on-new-suppressions)",
+            flush=True,
+        )
         exit_code = exit_code or 1
     return exit_code
 
 
-def report_new_suppressions(repo: Path, base: str, head: str) -> int:
-    """Print each ``# hefesto: ignore`` comment the diff adds. Returns the count."""
+APPROVAL_RE = re.compile(
+    r"^[ \t]*Suppression approved by Arturo on (\d{4}-\d{2}-\d{2}): (\S+):(\d+)[ \t]*$"
+)
+
+
+def parse_suppression_approvals(body: Optional[str]) -> Set[Tuple[str, int]]:
+    """``(file, line)`` pairs approved in a pull request body, one per line."""
+    approved: Set[Tuple[str, int]] = set()
+    for raw in (body or "").splitlines():
+        match = APPROVAL_RE.match(raw.rstrip("\r"))
+        if match:
+            approved.add((match.group(2), int(match.group(3))))
+    return approved
+
+
+def pull_request_body(environ: Mapping[str, str]) -> Optional[str]:
+    """The pull request body from the Actions event payload, or None."""
+    event_path = environ.get("GITHUB_EVENT_PATH")
+    if not event_path:
+        return None
+    try:
+        payload = json.loads(Path(event_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    pull_request = payload.get("pull_request") if isinstance(payload, dict) else None
+    if not isinstance(pull_request, dict):
+        return None
+    body = pull_request.get("body")
+    return body if isinstance(body, str) else None
+
+
+def _write_step_summary(environ: Mapping[str, str], lines: list[str]) -> None:
+    summary = environ.get("GITHUB_STEP_SUMMARY")
+    if not summary:
+        return
+    with open(summary, "a", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+
+
+def report_new_suppressions(
+    repo: Path, base: str, head: str, environ: Optional[Mapping[str, str]] = None
+) -> int:
+    """List each ``# hefesto: ignore`` comment the diff adds.
+
+    Returns how many have no approval line in the pull request body.
+    """
     from hefesto.core.suppressions import format_new_suppressions, new_suppressions_in_diff
 
+    env = os.environ if environ is None else environ
     base_rev = empty_tree(repo) if is_zero_rev(base) else base
     proc = _git(repo, ["diff", "--no-color", "--unified=0", base_rev, head, "--", "*.py"])
     if proc.returncode != 0:
         raise DogfoodError(proc.stderr.strip() or f"git diff exited {proc.returncode}")
     found = new_suppressions_in_diff(proc.stdout, repo)
+    approvals = parse_suppression_approvals(pull_request_body(env))
+    rows = []
+    unapproved = []
+    for item, text in zip(found, format_new_suppressions(found)):
+        ok = (item.file, item.line) in approvals
+        rows.append((text, ok))
+        if not ok:
+            unapproved.append(text)
     print(f"New line suppressions ({len(found)}):", flush=True)
-    for line in format_new_suppressions(found):
-        print(f"  {line}", flush=True)
+    for text, ok in rows:
+        print(f"  {text} ({'approved' if ok else 'not approved'})", flush=True)
     if not found:
         print("  (none)", flush=True)
-    return len(found)
+    print(f"Unapproved new line suppressions ({len(unapproved)}):", flush=True)
+    for text in unapproved:
+        print(f"  {text}", flush=True)
+    summary = ["### HefestoAI: new line suppressions", "", f"New line suppressions ({len(found)}):"]
+    summary += [f"- `{text}` ({'approved' if ok else 'not approved'})" for text, ok in rows]
+    if not found:
+        summary.append("- (none)")
+    _write_step_summary(env, summary)
+    return len(unapproved)
 
 
 if __name__ == "__main__":
