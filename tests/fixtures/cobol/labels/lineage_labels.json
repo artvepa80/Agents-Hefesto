@@ -11,7 +11,7 @@
   "carddemo": {
    "CALL": {
     "program": 18,
-    "system_service": 43,
+    "system": 43,
     "external": 2,
     "variable_target": 1
    },

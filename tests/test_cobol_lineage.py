@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from hefesto.analyzers.devops.cobol_lineage import build_lineage, extract, is_system_service
+from hefesto.analyzers.devops.cobol_lineage import build_lineage, extract, is_system_target
 from hefesto.analyzers.devops.cobol_project_index import CobolProjectIndex
 from hefesto.cli.main import cli
 
@@ -50,12 +50,12 @@ def test_call_literal_to_repo_program_is_an_edge():
 
 
 @pytest.mark.parametrize("name", ["MQOPEN", "CEEDAYS", "CBLTDLI", "AIBTDLI", "DSNTIAC"])
-def test_system_services_are_references_not_nodes(name):
+def test_system_targets_are_references_not_nodes(name):
     g = lineage({"A.cbl": prog("A", f"    CALL '{name}' USING X.")})
     assert g["edges"] == []
-    assert [(r["class"], r["target"]) for r in g["references"]] == [("system_service", name)]
+    assert [(r["class"], r["target"]) for r in g["references"]] == [("system", name)]
     assert all(n["kind"] != "program" or n["name"] != name for n in g["nodes"])
-    assert is_system_service(name.lower())
+    assert is_system_target(name.lower())
 
 
 def test_non_cobol_module_of_the_repo_is_external():
@@ -515,7 +515,7 @@ def test_sysibm_catalog_is_a_system_reference_not_a_table():
     assert not any(e["kind"] == "SQL" and "SYSIBM" in e["to"] for e in out["edges"])
     refs = [r for r in out["references"] if r["kind"] == "SQL"]
     assert [(r["class"], r["target"], r["from"], r["op"]) for r in refs] == [
-        ("system_service", "SYSIBM.SYSDUMMY1", "program:A", "SELECT")
+        ("system", "SYSIBM.SYSDUMMY1", "program:A", "SELECT")
     ]
 
 

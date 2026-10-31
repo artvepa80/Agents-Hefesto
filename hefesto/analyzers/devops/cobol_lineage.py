@@ -17,7 +17,8 @@ What becomes an edge (only literal targets, never guessed):
   select) -> ``table``.
 
 Literal targets that are not programs of the tree are ``references``:
-``system_service`` (MQ, Language Environment, IMS, DB2 entry points, see
+``system`` (target provided by the system, not by the repo; ``kind`` says
+how it is referenced: MQ, Language Environment, IMS, DB2 entry points, see
 :data:`SYSTEM_SERVICE_PREFIXES`) or ``external`` (everything else, including
 non-COBOL modules of the repo such as assembler). Variable targets, dynamic
 SQL and names that match two programs are ``unresolved``, with the expression
@@ -388,7 +389,7 @@ def _table_list(tokens: List[str], j: int, single: bool = False) -> List[int]:
 # ----------------------------------------------------------------- graph
 
 
-def is_system_service(name: str) -> bool:
+def is_system_target(name: str) -> bool:
     upper = name.upper()
     return upper in SYSTEM_SERVICES or upper.startswith(SYSTEM_SERVICE_PREFIXES)
 
@@ -537,7 +538,7 @@ def _add_ref(
             graph.references.append(
                 {
                     "kind": "SQL",
-                    "class": "system_service",
+                    "class": "system",
                     "target": ref.target,
                     "op": ref.op,
                     "from": source,
@@ -576,7 +577,7 @@ def _add_program_ref(
             }
         )
     else:
-        cls = "system_service" if is_system_service(ref.target) else "external"
+        cls = "system" if is_system_target(ref.target) else "external"
         graph.references.append(
             {"kind": ref.kind, "class": cls, "target": ref.target, "from": source, **place}
         )
