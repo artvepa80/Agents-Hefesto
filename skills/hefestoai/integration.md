@@ -6,7 +6,7 @@
 pip install hefesto-ai
 ```
 
-Requires Python >= 3.10. Installs the `hefesto` CLI.
+Requires Python >= 3.11. Installs the `hefesto` CLI.
 
 ## Pre-Commit Hook
 

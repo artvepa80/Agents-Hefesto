@@ -6,7 +6,7 @@ This extra is not on PyPI yet.
 
 ## Install
 
-Python 3.10 or newer. That is the package `requires-python`, and the `mcp` dependency requires the same (`>=3.10`), so the extra does not add an environment marker.
+Python 3.11 or newer. That is the package `requires-python`; the `mcp` dependency requires `>=3.10`, which every supported Python meets, so the extra does not add an environment marker.
 
 ```bash
 pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"

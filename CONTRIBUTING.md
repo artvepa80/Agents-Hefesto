@@ -40,7 +40,7 @@ git clone https://github.com/artvepa80/Agents-Hefesto.git
 cd Agents-Hefesto
 
 # Create virtual environment
-python3.10 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install in development mode (the lint extra provides black, flake8, isort, ruff)
