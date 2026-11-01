@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
-- **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life on 2026-10-01 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
+- **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
 - The GitHub Action needs `python3` >= 3.11 on the runner (`ubuntu-latest` has it) and fails with a clear error otherwise.
 - CI (`ci.yml`, `multilang-smoke.yml`) now tests on Python 3.11 (oldest supported) and 3.15 (latest stable CPython, 3.15.2 at the time of the change). 3.10, 3.12, 3.13 and 3.14 are no longer in the matrix. Each workflow gets a summary job (`ci-required` in `ci.yml`, `multilang-smoke-required` in `multilang-smoke.yml`) that needs the whole matrix and fails if any needed job failed, was cancelled or was skipped; branch protection can require only these, so the next Python version change does not need a ruleset change.
-- Released as a minor version (4.21.0), not a major one: the change is breaking only for Python 3.10 users, who keep the releases already published.
+- Released as a minor version (4.21.0), not a major one: `pip` on Python 3.10 keeps installing 4.20.x. Action users on `@v4` get 4.21.0 automatically: on a runner whose `python3` is 3.10 (for example `ubuntu-22.04`), add `actions/setup-python` with Python 3.11 or newer before the Action, or pin `@v4.20.4`.
 - Classifiers: 3.10 removed, 3.15 added. `ruff` `target-version`, `black` `target-version` and `mypy` `python_version` move to 3.11. The `tomli` dependency for `python_version < '3.11'` is dropped (never installed on 3.11+).
 - `hefesto check` (installation check) now reports an error below 3.11, and the 3.10 fallback that read `pyproject.toml` without `tomllib` is removed. `TomlAnalyzer` imports `tomllib` directly (no `tomli` fallback).
 ### Fixed — a file whose grammar cannot be loaded fails `--fail-on` instead of passing
