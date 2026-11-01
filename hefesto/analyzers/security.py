@@ -320,6 +320,11 @@ class SecurityAnalyzer:
         issues: List[AnalysisIssue] = []
         lines = code.split("\n")
 
+        # Masking literals only hides text, so a file with no sink in the raw
+        # code has none after masking: skip the literal scan for it.
+        if not _SQL_EXECUTE_SINKS.search(code):
+            return issues
+
         # In Python, text inside a string literal is data, not code: it does
         # not count as a sink or a def, and lines inside it are not checked.
         spans = string_spans_for(tree, file_path, code)
@@ -485,7 +490,10 @@ class SecurityAnalyzer:
         """
         issues: List[AnalysisIssue] = []
         lines = code.split("\n")
-        spans = string_spans_for(tree, file_path, code)
+        # Literal spans only matter when the file has a sink at all.
+        spans = (
+            string_spans_for(tree, file_path, code) if _CMD_INJECTION_SINKS.search(code) else None
+        )
 
         for line_num, line in enumerate(lines, start=1):
             stripped = line.lstrip()

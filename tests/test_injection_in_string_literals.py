@@ -143,25 +143,61 @@ def test_sink_inside_bytes_raw_or_escaped_literal_is_skipped(literal: str) -> No
     assert _run(code) == []
 
 
-def test_inside_string_is_not_linear_in_the_number_of_literals() -> None:
+class _CountingSpans(list):
+    """A span list that counts element reads, so tests can bound the work."""
+
+    reads = 0
+
+    def __getitem__(self, index):  # type: ignore[override]
+        type(self).reads += 1
+        return super().__getitem__(index)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+
+def test_inside_string_reads_a_logarithmic_number_of_spans() -> None:
     n = 20_000
     spans = python_string_spans("".join(f"X{i} = 'value'\n" for i in range(n)))
     assert spans is not None and len(spans) == n
-    t0 = time.perf_counter()
-    hits = sum(inside_string(spans, row, 0) for row in range(1, n + 1))
-    # A linear scan per call is ~2e8 comparisons here (tens of seconds).
-    assert time.perf_counter() - t0 < 2.0
+    counted = _CountingSpans(spans)
+    _CountingSpans.reads = 0
+    hits = sum(inside_string(counted, row, 0) for row in range(1, n + 1, 97))
+    calls = len(range(1, n + 1, 97))
+    # Binary search: about log2(20000) ~ 15 reads per call; a scan reads n.
+    assert _CountingSpans.reads <= calls * 40
     assert hits == 0
     quote = len(f"X{n - 1} = ")
     assert inside_string(spans, n, quote + 1) and not inside_string(spans, n, quote)
 
 
-def test_sql_check_on_many_literals_finishes_quickly() -> None:
+def _best_sql_check_time(n: int) -> float:
+    # Each line has a SQL keyword in a literal, so every line reaches the
+    # literal lookup; none is concatenated, so none is reported.
     code = "def f(cur):\n    cur.execute('SELECT 1')\n" + "".join(
-        f"X{i} = 'value'\n" for i in range(20_000)
+        f"X{i} = 'SELECT a FROM t'\n" for i in range(n)
     )
-    t0 = time.perf_counter()
-    issues = SecurityAnalyzer()._check_sql_injection(None, "big.py", code)
-    # The quadratic version took about 30 s on this input.
-    assert time.perf_counter() - t0 < 5.0
-    assert issues == []
+    best = float("inf")
+    for _ in range(3):
+        t0 = time.perf_counter()
+        assert SecurityAnalyzer()._check_sql_injection(None, "big.py", code) == []
+        best = min(best, time.perf_counter() - t0)
+    return best
+
+
+def test_sql_check_time_grows_linearly_with_file_size() -> None:
+    # Doubling the input about doubles the time; the quadratic version took
+    # about 4x (5 s at 8k lines, 30 s at 20k).
+    small, large = _best_sql_check_time(4_000), _best_sql_check_time(8_000)
+    assert large / small < 3.5
+
+
+def test_escaped_braces_in_fstring_are_a_known_false_positive() -> None:
+    # Known limit: ``{{...}}`` is literal text, but the sink in it is still
+    # reported (on 3.12+ the tokenizer splits the text at the braces; on 3.11
+    # and earlier f-strings are never data).
+    code = "import os\n\n\ndef f(d):\n    HELP = f\"{{os.system('ls ' + d)}}\"\n"
+    assert [(i.issue_type, i.line) for i in _run(code)] == [
+        (AnalysisIssueType.COMMAND_INJECTION, 5)
+    ]
