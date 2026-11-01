@@ -64,12 +64,12 @@ runs:
   steps:
     # Install HefestoAI from this action's own checkout (the package is not
     # pulled from PyPI) into a private virtualenv, so the job's Python is
-    # left untouched. Needs python3 >= 3.10 on the runner (ubuntu-latest has it).
+    # left untouched. Needs python3 >= 3.11 on the runner (ubuntu-latest has it).
     - name: Install HefestoAI
       shell: bash
       run: |
-        python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' || {
-          echo "::error::HefestoAI needs python3 >= 3.10 on the runner (found $(python3 --version 2>&1)). Add actions/setup-python before this step."
+        python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' || {
+          echo "::error::HefestoAI needs python3 >= 3.11 on the runner (found $(python3 --version 2>&1)). Add actions/setup-python before this step."
           exit 1
         }
         python3 -m venv "$RUNNER_TEMP/hefesto-venv"
