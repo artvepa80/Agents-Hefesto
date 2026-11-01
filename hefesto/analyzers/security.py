@@ -342,10 +342,13 @@ class SecurityAnalyzer:
             if stripped.startswith("#") or stripped.startswith("//"):
                 continue
 
-            if spans and inside_string(spans, line_num, len(line) - len(stripped)):
+            if not _sql_keyword_in_string(line):
                 continue
 
-            if not _sql_keyword_in_string(line):
+            # Known limit (same as before #156): a line that starts inside a
+            # multi-line literal is skipped as a whole, even if code follows
+            # the closing quotes on that line.
+            if spans and inside_string(spans, line_num, len(line) - len(stripped)):
                 continue
 
             if not _has_dynamic_concatenation(line):

@@ -6,18 +6,23 @@ text that is data inside a string literal (issue #156).
 
 from __future__ import annotations
 
+import bisect
 import io
 import re
 import tokenize
 from typing import List, Optional, Tuple
 
 from hefesto.core.ast.generic_ast import GenericAST
+from hefesto.core.safe_parse import safe_parse
 
 # A literal's (start, end) as tokenize reports them: 1-based rows, 0-based columns.
 Span = Tuple[Tuple[int, int], Tuple[int, int]]
 
-_FSTRING_START = getattr(tokenize, "FSTRING_START", None)
-_FSTRING_END = getattr(tokenize, "FSTRING_END", None)
+# Python 3.12+ (PEP 701) tokenizes f-strings, and 3.14+ t-strings, as START,
+# MIDDLE (literal text), expression tokens and END.
+_MIDDLE_TYPES = {
+    t for t in (getattr(tokenize, n, None) for n in ("FSTRING_MIDDLE", "TSTRING_MIDDLE")) if t
+}
 
 
 def _is_python(tree: Optional[GenericAST], file_path: str) -> bool:
@@ -26,27 +31,41 @@ def _is_python(tree: Optional[GenericAST], file_path: str) -> bool:
     return file_path.endswith((".py", ".pyi"))
 
 
+def _is_formatted(string_token: str) -> bool:
+    """True for an f-/t-string STRING token (Python 3.11 and earlier)."""
+    prefix = string_token[: len(string_token) - len(string_token.lstrip("rRbBuUfFtT"))]
+    return any(c in prefix for c in "fFtT")
+
+
 def _collect(tokens: List[tokenize.TokenInfo]) -> List[Span]:
-    """Turn tokens into literal spans. On Python 3.12+ an f-string is several
-    tokens (FSTRING_START ... FSTRING_END); it becomes one span."""
+    """Turn tokens into literal spans, sorted by start.
+
+    Only literal text is data. On Python 3.12+ that is the MIDDLE parts of an
+    f-string and the STRING tokens, including strings nested in a replacement
+    field; the expressions in ``{...}`` stay code, so a sink there is still
+    seen. On 3.11 and earlier an f-string is one STRING token that also holds
+    its expressions, so it is not treated as data at all (same as before #156).
+    """
     spans: List[Span] = []
-    open_fstrings: List[Tuple[int, int]] = []
     for tok in tokens:
-        if _FSTRING_START is not None and tok.type == _FSTRING_START:
-            open_fstrings.append(tok.start)
-        elif _FSTRING_END is not None and tok.type == _FSTRING_END:
-            start = open_fstrings.pop()
-            spans.extend([] if open_fstrings else [(start, tok.end)])
-        elif tok.type == tokenize.STRING and not open_fstrings:
+        if tok.type in _MIDDLE_TYPES:
+            spans.append((tok.start, tok.end))
+        elif tok.type == tokenize.STRING and not _is_formatted(tok.string):
             spans.append((tok.start, tok.end))
     return spans
 
 
 def python_string_spans(code: str) -> Optional[List[Span]]:
-    """Return the string literal spans in *code*, or None if it does not tokenize."""
+    """Return the string literal spans in *code*, or None if it does not parse.
+
+    Code this Python cannot parse (for example PEP 701 f-strings on 3.11) may
+    still tokenize, but into the wrong literals; it is checked line by line.
+    """
+    if safe_parse(code).tree is None:
+        return None
     try:
         tokens = list(tokenize.generate_tokens(io.StringIO(code).readline))
-    except (tokenize.TokenError, SyntaxError):
+    except (tokenize.TokenError, SyntaxError, ValueError):
         return None
     return _collect(tokens)
 
@@ -59,8 +78,14 @@ def string_spans_for(tree: Optional[GenericAST], file_path: str, code: str) -> O
 
 
 def inside_string(spans: List[Span], row: int, col: int) -> bool:
-    """True if (row, col) is inside a literal, after its first character."""
-    return any(start < (row, col) < end for start, end in spans)
+    """True if (row, col) is inside a literal, after its first character.
+
+    *spans* are sorted and do not overlap, so a binary search finds the only
+    literal that can contain the position (O(log n) per call).
+    """
+    pos = (row, col)
+    i = bisect.bisect_left(spans, pos, key=lambda span: span[0]) - 1
+    return i >= 0 and spans[i][0] < pos < spans[i][1]
 
 
 def first_match_outside_strings(
