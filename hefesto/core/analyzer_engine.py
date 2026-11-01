@@ -14,6 +14,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
@@ -293,6 +294,11 @@ class AnalyzerEngine:
         self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
         # Found files that could not be read or whose analyzer raised
         self._not_analyzed: List[Dict[str, Any]] = []
+        # First grammar-load failure per language, kept for this engine (one
+        # run) only, so an offline or hanging download is tried once per
+        # grammar instead of once per file. Never persisted.
+        self._grammar_failures: Dict[Language, Exception] = {}
+        self._grammar_lock = threading.Lock()
         # Found files that are not valid UTF-8, read with FALLBACK_ENCODING
         self._decoded_with_fallback: List[Dict[str, Any]] = []
         # COBOL COPY index (COBOL007/COBOL015). Set for the whole run by
@@ -808,7 +814,7 @@ class AnalyzerEngine:
                 return dispatched
 
             try:
-                parser = ParserFactory.get_parser(language)
+                parser = self._get_parser(language)
             except Exception as exc:
                 if not self._grammar_load_failed(file_path, language, exc):
                     self._record_parser_failure(file_path, language, exc)
@@ -979,6 +985,25 @@ class AnalyzerEngine:
             }
         )
         logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
+
+    def _get_parser(self, language: Language) -> Any:
+        """``ParserFactory.get_parser``, but a grammar that failed to load is not retried.
+
+        The first grammar-pack error for a language is re-raised for every
+        later file of that language in this run, so each file is still
+        reported as not analyzed. The lock makes concurrent callers wait for
+        the first load instead of starting their own download.
+        """
+        with self._grammar_lock:
+            failed = self._grammar_failures.get(language)
+            if failed is not None:
+                raise failed
+            try:
+                return ParserFactory.get_parser(language)
+            except Exception as exc:
+                if _is_grammar_pack_error(exc):
+                    self._grammar_failures[language] = exc
+                raise
 
     def _grammar_load_failed(self, file_path: Path, language: Language, exc: Exception) -> bool:
         """Record a supported file whose tree-sitter grammar could not be loaded.
