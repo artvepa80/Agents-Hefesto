@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security — release workflow
+
+- Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
+
 ### Added — line suppression comments (Python)
 
 - `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.
