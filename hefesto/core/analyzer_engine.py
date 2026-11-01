@@ -202,6 +202,20 @@ def _is_grammar_pack_error(exc: BaseException) -> bool:
     return isinstance(base, type) and isinstance(exc, base)
 
 
+def _fresh_copy(exc: Exception) -> Exception:
+    """A new exception like ``exc`` (same type and args), or ``exc`` itself.
+
+    Raising the cached object again would chain one more traceback onto it
+    per raise. Falls back to the cached object when its type cannot be rebuilt
+    from its args (a custom ``__init__`` signature).
+    """
+    try:
+        fresh = type(exc)(*exc.args)
+    except Exception:
+        return exc
+    return fresh if type(fresh) is type(exc) else exc
+
+
 def not_analyzed_message(entry: Dict[str, Any]) -> str:
     """``<path>: not analyzed, <reason>`` for reports."""
     return f"{entry.get('path')}: not analyzed, {_not_analyzed_reason(entry)}"
@@ -989,15 +1003,17 @@ class AnalyzerEngine:
     def _get_parser(self, language: Language) -> Any:
         """``ParserFactory.get_parser``, but a grammar that failed to load is not retried.
 
-        The first grammar-pack error for a language is re-raised for every
-        later file of that language in this run, so each file is still
-        reported as not analyzed. The lock makes concurrent callers wait for
-        the first load instead of starting their own download.
+        The first grammar-pack error for a language is raised again, as a new
+        exception of the same type and args, for every later file of that
+        language in this run, so each file is still reported as not analyzed
+        and the cached exception's traceback does not grow with each raise.
+        The lock makes concurrent callers wait for the first load instead of
+        starting their own download.
         """
         with self._grammar_lock:
             failed = self._grammar_failures.get(language)
             if failed is not None:
-                raise failed
+                raise _fresh_copy(failed)
             try:
                 return ParserFactory.get_parser(language)
             except Exception as exc:

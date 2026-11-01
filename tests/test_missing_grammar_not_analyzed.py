@@ -213,3 +213,59 @@ def test_concurrent_parser_requests_share_one_failed_load(monkeypatch):
 
     assert calls == ["go"]
     assert len(errors) == 6
+
+
+def test_a_cached_grammar_failure_is_raised_as_a_new_exception(monkeypatch):
+    """Later files get a fresh exception; the cached one's traceback does not grow."""
+    from hefesto.core.analyzer_engine import AnalyzerEngine, _is_grammar_pack_error
+    from hefesto.core.language_detector import Language
+
+    def get_parser(name):
+        raise DownloadError(f"Download error: timed out fetching {name}")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    engine = AnalyzerEngine()
+
+    def tb_len(exc):
+        n, tb = 0, exc.__traceback__
+        while tb is not None:
+            n, tb = n + 1, tb.tb_next
+        return n
+
+    raised = []
+    for _ in range(5):
+        with pytest.raises(DownloadError) as info:
+            engine._get_parser(Language.GO)
+        raised.append(info.value)
+    cached = engine._grammar_failures[Language.GO]
+    first_len = tb_len(cached)
+    for _ in range(5):
+        with pytest.raises(DownloadError):
+            engine._get_parser(Language.GO)
+
+    assert len({id(e) for e in raised}) == 5
+    assert all(e is not cached for e in raised[1:])
+    assert all(_is_grammar_pack_error(e) for e in raised)
+    assert raised[1].args == cached.args
+    assert tb_len(cached) == first_len
+
+
+def test_a_cached_failure_that_cannot_be_rebuilt_is_still_raised(monkeypatch):
+    """An exception type whose constructor rejects its own args falls back to the cached object."""
+    from hefesto.core.analyzer_engine import AnalyzerEngine
+    from hefesto.core.language_detector import Language
+
+    class OddError(pack.Error):
+        def __init__(self, name, detail):
+            super().__init__(f"{name}: {detail}")
+
+    def get_parser(name):
+        raise OddError(name, "unreachable")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    engine = AnalyzerEngine()
+    for _ in range(3):
+        with pytest.raises(OddError):
+            engine._get_parser(Language.GO)
