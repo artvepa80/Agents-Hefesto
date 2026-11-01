@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — local stdio MCP adapter (unreleased)
+
+- Optional extra `mcp` and console script `hefesto-mcp`. Not on PyPI yet. Install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. Python >= 3.10, the same `requires-python` as the package (`mcp` also requires `>=3.10`, so the extra has no separate environment marker).
+- Two read-only tools over stdio: `analyze_local` and `version`. The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory. A path that resolves outside the root, including through a symlink, is rejected (`Path.resolve()` and `is_relative_to()`).
+- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. See [docs/local-mcp.md](docs/local-mcp.md).
+
 ### Security — release workflow
 
 - Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
