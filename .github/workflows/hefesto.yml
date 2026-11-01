@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       # tests/ holds inputs that are vulnerable on purpose (SQL and command
       # injection strings, long or complex functions) so the analyzer's own
@@ -54,7 +54,7 @@ jobs:
       - name: HefestoAI full scan
         # Floating major tag. Pin a commit if policy requires it:
         # artvepa80/Agents-Hefesto@2b72fd0910edc46ab92afc6dbeb068d6856ae3a1 # v4.20.2
-        uses: artvepa80/Agents-Hefesto@v4
+        uses: artvepa80/Agents-Hefesto@113b91b82eb7cf29267fef99a74534c7b60f5c54 # v4.20.4
         continue-on-error: true  # remove to make the gate blocking
         with:
           target: .
