@@ -128,3 +128,55 @@ def test_node_text_is_sliced_by_bytes() -> None:
     func = next(n for n in ast.root.children if n.name == "calcularTotal")
 
     assert func.text == "function calcularTotal() { return 1; }"
+
+
+def _declared_names(language: str, code: str) -> list:
+    from hefesto.core.ast.generic_ast import NodeType
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    out: list = []
+
+    def walk(node):
+        if node.type in (NodeType.FUNCTION, NodeType.METHOD, NodeType.CLASS):
+            out.append(node.name)
+        for child in node.children:
+            walk(child)
+
+    walk(TreeSitterParser(language).parse(code, f"sample.{language}").root)
+    return out
+
+
+@pytest.mark.parametrize(
+    "language, code, expected",
+    [
+        (
+            "c_sharp",
+            "class A { public async Task WriteLazy() { } }",
+            ["A", "WriteLazy"],
+        ),
+        (
+            "c_sharp",
+            "class A { private TestClass Make(string s) { return null; } }",
+            ["A", "Make"],
+        ),
+        (
+            "c_sharp",
+            "class A { public void Throws<T>() where T : Exception { } }",
+            ["A", "Throws"],
+        ),
+        (
+            "go",
+            "package p\n\nfunc (s *Server) Run(x int) int { return x }\n",
+            ["Run"],
+        ),
+        (
+            "java",
+            "class A { List<String> items() { return null; } }",
+            ["A", "items"],
+        ),
+    ],
+)
+def test_declared_name_not_return_type_or_receiver(language: str, code: str, expected) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+
+    assert _declared_names(language, code) == expected
