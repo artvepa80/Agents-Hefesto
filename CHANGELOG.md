@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — local stdio MCP adapter
+
+- Optional extra `mcp` (`pip install "hefesto-ai[mcp]"`) and console script `hefesto-mcp`. Two read-only tools over stdio: `analyze_local` (local engine on a path inside the working directory; a path that resolves outside it, including through a symlink, is rejected) and `version`. The process does not make network calls and does not send usage telemetry. The CLI opt-out (`HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `hefesto telemetry disable`) is unchanged. See [docs/local-mcp.md](docs/local-mcp.md).
+
 ### Added — line suppression comments (Python)
 
 - `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.

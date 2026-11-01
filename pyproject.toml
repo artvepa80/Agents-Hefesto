@@ -89,6 +89,10 @@ multilang = [
 format = [
     "black>=24",
 ]
+# Optional: local stdio MCP adapter (`hefesto-mcp`). Core deps stay the same.
+mcp = [
+    "mcp>=1.2,<2",
+]
 ci = [
     "pyyaml>=6.0,<7.0",
     "packaging>=23.0,<25.0",
@@ -99,6 +103,7 @@ all = [
 ]
 [project.scripts]
 hefesto = "hefesto.cli.main:cli"
+hefesto-mcp = "hefesto.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/artvepa80/Agents-Hefesto"

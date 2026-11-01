@@ -210,6 +210,28 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
+## Local MCP (stdio)
+
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service and it does not open network connections.
+
+```bash
+pip install "hefesto-ai[mcp]"
+```
+
+Claude Desktop and Claude Code can launch it with this stdio config (`hefesto-mcp` must be on `PATH`):
+
+```json
+{
+  "mcpServers": {
+    "hefesto": {
+      "command": "hefesto-mcp"
+    }
+  }
+}
+```
+
+Tools: `analyze_local` (a file or directory inside the working directory; paths that resolve outside it are rejected) and `version`. Details: [docs/local-mcp.md](docs/local-mcp.md).
+
 ---
 
 ## PR Review (v4.20.4)
@@ -309,6 +331,9 @@ pip install "hefesto-ai[multilang]"
 
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
+
+# Optional: local stdio MCP adapter (`hefesto-mcp`)
+pip install "hefesto-ai[mcp]"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
