@@ -7,14 +7,15 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
 
 ## What is published
 
-- The canonical entry is the one deployed with the landing page at
-  `https://hefestoai.narapallc.com/server.json`: a remote (`streamable-http`,
-  `https://hefestoai.narapallc.com/api/mcp-protocol`), description
-  "HefestoAI checks AI-generated code before you ship it.", and `repository.url`
-  on this public repository.
-- This repository's `server.json` is never published. It tracks the PyPI version
-  and has a different description; `scripts/verify_server_json.py` keeps checking
-  it in CI.
+- The file the workflow downloads is
+  `https://hefestoai.narapallc.com/server.json`. That file is not in this
+  repository. It is served with the hosted landing page.
+- `scripts/check_mcp_registry_entry.py` requires the downloaded file to match
+  this repository's `server.json` description, one PyPI package
+  (`hefesto-mcp`, `uvx`, transport `stdio`, package version equal to the
+  document version, `HEFESTO_MCP_ROOT` required), and the existing remote
+  (`streamable-http`, `https://hefestoai.narapallc.com/api/mcp-protocol`).
+  `repository.url` stays on this public repository.
 - The registry `version` tracks the deployed engine, not PyPI. It must equal all of:
   the production `initialize` `serverInfo.version`, the `engine.version` returned by
   a minimal `tools/call analyze` (the same check as the private
@@ -28,14 +29,14 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   `GET /v0.1/servers/{name}/versions/{version}?include_deleted=true` must return 404,
   and `GET /v0.1/servers/{name}/versions?include_deleted=true` lists every version,
   including deleted ones.
-- This repository's `server.json` lists the local stdio package
-  (`hefesto-mcp` on PyPI, `uvx`, transport `stdio`, required
-  `HEFESTO_MCP_ROOT`) and keeps the hosted remote. The README and the
-  wrapper README each contain `mcp-name: io.github.artvepa80/hefestoai`
-  for the PyPI ownership check. The canonical hosted entry that this
-  workflow publishes is still remote-only: `scripts/check_mcp_registry_entry.py`
-  rejects a `packages` key on that file. Publishing the package entry is a
-  separate step and is not done from this repository's workflow.
+- This repository's `server.json` is still not the file the workflow uploads.
+  The workflow downloads the hosted URL, and the checker now rejects that
+  download until it has the package entry and the description from this
+  repository's `server.json`. The README and the wrapper README each contain
+  `mcp-name: io.github.artvepa80/hefestoai` for the PyPI ownership check.
+- `release.yml` publishes the `hefesto-mcp` wrapper to PyPI after `hefesto-ai`,
+  using the same GitHub environment `pypi` and trusted publishing. The pending
+  publisher for project `hefesto-mcp` is a separate PyPI record.
 
 ## How to run it
 

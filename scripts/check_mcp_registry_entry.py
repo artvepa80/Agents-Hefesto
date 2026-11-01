@@ -22,10 +22,12 @@ and a warning in a dry run. The lookup is
 (404 means free) plus ``GET /v0.1/servers/{name}/versions?include_deleted=true``
 (``docs/reference/api/openapi.yaml``).
 
-The canonical hosted file has no ``packages`` entry. This script rejects one.
-The public repository ``server.json`` is a different document: it lists the
-local stdio package and is not what this workflow publishes. The published
-entry stays a remote (streamable-http) until a separate publish.
+``description`` is read from this repository's ``server.json`` (the source of
+truth). ``packages`` must be exactly one PyPI entry for ``hefesto-mcp``
+(stdio, ``uvx``, version equal to the document version, ``HEFESTO_MCP_ROOT``
+required). ``remotes`` stays the single hosted streamable-http URL. The
+workflow still validates the file downloaded from the hosted URL; that file
+is not stored in this repository.
 
 Usage::
 
@@ -46,7 +48,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 SERVER_NAME = "io.github.artvepa80/hefestoai"
-DESCRIPTION = "HefestoAI checks AI-generated code before you ship it."
+PACKAGE_ID = "hefesto-mcp"
+ROOT_ENV = "HEFESTO_MCP_ROOT"
 PUBLIC_REPOSITORY_URL = "https://github.com/artvepa80/Agents-Hefesto"
 REMOTE_TYPE = "streamable-http"
 REMOTE_URL = "https://hefestoai.narapallc.com/api/mcp-protocol"
@@ -65,6 +68,19 @@ ANALYZE_PARAMS = {
     "arguments": {"files": [{"path": "registry_probe.py", "content": "VALUE = 1\n"}]},
 }
 TIMEOUT_SECONDS = 90
+_REPO_SERVER = Path(__file__).resolve().parent.parent / "server.json"
+
+
+def _repo_description() -> str:
+    """Description in this repository's server.json."""
+    document = json.loads(_REPO_SERVER.read_text(encoding="utf-8"))
+    description = document.get("description")
+    if not isinstance(description, str) or not description:
+        raise RuntimeError("repo server.json description is missing")
+    return description
+
+
+DESCRIPTION = _repo_description()
 
 
 def _expected_fields(expected_version: str) -> List[Tuple[str, Tuple[str, ...], str]]:
@@ -101,9 +117,59 @@ def check_document(document: dict, expected_version: str) -> List[str]:
         for label, path, expected in _expected_fields(expected_version)
         if _lookup(document, path) != expected
     ]
-    if "packages" in document:
-        errors.append("packages is not allowed (PyPI entry needs the owner's decision)")
+    errors.extend(_package_errors(document))
     return errors + _remote_errors(document.get("remotes"))
+
+
+def _package_identity_errors(package: dict, version: str) -> List[str]:
+    errors: List[str] = []
+    if package.get("registryType") != "pypi" or package.get("identifier") != PACKAGE_ID:
+        errors.append("packages[0] must be the pypi package hefesto-mcp")
+    if package.get("version") != version:
+        errors.append("packages[0].version must equal the document version")
+    if package.get("runtimeHint") != "uvx":
+        errors.append("packages[0].runtimeHint must be uvx")
+    return errors
+
+
+def _stdio_transport(package: dict) -> bool:
+    transport = package.get("transport")
+    return isinstance(transport, dict) and transport.get("type") == "stdio"
+
+
+def _root_env_required(variables: object) -> bool:
+    if not isinstance(variables, list):
+        return False
+    for item in variables:
+        if not isinstance(item, dict):
+            continue
+        if item.get("name") == ROOT_ENV and item.get("isRequired") is True:
+            return True
+    return False
+
+
+def _one_package(document: dict) -> Optional[dict]:
+    version = document.get("version")
+    packages = document.get("packages")
+    if not isinstance(version, str) or not isinstance(packages, list) or len(packages) != 1:
+        return None
+    package = packages[0]
+    if not isinstance(package, dict):
+        return None
+    return package
+
+
+def _package_errors(document: dict) -> List[str]:
+    package = _one_package(document)
+    if package is None:
+        return ["packages must hold exactly one hefesto-mcp entry"]
+    version = str(document.get("version"))
+    errors = _package_identity_errors(package, version)
+    if not _stdio_transport(package):
+        errors.append("packages[0].transport must be stdio")
+    if not _root_env_required(package.get("environmentVariables")):
+        errors.append("packages[0] must require HEFESTO_MCP_ROOT")
+    return errors
 
 
 def check_hosted_version(document: dict, hosted: Dict[str, str]) -> List[str]:

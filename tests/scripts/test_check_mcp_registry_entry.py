@@ -42,14 +42,56 @@ def mod():
     return module
 
 
+def _valid(mod, version="4.20.1"):
+    document = copy.deepcopy(CANONICAL)
+    document["version"] = version
+    document["description"] = mod.DESCRIPTION
+    document["packages"] = [
+        {
+            "registryType": "pypi",
+            "registryBaseUrl": "https://pypi.org",
+            "identifier": "hefesto-mcp",
+            "version": version,
+            "runtimeHint": "uvx",
+            "transport": {"type": "stdio"},
+            "environmentVariables": [
+                {
+                    "name": "HEFESTO_MCP_ROOT",
+                    "description": "Project directory the tools may read (not / or home)",
+                    "isRequired": True,
+                    "isSecret": False,
+                }
+            ],
+        }
+    ]
+    return document
+
+
 def test_canonical_entry_passes(mod):
-    assert mod.check_document(CANONICAL, "4.20.1") == []
+    assert mod.check_document(_valid(mod), "4.20.1") == []
 
 
-def test_public_server_json_is_rejected(mod):
+def test_repo_server_json_matches_the_registry_contract(mod):
     public = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
-    errors = mod.check_document(public, public["version"])
-    assert any("description" in error for error in errors)
+    assert mod.DESCRIPTION == public["description"]
+    assert "closed-source" not in mod.DESCRIPTION
+    assert mod.check_document(public, public["version"]) == []
+
+
+def test_package_must_be_one_stdio_uvx_entry(mod):
+    document = _valid(mod)
+    document["packages"][0]["runtimeHint"] = "npx"
+    document["packages"][0]["transport"] = {"type": "sse", "url": "https://example.com"}
+    document["packages"][0]["environmentVariables"][0]["isRequired"] = False
+    document["packages"][0]["version"] = "9.9.9"
+    errors = mod.check_document(document, "4.20.1")
+    assert any("uvx" in error for error in errors)
+    assert any("stdio" in error for error in errors)
+    assert any("HEFESTO_MCP_ROOT" in error for error in errors)
+    assert any("document version" in error for error in errors)
+    bare = _valid(mod)
+    bare.pop("packages")
+    assert any("exactly one" in error for error in mod.check_document(bare, "4.20.1"))
 
 
 @pytest.mark.parametrize(
@@ -66,7 +108,7 @@ def test_public_server_json_is_rejected(mod):
     ],
 )
 def test_each_constraint_is_enforced(mod, mutate, needle):
-    document = copy.deepcopy(CANONICAL)
+    document = _valid(mod)
     mutate(document)
     errors = mod.check_document(document, "4.20.1")
     assert any(needle in error for error in errors), errors
@@ -158,7 +200,7 @@ def test_registry_other_errors_propagate(mod, monkeypatch):
 
 def _run(mod, tmp_path, monkeypatch, *, published, hosted=None, mode="dry-run", summary=None):
     path = tmp_path / "server.json"
-    path.write_text(json.dumps(CANONICAL), encoding="utf-8")
+    path.write_text(json.dumps(_valid(mod)), encoding="utf-8")
     monkeypatch.setattr(mod, "fetch_hosted_versions", lambda: dict(hosted or HOSTED_OK))
     entries = [_entry(v, i == 0) for i, v in enumerate(published)]
     monkeypatch.setattr(mod, "fetch_registry_versions", lambda: entries)

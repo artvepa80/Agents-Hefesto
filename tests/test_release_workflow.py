@@ -72,9 +72,30 @@ def test_publish_is_trusted_publishing_fail_closed():
     assert download["with"]["name"] == "python-package-distributions"
 
 
+def test_wrapper_publishes_after_hefesto_ai_on_the_same_environment():
+    job = _workflow()["jobs"]["publish-hefesto-mcp"]
+    assert job["needs"] == "publish"
+    assert job["environment"] == {
+        "name": "pypi",
+        "url": "https://pypi.org/p/hefesto-mcp",
+    }
+    assert job["permissions"] == {"id-token": "write"}
+    text = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "--project-name hefesto-mcp" in text
+    assert "packaging/hefesto-mcp" in text
+    assert "python -m twine check dist-mcp/*" in text
+    assert "hefesto-mcp = hefesto.mcp_server:main" in text
+    publish = job["steps"][-1]
+    assert publish["name"] == "Publish hefesto-mcp to PyPI"
+    assert publish["with"]["packages-dir"] == "dist-mcp"
+    engine = _workflow()["jobs"]["publish"]
+    assert engine["environment"]["url"] == "https://pypi.org/p/hefesto-ai"
+    assert "packages-dir" not in engine["steps"][-1]
+
+
 def test_github_release_runs_only_after_publish():
     job = _workflow()["jobs"]["github-release"]
-    assert job["needs"] == "publish"
+    assert job["needs"] == ["publish", "publish-hefesto-mcp"]
     assert job["permissions"] == {"contents": "write"}
     release = next(step for step in job["steps"] if step["name"] == "Create GitHub Release")
     script = release["run"]

@@ -84,11 +84,69 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
+  # Wrapper wheel, after hefesto-ai is on PyPI (the wrapper depends on that version).
+  # Same protected GitHub environment as the engine publish. The PyPI pending
+  # publisher for project hefesto-mcp must name this workflow and environment.
+  publish-hefesto-mcp:
+    needs: publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hefesto-mcp
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Verify wrapper version matches the tag
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "packaging>=23.0" "tomli>=2.0.1"
+          python scripts/verify_release_tag.py --tag "${GITHUB_REF_NAME}" \
+            --project-root packaging/hefesto-mcp --project-name hefesto-mcp
+
+      - name: Build wrapper and check the wheel
+        run: |
+          python -m pip install build twine
+          python -m build --outdir dist-mcp packaging/hefesto-mcp
+          python -m twine check dist-mcp/*
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+          wheels = sorted(Path("dist-mcp").glob("hefesto_mcp-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wrapper wheel, found {wheels}")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              names = archive.namelist()
+              entry = next(name for name in names if name.endswith("/entry_points.txt"))
+              text = archive.read(entry).decode("utf-8")
+              if "hefesto-mcp = hefesto.mcp_server:main" not in text:
+                  raise SystemExit("wrapper wheel is missing the hefesto-mcp script")
+              metadata = archive.read(
+                  next(name for name in names if name.endswith("/METADATA"))
+              ).decode("utf-8")
+              if "Name: hefesto-mcp" not in metadata:
+                  raise SystemExit("wrapper METADATA name is not hefesto-mcp")
+          print(f"wrapper wheel ok: {wheels[0].name}")
+          PY
+
+      - name: Publish hefesto-mcp to PyPI
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist-mcp
+
   # GitHub Release and the floating v4 tag run only after publish succeeds.
   # contents: write is limited to this job. checkout stays on v5 so the v4
   # push keeps the persisted credentials that step already uses.
   github-release:
-    needs: publish
+    needs: [publish, publish-hefesto-mcp]
     runs-on: ubuntu-latest
     permissions:
       contents: write
