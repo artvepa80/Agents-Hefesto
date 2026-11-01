@@ -1,0 +1,1527 @@
+{
+ "schema_version": 1,
+ "description": "Every program-to-program (CALL, LINK, XCTL) and program-to-table (SQL) edge of the lineage section on the pinned CardDemo and GenApp corpora, labelled against the source. verdict TP = the target is what the statement at that file and line invokes (CALL/LINK/XCTL, resolved to the right program file) or uses (SQL table); FP = it is not. Each edge was checked by a helper against the source line and the target file, and every kind was spot-checked by hand.",
+ "corpora": {
+  "carddemo": "59cc6c2fd7ebd7ef7925cad552a01a4b8b6e4d5e",
+  "genapp": "f6f3f4b2580d31b7d8dcc31ce3e3676f4cceaaaa",
+  "zopeneditor": "8f9835308de6159eb54f226041d5f81a780cb8eb"
+ },
+ "sampling": "Every edge, not a sample: CardDemo CALL 18 (one written in app/cpy/CSUTLDPY.cpy, counted for COACTUPC), XCTL 2, SQL 15; GenApp LINK 82, SQL 33.",
+ "expected": {
+  "carddemo": {
+   "CALL": {
+    "program": 18,
+    "system": 43,
+    "external": 2,
+    "variable_target": 1
+   },
+   "LINK/XCTL": {
+    "program": 2,
+    "variable_target": 31
+   }
+  },
+  "genapp": {
+   "LINK/XCTL": {
+    "program": 82,
+    "variable_target": 13
+   }
+  },
+  "zopeneditor": {
+   "CALL": {
+    "variable_target": 3
+   }
+  }
+ },
+ "labels": [
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 351,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 377,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 401,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 734,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 746,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 769,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 787,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 805,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 835,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 860,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 877,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 893,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CBSTM03A",
+   "to": "program:CBSTM03B",
+   "file": "app/cbl/CBSTM03A.CBL",
+   "line": 909,
+   "verdict": "TP",
+   "reason": "CALL 'CBSTM03B' resolves to CBSTM03B.CBL"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:COACTUPC",
+   "to": "program:CSUTLDTC",
+   "file": "app/cpy/CSUTLDPY.cpy",
+   "line": 293,
+   "verdict": "TP",
+   "reason": "CALL 'CSUTLDTC' resolves to CSUTLDTC.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CORPT00C",
+   "to": "program:CSUTLDTC",
+   "file": "app/cbl/CORPT00C.cbl",
+   "line": 392,
+   "verdict": "TP",
+   "reason": "CALL 'CSUTLDTC' resolves to CSUTLDTC.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:CORPT00C",
+   "to": "program:CSUTLDTC",
+   "file": "app/cbl/CORPT00C.cbl",
+   "line": 412,
+   "verdict": "TP",
+   "reason": "CALL 'CSUTLDTC' resolves to CSUTLDTC.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:COTRN02C",
+   "to": "program:CSUTLDTC",
+   "file": "app/cbl/COTRN02C.cbl",
+   "line": 393,
+   "verdict": "TP",
+   "reason": "CALL 'CSUTLDTC' resolves to CSUTLDTC.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "CALL",
+   "from": "program:COTRN02C",
+   "to": "program:CSUTLDTC",
+   "file": "app/cbl/COTRN02C.cbl",
+   "line": 413,
+   "verdict": "TP",
+   "reason": "CALL 'CSUTLDTC' resolves to CSUTLDTC.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COBTUPDT",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COBTUPDT.cbl",
+   "line": 138,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COBTUPDT",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COBTUPDT.cbl",
+   "line": 172,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COBTUPDT",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COBTUPDT.cbl",
+   "line": 202,
+   "verdict": "TP",
+   "reason": "DELETE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COPAUS2C",
+   "to": "table:CARDDEMO.AUTHFRDS",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl",
+   "line": 142,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CARDDEMO.AUTHFRDS at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COPAUS2C",
+   "to": "table:CARDDEMO.AUTHFRDS",
+   "file": "app/app-authorization-ims-db2-mq/cbl/COPAUS2C.cbl",
+   "line": 223,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table CARDDEMO.AUTHFRDS at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTLIC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 342,
+   "verdict": "TP",
+   "reason": "SELECT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTLIC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 358,
+   "verdict": "TP",
+   "reason": "SELECT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTLIC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 1806,
+   "verdict": "TP",
+   "reason": "SELECT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTLIC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 1847,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTLIC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTLIC.cbl",
+   "line": 1901,
+   "verdict": "TP",
+   "reason": "DELETE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTUPC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 1480,
+   "verdict": "TP",
+   "reason": "SELECT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTUPC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 1545,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTUPC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 1598,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "SQL",
+   "from": "program:COTRTUPC",
+   "to": "table:CARDDEMO.TRANSACTION_TYPE",
+   "file": "app/app-transaction-type-db2/cbl/COTRTUPC.cbl",
+   "line": 1628,
+   "verdict": "TP",
+   "reason": "DELETE statement names table CARDDEMO.TRANSACTION_TYPE at this line"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "XCTL",
+   "from": "program:COSGN00C",
+   "to": "program:COADM01C",
+   "file": "app/cbl/COSGN00C.cbl",
+   "line": 231,
+   "verdict": "TP",
+   "reason": "EXEC CICS XCTL PROGRAM('COADM01C') resolves to COADM01C.cbl"
+  },
+  {
+   "corpus": "carddemo",
+   "kind": "XCTL",
+   "from": "program:COSGN00C",
+   "to": "program:COMEN01C",
+   "file": "app/cbl/COSGN00C.cbl",
+   "line": 236,
+   "verdict": "TP",
+   "reason": "EXEC CICS XCTL PROGRAM('COMEN01C') resolves to COMEN01C.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 308,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 316,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 322,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB02",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb02.cbl",
+   "line": 205,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB02",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb02.cbl",
+   "line": 213,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACDB02",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacdb02.cbl",
+   "line": 219,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacus01.cbl",
+   "line": 159,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacus01.cbl",
+   "line": 167,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacus01.cbl",
+   "line": 173,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacvs01.cbl",
+   "line": 102,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacvs01.cbl",
+   "line": 109,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGACVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgacvs01.cbl",
+   "line": 115,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 575,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 583,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 589,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapol01.cbl",
+   "line": 149,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapol01.cbl",
+   "line": 157,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapol01.cbl",
+   "line": 163,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 169,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 176,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGAPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgapvs01.cbl",
+   "line": 182,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpdb01.cbl",
+   "line": 225,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpdb01.cbl",
+   "line": 233,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpdb01.cbl",
+   "line": 239,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpol01.cbl",
+   "line": 166,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpol01.cbl",
+   "line": 174,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpol01.cbl",
+   "line": 180,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpvs01.cbl",
+   "line": 113,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpvs01.cbl",
+   "line": 120,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGDPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgdpvs01.cbl",
+   "line": 126,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicdb01.cbl",
+   "line": 225,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicdb01.cbl",
+   "line": 233,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicdb01.cbl",
+   "line": 239,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicus01.cbl",
+   "line": 146,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicus01.cbl",
+   "line": 154,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGICUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgicus01.cbl",
+   "line": 160,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 1010,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 1018,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 1024,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipol01.cbl",
+   "line": 119,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipol01.cbl",
+   "line": 127,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGIPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgipol01.cbl",
+   "line": 133,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTC1",
+   "to": "program:LGACUS01",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 128,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGACUS01') resolves to lgacus01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTC1",
+   "to": "program:LGICUS01",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 89,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGICUS01') resolves to lgicus01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTC1",
+   "to": "program:LGICUS01",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 151,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGICUS01') resolves to lgicus01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTC1",
+   "to": "program:LGUCUS01",
+   "file": "base/src/lgtestc1.cbl",
+   "line": 190,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGUCUS01') resolves to lgucus01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP1",
+   "to": "program:LGAPOL01",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 115,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGAPOL01') resolves to lgapol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP1",
+   "to": "program:LGDPOL01",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 139,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGDPOL01') resolves to lgdpol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP1",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 72,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP1",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 173,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP1",
+   "to": "program:LGUPOL01",
+   "file": "base/src/lgtestp1.cbl",
+   "line": 216,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGUPOL01') resolves to lgupol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP2",
+   "to": "program:LGAPOL01",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 105,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGAPOL01') resolves to lgapol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP2",
+   "to": "program:LGDPOL01",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 129,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGDPOL01') resolves to lgdpol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP2",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 67,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP2",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 159,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP2",
+   "to": "program:LGUPOL01",
+   "file": "base/src/lgtestp2.cbl",
+   "line": 198,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGUPOL01') resolves to lgupol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP3",
+   "to": "program:LGAPOL01",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 106,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGAPOL01') resolves to lgapol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP3",
+   "to": "program:LGDPOL01",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 129,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGDPOL01') resolves to lgdpol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP3",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 70,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP3",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 159,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP3",
+   "to": "program:LGUPOL01",
+   "file": "base/src/lgtestp3.cbl",
+   "line": 196,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGUPOL01') resolves to lgupol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP4",
+   "to": "program:LGAPOL01",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 178,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGAPOL01') resolves to lgapol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP4",
+   "to": "program:LGDPOL01",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 201,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGDPOL01') resolves to lgdpol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGTESTP4",
+   "to": "program:LGIPOL01",
+   "file": "base/src/lgtestp4.cbl",
+   "line": 122,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGIPOL01') resolves to lgipol01.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucdb01.cbl",
+   "line": 202,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucdb01.cbl",
+   "line": 210,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucdb01.cbl",
+   "line": 216,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucus01.cbl",
+   "line": 152,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucus01.cbl",
+   "line": 160,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCUS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucus01.cbl",
+   "line": 166,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucvs01.cbl",
+   "line": 117,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucvs01.cbl",
+   "line": 124,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUCVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgucvs01.cbl",
+   "line": 130,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 515,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 523,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPDB01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 529,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupol01.cbl",
+   "line": 181,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupol01.cbl",
+   "line": 189,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPOL01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupol01.cbl",
+   "line": 195,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 187,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 194,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "LINK",
+   "from": "program:LGUPVS01",
+   "to": "program:LGSTSQ",
+   "file": "base/src/lgupvs01.cbl",
+   "line": 200,
+   "verdict": "TP",
+   "reason": "EXEC CICS LINK PROGRAM('LGSTSQ') resolves to lgstsq.cbl"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGACDB01",
+   "to": "table:CUSTOMER",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 223,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CUSTOMER at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGACDB01",
+   "to": "table:CUSTOMER",
+   "file": "base/src/lgacdb01.cbl",
+   "line": 252,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CUSTOMER at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGACDB02",
+   "to": "table:CUSTOMER_SECURE",
+   "file": "base/src/lgacdb02.cbl",
+   "line": 167,
+   "verdict": "TP",
+   "reason": "INSERT statement names table CUSTOMER_SECURE at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:COMMERCIAL",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 500,
+   "verdict": "TP",
+   "reason": "INSERT statement names table COMMERCIAL at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:ENDOWMENT",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 347,
+   "verdict": "TP",
+   "reason": "INSERT statement names table ENDOWMENT at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:ENDOWMENT",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 369,
+   "verdict": "TP",
+   "reason": "INSERT statement names table ENDOWMENT at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:HOUSE",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 410,
+   "verdict": "TP",
+   "reason": "INSERT statement names table HOUSE at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:MOTOR",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 450,
+   "verdict": "TP",
+   "reason": "INSERT statement names table MOTOR at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 269,
+   "verdict": "TP",
+   "reason": "INSERT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGAPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgapdb01.cbl",
+   "line": 319,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGDPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgdpdb01.cbl",
+   "line": 191,
+   "verdict": "TP",
+   "reason": "DELETE statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGICDB01",
+   "to": "table:CUSTOMER",
+   "file": "base/src/lgicdb01.cbl",
+   "line": 188,
+   "verdict": "TP",
+   "reason": "SELECT statement names table CUSTOMER at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:COMMERCIAL",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 113,
+   "verdict": "TP",
+   "reason": "SELECT statement names table COMMERCIAL at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:COMMERCIAL",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 144,
+   "verdict": "TP",
+   "reason": "SELECT statement names table COMMERCIAL at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:COMMERCIAL",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 671,
+   "verdict": "TP",
+   "reason": "SELECT statement names table COMMERCIAL at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:COMMERCIAL",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 777,
+   "verdict": "TP",
+   "reason": "SELECT statement names table COMMERCIAL at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:ENDOWMENT",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 361,
+   "verdict": "TP",
+   "reason": "SELECT statement names table ENDOWMENT at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:HOUSE",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 469,
+   "verdict": "TP",
+   "reason": "SELECT statement names table HOUSE at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:MOTOR",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 563,
+   "verdict": "TP",
+   "reason": "SELECT statement names table MOTOR at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 113,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 144,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 361,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 469,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 563,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 671,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGIPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgipdb01.cbl",
+   "line": 777,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUCDB01",
+   "to": "table:CUSTOMER",
+   "file": "base/src/lgucdb01.cbl",
+   "line": 156,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table CUSTOMER at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:ENDOWMENT",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 395,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table ENDOWMENT at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:HOUSE",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 432,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table HOUSE at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:MOTOR",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 470,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table MOTOR at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 135,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 319,
+   "verdict": "TP",
+   "reason": "UPDATE statement names table POLICY at this line"
+  },
+  {
+   "corpus": "genapp",
+   "kind": "SQL",
+   "from": "program:LGUPDB01",
+   "to": "table:POLICY",
+   "file": "base/src/lgupdb01.cbl",
+   "line": 332,
+   "verdict": "TP",
+   "reason": "SELECT statement names table POLICY at this line"
+  }
+ ]
+}

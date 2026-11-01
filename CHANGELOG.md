@@ -11,6 +11,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report code that is data inside a string literal, such as a code template in a triple-quoted string or `'os.system("ls " + cmd)'` in a snippet. The analyzer finds string literals with `tokenize`. A command sink (`os.system`, `os.popen`, `subprocess.*`) inside a literal is skipped. A line that starts inside a literal is not checked for SQL, and text inside literals no longer counts as a `def` or an `.execute(` sink. Real findings are unchanged, including `tests/fixtures/sqli_safe_patterns/true_positive_concat.py`. Files that do not tokenize, and other languages, are checked line by line as before. Finding counts can go down.
 
+### Fixed — one MF002 / GJ002 finding per line (#155)
+
+`MF002` (Makefile) and `GJ002` (Jenkinsfile) each had two overlapping patterns, so one `curl ... | sh` line was reported twice. Each analyzer now keeps one finding per line and rule, the one with the highest confidence: `MF002` keeps "Downloading and piping to (sudo) shell is a high-confidence RCE." (0.98) and `GJ002` keeps "Downloading and piping to shell in pipeline is RCE risk." (0.97) when the line is an `sh`/`bat` step, otherwise the generic message (0.95). CRITICAL counts and SARIF results for these files go down; which lines are flagged, and pass/fail, are unchanged. Other rules are not deduplicated.
+
+### Added — local stdio MCP adapter (unreleased)
+
+- Optional extra `mcp` and console script `hefesto-mcp`. Not on PyPI yet. Install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. Python >= 3.10, the same `requires-python` as the package (`mcp` also requires `>=3.10`, so the extra has no separate environment marker).
+- Two read-only tools over stdio: `analyze_local` and `version`. The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory. A path that resolves outside the root, including through a symlink, is rejected (`Path.resolve()` and `is_relative_to()`).
+- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. See [docs/local-mcp.md](docs/local-mcp.md).
+
+### Security — release workflow
+
+- Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
+
+### Added — line suppression comments (Python)
+
+- `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.
+- Findings up to HIGH can be suppressed; CRITICAL findings are never suppressed. A directive without a reason, without `[TYPE]`, whose type matches no finding on that line, or that targets a CRITICAL finding suppresses nothing and prints a warning on stderr (`meta.suppression_warnings` in JSON).
+- Suppressed findings do not count in the summary or for `--fail-on`. Text output shows `Suppressed: N`. JSON lists them per file under `suppressed_issues` with `"suppressed": true` (a boolean) and `"suppression_reason"`. `summary.suppressed` is a new key in the default JSON summary, always present: the count of suppressed findings (`0` when none). SARIF keeps them as results with `suppressions` (`kind: inSource`, `justification`).
+- `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
+- `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
+
+### Changed — CI gate on new line suppressions
+
+- The changed-file gate (`.github/workflows/dogfood.yml`) now passes `--fail-on-new-suppressions` on pull requests. `scripts/dogfood_changed.py` accepts a new suppression only when the PR body has the line `Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for that exact file and line (one line per suppression), read from the event payload at `GITHUB_EVENT_PATH` with no token. It always appends the new suppressions and their approval status to `$GITHUB_STEP_SUMMARY` when set. The workflow also runs on `edited` pull requests so an added approval line re-runs the gate. Pushes to `main` only list new suppressions.
+
+### Added — COBOL: program lineage in the JSON report (`--lineage`)
+
+- `hefesto analyze --output json --lineage` adds a `lineage` section: program nodes, `CALL`/`LINK`/`XCTL` edges to programs of the scan, SQL table edges with their statement type, and direct `COPY`/`EXEC SQL INCLUDE` edges. One edge per (kind, from, to, op, file), with its source lines in `lines`. Targets outside the scan are listed under `references` (`system`: target provided by the system, not by the repo; `kind` says how it is referenced; or `external`; `SYSIBM.*` tables are `system` references, not table nodes); variable targets, ambiguous names and dynamic SQL are listed under `unresolved` with a reason and never become edges. References in a copybook, including one pulled in with `EXEC SQL INCLUDE`, belong to every program that copies it.
+- Opt-in: without `--lineage` no lineage is extracted and the JSON is unchanged (a test compares it with the output from before this change on a COBOL project). With `--output text`, `html` or `sarif`, `--lineage` prints a warning and is ignored.
+- Measured precision on labelled edges (`python scripts/cobol_label_precision.py --lineage ...`, labels in `tests/fixtures/cobol/labels/lineage_labels.json`): CardDemo `CALL` 18/18, `XCTL` 2/2, SQL 14/14; GenApp `LINK` 82/82, SQL 33/33. Every literal `CALL`/`LINK`/`XCTL` target is classified once (CardDemo: 18 program, 43 system service, 2 external, 1 variable `CALL`; 2 program and 31 variable `LINK`/`XCTL`; GenApp: 82 program, 13 variable). Limits: small samples (the CardDemo `CALL` edges go to 2 programs, GenApp is one application, CardDemo navigation is almost all variable `XCTL`); `SELECT ... ASSIGN TO`, `CALL` targets set by `MOVE`/`SET` and dynamic SQL tables are not followed.
+- Cost with `--lineage` (same build with and without the flag, median of 7 interleaved runs): -1 % to +6 % run time on CardDemo, GenApp and zopeneditor-sample (under 0.05 s). On synthetic code with an `EXEC SQL` in every paragraph (10 to 70 times more SQL than those corpora), 15 interleaved rounds: +18.6 % median on the 1.05M-line project (+18.1 % median per-round difference), with peak memory 122 MB instead of 84 MB and a 4.8 MB instead of 3.1 MB JSON, and +15.5 % median on a single 500,000-line program (+13.7 % median per-round difference).
+
 ### Fixed — the zero-files warning names a missing parser (#160)
 
 When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.

@@ -28,6 +28,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    # "edited" re-runs the gate when a suppression approval line is added to
+    # the pull request body.
+    types: [ opened, synchronize, reopened, edited ]
 
 permissions:
   contents: read
@@ -66,13 +69,18 @@ jobs:
           PUSH_BEFORE_SHA: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
+          # New line suppressions fail pull requests unless the PR body has an
+          # approval line per file:line (read from GITHUB_EVENT_PATH). Pushes
+          # to main only list them: the push payload has no PR body.
+          FLAGS=()
           if [ "$EVENT_NAME" = "pull_request" ]; then
             BASE="$PR_BASE_SHA"
+            FLAGS+=(--fail-on-new-suppressions)
           else
             BASE="$PUSH_BEFORE_SHA"
           fi
           echo "event=${EVENT_NAME} base=${BASE} head=${HEAD_SHA}"
-          python scripts/dogfood_changed.py --base "$BASE" --head "$HEAD_SHA"
+          python scripts/dogfood_changed.py --base "$BASE" --head "$HEAD_SHA" "${FLAGS[@]}"
 
       - name: Self-check the gate
         if: ${{ !cancelled() }}

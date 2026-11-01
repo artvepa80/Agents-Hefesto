@@ -191,3 +191,8 @@ roadmap:
       - helm
       - arm_templates
       - serverless
+  local_stdio_mcp:
+    status: SHIPPED
+    items:
+      - analyze_local
+      - version
