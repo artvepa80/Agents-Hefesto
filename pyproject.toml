@@ -90,6 +90,8 @@ format = [
     "black>=24",
 ]
 # Optional: local stdio MCP adapter (`hefesto-mcp`). Core deps stay the same.
+# `mcp` requires Python >=3.10, the same floor as [project] requires-python,
+# so this extra does not need its own environment marker.
 mcp = [
     "mcp>=1.2,<2",
 ]

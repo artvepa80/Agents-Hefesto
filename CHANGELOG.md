@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — local stdio MCP adapter
+### Added — local stdio MCP adapter (unreleased)
 
-- Optional extra `mcp` (`pip install "hefesto-ai[mcp]"`) and console script `hefesto-mcp`. Two read-only tools over stdio: `analyze_local` (local engine on a path inside the working directory; a path that resolves outside it, including through a symlink, is rejected) and `version`. The process does not make network calls and does not send usage telemetry. The CLI opt-out (`HEFESTO_TELEMETRY=0`, `DO_NOT_TRACK=1`, or `hefesto telemetry disable`) is unchanged. See [docs/local-mcp.md](docs/local-mcp.md).
+- Optional extra `mcp` and console script `hefesto-mcp`. Not on PyPI yet. Install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. Python >= 3.10, the same `requires-python` as the package (`mcp` also requires `>=3.10`, so the extra has no separate environment marker).
+- Two read-only tools over stdio: `analyze_local` and `version`. The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory. A path that resolves outside the root, including through a symlink, is rejected (`Path.resolve()` and `is_relative_to()`).
+- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. See [docs/local-mcp.md](docs/local-mcp.md).
 
 ### Added — line suppression comments (Python)
 
