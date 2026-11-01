@@ -1,8 +1,9 @@
 name: Weekly full matrix
 
-# Runs the lint-and-test steps from ci.yml on every supported Python
-# (3.11 to 3.15) against main once a week. Pull requests and pushes test
-# only 3.11 and 3.15; this catches breakage on 3.12-3.14 in between.
+# Runs the lint-and-test steps from ci.yml and the multilang-smoke steps
+# from multilang-smoke.yml on every supported Python (3.11 to 3.15)
+# against main once a week. Pull requests and pushes test only 3.11 and
+# 3.15; this catches breakage on 3.12-3.14 in between.
 # Not a required check.
 
 on:
@@ -88,3 +89,113 @@ jobs:
           python -m pytest -q --tb=short --maxfail=5 \
             -m "not integration and not slow" \
             --cov=hefesto --cov-report=xml --cov-report=term
+
+  multilang-smoke-full:
+    # Same steps as multilang-smoke.yml (job multilang-smoke), on every
+    # supported Python. tests/test_weekly_full_matrix_workflow.py checks
+    # that the steps of both jobs stay in sync with their source workflows.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: main
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install [multilang] extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[multilang]"
+
+      - name: Prefetch the 6 grammars (no download during the smoke)
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
+        run: |
+          python - <<'PY'
+          import os, time, traceback
+          from tree_sitter_language_pack import download, downloaded_languages
+
+          langs = ["javascript", "typescript", "java", "go", "rust", "csharp"]
+          cache = os.environ["TREE_SITTER_LANGUAGE_PACK_CACHE_DIR"]
+          os.makedirs(cache, exist_ok=True)
+          last = None
+          for attempt in range(1, 4):
+              try:
+                  print(f"download({langs}) attempt {attempt}/3 (cache={cache})")
+                  download(langs)
+                  have = set(downloaded_languages())
+                  missing = [l for l in langs if l not in have]
+                  if missing:
+                      raise RuntimeError(f"still missing after download: {missing}")
+                  print("Prefetched:", ", ".join(sorted(have & set(langs))))
+                  break
+              except Exception as e:
+                  last = e
+                  print(f"attempt {attempt} failed: {type(e).__name__}: {e}")
+                  traceback.print_exc()
+                  if attempt < 3:
+                      delay = 2 ** attempt
+                      print(f"backoff {delay}s")
+                      time.sleep(delay)
+          else:
+              raise SystemExit(
+                  f"::error::Grammar prefetch failed after 3 attempts: "
+                  f"{type(last).__name__}: {last}"
+              )
+          PY
+
+      - name: Smoke — get_parser + parse for the 6 supported languages
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
+        run: |
+          python - <<'PY'
+          from tree_sitter_language_pack import get_parser
+
+          # Manifest canonical names (NOT Hefesto's internal LANG_MAP keys).
+          # See workflow header comment for the naming map rationale.
+          samples = {
+              "javascript": b"function f() { return 1; }",
+              "typescript": b"function f(): number { return 1; }",
+              "java":       b"class Foo { int bar() { return 1; } }",
+              "go":         b"package main\nfunc Foo() int { return 1 }\n",
+              "rust":       b"pub fn foo() -> i32 { 1 }",
+              "csharp":     b"class Foo { int Bar() { return 1; } }",
+          }
+          failures = []
+          for lang, code in samples.items():
+              try:
+                  parser = get_parser(lang)
+                  if parser is None:
+                      failures.append(f"{lang}: get_parser returned None")
+                      continue
+                  tree = parser.parse(code)
+                  if not tree.root_node.children:
+                      failures.append(f"{lang}: AST has no children (empty parse)")
+                      continue
+                  print(f"  {lang:12s} -> OK ({len(tree.root_node.children)} top-level nodes)")
+              except Exception as e:
+                  failures.append(f"{lang}: {type(e).__name__}: {e}")
+          if failures:
+              print("FAILURES:")
+              for f in failures:
+                  print(f"  - {f}")
+              raise SystemExit(1)
+          print("All 6 languages OK")
+          PY
+
+      - name: Unit tests that need the grammars
+        env:
+          TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
+        run: |
+          pip install -e ".[multilang,dev]"
+          python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py tests/test_missing_grammar_not_analyzed.py
