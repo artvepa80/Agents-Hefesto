@@ -48,7 +48,8 @@ exits 0 even when it reports findings.
     "medium": 1,
     "low": 0,
     "total_loc": 5,
-    "duration_seconds": 0.004
+    "duration_seconds": 0.004,
+    "suppressed": 0
   },
   "files": [
     {
@@ -76,6 +77,12 @@ exits 0 even when it reports findings.
   "timestamp": "2026-10-29T17:31:26.423624"
 }
 ```
+
+`summary.suppressed` is always present: it is the number of findings
+suppressed with `# hefesto: ignore[TYPE] reason` comments (an integer, `0` when
+none). Do not confuse it with the per-finding `"suppressed": true` (a boolean)
+on the entries listed under each file's `suppressed_issues`. See
+[ANALYSIS_RULES.md](ANALYSIS_RULES.md) for the suppression syntax.
 
 Example: count CRITICAL findings with `jq`:
 

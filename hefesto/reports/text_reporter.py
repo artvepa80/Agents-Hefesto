@@ -132,6 +132,9 @@ class TextReporter:
         lines.extend(self._not_analyzed_lines(meta))
         lines.extend(self._fallback_lines(meta))
         lines.append(f"   Issues found: {summary.total_issues}")
+        suppressed = getattr(summary, "suppressed_issues", 0)
+        if suppressed:
+            lines.append(f"   Suppressed: {suppressed} (# hefesto: ignore, not counted)")
 
         if summary.total_issues > 0:
             critical = self._colorize("CRITICAL", summary.critical_issues)
