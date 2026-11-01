@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — SQL and command injection rules skip code inside Python string literals (#156)
+
+In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report code that is data inside a string literal, such as a code template in a triple-quoted string or `'os.system("ls " + cmd)'` in a snippet. The analyzer finds string literals with `tokenize`. A command sink (`os.system`, `os.popen`, `subprocess.*`) inside a literal is skipped. A line that starts inside a literal is not checked for SQL, and text inside literals no longer counts as a `def` or an `.execute(` sink. Real findings are unchanged, including `tests/fixtures/sqli_safe_patterns/true_positive_concat.py`. Only literal text counts as data: in an f-string, code inside `{...}` is still checked, so `f"{os.popen('cat ' + fn).read()}"` is still reported. On Python 3.12+ the literal parts of an f-string are data; on 3.11 and earlier f-strings are never treated as data, so results for f-strings can differ between 3.11 and 3.12+; code the running Python cannot parse is checked as before. A line that starts inside a multi-line literal is skipped as a whole, as before. The literal lookup is a binary search, so the check stays linear in file size. Files that do not tokenize, and other languages, are checked line by line as before. Finding counts can go down.
+
 ### Fixed — one MF002 / GJ002 finding per line (#155)
 
 `MF002` (Makefile) and `GJ002` (Jenkinsfile) each had two overlapping patterns, so one `curl ... | sh` line was reported twice. Each analyzer now keeps one finding per line and rule, the one with the highest confidence: `MF002` keeps "Downloading and piping to (sudo) shell is a high-confidence RCE." (0.98) and `GJ002` keeps "Downloading and piping to shell in pipeline is RCE risk." (0.97) when the line is an `sh`/`bat` step, otherwise the generic message (0.95). CRITICAL counts and SARIF results for these files go down; which lines are flagged, and pass/fail, are unchanged. Other rules are not deduplicated.
