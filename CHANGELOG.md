@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security — release workflow
 
 - Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
+- Bump `pypa/gh-action-pypi-publish` to v1.14.3 in `.github/workflows/release-testpypi.yml` as well (same advisory).
+- Pin every third-party action in `.github/workflows/` to a full commit SHA, with the version in a trailing comment. `tests/test_release_workflow.py` now checks that property instead of exact versions.
+- Add a `github-actions` entry to `.github/dependabot.yml` so the pinned actions get weekly update PRs.
+- CI only: no published package was changed or rebuilt.
 
 ### Added — line suppression comments (Python)
 

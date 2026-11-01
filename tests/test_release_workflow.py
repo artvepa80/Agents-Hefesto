@@ -1,5 +1,6 @@
 """Contract for production PyPI trusted publishing in release.yml."""
 
+import re
 from pathlib import Path
 
 import yaml
@@ -42,7 +43,7 @@ def test_build_keeps_guard_tag_check_and_twine_check():
     assert "python -m build" in text
     assert "python -m twine check dist/*" in text
     upload = build["steps"][-1]
-    assert upload["uses"] == "actions/upload-artifact@v6"
+    assert re.fullmatch(r"actions/upload-artifact@[0-9a-f]{40}", upload["uses"])
     assert upload["with"]["name"] == "python-package-distributions"
     assert upload["with"]["path"] == "dist/"
     assert upload["with"]["if-no-files-found"] == "error"
@@ -64,10 +65,10 @@ def test_publish_is_trusted_publishing_fail_closed():
     assert publish["permissions"] == {"id-token": "write"}
     publish_step = publish["steps"][-1]
     assert publish_step["name"] == "Publish to PyPI"
-    assert publish_step["uses"] == "pypa/gh-action-pypi-publish@v1.14.3"
+    assert re.fullmatch(r"pypa/gh-action-pypi-publish@[0-9a-f]{40}", publish_step["uses"])
     assert "with" not in publish_step
     download = publish["steps"][0]
-    assert download["uses"] == "actions/download-artifact@v7"
+    assert re.fullmatch(r"actions/download-artifact@[0-9a-f]{40}", download["uses"])
     assert download["with"]["name"] == "python-package-distributions"
 
 
@@ -86,3 +87,18 @@ def test_github_release_runs_only_after_publish():
     assert 'git tag -f "$MAJOR" "$GITHUB_SHA"' in move["run"]
     assert 'git push -f origin "refs/tags/${MAJOR}"' in move["run"]
     assert "success()" not in WORKFLOW.read_text(encoding="utf-8")
+
+
+def test_every_third_party_action_is_pinned_to_a_commit_sha():
+    root = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+    files = sorted(root.glob("*.yml")) + sorted(root.glob("*.yaml"))
+    assert files
+    unpinned = []
+    for path in files:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            found = re.match(r"\s*-?\s*uses:\s*['\"]?([^\s'\"#]+)", line)
+            if not found or found.group(1).startswith(("./", "docker://")):
+                continue
+            if not re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", found.group(1)):
+                unpinned.append(f"{path.name}: {found.group(1)}")
+    assert unpinned == []
