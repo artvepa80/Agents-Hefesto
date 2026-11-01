@@ -79,6 +79,10 @@ python scripts/verify_readme.py
 python scripts/verify_server_json.py
 ```
 
+### Python versions in CI
+
+Pull requests and pushes to `main` run `lint-and-test` on Python 3.11 (oldest supported) and 3.15 (latest stable). The workflow `.github/workflows/weekly-full-matrix.yml` runs the same steps on every supported version, 3.11 to 3.15, against `main` once a week (Mondays 06:17 UTC); maintainers can also start it from the Actions tab. It is not a required check: a failure there is fixed in a normal pull request.
+
 ### New line suppressions in pull requests
 
 On pull requests the changed-file gate runs with `--fail-on-new-suppressions`:

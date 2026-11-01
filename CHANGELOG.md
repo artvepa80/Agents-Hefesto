@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — weekly full-matrix CI run
+
+- New workflow `.github/workflows/weekly-full-matrix.yml` runs the `lint-and-test` steps of `ci.yml` on Python 3.11, 3.12, 3.13, 3.14 and 3.15 against `main` every Monday at 06:17 UTC, and on demand (`workflow_dispatch`). Pull requests and pushes keep testing only 3.11 and 3.15. It is not a required check and does not upload coverage; actions are pinned by commit SHA like the other workflows.
+
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
 - **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
