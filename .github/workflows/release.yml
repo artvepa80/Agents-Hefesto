@@ -64,7 +64,7 @@ jobs:
   # so the build job cannot mint a PyPI identity. Attestations stay at
   # the action default (PEP 740). The action's default repository is PyPI.
   # https://docs.pypi.org/trusted-publishers/using-a-publisher/
-  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.2/README.md
+  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.3/README.md
   publish:
     needs: build
     runs-on: ubuntu-latest
@@ -82,7 +82,7 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
 
   # GitHub Release and the floating v4 tag run only after publish succeeds.
   # contents: write is limited to this job. checkout stays on v5 so the v4
