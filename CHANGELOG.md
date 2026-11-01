@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two read-only tools over stdio: `analyze_local` and `version`. The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory. A path that resolves outside the root, including through a symlink, is rejected (`Path.resolve()` and `is_relative_to()`).
 - Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. See [docs/local-mcp.md](docs/local-mcp.md).
 
+### Security — release workflow
+
+- Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
+
 ### Added — line suppression comments (Python)
 
 - `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.

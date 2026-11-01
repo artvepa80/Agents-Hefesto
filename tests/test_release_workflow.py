@@ -64,7 +64,7 @@ def test_publish_is_trusted_publishing_fail_closed():
     assert publish["permissions"] == {"id-token": "write"}
     publish_step = publish["steps"][-1]
     assert publish_step["name"] == "Publish to PyPI"
-    assert publish_step["uses"] == "pypa/gh-action-pypi-publish@v1.14.2"
+    assert publish_step["uses"] == "pypa/gh-action-pypi-publish@v1.14.3"
     assert "with" not in publish_step
     download = publish["steps"][0]
     assert download["uses"] == "actions/download-artifact@v7"
