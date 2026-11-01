@@ -40,10 +40,11 @@ def _explicit_root(argv: list[str], env: Mapping[str, str]) -> str | None:
 
 
 def _reject_broad_root(root: Path) -> None:
+    hint = "set HEFESTO_MCP_ROOT or pass --root"
     if root == Path(root.anchor).resolve():
-        raise ValueError("sandbox root cannot be the filesystem root")
+        raise ValueError(f"sandbox root cannot be the filesystem root; {hint}")
     if root == Path.home().resolve():
-        raise ValueError("sandbox root cannot be the home directory")
+        raise ValueError(f"sandbox root cannot be the home directory; {hint}")
 
 
 def resolve_sandbox_root(
@@ -131,14 +132,25 @@ def _run_engine(target: Path, level: str) -> str:
 
 
 def analyze_local(path: str, severity: str | None = None) -> str:
-    """Analyze a path inside the sandbox root. Returns JSON. Read-only."""
+    """Analyze a file or directory with the local engine and return JSON.
+
+    Runs the same local checks as ``hefesto analyze`` (security, complexity,
+    and the formats that engine registers). ``path`` must resolve inside the
+    sandbox root (``HEFESTO_MCP_ROOT`` or ``--root``). ``severity`` must be
+    one of LOW, MEDIUM, HIGH, or CRITICAL (default MEDIUM). The result is
+    the JSON report. Read-only: it writes no files and uses no network.
+    """
     _disable_telemetry()
     target = resolve_inside_root(path)
     return _run_engine(target, _severity(severity))
 
 
 def version() -> str:
-    """Return the engine version."""
+    """Return the installed engine version string.
+
+    No args. Reads no files and uses no network.
+    Use it to confirm which engine produced a result.
+    """
     return __version__
 
 

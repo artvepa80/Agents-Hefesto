@@ -3,7 +3,7 @@
   "name": "io.github.artvepa80/hefestoai",
   "title": "HefestoAI",
   "description": "Release-truth gate for AI-generated code. Hosted MCP server is closed-source (Narapa LLC).",
-  "version": "4.20.4",
+  "version": "4.20.5",
   "repository": {
     "url": "https://github.com/artvepa80/Agents-Hefesto",
     "source": "github",
@@ -14,6 +14,26 @@
     {
       "type": "streamable-http",
       "url": "https://hefestoai.narapallc.com/api/mcp-protocol"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "hefesto-mcp",
+      "version": "4.20.5",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "HEFESTO_MCP_ROOT",
+          "description": "Project directory the tools may read (not / or home)",
+          "isRequired": true,
+          "isSecret": false
+        }
+      ]
     }
   ]
 }

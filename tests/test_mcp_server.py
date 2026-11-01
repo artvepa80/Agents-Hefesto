@@ -91,7 +91,10 @@ def test_refuses_filesystem_root(capsys):
     with pytest.raises(SystemExit) as caught:
         main(["--root", "/"])
     assert caught.value.code == 2
-    assert "filesystem root" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "filesystem root" in err
+    assert "HEFESTO_MCP_ROOT" in err
+    assert "--root" in err
 
 
 def test_refuses_home_directory(capsys, monkeypatch):
@@ -104,7 +107,10 @@ def test_refuses_home_directory(capsys, monkeypatch):
     with pytest.raises(SystemExit) as caught:
         main([])
     assert caught.value.code == 2
-    assert "home directory" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "home directory" in err
+    assert "HEFESTO_MCP_ROOT" in err
+    assert "--root" in err
 
 
 def test_path_outside_root_is_rejected(tmp_path, monkeypatch):
@@ -143,6 +149,25 @@ def test_version_matches_package():
 
     assert version() == __version__
     assert version()
+    text = version.__doc__ or ""
+    assert "installed engine version string" in text
+    assert "No args" in text
+    assert "Reads no files" in text
+    assert "no network" in text
+    assert "which engine produced a result" in text
+
+
+def test_analyze_local_docstring_states_the_contract():
+    from hefesto.mcp_server import analyze_local
+
+    text = analyze_local.__doc__ or ""
+    assert "HEFESTO_MCP_ROOT" in text
+    assert "--root" in text
+    for level in ("LOW", "MEDIUM", "HIGH", "CRITICAL"):
+        assert level in text
+    assert "JSON" in text
+    assert "Read-only" in text
+    assert "no network" in text
 
 
 def test_startup_forces_telemetry_off(tmp_path, monkeypatch):
