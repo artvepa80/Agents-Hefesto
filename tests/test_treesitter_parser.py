@@ -170,6 +170,13 @@ def _declared_names(language: str, code: str) -> list:
             ["Run"],
         ),
         (
+            "c_sharp",
+            "class A { public TException Throws<TException>()"
+            " where TException : Exception { return null; } }",
+            ["A", "Throws"],
+        ),
+        ("typescript", "class Foo {}", ["Foo"]),
+        (
             "java",
             "class A { List<String> items() { return null; } }",
             ["A", "items"],
