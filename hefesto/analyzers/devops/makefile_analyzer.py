@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from typing import List, Tuple
 
+from hefesto.analyzers.devops.finding_dedup import keep_best_per_line
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -292,4 +293,5 @@ class MakefileAnalyzer:
                         )
                     )
 
-        return issues
+        # Overlapping MF002 patterns can match one line; report it once (#155).
+        return keep_best_per_line(issues, ("MF002",))
