@@ -1215,7 +1215,7 @@ def _zero_files_cause(engine, before: int) -> str:
     if grammars:
         return (
             f"tree-sitter grammar could not be loaded for {', '.join(grammars)};"
-            " offline or empty grammar cache?"
+            " offline, or an empty or damaged grammar cache?"
         )
     return "no supported source files, or every file was excluded"
 

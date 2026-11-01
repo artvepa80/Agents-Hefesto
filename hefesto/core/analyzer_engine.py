@@ -185,7 +185,7 @@ def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
     if entry.get("reason") == "grammar_unavailable":
         return (
             f"tree-sitter grammar '{entry.get('grammar')}' could not be loaded"
-            f" ({entry.get('exception')}; offline or empty grammar cache?)"
+            f" ({entry.get('exception')}; offline, or an empty or damaged grammar cache?)"
         )
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
     return f"{what} ({entry.get('exception')})"
