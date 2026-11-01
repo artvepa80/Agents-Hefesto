@@ -46,9 +46,9 @@ jobs:
         python-version: ["3.11", "3.15"]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -139,7 +139,7 @@ jobs:
           TREE_SITTER_LANGUAGE_PACK_CACHE_DIR: ${{ runner.temp }}/tslp-cache
         run: |
           pip install -e ".[multilang,dev]"
-          python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py
+          python -m pytest -q -rs -p no:cacheprovider --no-cov tests/test_eval_usage_ast.py tests/test_default_exclude_vendored_js.py tests/test_zero_files_invariant.py tests/test_missing_grammar_not_analyzed.py
 
   multilang-smoke-required:
     # Single required check for branch protection: depends on the whole
