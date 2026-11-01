@@ -15,7 +15,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import re
 from pathlib import Path, PurePosixPath
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from hefesto.analyzers.eval_calls import find_eval_calls
 from hefesto.analyzers.python_strings import (
@@ -109,19 +109,36 @@ _SQL_EXECUTE_SINKS = re.compile(
     re.IGNORECASE,
 )
 
-# ``.run(`` stays a sink for driver APIs such as pg8000's ``conn.run(sql)``,
-# but not when the receiver is ``subprocess`` or ``asyncio``: those start a
-# process or an event loop, never a query. They are common enough that
-# counting them made many files pay for the SQL string-span pass.
-_NON_SQL_RUN_RECEIVER = re.compile(r"\b(?:subprocess|asyncio)\s*$", re.IGNORECASE)
+# ``.run(`` stays a sink for driver APIs such as pg8000's ``conn.run(sql)``
+# and for ``asyncio.run(pool.fetchrow(sql))``. ``subprocess.run`` starts a
+# process, so it is a sink only when that process is a SQL command-line
+# client: the first argument (first list element, or the start of a command
+# string, ``shell=True`` included) names one, bare or as a path. Plain
+# ``subprocess.run`` of other programs is common enough that counting it made
+# many files pay for the SQL string-span pass.
+_SUBPROCESS_RECEIVER = re.compile(r"\bsubprocess\s*$", re.IGNORECASE)
+_SQL_CLI_FIRST_ARG = re.compile(
+    r"""\s*\[?\s*[rRbBuUfF]{0,2}["']\s*(?:[^"'\s]*[/\\])?"""
+    r"(?:psql|mysql|mariadb|sqlite3|sqlcmd|duckdb|clickhouse-client|bq)"
+    r"""(?:\.exe)?(?=["'\s])""",
+    re.IGNORECASE,
+)
 
 
-def _has_sql_sink(text: str) -> bool:
-    """Return True if *text* contains a SQL execute sink."""
+def _has_sql_sink(text: str, raw: Optional[str] = None) -> bool:
+    """Return True if *text* contains a SQL execute sink.
+
+    *raw* is the same text before string literals were blanked out (same
+    length and offsets); the program name of a ``subprocess.run`` call is
+    read from it, since in *text* it may be masked.
+    """
+    source = text if raw is None else raw
     for match in _SQL_EXECUTE_SINKS.finditer(text):
         if match.group(1).lower() != "run":
             return True
-        if not _NON_SQL_RUN_RECEIVER.search(text, max(0, match.start() - 20), match.start()):
+        if not _SUBPROCESS_RECEIVER.search(text, max(0, match.start() - 20), match.start()):
+            return True
+        if _SQL_CLI_FIRST_ARG.match(source, match.end()):
             return True
     return False
 
@@ -239,7 +256,9 @@ def _secret_issue(
     )
 
 
-def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
+def _build_scope_sink_map(
+    lines: List[str], raw_lines: Optional[List[str]] = None
+) -> List[Tuple[int, int, bool]]:
     """Return a list of (start_line, end_line, has_sink) for function scopes.
 
     Uses a simple indentation heuristic: a ``def `` or ``async def `` at
@@ -265,7 +284,8 @@ def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
                 j += 1
             end = j  # 1-indexed inclusive
             scope_code = "\n".join(lines[i:j])
-            has_sink = _has_sql_sink(scope_code)
+            scope_raw = "\n".join(raw_lines[i:j]) if raw_lines is not None else None
+            has_sink = _has_sql_sink(scope_code, scope_raw)
             scopes.append((start, end, has_sink))
             i = j
         else:
@@ -348,12 +368,12 @@ class SecurityAnalyzer:
         code_lines = mask_strings(lines, spans) if spans else lines
 
         # Pre-compute: does this file contain any SQL execute sink at all?
-        file_has_sink = _has_sql_sink("\n".join(code_lines))
+        file_has_sink = _has_sql_sink("\n".join(code_lines), code)
         if not file_has_sink:
             return issues
 
         # Build a map of function-scope boundaries (line ranges) for sink lookup.
-        scope_sinks = _build_scope_sink_map(code_lines)
+        scope_sinks = _build_scope_sink_map(code_lines, lines)
 
         flagged_lines: set = set()
 

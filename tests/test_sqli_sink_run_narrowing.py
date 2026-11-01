@@ -1,9 +1,10 @@
-"""`.run(` on a process or event-loop runner is not a SQL execute sink.
+"""``subprocess.run`` of a non-SQL program is not a SQL execute sink.
 
-``subprocess.run`` and ``asyncio.run`` used to satisfy the SQL sink pre-check,
-so every file that only started a process or an event loop paid for the
-string-span pass of the SQL injection check. Driver-style ``.run(`` calls
-(for example pg8000's ``conn.run``) and the other sinks keep counting.
+``subprocess.run`` used to satisfy the SQL sink pre-check, so every file that
+only started a process paid for the string-span pass of the SQL injection
+check. ``subprocess.run`` stays a sink when its program is a SQL command-line
+client (psql, mysql, sqlite3, ...). ``asyncio.run`` and every other ``.run(``
+(for example pg8000's ``conn.run``) stay sinks, as do the other sinks.
 """
 
 import pytest
@@ -20,10 +21,12 @@ def _sqli(code: str):
     "line",
     [
         "subprocess.run(['ls'])",
-        "asyncio.run(main())",
         "subprocess . run(cmd)",
         "x = 1\nsubprocess.run(cmd)",
-        "result = asyncio.run(coro)",
+        "subprocess.run(['git', 'status'])",
+        "subprocess.run('ls -l', shell=True)",
+        "subprocess.run(['psqlx', 'a'])",
+        "subprocess.run(['./mysql_backup.sh'])",
     ],
 )
 def test_runner_calls_are_not_sql_sinks(line):
@@ -47,6 +50,19 @@ def test_runner_calls_are_not_sql_sinks(line):
         "asyncio.run(m())\nconn.run(q)",
         "pool.acquire().run(q)",
         "conns[0].run(q)",
+        "asyncio.run(main())",
+        "result = asyncio.run(coro)",
+        "subprocess.run(['psql', '-c', q])",
+        'subprocess.run(["sqlite3", db, q])',
+        'subprocess.run("mysql -e \'" + q, shell=True)',
+        "subprocess.run(['/usr/bin/psql', '-c', q])",
+        "subprocess.run(\n    ['mariadb', '-e', q]\n)",
+        "subprocess.run(['sqlcmd', '-Q', q])",
+        "subprocess.run(['duckdb', db, q])",
+        "subprocess.run(['clickhouse-client', '-q', q])",
+        "subprocess.run(['bq', 'query', q])",
+        "subprocess.run(f'psql -c {q}', shell=True)",
+        "subprocess.run(r'C:\\bin\\sqlcmd.exe -Q ' + q, shell=True)",
     ],
 )
 def test_sql_sinks_still_match(line):
@@ -66,17 +82,65 @@ def test_runner_only_file_builds_no_string_spans(monkeypatch):
         "def main(name):\n"
         '    msg = "SELECT " + name\n'
         "    subprocess.run(['echo', msg])\n"
-        "    asyncio.run(work())\n"
     )
     assert _sqli(code) == []
     assert calls == []
 
 
-def test_concat_with_only_subprocess_run_is_not_flagged():
+def _cmdi(code: str):
+    return SecurityAnalyzer()._check_command_injection(None, "app.py", code)
+
+
+def _types(issues):
+    return {i.issue_type.value for i in issues}
+
+
+def test_concat_select_run_through_psql_is_flagged():
     code = (
+        "import subprocess\n"
         "def f(name):\n"
         '    q = "SELECT * FROM t WHERE n = \'" + name + "\'"\n'
         "    subprocess.run(['psql', '-c', q])\n"
+    )
+    assert _types(_sqli(code)) == {"SQL_INJECTION_RISK"}
+
+
+def test_fstring_sql_run_through_sqlite3_is_flagged():
+    code = (
+        "import subprocess\n"
+        "def f(db, user_id):\n"
+        '    query = f"SELECT * FROM users WHERE id = {user_id}"\n'
+        '    subprocess.run(["sqlite3", db, query])\n'
+    )
+    assert _types(_sqli(code)) == {"SQL_INJECTION_RISK"}
+
+
+def test_delete_through_mysql_shell_is_sqli_and_command_injection():
+    code = (
+        "import subprocess\n"
+        "def f(table):\n"
+        '    subprocess.run("mysql -e \'DELETE FROM " + table + "\'", shell=True)\n'
+    )
+    assert _types(_sqli(code)) == {"SQL_INJECTION_RISK"}
+    assert _types(_cmdi(code)) == {"COMMAND_INJECTION"}
+
+
+def test_concat_sql_in_asyncio_run_is_flagged():
+    code = (
+        "import asyncio\n"
+        "def f(pool, name):\n"
+        '    q = "SELECT * FROM t WHERE n = \'" + name + "\'"\n'
+        "    return asyncio.run(pool.fetchrow(q))\n"
+    )
+    assert _types(_sqli(code)) == {"SQL_INJECTION_RISK"}
+
+
+def test_concat_with_only_non_sql_subprocess_run_is_not_flagged():
+    code = (
+        "import subprocess\n"
+        "def f(name):\n"
+        '    q = "SELECT * FROM t WHERE n = \'" + name + "\'"\n'
+        "    subprocess.run(['echo', q])\n"
     )
     assert _sqli(code) == []
 
