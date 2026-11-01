@@ -6,7 +6,7 @@ Static code analysis, security scanning, and quality assurance.
 Copyright (c) 2025 Narapa LLC, Miami, Florida
 """
 
-from hefesto.__version__ import __version__
+from hefesto.__version__ import __version__  # hefesto: ignore[PICKLE_USAGE] required-check test
 
 __all__ = [
     "__version__",
