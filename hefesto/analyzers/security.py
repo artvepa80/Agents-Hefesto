@@ -105,9 +105,26 @@ def is_test_or_example_path(file_path: str) -> bool:
 
 # Sinks that indicate SQL strings are actually executed (not just built/logged).
 _SQL_EXECUTE_SINKS = re.compile(
-    r"\.\s*(?:execute|executemany|executescript|run|raw|mogrify)\s*\(",
+    r"\.\s*(execute|executemany|executescript|run|raw|mogrify)\s*\(",
     re.IGNORECASE,
 )
+
+# ``.run(`` stays a sink for driver APIs such as pg8000's ``conn.run(sql)``,
+# but not when the receiver is ``subprocess`` or ``asyncio``: those start a
+# process or an event loop, never a query. They are common enough that
+# counting them made many files pay for the SQL string-span pass.
+_NON_SQL_RUN_RECEIVER = re.compile(r"\b(?:subprocess|asyncio)\s*$", re.IGNORECASE)
+
+
+def _has_sql_sink(text: str) -> bool:
+    """Return True if *text* contains a SQL execute sink."""
+    for match in _SQL_EXECUTE_SINKS.finditer(text):
+        if match.group(1).lower() != "run":
+            return True
+        if not _NON_SQL_RUN_RECEIVER.search(text, max(0, match.start() - 20), match.start()):
+            return True
+    return False
+
 
 # Command execution sinks (os.system, os.popen, subprocess with shell).
 _CMD_INJECTION_SINKS = re.compile(
@@ -248,7 +265,7 @@ def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
                 j += 1
             end = j  # 1-indexed inclusive
             scope_code = "\n".join(lines[i:j])
-            has_sink = bool(_SQL_EXECUTE_SINKS.search(scope_code))
+            has_sink = _has_sql_sink(scope_code)
             scopes.append((start, end, has_sink))
             i = j
         else:
@@ -322,7 +339,7 @@ class SecurityAnalyzer:
 
         # Masking literals only hides text, so a file with no sink in the raw
         # code has none after masking: skip the literal scan for it.
-        if not _SQL_EXECUTE_SINKS.search(code):
+        if not _has_sql_sink(code):
             return issues
 
         # In Python, text inside a string literal is data, not code: it does
@@ -331,7 +348,7 @@ class SecurityAnalyzer:
         code_lines = mask_strings(lines, spans) if spans else lines
 
         # Pre-compute: does this file contain any SQL execute sink at all?
-        file_has_sink = bool(_SQL_EXECUTE_SINKS.search("\n".join(code_lines)))
+        file_has_sink = _has_sql_sink("\n".join(code_lines))
         if not file_has_sink:
             return issues
 
