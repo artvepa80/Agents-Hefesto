@@ -11,7 +11,7 @@ import argparse
 import contextlib
 import os
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from hefesto.__version__ import __version__
@@ -75,10 +75,18 @@ def current_root() -> Path:
     return resolve_sandbox_root([])
 
 
+def _anchored(path: str, root: Path) -> Path:
+    """Join a relative path to ``root``. Absolute paths stay absolute."""
+    raw = Path(path)
+    if raw.is_absolute():
+        return raw
+    return root / raw
+
+
 def resolve_inside_root(path: str, root: Path | None = None) -> Path:
-    """Resolve ``path`` and reject anything outside ``root``."""
+    """Resolve ``path`` against the sandbox root and reject anything outside it."""
     base = (root if root is not None else current_root()).resolve()
-    resolved = Path(path).resolve()
+    resolved = _anchored(path, base).resolve()
     if not resolved.is_relative_to(base) or _symlink_escapes(path, base):
         raise ValueError(f"path is outside the sandbox root: {path}")
     return resolved
@@ -86,9 +94,8 @@ def resolve_inside_root(path: str, root: Path | None = None) -> Path:
 
 def _symlink_escapes(path: str, root: Path) -> bool:
     raw = Path(path)
-    absolute = raw.is_absolute()
-    cursor = Path(raw.anchor) if absolute else Path.cwd().resolve()
-    parts = raw.parts[1:] if absolute else raw.parts
+    cursor = Path(raw.anchor) if raw.is_absolute() else root
+    parts = raw.parts[1:] if raw.is_absolute() else raw.parts
     for part in parts:
         cursor = cursor / part
         if _linked_outside(cursor, root):
@@ -136,9 +143,11 @@ def analyze_local(path: str, severity: str | None = None) -> str:
 
     Runs the same local checks as ``hefesto analyze`` (security, complexity,
     and the formats that engine registers). ``path`` must resolve inside the
-    sandbox root (``HEFESTO_MCP_ROOT`` or ``--root``). ``severity`` must be
-    one of LOW, MEDIUM, HIGH, or CRITICAL (default MEDIUM). The result is
-    the JSON report. Read-only: it writes no files and uses no network.
+    sandbox root (``HEFESTO_MCP_ROOT`` or ``--root``). A relative path is
+    joined to that root, not to the process working directory. ``severity``
+    must be one of LOW, MEDIUM, HIGH, or CRITICAL (default MEDIUM). The
+    result is the JSON report. Read-only: it writes no files.
+    It uses no network.
     """
     _disable_telemetry()
     target = resolve_inside_root(path)
@@ -154,6 +163,29 @@ def version() -> str:
     return __version__
 
 
+async def _call_on_worker(fn: Callable[..., str], *args: object) -> str:
+    """Run a sync tool off the stdio event loop.
+
+    FastMCP calls a synchronous tool on the loop thread. A directory scan
+    would block the session until it returned.
+    """
+    import anyio
+
+    return await anyio.to_thread.run_sync(fn, *args)
+
+
+async def _analyze_local_tool(path: str, severity: str | None = None) -> str:
+    return await _call_on_worker(analyze_local, path, severity)
+
+
+async def _version_tool() -> str:
+    return await _call_on_worker(version)
+
+
+_analyze_local_tool.__doc__ = analyze_local.__doc__
+_version_tool.__doc__ = version.__doc__
+
+
 def build_server():
     """FastMCP server with the two read-only tools. Requires the mcp extra."""
     from mcp.server.fastmcp import FastMCP
@@ -165,8 +197,8 @@ def build_server():
         openWorldHint=False,
     )
     server = FastMCP("hefesto")
-    server.add_tool(analyze_local, annotations=hints)
-    server.add_tool(version, annotations=hints)
+    server.add_tool(_analyze_local_tool, name="analyze_local", annotations=hints)
+    server.add_tool(_version_tool, name="version", annotations=hints)
     return server
 
 

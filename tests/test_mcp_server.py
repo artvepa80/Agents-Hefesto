@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import socket
+import threading
 from pathlib import Path
 
 import pytest
@@ -141,6 +142,71 @@ def test_path_outside_root_is_rejected(tmp_path, monkeypatch):
     inside = work / "ok.py"
     inside.write_text("x = 1\n", encoding="utf-8")
     assert resolve_inside_root("ok.py", root=work) == inside.resolve()
+
+
+def test_relative_path_joins_the_sandbox_root_not_cwd(tmp_path, monkeypatch):
+    proj = tmp_path / "proj"
+    app = proj / "src" / "app.py"
+    app.parent.mkdir(parents=True)
+    app.write_text("x = 1\n", encoding="utf-8")
+    outside = tmp_path / "outside.py"
+    outside.write_text("x = 1\n", encoding="utf-8")
+    link = proj / "escape.py"
+    link.symlink_to(outside)
+    monkeypatch.chdir("/")
+    monkeypatch.setenv("HEFESTO_MCP_ROOT", str(proj))
+
+    from hefesto.mcp_server import analyze_local, prepare_startup, resolve_inside_root
+
+    assert prepare_startup([]) == proj.resolve()
+    assert resolve_inside_root("src/app.py") == app.resolve()
+    payload = json.loads(analyze_local("src/app.py", severity="LOW"))
+    assert payload["summary"]["files_analyzed"] == 1
+    with pytest.raises(ValueError):
+        resolve_inside_root("/etc/passwd")
+    with pytest.raises(ValueError):
+        resolve_inside_root("../etc/passwd")
+    with pytest.raises(ValueError):
+        resolve_inside_root("escape.py")
+
+
+def test_sync_tools_run_off_the_event_loop(monkeypatch):
+    pytest.importorskip("anyio")
+    import contextlib
+
+    import hefesto.mcp_server as mcp_server
+
+    saw = {"thread": None, "ticks": 0, "result": None, "loop": None}
+
+    def slow(_path, _severity=None):
+        import time
+
+        saw["thread"] = threading.get_ident()
+        time.sleep(0.2)
+        return "ok"
+
+    monkeypatch.setattr(mcp_server, "analyze_local", slow)
+
+    async def _run():
+        saw["loop"] = threading.get_ident()
+
+        async def _tick():
+            while True:
+                await asyncio.sleep(0.02)
+                saw["ticks"] += 1
+
+        ticker = asyncio.create_task(_tick())
+        try:
+            saw["result"] = await mcp_server._analyze_local_tool("src/app.py")
+        finally:
+            ticker.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ticker
+
+    asyncio.run(_run())
+    assert saw["result"] == "ok"
+    assert saw["thread"] not in (None, saw["loop"])
+    assert saw["ticks"] >= 2
 
 
 def test_version_matches_package():

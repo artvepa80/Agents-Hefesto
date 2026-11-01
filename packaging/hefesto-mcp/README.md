@@ -1,6 +1,6 @@
 # hefesto-mcp
 
-Local stdio MCP adapter for the Hefesto release-truth engine. The package depends on `hefesto-ai[mcp]` and installs the `hefesto-mcp` command. It contains no Python modules of its own.
+Local stdio MCP adapter for the Hefesto release-truth engine. The package depends on `hefesto-ai[mcp]` (`mcp>=1.7,<2`) and installs the `hefesto-mcp` command. It contains no Python modules of its own.
 
 <!-- mcp-name: io.github.artvepa80/hefestoai -->
 

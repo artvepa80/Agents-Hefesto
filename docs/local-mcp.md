@@ -6,7 +6,7 @@
 
 ## Install
 
-Python 3.10 or newer. That is the package `requires-python`, and the `mcp` dependency requires the same (`>=3.10`), so the extra does not add an environment marker.
+Python 3.10 or newer. That is the package `requires-python`, and the `mcp` dependency requires the same (`>=3.10`), so the extra does not add an environment marker. The extra requires `mcp>=1.7,<2`.
 
 ```bash
 uvx hefesto-mcp
@@ -24,7 +24,7 @@ The tools may read only inside one directory. The process chooses it in this ord
 2. `HEFESTO_MCP_ROOT` (environment variable; required for `uvx hefesto-mcp`)
 3. The working directory, if neither is set
 
-The path is resolved with `Path.resolve()`. The process exits with status 2 when that directory is `/` or the home directory. The stderr message names `HEFESTO_MCP_ROOT` and `--root`. A request path is resolved the same way and must be `is_relative_to()` that root. A symlink whose target resolves outside the root is rejected. The check does not use a string prefix.
+The path is resolved with `Path.resolve()`. The process exits with status 2 when that directory is `/` or the home directory. The stderr message names `HEFESTO_MCP_ROOT` and `--root`. A relative request path is joined to that root, not to the process working directory, and then resolved the same way. It must be `is_relative_to()` that root. A symlink whose target resolves outside the root is rejected. The check does not use a string prefix.
 
 ## Client config
 

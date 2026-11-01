@@ -19,11 +19,10 @@ by ``scripts/check_mcp_registry_entry.py`` is a different file and still has
 no ``packages`` key.
 
 ``repository`` stays on this public repository because it contains the
-``hefesto-ai`` engine that the hosted ``analyze`` tool runs. The hosted MCP
-server itself is closed-source and operated by Narapa LLC; that fact is in
-``description`` (schema maxLength 100). ``repository.subfolder`` is omitted:
-the schema uses it for a server that lives in a monorepo path, and the MCP
-server is not in this repository.
+``hefesto-ai`` engine that the hosted ``analyze`` tool runs. ``description``
+names the local stdio server and the hosted remote (schema maxLength 100)
+and does not lead with closed-source. ``repository.subfolder`` is omitted:
+the local adapter is the PyPI package, not a monorepo path.
 """
 
 from __future__ import annotations
@@ -42,9 +41,9 @@ OFFICIAL_SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11
 SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#"
 
 SERVER_NAME = "io.github.artvepa80/hefestoai"
-# 90 characters. server.schema.json ServerDetail.description maxLength is 100.
+# 88 characters. server.schema.json ServerDetail.description maxLength is 100.
 DESCRIPTION = (
-    "Release-truth gate for AI-generated code. Hosted MCP server is closed-source (Narapa LLC)."
+    "Release-truth gate for AI-generated code: local stdio server (MIT) plus a hosted remote."
 )
 PUBLIC_REPOSITORY_URL = "https://github.com/artvepa80/Agents-Hefesto"
 # GitHub database id from `gh api repos/artvepa80/Agents-Hefesto --jq .id`.
@@ -103,7 +102,7 @@ def _identity_errors(document: dict, package_version: str) -> list[str]:
 def _description_errors(description: object) -> list[str]:
     errors: list[str] = []
     if description != DESCRIPTION:
-        errors.append("description must state that the hosted MCP server is closed-source (Narapa)")
+        errors.append("description must match the registry summary")
     if isinstance(description, str) and len(description) > DESCRIPTION_MAX_LENGTH:
         errors.append(
             f"description length {len(description)} exceeds "

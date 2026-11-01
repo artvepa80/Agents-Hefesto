@@ -214,7 +214,7 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 
 ## Local MCP (stdio)
 
-The `mcp` extra runs the local engine over stdio. It does not call the hosted service. `uvx hefesto-mcp` becomes available once 4.20.5 is on PyPI. It needs Python 3.10 or newer, the same `requires-python` as this package (the `mcp` dependency also requires Python >= 3.10, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory.
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. `uvx hefesto-mcp` becomes available once 4.20.5 is on PyPI. The extra requires `mcp>=1.7,<2` and Python 3.10 or newer, the same `requires-python` as this package (the `mcp` package also requires Python >= 3.10, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
 
 ```bash
 uvx hefesto-mcp
