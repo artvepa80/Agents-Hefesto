@@ -313,6 +313,19 @@ test(analyzers): add empirical complexity validation
   `Same-day merge exception: approved by Arturo on YYYY-MM-DD. Reason: <one line>.`
   A same-day merge of a runtime PR without that line is a violation, not an exception. The rule is checkable from GitHub data alone: the PR's `created_at` and `merged_at` converted to America/Lima, its changed files, and the exception line in its body.
 
+### Standing merge rule (GH-9)
+- **GH-9 (MUST)** An agent may squash-merge its own PR without asking only when all of these hold:
+  - CI is green on a head that is up to date with `main`;
+  - `hefesto analyze` on the changed files is clean;
+  - GH-8 is respected (a runtime PR is not merged on the Lima calendar day it was opened);
+  - the diff contains only the PR's own change;
+  - the PR text and commit message are neutral;
+  - the change is non-destructive.
+
+  After such a merge, the agent comments on the PR that it was merged under the standing merge rule.
+
+  Excluded: these always need the owner's explicit OK, even when every condition above holds: pricing, payments/billing, hosting, secrets and tokens, rulesets, release tags, PyPI publishing, landing-page deploys, workflows (`.github/workflows/`), dependencies, and migrations.
+
 ### Ruleset incident procedure
 If infrastructure (not the change under review) breaks a required check of the `main` ruleset (15985908) so that a fix cannot merge:
 1. Get Arturo's explicit OK before touching the ruleset.
