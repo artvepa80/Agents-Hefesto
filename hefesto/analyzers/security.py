@@ -256,14 +256,14 @@ def _secret_issue(
     )
 
 
-def _build_scope_sink_map(
-    lines: List[str], raw_lines: Optional[List[str]] = None
-) -> List[Tuple[int, int, bool]]:
+def _build_scope_sink_map(lines: List[str], raw_lines: List[str]) -> List[Tuple[int, int, bool]]:
     """Return a list of (start_line, end_line, has_sink) for function scopes.
 
     Uses a simple indentation heuristic: a ``def `` or ``async def `` at
     column N starts a scope that extends until the next line at the same
-    or lesser indentation (or EOF).
+    or lesser indentation (or EOF). *raw_lines* are the same lines before
+    string literals were blanked out; ``_has_sql_sink`` reads a
+    ``subprocess.run`` program name from them.
     """
     scopes: List[Tuple[int, int, bool]] = []
     n = len(lines)
@@ -284,8 +284,7 @@ def _build_scope_sink_map(
                 j += 1
             end = j  # 1-indexed inclusive
             scope_code = "\n".join(lines[i:j])
-            scope_raw = "\n".join(raw_lines[i:j]) if raw_lines is not None else None
-            has_sink = _has_sql_sink(scope_code, scope_raw)
+            has_sink = _has_sql_sink(scope_code, "\n".join(raw_lines[i:j]))
             scopes.append((start, end, has_sink))
             i = j
         else:
