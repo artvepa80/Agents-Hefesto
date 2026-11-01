@@ -288,6 +288,14 @@ def _load_project_config(paths, config_path, option_names):
     ),
 )
 @click.option(
+    "--lineage",
+    is_flag=True,
+    help=(
+        "COBOL: add a program lineage section (CALL/LINK/XCTL/SQL/COPY graph) "
+        "to the JSON report. JSON output only; other formats ignore it with a warning."
+    ),
+)
+@click.option(
     "--include-vendored",
     is_flag=True,
     help=(
@@ -357,6 +365,7 @@ def analyze(
     max_issues: Optional[int],
     exclude_types: str,
     copybook_paths: Tuple[str, ...],
+    lineage: bool,
     include_vendored: bool,
     enable_memory_budget_gate: bool,
     include_third_party: bool,
@@ -423,6 +432,7 @@ def analyze(
             _exit(1)
         if copybook_paths and hasattr(engine, "set_copybook_paths"):
             engine.set_copybook_paths(list(copybook_paths))
+        _enable_lineage(engine, lineage, output)
         if include_vendored and hasattr(engine, "set_include_vendored"):
             engine.set_include_vendored(True)
 
@@ -444,8 +454,11 @@ def analyze(
 
         _run_ml_analysis(all_file_results, source_cache, quiet, json_mode)
         _run_format_check(format_check, all_file_results, source_cache, quiet, json_mode)
+        suppression_warnings = _apply_line_suppressions(all_file_results, source_cache)
 
         meta = engine._build_meta() if hasattr(engine, "_build_meta") else {}
+        if suppression_warnings:
+            meta["suppression_warnings"] = suppression_warnings
         if budget_result is not None:
             meta["dynamic_budget_results"] = budget_result.to_dict()
 
@@ -457,6 +470,7 @@ def analyze(
             save_html,
             meta=meta,
         )
+        combined_report.lineage = _lineage_section(engine)
 
         _print_report(combined_report, output, save_html, quiet, max_issues)
         if sarif_file:
@@ -757,7 +771,12 @@ def check_test_contradictions(test_directory: str):
     default=None,
     help="PR number to post to when --post is used; auto-detected via gh if omitted",
 )
-def pr_review(project_root, base, head, strict, post, repo, pr):
+@click.option(
+    "--fail-on-new-suppressions",
+    is_flag=True,
+    help="Exit 1 when the diff adds a `# hefesto: ignore[TYPE] reason` comment",
+)
+def pr_review(project_root, base, head, strict, post, repo, pr, fail_on_new_suppressions):
     """Generate a Hefesto PR review for the current diff.
 
     Default output is JSON on stdout, suitable for piping into the
@@ -789,8 +808,11 @@ def pr_review(project_root, base, head, strict, post, repo, pr):
         _exit(1)
         return
 
+    _echo_new_suppressions(result.new_suppressions)
     if not post:
         click.echo(json.dumps(result.to_dict(), indent=2))
+        if fail_on_new_suppressions and result.new_suppressions:
+            _exit(1)
         return
 
     from hefesto.pr_review.post import detect_repo_and_pr, post_findings
@@ -828,6 +850,8 @@ def pr_review(project_root, base, head, strict, post, repo, pr):
         f"({counters['failed']} failed, {counters['skipped_no_hunk']} skipped)"
     )
     if counters["failed"] > 0:
+        _exit(1)
+    if fail_on_new_suppressions and result.new_suppressions:
         _exit(1)
 
 
@@ -1083,6 +1107,26 @@ def _mount_iris_ingest(app):
         pass  # IRIS not installed — skip silently
 
 
+def _enable_lineage(engine, lineage: bool, output: str) -> None:
+    """``--lineage``: JSON only; with another --output it warns and is ignored."""
+    if not lineage:
+        return
+    if output != "json":
+        click.echo(
+            f"Warning: --lineage is JSON-only; ignored with --output {output}.",
+            err=True,
+        )
+        return
+    engine.collect_lineage = True
+
+
+def _lineage_section(engine):
+    """The ``lineage`` JSON section; None unless ``--lineage`` enabled it on the engine."""
+    if not getattr(engine, "collect_lineage", False):
+        return None
+    return engine.cobol_lineage()
+
+
 def _setup_analyzer_engine(severity, quiet, json_mode=False, scope_config=None, enrich_config=None):
     from hefesto.analyzers import (
         BestPracticesAnalyzer,
@@ -1221,6 +1265,30 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
     return all_file_results, total_loc, total_duration, source_cache
 
 
+def _echo_new_suppressions(new_suppressions):
+    """List suppression comments a diff adds, on stderr (stdout stays JSON)."""
+    if not new_suppressions:
+        return
+    click.echo(f"New line suppressions ({len(new_suppressions)}):", err=True)
+    for item in new_suppressions:
+        types = ", ".join(item.get("types") or [])
+        problem = f" (malformed: {item['problem']})" if item.get("problem") else ""
+        click.echo(f"  {item['file']}:{item['line']} [{types}] {item['reason']}{problem}", err=True)
+
+
+def _apply_line_suppressions(all_file_results, source_cache):
+    """Apply ``# hefesto: ignore[TYPE] reason`` (Python files) after analysis.
+
+    Warnings for ignored directives always go to stderr, even with --quiet.
+    """
+    from hefesto.core.suppressions import apply_suppressions
+
+    warnings = apply_suppressions(all_file_results, source_cache)
+    for item in warnings:
+        click.echo(f"Warning: {item['file']}:{item['line']}: {item['message']}", err=True)
+    return warnings
+
+
 def _run_ml_analysis(all_file_results, source_cache, quiet, json_mode):
     """Run ML-powered semantic duplication analysis (OMEGA/PRO only)."""
     import os
@@ -1313,6 +1381,7 @@ def _generate_report(all_file_results, total_loc, total_duration, output, save_h
         low_issues=sum(1 for i in all_issues if i.severity.value == "LOW"),
         total_loc=total_loc,
         duration_seconds=total_duration,
+        suppressed_issues=sum(len(r.suppressed_issues) for r in all_file_results),
     )
 
     combined_report = AnalysisReport(

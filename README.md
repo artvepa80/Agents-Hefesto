@@ -210,6 +210,29 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
+## Local MCP (stdio) — unreleased
+
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is not on PyPI yet. It needs Python 3.10 or newer, the same `requires-python` as this package (the `mcp` dependency also requires Python >= 3.10, so the extra has no separate environment marker).
+
+```bash
+pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
+```
+
+Claude Desktop launches it with stdio. `hefesto-mcp` must be on `PATH`. Pass the project directory as `--root` (or set `HEFESTO_MCP_ROOT`). The process refuses to start when that directory resolves to `/` or the home directory. Paths outside it are rejected.
+
+```json
+{
+  "mcpServers": {
+    "hefesto": {
+      "command": "hefesto-mcp",
+      "args": ["--root", "/absolute/path/to/the/project"]
+    }
+  }
+}
+```
+
+Tools: `analyze_local` (a file or directory inside that root) and `version`. Details: [docs/local-mcp.md](docs/local-mcp.md).
+
 ---
 
 ## PR Review (v4.20.4)
@@ -309,6 +332,9 @@ pip install "hefesto-ai[multilang]"
 
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
+
+# Optional, unreleased: local stdio MCP adapter (not on PyPI yet)
+pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
