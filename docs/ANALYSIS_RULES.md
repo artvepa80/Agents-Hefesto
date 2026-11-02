@@ -472,6 +472,24 @@ Python security rules carry a CWE in SARIF 2.1.0 from one mapping (`hefesto/repo
 
 An issue field `metadata.cwe` overrides this table. COBOL rules that already set one keep the same tag text (`external/cwe/cwe-798`, `external/cwe/cwe-20`); those tags are not zero-padded.
 
+### 2.8 Unquoted variable in shell scripts (SHELL_UNQUOTED_VARIABLE)
+
+**Rule id:** `unquoted-var` · **Severity:** MEDIUM · **Analyzer:** shell (`.sh`, `.bash` and files with a shell shebang)
+
+An unquoted `$NAME` or `${NAME}` is split into words and expanded as a glob, so `rm -rf $DIR` with `DIR="my dir"` removes `my` and `dir`. The rule reports one finding per line when such a variable is:
+
+- an argument of `rm` or `cd` used as a command (at the start of the line, after `;`, `&&`, `||`, `|`, `(`, or after `sudo`, `then`, `do`, `else`, `exec`, `command`, `nohup`, `!`, `{`);
+- the operand of a single-bracket test, e.g. `[ -f $FILE ]`.
+
+Not reported: quoted expansions (`rm -f "$TMPFILE"`, `rm -rf "$DIR"/cache`, `rm -rf "$(path "$v")"`), single-quoted text, escaped `\$`, `[[ ... ]]` tests (no word splitting there), `rm`/`cd` inside a string (`echo "run: rm $X"`), and subcommands named `rm` (`docker image rm $ID`, `git rm $FILE`, `docker run --rm`).
+
+```bash
+rm -rf $BUILD_DIR/cache     # reported
+rm -rf "$BUILD_DIR"/cache   # fix
+```
+
+Limits: line-based, no data flow. A command passed as a string (`bash -c "cd $TMP && ..."`) is not analyzed, and `$1`, `$@` and other special parameters are not checked.
+
 ---
 
 ## 3. Code Smells

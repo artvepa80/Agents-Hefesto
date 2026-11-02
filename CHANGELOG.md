@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `SHELL_UNQUOTED_VARIABLE` no longer reports quoted variables
+
+- The shell rule `unquoted-var` (`SHELL_UNQUOTED_VARIABLE`) reported `rm -f "$TMPFILE"`, the quoted form it recommends: its `rm` pattern let the last letter of the name stand in for "unquoted". It now reads the quoting of the line: a `$NAME` or `${NAME}` argument of `rm` or `cd` is reported only outside quotes, and `$( ... )` bodies keep their own quotes. Also no longer reported: `[[ -f $X ]]` (no word splitting inside `[[ ]]`), `rm`/`cd` inside a string, and subcommands named `rm` (`docker image rm $ID`, `git rm`, `docker run --rm`). Newly reported: unquoted `${NAME}` and single-letter names in `rm` arguments (`rm -rf ${DIR}`), and `cd $DIR` at the end of a line.
+- Measured on 982 shell files (four public shell-heavy projects at pinned commits plus this repository's scripts): 305 findings before, 28 after. Hand-labelled, all 28 are unquoted variables in `rm`, `cd` or `[` (28/28; small sample). Of the 287 removed, 284 were quoted or safe; 3 were commands inside `bash -c "..."` strings, which the rule no longer looks into. Severity (MEDIUM) and the rule id are unchanged. Rule documented in `docs/ANALYSIS_RULES.md` (2.8).
+
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
 - **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
