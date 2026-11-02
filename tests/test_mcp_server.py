@@ -8,8 +8,8 @@ import json
 import os
 import shutil
 import socket
+import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -272,63 +272,85 @@ def test_analyze_local_does_not_use_network(tmp_path, monkeypatch):
     assert os.environ["HEFESTO_TELEMETRY"] == "0"
 
 
-def _read_fd(fd: int) -> bytes:
+def _drain(fd: int) -> bytes:
     os.set_blocking(fd, False)
-    chunks: list[bytes] = []
+    out = b""
     while True:
         try:
             chunk = os.read(fd, 4096)
         except BlockingIOError:
-            return b"".join(chunks)
+            return out
         if not chunk:
-            return b"".join(chunks)
-        chunks.append(chunk)
+            return out
+        out += chunk
 
 
-def test_concurrent_engine_prints_do_not_reach_fd_1(monkeypatch):
-    """Two overlapping scans must not write engine text to the real stdout fd."""
+def _race_events(monkeypatch):
+    """Stand in for the engine so the second scan prints after the first returns."""
     import hefesto.cli.main as cli
-    from hefesto.mcp_server import _run_engine
     from hefesto.reports.json_reporter import JSONReporter
 
-    def _printing_setup(*_args, **_kwargs):
-        print("engine-text")
-        time.sleep(0.05)
-        print("engine-text")
-        return object()
+    first_inside = threading.Event()
+    first_done = threading.Event()
+    calls = iter(("first", "second"))
+    order = threading.Lock()
 
-    def _printing_loop(*_args, **_kwargs):
-        print("engine-text")
+    def setup(*_args, **_kwargs):
+        with order:
+            who = next(calls)
+        if who == "first":
+            first_inside.set()
+            return "first"
+        first_done.wait(timeout=2)
+        print("engine-text", flush=True)
+        return "second"
+
+    def loop(engine, *_args, **_kwargs):
+        if engine == "first":
+            first_inside.wait(timeout=2)
+            threading.Event().wait(0.2)
         return [], 0, 0.0, {}
 
-    def _printing(*_args, **_kwargs):
-        print("engine-text")
-
-    monkeypatch.setattr(cli, "_setup_analyzer_engine", _printing_setup)
-    monkeypatch.setattr(cli, "_run_analysis_loop", _printing_loop)
-    monkeypatch.setattr(cli, "_apply_line_suppressions", _printing)
-    monkeypatch.setattr(cli, "_generate_report", _printing)
+    monkeypatch.setattr(cli, "_setup_analyzer_engine", setup)
+    monkeypatch.setattr(cli, "_run_analysis_loop", loop)
+    monkeypatch.setattr(cli, "_apply_line_suppressions", lambda *_a, **_k: None)
+    monkeypatch.setattr(cli, "_generate_report", lambda *_a, **_k: None)
     monkeypatch.setattr(JSONReporter, "generate", lambda self, report: "{}")
+    return first_inside, first_done
 
+
+def test_overlapping_scans_keep_fd_1_clean(monkeypatch):
+    """Overlapping scans must not write engine text to the real stdout fd.
+
+    pytest replaces ``sys.stdout``, so the test points it back at descriptor 1
+    before the calls. The second call prints only after the first has restored
+    stdout, which is the race the lock closes.
+    """
+    from hefesto.mcp_server import _run_engine
+
+    first_inside, first_done = _race_events(monkeypatch)
     read_fd, write_fd = os.pipe()
     saved = os.dup(1)
     os.dup2(write_fd, 1)
     os.close(write_fd)
-    errors: list[BaseException] = []
+    real_stdout = open(1, "w", closefd=False, buffering=1)
+    monkeypatch.setattr(sys, "stdout", real_stdout)
 
-    def _call() -> None:
+    def run_first():
         try:
-            assert _run_engine(Path("."), "MEDIUM") == "{}"
-        except BaseException as exc:
-            errors.append(exc)
+            return _run_engine(Path("."), "MEDIUM")
+        finally:
+            first_done.set()
 
     try:
         with ThreadPoolExecutor(max_workers=2) as pool:
-            futures = [pool.submit(_call) for _ in range(2)]
-            for future in futures:
-                future.result(timeout=5)
-        assert errors == []
-        assert _read_fd(read_fd) == b""
+            first = pool.submit(run_first)
+            assert first_inside.wait(timeout=2)
+            second = pool.submit(_run_engine, Path("."), "MEDIUM")
+            assert first.result(timeout=5) == "{}"
+            assert second.result(timeout=5) == "{}"
+        real_stdout.flush()
+        assert _drain(read_fd) == b""
     finally:
         os.dup2(saved, 1)
         os.close(saved)
