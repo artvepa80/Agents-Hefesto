@@ -12,7 +12,7 @@ Copyright 2025 Narapa LLC, Miami, Florida
 """
 
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -164,34 +164,128 @@ class ShellAnalyzer:
 
         return issues
 
+    # Single-bracket test with an unquoted variable; [[ ]] does not split words.
+    _UNQUOTED_TEST = re.compile(r"(?<!\[)\[\s+-[a-z]\s+\$[A-Za-z_]")
+    # rm / cd as a word (not "perform", not "docker run --rm"); see _is_command.
+    _RM_OR_CD = re.compile(r"(?:^|(?<=[\s;&|(`]))(rm|cd)\s")
+    # Words after which the next word is still a command, not an argument.
+    _COMMAND_PREFIXES = frozenset(
+        {
+            "sudo",
+            "then",
+            "do",
+            "else",
+            "exec",
+            "command",
+            "nohup",
+            "!",
+            "{",
+            "if",
+            "elif",
+            "while",
+            "until",
+            "time",
+            "xargs",
+        }
+    )
+    _VAR_NAME = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})")
+
+    @staticmethod
+    def _scan_quotes(text: str) -> Tuple[List[int], bool]:
+        """Indexes of the characters of ``text`` outside quotes, and whether it ends inside quotes.
+
+        Backslash escapes are skipped, and so is a ``$( ... )`` body: its inner
+        quotes are its own (``rm -rf "$(path "$v")"`` is quoted).
+        """
+        unquoted: List[int] = []
+        quote = ""
+        i = 0
+        while i < len(text):
+            char = text[i]
+            if quote != "'" and (char == "\\" or text.startswith("$(", i)):
+                i = ShellAnalyzer._skip_escape_or_substitution(text, i)
+                continue
+            if char in "'\"" and quote in ("", char):
+                quote = "" if quote else char
+            elif not quote:
+                unquoted.append(i)
+            i += 1
+        return unquoted, bool(quote)
+
+    def _has_unquoted_var(self, args: str) -> bool:
+        """True if ``args`` (up to the next command separator) expands an unquoted $NAME."""
+        for i in self._scan_quotes(args)[0]:
+            if args[i] in ";&|":
+                return False
+            if args[i] == "$" and self._VAR_NAME.match(args, i):
+                return True
+        return False
+
+    @staticmethod
+    def _skip_escape_or_substitution(text: str, i: int) -> int:
+        """Index after the ``\\x`` escape or the ``$( ... )`` that starts at ``i``."""
+        if text[i] == "\\":
+            return i + 2
+        return ShellAnalyzer._skip_command_substitution(text, i + 2)
+
+    @staticmethod
+    def _skip_command_substitution(text: str, start: int) -> int:
+        """Index just after the ``)`` closing a ``$(`` whose body starts at ``start``."""
+        depth = 1
+        i = start
+        while i < len(text) and depth:
+            if text[i] == "(":
+                depth += 1
+            elif text[i] == ")":
+                depth -= 1
+            i += 1
+        return i
+
+    @classmethod
+    def _is_command(cls, prefix: str) -> bool:
+        """True if a word right after ``prefix`` is in command position."""
+        words = prefix.split()
+        if not words:
+            return True
+        last = words[-1]
+        return last[-1] in ";&|(`" or last in cls._COMMAND_PREFIXES
+
+    def _rm_or_cd_with_unquoted_var(self, line: str) -> Optional[str]:
+        """``"rm"`` or ``"cd"`` if that command gets an unquoted variable on this line."""
+        for match in self._RM_OR_CD.finditer(line):
+            prefix = line[: match.start()]
+            # Skip text inside a string (echo "run: rm $X") and subcommands
+            # (docker image rm $ID, git rm $FILE).
+            if self._scan_quotes(prefix)[1] or not self._is_command(prefix):
+                continue
+            if self._has_unquoted_var(line[match.end() :]):
+                return match.group(1)
+        return None
+
     def _check_unquoted_vars(self, file_path: str, line_num: int, line: str) -> List[AnalysisIssue]:
         """Check for unquoted variables in dangerous contexts."""
-        issues: List[AnalysisIssue] = []
-
-        dangerous = [
-            (r"\[\s+-[a-z]\s+\$[A-Za-z_]", "test with unquoted var"),
-            (r"rm\s+.*\$[A-Za-z_][A-Za-z0-9_]*[^\"'\s]", "rm with unquoted var"),
-            (r"cd\s+\$[A-Za-z_][A-Za-z0-9_]*\s", "cd with unquoted var"),
+        desc = None
+        if self._UNQUOTED_TEST.search(line):
+            desc = "test with unquoted var"
+        else:
+            command = self._rm_or_cd_with_unquoted_var(line)
+            if command:
+                desc = f"{command} with unquoted var"
+        if desc is None:
+            return []
+        return [
+            self._create_issue(
+                file_path,
+                line_num,
+                line,
+                AnalysisIssueType.SHELL_UNQUOTED_VARIABLE,
+                AnalysisIssueSeverity.MEDIUM,
+                f"Unquoted variable: {desc}",
+                'Quote variables: "$var" instead of $var.',
+                0.65,
+                "unquoted-var",
+            )
         ]
-
-        for pattern, desc in dangerous:
-            if re.search(pattern, line):
-                issues.append(
-                    self._create_issue(
-                        file_path,
-                        line_num,
-                        line,
-                        AnalysisIssueType.SHELL_UNQUOTED_VARIABLE,
-                        AnalysisIssueSeverity.MEDIUM,
-                        f"Unquoted variable: {desc}",
-                        'Quote variables: "$var" instead of $var.',
-                        0.65,
-                        "unquoted-var",
-                    )
-                )
-                break
-
-        return issues
 
     def _strip_inline_comment(self, line: str) -> str:
         """Remove inline comments, preserving strings."""
