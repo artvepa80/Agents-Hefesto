@@ -143,9 +143,8 @@ _C_NOISE = re.compile(
 # Objective-C syntax that C and C++ do not have. Checked after comments and
 # literals are removed, so Doxygen ``@interface``/``@end`` commands do not match.
 _OBJC_MARKERS = re.compile(
-    r"^[ \t]*@(?:interface|protocol|implementation|end)\b"
-    r"|^[ \t]*#[ \t]*import\b"
-    r"|\bNS_ASSUME_NONNULL_BEGIN\b",
+    r"^[ \t]*@(?:interface|protocol|implementation|end|class|property)\b"
+    r"|^[ \t]*NS_ASSUME_NONNULL_BEGIN\b",
     re.MULTILINE,
 )
 _CPP_SOURCE_SUFFIXES = (".cpp", ".cc", ".cxx", ".c++")

@@ -141,6 +141,7 @@ def _engine_run(tmp_path: Path, name: str, code: str):
     path = tmp_path / name
     path.write_text(code)
     engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+    engine.experimental = frozenset({"c-cpp"})
     report = engine.analyze_files([str(path)], project_root=str(tmp_path))
     return engine, report
 
@@ -202,7 +203,8 @@ NS_ASSUME_NONNULL_END
         _BRIDGE_H,
         "@interface Foo : NSObject\n@property int x;\n@end\n",
         "@protocol P\n- (void)run;\n@end\n",
-        '#import "Other.h"\nint f(void);\n',
+        "@class Foo;\nint f(void);\n",
+        "@property (nonatomic) int x;\n",
         "NS_ASSUME_NONNULL_BEGIN\nint f(void);\nNS_ASSUME_NONNULL_END\n",
         "  @end\n",
     ],
@@ -222,6 +224,9 @@ def test_objective_c_header_is_skipped(tmp_path: Path, content: str) -> None:
         "// #import <x.h>\n// NS_ASSUME_NONNULL_BEGIN\nint f(void);\n",
         'const char *s = "@interface @end #import";\n',
         "int at_end(void); /* @end */\n",
+        "/* @class Foo;\n@property x */\nint f(void);\n",
+        # ``#import`` alone is not enough: GCC accepts it in C too.
+        '#import "Other.h"\nint f(void);\n',
     ],
 )
 def test_c_header_with_objc_words_in_comments_stays_c(tmp_path: Path, content: str) -> None:
@@ -230,46 +235,59 @@ def test_c_header_with_objc_words_in_comments_stays_c(tmp_path: Path, content: s
     assert LanguageDetector.detect(path, content) == Language.C
 
 
-def test_objective_c_header_does_not_fail_the_gate(tmp_path: Path) -> None:
-    """``--fail-on HIGH`` on a tree with an Objective-C ``Bridge.h`` exits 0."""
+_RN_TREE = {
+    "ios/AppDelegate.h": "#import <UIKit/UIKit.h>\n@interface AppDelegate : UIResponder\n@end\n",
+    "ios/RCTBridgeModule.h": _BRIDGE_H,
+    # Objective-C++: Objective-C and C++ markers together count as Objective-C.
+    "ios/TurboBridge.h": "namespace facebook {\nclass Turbo;\n}\n@class RCTBridge;\n",
+    "cpp/jsi.cpp": "namespace jsi {\nint value(int a) { return a; }\n}\n",
+    "cpp/util.c": "int add(int a, int b) { return a + b; }\n",
+    "index.js": "export const x = 1;\n",
+}
+
+
+def _cli(tmp_path: Path, *args: str):
     import subprocess
     import sys
 
-    pytest.importorskip("tree_sitter_language_pack")
-    (tmp_path / "Bridge.h").write_text(_BRIDGE_H)
-    (tmp_path / "util.c").write_text("int add(int a, int b) { return a + b; }\n")
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "hefesto.cli.main",
-            "analyze",
-            str(tmp_path),
-            "--fail-on",
-            "HIGH",
-            "--output",
-            "json",
-            "--quiet",
-        ],
+    return subprocess.run(
+        [sys.executable, "-m", "hefesto.cli.main", "analyze", str(tmp_path), *args],
         capture_output=True,
         text=True,
         cwd=str(Path(__file__).resolve().parents[1]),
     )
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "Bridge.h" not in result.stdout
 
 
-def test_only_objective_c_headers_need_allow_no_files(tmp_path: Path) -> None:
-    """A tree with nothing but Objective-C headers analyzes no file, like a tree of
-    ``.m`` files: ``--fail-on`` exits 1 unless ``--allow-no-files`` is set."""
-    import subprocess
-    import sys
-
-    (tmp_path / "Bridge.h").write_text(_BRIDGE_H)
-    base = [sys.executable, "-m", "hefesto.cli.main", "analyze", str(tmp_path), "--quiet"]
-    root = str(Path(__file__).resolve().parents[1])
-    strict = subprocess.run(base + ["--fail-on", "HIGH"], capture_output=True, cwd=root)
-    allowed = subprocess.run(
-        base + ["--fail-on", "HIGH", "--allow-no-files"], capture_output=True, cwd=root
+def test_react_native_tree_does_not_fail_the_gate(tmp_path: Path) -> None:
+    """``--experimental c-cpp --fail-on HIGH`` on a React Native-like tree exits 0,
+    and none of its Objective-C headers is analyzed."""
+    pytest.importorskip("tree_sitter_language_pack")
+    for rel, text in _RN_TREE.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    result = _cli(
+        tmp_path, "--experimental", "c-cpp", "--fail-on", "HIGH", "--output", "json", "--quiet"
     )
-    assert (strict.returncode, allowed.returncode) == (1, 0)
+    assert result.returncode == 0, result.stdout + result.stderr
+    for header in ("AppDelegate.h", "RCTBridgeModule.h", "TurboBridge.h"):
+        assert header not in result.stdout
+    assert "jsi.cpp" in result.stdout and "util.c" in result.stdout
+
+
+def _normalized(text: str) -> str:
+    import re
+
+    return re.sub(r"\d+\.\d+s", "<t>", text)
+
+
+def test_only_objective_c_headers_match_the_default_run(tmp_path: Path) -> None:
+    """A tree of Objective-C headers gives the exit code and messages of a run
+    without ``c-cpp`` (the files are unrecognized, as before C support)."""
+    (tmp_path / "Bridge.h").write_text(_BRIDGE_H)
+    default = _cli(tmp_path, "--fail-on", "HIGH")
+    on = _cli(tmp_path, "--fail-on", "HIGH", "--experimental", "c-cpp")
+    assert default.returncode == on.returncode == 1
+    assert "Found 0 file(s)" in on.stdout
+    assert "Gate failure: no files were analyzed (exit 1)" in on.stdout
+    assert _normalized(on.stdout) == _normalized(default.stdout)
+    assert on.stderr == default.stderr
