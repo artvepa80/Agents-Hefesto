@@ -46,6 +46,10 @@ inputs:
     description: 'Code scanning category of the upload (distinguishes several Hefesto runs in one repository)'
     required: false
     default: 'hefesto'
+  multilang:
+    description: 'Opt-in. true: install the [multilang] extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed too (their grammars are downloaded on the first run; a file whose grammar cannot be loaded is listed as not analyzed and fails fail_on). Default false: base package only, those files are skipped (parser unavailable).'
+    required: false
+    default: 'false'
   telemetry:
     description: 'Opt-in anonymous telemetry. Only 1 or true enables it: one anonymous ping per run (version, file count, issue count, exit code) and the CLI usage events. Any other value, including the default 0, sends nothing.'
     required: false
@@ -65,15 +69,12 @@ runs:
     # Install HefestoAI from this action's own checkout (the package is not
     # pulled from PyPI) into a private virtualenv, so the job's Python is
     # left untouched. Needs python3 >= 3.11 on the runner (ubuntu-latest has it).
+    # multilang: 'true' adds the [multilang] extra (opt-in, default off).
     - name: Install HefestoAI
       shell: bash
-      run: |
-        python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' || {
-          echo "::error::HefestoAI needs python3 >= 3.11 on the runner (found $(python3 --version 2>&1)). Add actions/setup-python before this step."
-          exit 1
-        }
-        python3 -m venv "$RUNNER_TEMP/hefesto-venv"
-        "$RUNNER_TEMP/hefesto-venv/bin/python" -m pip install --quiet --disable-pip-version-check "$GITHUB_ACTION_PATH"
+      env:
+        INPUT_MULTILANG: ${{ inputs.multilang }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/action_install.sh"
 
     - name: Run HefestoAI
       id: analyze

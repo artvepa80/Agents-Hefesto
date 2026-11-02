@@ -35,7 +35,7 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.4` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.4` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need `multilang: 'true'` in the Action (opt-in) or the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/mo per user) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
@@ -50,7 +50,7 @@ These analyzers look for drift between what your project **declares** and what i
 | **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
 | **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
 | **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
-| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not read by any `scripts/action_*.sh`; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
 | **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
 
 ```bash
@@ -168,6 +168,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
+| `multilang` | Opt-in. `true`: installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed too (grammars are downloaded on the first run; a file whose grammar cannot be loaded fails `fail_on`) | `false` |
 | `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:

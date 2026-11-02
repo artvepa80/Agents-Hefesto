@@ -480,6 +480,23 @@ def test_install_artifact_flags_unused_input(tmp_path: Path) -> None:
     assert flagged == {"unused_flag"}  # target is consumed via INPUT_TARGET
 
 
+def test_install_artifact_input_read_by_another_action_script(tmp_path: Path) -> None:
+    _write(tmp_path / "action.yml", ACTION_YML)
+    _write(tmp_path / "scripts" / "action_entrypoint.sh", ENTRYPOINT_SH)
+    _write(tmp_path / "scripts" / "action_install.sh", 'echo "${INPUT_UNUSED_FLAG:-}"\n')
+    _write(tmp_path / "scripts" / "other.sh", 'echo "${INPUT_TARGET:-}"\n')
+    issues = InstallArtifactParityAnalyzer().analyze_project(tmp_path)
+    assert [i for i in issues if "input '" in i.message] == []
+
+
+def test_install_artifact_other_scripts_do_not_count(tmp_path: Path) -> None:
+    _write(tmp_path / "action.yml", ACTION_YML)
+    _write(tmp_path / "scripts" / "action_entrypoint.sh", ENTRYPOINT_SH)
+    _write(tmp_path / "scripts" / "release.sh", 'echo "${INPUT_UNUSED_FLAG:-}"\n')
+    issues = InstallArtifactParityAnalyzer().analyze_project(tmp_path)
+    assert ["unused_flag" in i.message for i in issues if "input '" in i.message] == [True]
+
+
 def test_install_artifact_flags_missing_copy(tmp_path: Path) -> None:
     _write(tmp_path / "pyproject.toml", PYPROJECT_MIN)
     _write(tmp_path / "README.md", "x")

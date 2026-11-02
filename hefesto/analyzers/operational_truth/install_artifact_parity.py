@@ -2,7 +2,7 @@
 
 Detects drift between install artifacts and the real repo:
 - ``action.yml`` inputs that are never referenced as ``INPUT_<NAME>``
-  in ``scripts/action_entrypoint.sh``.
+  in ``scripts/action_entrypoint.sh`` or another ``scripts/action_*.sh``.
 - ``Dockerfile.action`` ``COPY`` sources that do not exist in the repo.
 
 Conservative scope: all findings are concrete, high-confidence checks.
@@ -57,7 +57,10 @@ class InstallArtifactParityAnalyzer:
             return []
 
         try:
-            script = entrypoint.read_text(encoding="utf-8", errors="ignore")
+            script = "\n".join(
+                path.read_text(encoding="utf-8", errors="ignore")
+                for path in sorted(entrypoint.parent.glob("action_*.sh"))
+            )
         except Exception:
             return []
 
@@ -76,10 +79,10 @@ class InstallArtifactParityAnalyzer:
                     severity=AnalysisIssueSeverity.MEDIUM,
                     message=(
                         f"action.yml declares input '{name}' but "
-                        f"scripts/action_entrypoint.sh never reads {env_var}."
+                        f"no scripts/action_*.sh reads {env_var}."
                     ),
                     suggestion=(
-                        f"Either consume {env_var} in action_entrypoint.sh or "
+                        f"Either consume {env_var} in a scripts/action_*.sh script or "
                         f"remove the unused input from action.yml."
                     ),
                     engine="internal:operational_truth",
