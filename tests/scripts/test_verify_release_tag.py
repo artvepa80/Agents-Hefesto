@@ -83,18 +83,18 @@ def test_wrapper_name_and_version_match_the_tag(tmp_path):
     content = """
 [project]
 name = "hefesto-mcp"
-version = "4.20.5"
+version = "1.2.3"
 """
     (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
     result = run_script(
         tmp_path,
-        ["--tag", "v4.20.5", "--project-name", "hefesto-mcp"],
+        ["--tag", "v1.2.3", "--project-name", "hefesto-mcp"],
     )
     assert result.returncode == 0
     assert "SUCCESS" in result.stdout
     mismatch = run_script(
         tmp_path,
-        ["--tag", "v4.20.4", "--project-name", "hefesto-mcp"],
+        ["--tag", "v9.9.9", "--project-name", "hefesto-mcp"],
     )
     assert mismatch.returncode == 2
 
