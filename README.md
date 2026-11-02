@@ -692,6 +692,8 @@ enable_memory_budget_gate: false  # --enable-memory-budget-gate
 copybook_paths:             # --copybook-path (COBOL copybook directories outside the scan)
   - ../copylib              # relative paths are resolved from this file's directory
 include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
+experimental:               # --experimental (comma-separated; the CLI value replaces this list)
+  - lang-security           # C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)
 ```
 
 - **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,

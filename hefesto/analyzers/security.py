@@ -70,9 +70,7 @@ def is_test_path(file_path: str) -> bool:
     True when a directory segment is exactly ``test``, ``tests`` or
     ``__tests__``, or the file name follows a test convention: ``test_*``,
     ``*_test.<ext>``, ``*.test.<ext>``, ``*.spec.<ext>``, ``conftest.py``,
-    ``test.py`` or ``tests.py``. .NET test projects count too: a directory
-    ending in ``.Tests``, ``.Test``, ``.UnitTests`` or ``.IntegrationTests``,
-    or a C# file named ``*Tests.cs`` / ``*Test.cs``. Substrings never count, so
+    ``test.py`` or ``tests.py``. Substrings never count, so
     ``src/contest/config.py`` and ``latest_settings.py`` are not test code.
     There is no special case for ``fixtures``: a fixture under ``tests/`` is
     test code because of the ``tests`` segment.
@@ -81,9 +79,7 @@ def is_test_path(file_path: str) -> bool:
     if not parts:
         return False
     *dirs, name = parts
-    if any(seg in _TEST_DIRS or seg.endswith(_DOTNET_TEST_DIR_SUFFIXES) for seg in dirs):
-        return True
-    if _DOTNET_TEST_FILE.search(file_path.replace("\\", "/").rsplit("/", 1)[-1]):
+    if any(seg in _TEST_DIRS for seg in dirs):
         return True
     stem = name.split(".", 1)[0]
     return (
@@ -107,6 +103,16 @@ def is_example_path(file_path: str) -> bool:
         return False
     *dirs, name = parts
     return any(seg in _EXAMPLE_DIRS for seg in dirs) or name.endswith(".example")
+
+
+def is_dotnet_test_path(file_path: str) -> bool:
+    """A .NET test project file: a directory ending in ``.Tests``, ``.Test``,
+    ``.UnitTests`` or ``.IntegrationTests``, or a C# file named ``*Tests.cs`` /
+    ``*Test.cs``. Used only by the experimental language rules."""
+    parts = _path_segments(file_path)
+    if any(seg.endswith(_DOTNET_TEST_DIR_SUFFIXES) for seg in parts[:-1]):
+        return True
+    return bool(_DOTNET_TEST_FILE.search(file_path.replace("\\", "/").rsplit("/", 1)[-1]))
 
 
 def is_test_or_example_path(file_path: str) -> bool:
@@ -282,6 +288,35 @@ class SecurityAnalyzer:
         (r"(?-i:AKIA[0-9A-Z]{16})", "AWS Access Key ID"),
     ]
 
+    # ``--experimental lang-security``: set by the engine; off by default.
+    lang_rules = False
+
+    def _runs_language_rules(self, tree: GenericAST, file_path: str) -> bool:
+        if not self.lang_rules or tree.language not in _RULE_LANGUAGES:
+            return False
+        return not (is_test_or_example_path(file_path) or is_dotnet_test_path(file_path))
+
+    def _with_language_rules(
+        self, tree: GenericAST, file_path: str, generic: List[AnalysisIssue]
+    ) -> List[AnalysisIssue]:
+        """The C#/Go/Rust rules plus the generic SQL and command findings.
+
+        One finding per line: a language rule replaces the generic one.
+        """
+        if not self._runs_language_rules(tree, file_path):
+            return generic
+        rules = find_language_rule_issues(tree, file_path)
+        sql_lines, cmd_lines = rule_lines(rules)
+        kept = [
+            g
+            for g in generic
+            if not (
+                (g.issue_type == AnalysisIssueType.SQL_INJECTION_RISK and g.line in sql_lines)
+                or (g.issue_type == AnalysisIssueType.COMMAND_INJECTION and g.line in cmd_lines)
+            )
+        ]
+        return rules + kept
+
     def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Analyze code for security vulnerabilities."""
         issues = []
@@ -289,20 +324,7 @@ class SecurityAnalyzer:
         issues.extend(self._check_hardcoded_secrets(tree, file_path, code))
         generic = self._check_sql_injection(tree, file_path, code)
         generic += self._check_command_injection(tree, file_path, code)
-        if tree.language in _RULE_LANGUAGES and not is_test_or_example_path(file_path):
-            rules = find_language_rule_issues(tree, file_path)
-            # One finding per line: the language rule replaces the generic one.
-            sql_lines, cmd_lines = rule_lines(rules)
-            generic = [
-                g
-                for g in generic
-                if not (
-                    (g.issue_type == AnalysisIssueType.SQL_INJECTION_RISK and g.line in sql_lines)
-                    or (g.issue_type == AnalysisIssueType.COMMAND_INJECTION and g.line in cmd_lines)
-                )
-            ]
-            issues.extend(rules)
-        issues.extend(generic)
+        issues.extend(self._with_language_rules(tree, file_path, generic))
         issues.extend(self._check_eval_usage(tree, file_path, code))
 
         if tree.language == "python":

@@ -1142,7 +1142,13 @@ Is it a minor style or documentation issue?
 
 ## C#, Go and Rust security rules (experimental)
 
-These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
+These rules are an experimental feature, named `lang-security`, and are off by default. Turn them on with `hefesto analyze . --experimental lang-security` or with `experimental: [lang-security]` in `.hefesto.yaml`.
+
+**Experimental** means: off by default; its results have not been measured yet; and a run without it gives the same output as a run of a release that did not have it. A name given on the command line replaces the list in `.hefesto.yaml`. An unknown name stops the run with exit code 2; a name that is no longer experimental only prints a warning. When the feature is on, the JSON report lists it in `meta.experimental` and the SARIF run in `properties.experimental`. The GitHub Action has no input for it, and the MCP server never turns it on.
+
+**Memory and time:** the rules walk the syntax tree the generic checks already built, so they add no parser. Peak resident memory of the `hefesto` process, off / on, `--severity LOW --output json`, one run each: Newtonsoft.Json `0a2e291` 106 / 107 MB (9.9 / 9.3 s), gin 73 / 73 MB (2.6 / 2.6 s), ripgrep 83 / 83 MB (3.8 / 3.9 s).
+
+With the feature on, these rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. The .NET test-project paths apply to these rules only; the other checks keep the SEC-03 test paths. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
 
 **Measured** means: for each rule, its findings on a labelled corpus were checked by hand and reported as `correct/n`. A precision claim of 95% or more needs n ≥ 59 findings for that rule with all of them correct (the smallest n where 0 errors gives a one-sided 95% lower bound of at least 95%). Until a rule is measured, it is experimental.
 

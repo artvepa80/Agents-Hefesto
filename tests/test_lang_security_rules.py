@@ -9,12 +9,20 @@ import pytest
 pytest.importorskip("tree_sitter_language_pack")
 
 
-def _rules(language: str, code: str, path: str = "src/app.x") -> List[Tuple[str, int, str]]:
+def _analyzer():
+    """A SecurityAnalyzer with ``--experimental lang-security`` on."""
     from hefesto.analyzers.security import SecurityAnalyzer
+
+    analyzer = SecurityAnalyzer()
+    analyzer.lang_rules = True
+    return analyzer
+
+
+def _rules(language: str, code: str, path: str = "src/app.x") -> List[Tuple[str, int, str]]:
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     tree = TreeSitterParser(language).parse(code, path)
-    issues = SecurityAnalyzer().analyze(tree, path, code)
+    issues = _analyzer().analyze(tree, path, code)
     return sorted((i.rule_id, i.line, i.severity.value) for i in issues if i.rule_id)
 
 
@@ -143,14 +151,13 @@ def test_rust_unsafe_fn_is_inventoried() -> None:
 
 
 def test_rule_issue_types_and_cwe() -> None:
-    from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     code = _cs("var f = new BinaryFormatter();\nvar h = MD5.Create();")
     tree = TreeSitterParser("c_sharp").parse(code, "a.cs")
     got = {
         i.rule_id: (i.issue_type.value, i.metadata.get("cwe"))
-        for i in SecurityAnalyzer().analyze(tree, "a.cs", code)
+        for i in _analyzer().analyze(tree, "a.cs", code)
     }
     assert got == {
         "CS002": ("INSECURE_DESERIALIZATION", "CWE-502"),
@@ -159,14 +166,13 @@ def test_rule_issue_types_and_cwe() -> None:
 
 
 def test_rule_replaces_the_generic_finding_on_the_same_line() -> None:
-    from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     code = _go('db.Query("SELECT * FROM t WHERE a=" + a)')
     tree = TreeSitterParser("go").parse(code, "a.go")
     sql = [
         i
-        for i in SecurityAnalyzer().analyze(tree, "a.go", code)
+        for i in _analyzer().analyze(tree, "a.go", code)
         if i.issue_type.value == "SQL_INJECTION_RISK"
     ]
     assert [(i.rule_id, i.line) for i in sql] == [("GO002", 4)]
@@ -191,7 +197,7 @@ def test_both_deserialization_types_carry_cwe_502_in_sarif(tmp_path) -> None:
     (tmp_path / "b.py").write_text("import pickle\n")
     out = subprocess.run(
         [sys.executable, "-m", "hefesto.cli.main", "analyze", str(tmp_path)]
-        + ["--output", "sarif", "--severity", "LOW", "--quiet"],
+        + ["--output", "sarif", "--severity", "LOW", "--quiet", "--experimental", "lang-security"],
         capture_output=True,
         text=True,
         cwd=str(Path(__file__).resolve().parents[1]),

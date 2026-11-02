@@ -25,6 +25,7 @@ import pytest
 
 from hefesto.analyzers.security import (
     SecurityAnalyzer,
+    is_dotnet_test_path,
     is_example_path,
     is_test_or_example_path,
     is_test_path,
@@ -203,7 +204,7 @@ def test_engine_reports_secret_in_contest_dir(
     ],
 )
 def test_dotnet_test_projects_are_test_code(file_path: str) -> None:
-    assert is_test_path(file_path)
+    assert is_dotnet_test_path(file_path)
 
 
 @pytest.mark.parametrize(
@@ -219,4 +220,4 @@ def test_dotnet_test_projects_are_test_code(file_path: str) -> None:
     ],
 )
 def test_dotnet_lookalikes_are_not_test_code(file_path: str) -> None:
-    assert not is_test_path(file_path)
+    assert not is_dotnet_test_path(file_path)
