@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — a grammar that fails to load is tried once per run, not once per file
+
+When a tree-sitter grammar cannot be loaded (offline, or a download that hangs until it times out), `hefesto analyze` tried to load it again for every file of that language, so each file paid the full network timeout (three JavaScript files cost three timeouts). The first failure per grammar is now remembered for the rest of the run and every later file of that language is reported straight away. Each later file gets a new exception of the same type and message, so the remembered one does not collect a longer traceback with every file. Every such file is still listed in `meta.not_analyzed` with `reason: grammar_unavailable`, so `--fail-on` still fails the run. The failure is kept in memory for one run only, never written to disk, and the next run tries the download again. Concurrent requests for the same grammar wait for one load. With a simulated 2 s timeout, 3 JavaScript and 3 Java files went from 12.0 s (6 loads) to 4.0 s (2 loads).
+
 ### Fixed — tree-sitter declarations use their declared name
 
 The tree-sitter parser took the first identifier inside a declaration as its name. C# methods whose return type is a plain class name were reported under that type name (`public async Task WriteLazy()` gave `Function 'Task'`), and Go methods with a receiver had no name (`<anonymous>`). The parser now reads the grammar's `name` field first and falls back to the previous lookup. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. On Newtonsoft.Json 13.0.3, 71 of 727 messages get the method name instead of the return type and 107 `function` fields change; on gin (main at `0f09c3a`), 8 messages and 21 `function` fields change for Go methods; on zod v3.23.8, 2 messages change (class `ZodString`). gson and ripgrep are unchanged. The pr-review dedup key includes the message, so pull requests that were already reviewed may get these comments once more.
