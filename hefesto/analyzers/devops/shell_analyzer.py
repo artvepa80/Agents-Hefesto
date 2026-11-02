@@ -186,11 +186,8 @@ class ShellAnalyzer:
         i = 0
         while i < len(text):
             char = text[i]
-            if char == "\\" and quote != "'":
-                i += 2
-                continue
-            if text.startswith("$(", i) and quote != "'":
-                i = ShellAnalyzer._skip_command_substitution(text, i + 2)
+            if quote != "'" and (char == "\\" or text.startswith("$(", i)):
+                i = ShellAnalyzer._skip_escape_or_substitution(text, i)
                 continue
             if char in "'\"" and quote in ("", char):
                 quote = "" if quote else char
@@ -207,6 +204,13 @@ class ShellAnalyzer:
             if args[i] == "$" and self._VAR_NAME.match(args, i):
                 return True
         return False
+
+    @staticmethod
+    def _skip_escape_or_substitution(text: str, i: int) -> int:
+        """Index after the ``\\x`` escape or the ``$( ... )`` that starts at ``i``."""
+        if text[i] == "\\":
+            return i + 2
+        return ShellAnalyzer._skip_command_substitution(text, i + 2)
 
     @staticmethod
     def _skip_command_substitution(text: str, start: int) -> int:
