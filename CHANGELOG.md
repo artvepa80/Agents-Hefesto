@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation — written review summary on every merged PR
+
+- `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
+
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
 - **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
