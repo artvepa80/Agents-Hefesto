@@ -24,6 +24,18 @@ def test_trigger_and_workflow_permissions_stay_minimal():
     assert data["concurrency"]["group"] == "release-${{ github.ref }}"
 
 
+def _assert_local_wheel_smoke(smoke_run: str) -> None:
+    assert "--find-links" not in smoke_run
+    assert '"${engines[0]}[mcp]"' in smoke_run
+    assert "--no-index --no-deps" in smoke_run
+    assert "pip check" in smoke_run
+    assert "direct_url.json" in smoke_run
+    assert '"file:"' in smoke_run
+    assert "build_server()" in smoke_run
+    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in smoke_run
+    assert "cd /" in smoke_run
+
+
 def test_build_keeps_guard_tag_check_and_twine_check():
     build = _workflow()["jobs"]["build"]
     names = [step["name"] for step in build["steps"]]
@@ -65,16 +77,7 @@ def test_build_keeps_guard_tag_check_and_twine_check():
     smoke = next(
         step for step in build["steps"] if step["name"] == "Smoke install wrapper from local wheels"
     )
-    smoke_run = smoke["run"]
-    assert "--find-links" not in smoke_run
-    assert '"${engines[0]}[mcp]"' in smoke_run
-    assert "--no-index --no-deps" in smoke_run
-    assert "pip check" in smoke_run
-    assert "direct_url.json" in smoke_run
-    assert '"file:"' in smoke_run
-    assert "build_server()" in smoke_run
-    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in smoke_run
-    assert "cd /" in smoke_run
+    _assert_local_wheel_smoke(smoke["run"])
     assert "id-token" not in build.get("permissions", {})
 
 
