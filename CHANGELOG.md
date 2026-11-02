@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.21.0] - 2026-11-07
+
+### Upgrade notes — read first if you use the GitHub Action on `@v4`
+
+`@v4` moves to 4.21.0 when it is released, so workflows on `@v4` pick up these two changes without an edit:
+
+1. **Python 3.11 or newer is required.** The Action now stops with an error when the runner's `python3` is 3.10 (for example on `ubuntu-22.04`). Add `actions/setup-python` with Python 3.11 or newer before the Action, or pin `artvepa80/Agents-Hefesto@v4.20.4`. On Python 3.10, `pip` keeps installing 4.20.x.
+2. **A file whose tree-sitter grammar cannot be loaded now fails `--fail-on` (exit 1).** Such a file used to be skipped as a parse error, so the gate passed over code it never checked. It is now listed in `meta.not_analyzed` with `reason: grammar_unavailable`, and the not-analyzed gate fails the run; `--allow-not-analyzed` opts out. The Action installs the base package without `[multilang]`, so a missing grammar pack is still a skip with an install hint there. The case that changes is a CLI or hook run with `[multilang]` installed, an empty grammar cache and no network.
+
+Also in this release: tree-sitter function and class names are no longer cut or shifted after a UTF-8 BOM or other non-ASCII text, and C# methods and Go methods with a receiver are reported under their declared name instead of their return type or `<anonymous>`. Finding messages change for those declarations (line numbers, rule types and counts do not), so pull requests that were already reviewed may get those comments once more. Details below.
+
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
 - **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
