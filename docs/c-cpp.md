@@ -32,7 +32,17 @@ removed, it has C++-only syntax: `class` or `namespace` at the start of a line,
 `#include <name>` without a suffix (`<vector>`). `extern "C"` is not a marker,
 since C headers wrap their declarations in it. Otherwise a header is C++ when a
 `.cpp`, `.cc`, `.cxx` or `.c++` file with the same name sits next to it.
-Otherwise it is C. Objective-C headers are read as C.
+Otherwise it is C.
+
+A `.h` header is Objective-C, and is skipped (not analyzed, not listed in
+`meta.not_analyzed`, never fails the gate), when after comments and literals are
+removed it has `@interface`, `@protocol`, `@implementation` or `@end` at the
+start of a line, an `#import` directive, or `NS_ASSUME_NONNULL_BEGIN`. This check
+runs before the C++ check, so Objective-C++ headers are skipped too. Doxygen
+commands such as `@interface` inside comments do not count. Hefesto does not
+analyze Objective-C (`.m`, `.mm` are not read either), so a tree with nothing but
+Objective-C headers analyzes no file: `--fail-on` then exits 1 unless
+`--allow-no-files` is set, as for any tree without supported files.
 
 ## Parse errors
 

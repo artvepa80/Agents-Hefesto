@@ -140,16 +140,30 @@ _C_NOISE = re.compile(
     r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'",
     re.DOTALL,
 )
+# Objective-C syntax that C and C++ do not have. Checked after comments and
+# literals are removed, so Doxygen ``@interface``/``@end`` commands do not match.
+_OBJC_MARKERS = re.compile(
+    r"^[ \t]*@(?:interface|protocol|implementation|end)\b"
+    r"|^[ \t]*#[ \t]*import\b"
+    r"|\bNS_ASSUME_NONNULL_BEGIN\b",
+    re.MULTILINE,
+)
 _CPP_SOURCE_SUFFIXES = (".cpp", ".cc", ".cxx", ".c++")
 
 
 def _header_language(file_path: Path, content: Optional[str]) -> Language:
-    """C or C++ for a ``.h`` header.
+    """C, C++ or UNKNOWN (Objective-C, skipped) for a ``.h`` header.
 
+    UNKNOWN when the text (comments and literals removed) has Objective-C
+    syntax: ``@interface``, ``@protocol``, ``@implementation`` or ``@end`` at
+    the start of a line, ``#import``, or ``NS_ASSUME_NONNULL_BEGIN``.
     C++ when the text (comments and literals removed) has C++-only syntax,
     or when a C++ source with the same stem sits next to it; C otherwise.
     """
-    if content and _CPP_MARKERS.search(_C_NOISE.sub(" ", content)):
+    code = _C_NOISE.sub(" ", content) if content else ""
+    if _OBJC_MARKERS.search(code):
+        return Language.UNKNOWN
+    if _CPP_MARKERS.search(code):
         return Language.CPP
     try:
         for suffix in _CPP_SOURCE_SUFFIXES:

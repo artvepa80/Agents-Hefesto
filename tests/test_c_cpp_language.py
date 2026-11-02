@@ -179,3 +179,97 @@ def test_error_at_top_level_with_recovered_functions_is_analyzed(tmp_path: Path)
     engine, report = _engine_run(tmp_path, "f.hpp", code)
     assert [f.language for f in report.file_results] == ["cpp"]
     assert engine._not_analyzed == []
+
+
+# --- Objective-C headers ------------------------------------------------------
+
+_BRIDGE_H = """\
+#import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+@protocol BridgeDelegate <NSObject>
+- (void)bridgeDidFinish:(NSString *)name;
+@end
+
+NS_ASSUME_NONNULL_END
+"""
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        _BRIDGE_H,
+        "@interface Foo : NSObject\n@property int x;\n@end\n",
+        "@protocol P\n- (void)run;\n@end\n",
+        '#import "Other.h"\nint f(void);\n',
+        "NS_ASSUME_NONNULL_BEGIN\nint f(void);\nNS_ASSUME_NONNULL_END\n",
+        "  @end\n",
+    ],
+)
+def test_objective_c_header_is_skipped(tmp_path: Path, content: str) -> None:
+    """A ``.h`` with Objective-C syntax is not C: it is skipped, not analyzed as C."""
+    path = tmp_path / "Bridge.h"
+    path.write_text(content)
+    assert LanguageDetector.detect(path, content) == Language.UNKNOWN
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        # Doxygen @-commands and #import in comments or strings are not Objective-C.
+        "/** @interface Foo\n * @protocol bar\n * @end\n */\nint f(void);\n",
+        "// #import <x.h>\n// NS_ASSUME_NONNULL_BEGIN\nint f(void);\n",
+        'const char *s = "@interface @end #import";\n',
+        "int at_end(void); /* @end */\n",
+    ],
+)
+def test_c_header_with_objc_words_in_comments_stays_c(tmp_path: Path, content: str) -> None:
+    path = tmp_path / "plain.h"
+    path.write_text(content)
+    assert LanguageDetector.detect(path, content) == Language.C
+
+
+def test_objective_c_header_does_not_fail_the_gate(tmp_path: Path) -> None:
+    """``--fail-on HIGH`` on a tree with an Objective-C ``Bridge.h`` exits 0."""
+    import subprocess
+    import sys
+
+    pytest.importorskip("tree_sitter_language_pack")
+    (tmp_path / "Bridge.h").write_text(_BRIDGE_H)
+    (tmp_path / "util.c").write_text("int add(int a, int b) { return a + b; }\n")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "hefesto.cli.main",
+            "analyze",
+            str(tmp_path),
+            "--fail-on",
+            "HIGH",
+            "--output",
+            "json",
+            "--quiet",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parents[1]),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Bridge.h" not in result.stdout
+
+
+def test_only_objective_c_headers_need_allow_no_files(tmp_path: Path) -> None:
+    """A tree with nothing but Objective-C headers analyzes no file, like a tree of
+    ``.m`` files: ``--fail-on`` exits 1 unless ``--allow-no-files`` is set."""
+    import subprocess
+    import sys
+
+    (tmp_path / "Bridge.h").write_text(_BRIDGE_H)
+    base = [sys.executable, "-m", "hefesto.cli.main", "analyze", str(tmp_path), "--quiet"]
+    root = str(Path(__file__).resolve().parents[1])
+    strict = subprocess.run(base + ["--fail-on", "HIGH"], capture_output=True, cwd=root)
+    allowed = subprocess.run(
+        base + ["--fail-on", "HIGH", "--allow-no-files"], capture_output=True, cwd=root
+    )
+    assert (strict.returncode, allowed.returncode) == (1, 0)

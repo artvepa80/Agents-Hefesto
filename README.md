@@ -293,7 +293,8 @@ pointing to the install command (also exposed via
 ³ C and C++ are experimental: the generic complexity and size checks run on
 them; there are no C/C++-specific rules yet, and they are not counted in the
 format total below. `.h` headers are read as C unless they contain C++-only
-syntax or sit next to a C++ source with the same name. Details:
+syntax or sit next to a C++ source with the same name; headers with
+Objective-C syntax (`@interface`, `#import`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
 
 ### DevOps & Configuration
@@ -473,7 +474,8 @@ analyzer raised an error, or its tree-sitter grammar could not be loaded, for
 example offline, or with an empty or damaged grammar cache) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
 `meta.not_analyzed` (`path`, `language`, `reason`: `read_error`,
-`analyzer_error` or `grammar_unavailable`, `exception`; a `grammar_unavailable`
+`analyzer_error`, `grammar_unavailable` or `parse_error` (an experimental C/C++
+file where the grammar recovered no declaration), `exception`; a `grammar_unavailable`
 entry also names the `grammar`), SARIF has an `error` notification for it in
 `invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
 with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
