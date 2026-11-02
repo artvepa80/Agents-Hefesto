@@ -146,7 +146,7 @@ Dashboard > Plugins & MCPs; otherwise they use the CLI.
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request
-10. Before or right after merge, the reviewer posts a written review summary as a PR comment: what changed, the risks checked, the test and CI evidence on the final head, and the merge timing. Every merged PR carries this comment.
+10. Before or right after merge, the reviewer posts a written review summary as a PR comment: what changed, the risks checked, the test and CI evidence on the final head, and the merge timing. Every merged PR carries this comment. The summary says who wrote it and never states or implies the maintainer's approval.
 
 ### Commit Message Format
 
