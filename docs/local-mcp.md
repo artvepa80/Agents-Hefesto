@@ -59,4 +59,4 @@ Startup sets `HEFESTO_TELEMETRY=0` for this process. The tool path does not call
 
 ## Container
 
-`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.4`, then runs `hefesto-mcp --help` so a pin that does not provide the command fails the build. It sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built from the next release, once that version is on PyPI.
+`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.4`, then runs `hefesto-mcp --help` and `build_server()`. `--help` only checks the console script; `build_server()` imports `mcp`, so a pin that omits the extra fails the build. It sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built from the next release, once that version is on PyPI.
