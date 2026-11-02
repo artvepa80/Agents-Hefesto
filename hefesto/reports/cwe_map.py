@@ -30,9 +30,12 @@ CWE_NAMES: Dict[int, str] = {
     95: (
         "Improper Neutralization of Directives in Dynamically Evaluated Code " "('Eval Injection')"
     ),
+    295: "Improper Certificate Validation",
+    327: "Use of a Broken or Risky Cryptographic Algorithm",
     396: "Declaration of Catch for Generic Exception",
     502: "Deserialization of Untrusted Data",
     798: "Use of Hard-coded Credentials",
+    843: "Access of Resource Using Incompatible Type ('Type Confusion')",
 }
 
 

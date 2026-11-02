@@ -1140,6 +1140,28 @@ Is it a minor style or documentation issue?
 
 ---
 
+## C#, Go and Rust security rules (experimental)
+
+These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
+
+| Rule | What it reports | Issue type | Severity | CWE |
+|------|-----------------|------------|----------|-----|
+| CS001 | `new SqlCommand(...)` (also OleDb, Odbc, Npgsql, MySql, Sqlite), `CommandText = ...` or `ExecuteSqlRaw`/`FromSqlRaw` whose SQL is built with `+`, `$"...{x}"` or `string.Format` | `SQL_INJECTION_RISK` | HIGH | 89 |
+| CS002 | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | `INSECURE_DESERIALIZATION` | HIGH | 502 |
+| CS003 | `Process.Start(...)` or `new ProcessStartInfo(...)` with an argument built from strings | `COMMAND_INJECTION` | MEDIUM | 78 |
+| CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | MEDIUM | 327 |
+| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` | `COMMAND_INJECTION` | HIGH | 78 |
+| GO002 | `Query`, `QueryRow`, `Exec`, `Prepare` (and `...Context`) whose SQL text is built by `fmt.Sprintf` or `+` | `SQL_INJECTION_RISK` | HIGH | 89 |
+| GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | MEDIUM | 327 |
+| GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
+| RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
+| RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
+| RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
+
+RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` to list every `unsafe` block.
+
+Not reported on purpose: a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments; Go `Exec` calls whose literal part has no SQL keyword.
+
 ## 📊 Quick Reference
 
 ### All Rules Summary

@@ -18,6 +18,8 @@ from pathlib import Path, PurePosixPath
 from typing import List, Tuple
 
 from hefesto.analyzers.eval_calls import find_eval_calls
+from hefesto.analyzers.lang_security_rules import LANGUAGES as _RULE_LANGUAGES
+from hefesto.analyzers.lang_security_rules import find_language_rule_issues, rule_lines
 from hefesto.analyzers.python_strings import (
     first_match_outside_strings,
     inside_string,
@@ -276,8 +278,22 @@ class SecurityAnalyzer:
         issues = []
 
         issues.extend(self._check_hardcoded_secrets(tree, file_path, code))
-        issues.extend(self._check_sql_injection(tree, file_path, code))
-        issues.extend(self._check_command_injection(tree, file_path, code))
+        generic = self._check_sql_injection(tree, file_path, code)
+        generic += self._check_command_injection(tree, file_path, code)
+        if tree.language in _RULE_LANGUAGES and not is_test_or_example_path(file_path):
+            rules = find_language_rule_issues(tree, file_path)
+            # One finding per line: the language rule replaces the generic one.
+            sql_lines, cmd_lines = rule_lines(rules)
+            generic = [
+                g
+                for g in generic
+                if not (
+                    (g.issue_type == AnalysisIssueType.SQL_INJECTION_RISK and g.line in sql_lines)
+                    or (g.issue_type == AnalysisIssueType.COMMAND_INJECTION and g.line in cmd_lines)
+                )
+            ]
+            issues.extend(rules)
+        issues.extend(generic)
         issues.extend(self._check_eval_usage(tree, file_path, code))
 
         if tree.language == "python":

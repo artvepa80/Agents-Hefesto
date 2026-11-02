@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — security rules for C#, Go and Rust (experimental)
+
+- 11 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 broken hash or cipher; GO001 shell `-c` with a built string, GO002 SQL built from strings, GO003 weak `crypto/...` packages, GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice. Test paths are skipped.
+- New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY` and `UNSAFE_CODE`. CWE names for 295, 327 and 843 added to the SARIF taxonomy.
+- Docs: rule table in `docs/ANALYSIS_RULES.md`. Tests: `tests/test_lang_security_rules.py`.
+
 ### Documentation — written review summary on every merged PR
 
 - `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
