@@ -8,11 +8,14 @@ The canonical ``server.json`` is deployed with the hosted landing page and serve
 ``server.json`` is never sent to the registry: its description and version
 (PyPI) differ from the hosted entry.
 
-The registry version tracks the deployed engine, not PyPI. The entry's
-version must equal all of: the hosted ``initialize`` ``serverInfo.version``,
-the ``engine.version`` returned by a minimal ``tools/call analyze`` (as the
-private ``scripts/verify_hosted_engine.py`` does), and ``changelog.json``
-``latest`` on the landing page.
+The registry version is the hosted engine version and the PyPI package
+version. The entry's version must equal all of: the hosted ``initialize``
+``serverInfo.version``, the ``engine.version`` returned by a minimal
+``tools/call analyze`` (as the private ``scripts/verify_hosted_engine.py``
+does), ``changelog.json`` ``latest`` on the landing page, and a release
+already on PyPI (``https://pypi.org/pypi/hefesto-mcp/<version>/json``
+returns 200). A hosted-only hotfix cannot be registered without publishing
+the package too.
 
 A published registry version can never be changed
 (``docs/modelcontextprotocol-io/versioning.mdx``), so a version that is
@@ -56,6 +59,7 @@ REMOTE_URL = "https://hefestoai.narapallc.com/api/mcp-protocol"
 CANONICAL_URL = "https://hefestoai.narapallc.com/server.json"
 HOSTED_CHANGELOG_URL = "https://hefestoai.narapallc.com/changelog.json"
 REGISTRY_BASE = "https://registry.modelcontextprotocol.io"
+PYPI_JSON_URL = "https://pypi.org/pypi/{package}/{version}/json"
 OFFICIAL_META = "io.modelcontextprotocol.registry/official"
 INITIALIZE_PARAMS = {
     "protocolVersion": "2025-06-18",
@@ -189,6 +193,33 @@ def check_not_published(version: str, published: Iterable[str]) -> List[str]:
     return []
 
 
+def pypi_json_url(version: str, package: str = PACKAGE_ID) -> str:
+    quoted = urllib.parse.quote(version, safe="")
+    return PYPI_JSON_URL.format(package=package, version=quoted)
+
+
+def pypi_release_status(version: str) -> int:
+    """HTTP status of the PyPI JSON for this package version."""
+    request = urllib.request.Request(
+        pypi_json_url(version),
+        headers={"Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
+            return int(response.status)
+    except urllib.error.HTTPError as exc:
+        return int(exc.code)
+
+
+def check_pypi_release(version: str) -> List[str]:
+    """The registry version must already be the published hefesto-mcp release."""
+    status = pypi_release_status(version)
+    if status == 200:
+        return []
+    url = pypi_json_url(version)
+    return [f"{url} returned {status}, expected 200"]
+
+
 def _open(request: urllib.request.Request) -> str:
     with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
         return str(response.read().decode("utf-8"))
@@ -297,6 +328,7 @@ def network_findings(version: str, mode: str) -> Tuple[List[str], List[str], Dic
     """(errors, warnings, facts) from the hosted engine and the registry."""
     hosted = fetch_hosted_versions()
     errors = check_hosted_version({"version": version}, hosted)
+    errors.extend(check_pypi_release(version))
     entries = fetch_registry_versions()
     listed = [str(e.get("server", {}).get("version")) for e in entries]
     already = check_not_published(version, listed + ([version] if is_published(version) else []))

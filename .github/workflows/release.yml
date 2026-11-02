@@ -60,6 +60,74 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+      # Wrapper wheel. No id-token here: this job cannot publish.
+      # Tooling is the same install as the engine steps above
+      # (packaging>=23.0, tomli>=2.0.1, build, twine).
+      - name: Verify wrapper version matches the tag
+        run: |
+          python scripts/verify_release_tag.py --tag "${GITHUB_REF_NAME}" \
+            --project-root packaging/hefesto-mcp --project-name hefesto-mcp
+
+      - name: Build wrapper wheel
+        run: |
+          python -m build --outdir dist-mcp packaging/hefesto-mcp
+
+      - name: Twine check wrapper
+        run: |
+          python -m twine check dist-mcp/*
+
+      - name: Check wrapper wheel metadata
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          import zipfile
+          from pathlib import Path
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          requires_python = tomllib.load(open("pyproject.toml", "rb"))["project"]["requires-python"]
+          wheels = sorted(Path("dist-mcp").glob("hefesto_mcp-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wrapper wheel, found {wheels}")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              names = archive.namelist()
+              entry = next(name for name in names if name.endswith("/entry_points.txt"))
+              text = archive.read(entry).decode("utf-8")
+              if "hefesto-mcp = hefesto.mcp_server:main" not in text:
+                  raise SystemExit("wrapper wheel is missing the hefesto-mcp script")
+              metadata = archive.read(
+                  next(name for name in names if name.endswith("/METADATA"))
+              ).decode("utf-8")
+          lines = metadata.splitlines()
+          dist = f"Requires-Dist: hefesto-ai[mcp]=={version}"
+          if dist not in lines:
+              raise SystemExit(f"missing {dist}")
+          python_line = f"Requires-Python: {requires_python}"
+          if python_line not in lines:
+              raise SystemExit(f"missing {python_line}")
+          print(f"wrapper metadata ok: {wheels[0].name}")
+          PY
+
+      - name: Smoke install wrapper from local wheels
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          python -m venv "$RUNNER_TEMP/mcp-venv"
+          "$RUNNER_TEMP/mcp-venv/bin/python" -m pip install \
+            --find-links dist --find-links dist-mcp \
+            "hefesto-mcp==${VERSION}"
+          mkdir -p "$RUNNER_TEMP/proj"
+          cd /
+          HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj" \
+            "$RUNNER_TEMP/mcp-venv/bin/hefesto-mcp" --help
+
+      - name: Upload wrapper dist
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: hefesto-mcp-distributions
+          path: dist-mcp/
+          if-no-files-found: error
+
   # Trusted publishing (OIDC) to PyPI. id-token is set on this job only
   # so the build job cannot mint a PyPI identity. Attestations stay at
   # the action default (PEP 740). The action's default repository is PyPI.
@@ -84,9 +152,9 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
-  # Wrapper wheel, after hefesto-ai is on PyPI (the wrapper depends on that version).
-  # Same protected GitHub environment as the engine publish. The PyPI pending
-  # publisher for project hefesto-mcp must name this workflow and environment.
+  # Upload only. The wheel was built in the build job. Same protected
+  # GitHub environment as the engine publish. The PyPI pending publisher
+  # for project hefesto-mcp must name this workflow and environment.
   publish-hefesto-mcp:
     needs: publish
     runs-on: ubuntu-latest
@@ -97,45 +165,11 @@ jobs:
       id-token: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - name: Download wrapper dist
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          python-version: "3.11"
-
-      - name: Verify wrapper version matches the tag
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install "packaging>=23.0" "tomli>=2.0.1"
-          python scripts/verify_release_tag.py --tag "${GITHUB_REF_NAME}" \
-            --project-root packaging/hefesto-mcp --project-name hefesto-mcp
-
-      - name: Build wrapper and check the wheel
-        run: |
-          python -m pip install build twine
-          python -m build --outdir dist-mcp packaging/hefesto-mcp
-          python -m twine check dist-mcp/*
-          python - <<'PY'
-          import zipfile
-          from pathlib import Path
-          wheels = sorted(Path("dist-mcp").glob("hefesto_mcp-*.whl"))
-          if len(wheels) != 1:
-              raise SystemExit(f"expected one wrapper wheel, found {wheels}")
-          with zipfile.ZipFile(wheels[0]) as archive:
-              names = archive.namelist()
-              entry = next(name for name in names if name.endswith("/entry_points.txt"))
-              text = archive.read(entry).decode("utf-8")
-              if "hefesto-mcp = hefesto.mcp_server:main" not in text:
-                  raise SystemExit("wrapper wheel is missing the hefesto-mcp script")
-              metadata = archive.read(
-                  next(name for name in names if name.endswith("/METADATA"))
-              ).decode("utf-8")
-              if "Name: hefesto-mcp" not in metadata:
-                  raise SystemExit("wrapper METADATA name is not hefesto-mcp")
-          print(f"wrapper wheel ok: {wheels[0].name}")
-          PY
+          name: hefesto-mcp-distributions
+          path: dist-mcp
 
       - name: Publish hefesto-mcp to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

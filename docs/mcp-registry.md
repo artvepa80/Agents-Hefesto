@@ -16,11 +16,14 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   document version, `HEFESTO_MCP_ROOT` required), and the existing remote
   (`streamable-http`, `https://hefestoai.narapallc.com/api/mcp-protocol`).
   `repository.url` stays on this public repository.
-- The registry `version` tracks the deployed engine, not PyPI. It must equal all of:
+- The registry `version` is tied to the PyPI package version. It must equal all of:
   the production `initialize` `serverInfo.version`, the `engine.version` returned by
   a minimal `tools/call analyze` (the same check as the private
-  `scripts/verify_hosted_engine.py`), and `changelog.json` `latest` on the landing
-  page.
+  `scripts/verify_hosted_engine.py`), `changelog.json` `latest` on the landing
+  page, and a `hefesto-mcp` release already on PyPI
+  (`https://pypi.org/pypi/hefesto-mcp/<version>/json` returns 200). A hotfix that
+  exists only on the hosted server cannot be published to the registry unless
+  that same version is also published as the package.
 - A published registry version can never be changed
   ([versioning.mdx](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/versioning.mdx):
   "The version string MUST be unique for each publication"). The check uses the
@@ -34,9 +37,12 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   download until it has the package entry and the description from this
   repository's `server.json`. The README and the wrapper README each contain
   `mcp-name: io.github.artvepa80/hefestoai` for the PyPI ownership check.
-- `release.yml` publishes the `hefesto-mcp` wrapper to PyPI after `hefesto-ai`,
-  using the same GitHub environment `pypi` and trusted publishing. The pending
-  publisher for project `hefesto-mcp` is a separate PyPI record.
+- `release.yml` builds the `hefesto-mcp` wheel in the `build` job (tag check,
+  `twine check`, wheel metadata, and an install smoke from the local wheels)
+  and uploads it as `hefesto-mcp-distributions`. `publish-hefesto-mcp` only
+  downloads that artifact and publishes it after `hefesto-ai`, using the same
+  GitHub environment `pypi` and trusted publishing. The pending publisher for
+  project `hefesto-mcp` is a separate PyPI record.
 
 ## How to run it
 
@@ -70,6 +76,11 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
 - **Approval:** Arturo creates the `mcp-registry` environment himself (required
   reviewer: himself; `main` only). The publish job waits on that environment, and
   he approves each deployment.
+- **Wrapper upload failed:** if `publish-hefesto-mcp` in `release.yml` fails
+  (for example the pending publisher for `hefesto-mcp` is not in place), fix
+  that publisher and choose "Re-run failed jobs" on the same workflow run.
+  The wheel is already in the `hefesto-mcp-distributions` artifact, so the
+  rerun publishes that wheel and does not build it again.
 - Registry state on 2026-10-24: 4.20.3 is latest (published 2026-10-24), with
   4.20.2, 4.19.0, 4.17.0, 4.13.1 and 4.9.3 before it. 4.20.1 was never
   published.
@@ -79,5 +90,6 @@ sha256 from that release's `registry_1.8.1_checksums.txt`. To upgrade, change
 `MCP_PUBLISHER_VERSION` and `MCP_PUBLISHER_SHA256` together (the guide's
 "invalid audience" error means the binary is too old).
 
-`release.yml` is not involved: a PyPI release and a registry version are separate
-events with separate versions.
+`release.yml` publishes `hefesto-mcp`. The registry check refuses a version
+that is not already that PyPI release, so the registry version and the
+package version are the same string.

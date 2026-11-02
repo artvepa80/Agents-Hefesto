@@ -36,17 +36,36 @@ def test_build_keeps_guard_tag_check_and_twine_check():
         "Build sdist + wheel",
         "Twine check",
         "Upload dist",
+        "Verify wrapper version matches the tag",
+        "Build wrapper wheel",
+        "Twine check wrapper",
+        "Check wrapper wheel metadata",
+        "Smoke install wrapper from local wheels",
+        "Upload wrapper dist",
     ]
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "scripts/guard_public_repo.py" in text
     assert "scripts/verify_release_tag.py" in text
     assert "python -m build" in text
     assert "python -m twine check dist/*" in text
-    upload = build["steps"][-1]
+    upload = next(step for step in build["steps"] if step["name"] == "Upload dist")
     assert re.fullmatch(r"actions/upload-artifact@[0-9a-f]{40}", upload["uses"])
     assert upload["with"]["name"] == "python-package-distributions"
     assert upload["with"]["path"] == "dist/"
     assert upload["with"]["if-no-files-found"] == "error"
+    wrapper_upload = build["steps"][-1]
+    assert wrapper_upload["name"] == "Upload wrapper dist"
+    assert wrapper_upload["with"]["name"] == "hefesto-mcp-distributions"
+    assert wrapper_upload["with"]["path"] == "dist-mcp/"
+    build_text = "\n".join(step.get("run", "") for step in build["steps"])
+    assert "--project-name hefesto-mcp" in build_text
+    assert "python -m twine check dist-mcp/*" in build_text
+    assert "Requires-Dist: hefesto-ai[mcp]==" in build_text
+    assert "Requires-Python:" in build_text
+    assert "--find-links dist --find-links dist-mcp" in build_text
+    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in build_text
+    assert "cd /" in build_text
+    assert "id-token" not in build.get("permissions", {})
 
 
 def test_publish_is_trusted_publishing_fail_closed():
@@ -80,17 +99,38 @@ def test_wrapper_publishes_after_hefesto_ai_on_the_same_environment():
         "url": "https://pypi.org/p/hefesto-mcp",
     }
     assert job["permissions"] == {"id-token": "write"}
-    text = "\n".join(step.get("run", "") for step in job["steps"])
-    assert "--project-name hefesto-mcp" in text
-    assert "packaging/hefesto-mcp" in text
-    assert "python -m twine check dist-mcp/*" in text
-    assert "hefesto-mcp = hefesto.mcp_server:main" in text
+    assert [step["name"] for step in job["steps"]] == [
+        "Download wrapper dist",
+        "Publish hefesto-mcp to PyPI",
+    ]
+    download = job["steps"][0]
+    assert re.fullmatch(r"actions/download-artifact@[0-9a-f]{40}", download["uses"])
+    assert download["with"]["name"] == "hefesto-mcp-distributions"
+    assert download["with"]["path"] == "dist-mcp"
     publish = job["steps"][-1]
     assert publish["name"] == "Publish hefesto-mcp to PyPI"
     assert publish["with"]["packages-dir"] == "dist-mcp"
+    assert "run" not in publish
     engine = _workflow()["jobs"]["publish"]
     assert engine["environment"]["url"] == "https://pypi.org/p/hefesto-ai"
     assert "packages-dir" not in engine["steps"][-1]
+
+
+def test_token_jobs_do_not_build_or_install():
+    """A job that can publish must not build or pip-install."""
+    for name, job in _workflow()["jobs"].items():
+        permissions = job.get("permissions") or {}
+        if permissions.get("id-token") != "write":
+            continue
+        for step in job["steps"]:
+            run = step.get("run") or ""
+            assert "python -m build" not in run, name
+            assert "pip install" not in run, name
+    wrapper = _workflow()["jobs"]["publish-hefesto-mcp"]
+    assert any(
+        str(step.get("uses", "")).startswith("actions/download-artifact@")
+        for step in wrapper["steps"]
+    )
 
 
 def test_github_release_runs_only_after_publish():

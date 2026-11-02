@@ -189,6 +189,36 @@ def test_registry_404_means_not_published(mod, monkeypatch):
     assert mod.fetch_registry_versions() == []
 
 
+def test_pypi_json_must_return_200(mod, monkeypatch):
+    seen: list[str] = []
+
+    def ok(request, timeout=None):
+        seen.append(request.full_url)
+
+        class _Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        return _Response()
+
+    monkeypatch.setattr(mod.urllib.request, "urlopen", ok)
+    assert mod.check_pypi_release("1.2.3") == []
+    assert seen == ["https://pypi.org/pypi/hefesto-mcp/1.2.3/json"]
+
+    def missing(request, timeout=None):
+        raise mod.urllib.error.HTTPError(request.full_url, 404, "Not Found", None, None)
+
+    monkeypatch.setattr(mod.urllib.request, "urlopen", missing)
+    errors = mod.check_pypi_release("1.2.3")
+    assert len(errors) == 1
+    assert "returned 404, expected 200" in errors[0]
+
+
 def test_registry_other_errors_propagate(mod, monkeypatch):
     def server_error(url):
         raise mod.urllib.error.HTTPError(url, 503, "Unavailable", None, None)
@@ -205,6 +235,7 @@ def _run(mod, tmp_path, monkeypatch, *, published, hosted=None, mode="dry-run", 
     entries = [_entry(v, i == 0) for i, v in enumerate(published)]
     monkeypatch.setattr(mod, "fetch_registry_versions", lambda: entries)
     monkeypatch.setattr(mod, "is_published", lambda version: version in published)
+    monkeypatch.setattr(mod, "check_pypi_release", lambda version: [])
     argv = [str(path), "--expected-version", "4.20.1", "--mode", mode]
     if summary:
         argv += ["--summary", str(summary)]
