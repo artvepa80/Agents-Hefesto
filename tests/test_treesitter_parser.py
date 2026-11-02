@@ -200,7 +200,14 @@ def test_declared_name_not_return_type_or_receiver(language: str, code: str, exp
         ("rust", "impl Tr for [u8; 4] { }\n", [None]),
         ("go", "package p\n\ntype Server struct{}\n", ["Server"]),
         ("go", "package p\n\ntype ID = int\n", ["ID"]),
-        ("go", "package p\n\ntype (\n\tA int\n\tB string\n)\n", ["A"]),
+        ("go", "package p\n\ntype (\n\tA int\n\tB string\n)\n", [None]),
+        ("go", "package p\n\ntype (\n\tA int\n)\n", ["A"]),
+        # A group is not named after its first spec: Big must not be reported as Small.
+        (
+            "go",
+            "package p\n\ntype (\n\tSmall struct{}\n\tBig struct {\n\t\tA, B, C int\n\t}\n)\n",
+            [None],
+        ),
     ],
 )
 def test_type_blocks_named_after_their_type(language: str, code: str, expected) -> None:

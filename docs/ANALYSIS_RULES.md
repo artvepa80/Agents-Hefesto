@@ -1263,7 +1263,7 @@ field), not the first identifier inside it:
 |---|---|
 | C# `public async Task WriteLazy()` | `WriteLazy` |
 | Go `func (s *Server) Run()` | `Run` |
-| Go `type Server struct{}` | `Server` (a grouped `type (A int; B string)` is named `A`) |
+| Go `type Server struct{}` | `Server` (a grouped `type ( ... )` is named only when it holds one spec; `type (A int; B string)` stays `<anonymous>`) |
 | Rust `impl<T> Display for Vec<T>` | `Vec` |
 | Rust `impl a::B` | `B` |
 | Rust `impl Tr for (A, B)` | no name (tuple and array types have none) |

@@ -256,8 +256,9 @@ class TreeSitterParser(CodeParser):
         """Name of the type a Rust ``impl`` block or Go ``type`` declaration declares.
 
         Rust: ``impl<T> Tr for Vec<T>`` -> ``Vec``; ``impl a::B`` -> ``B``.
-        Go: ``type Server struct{}`` -> ``Server``; a grouped ``type (A int; B string)``
-        is named after its first spec (``A``).
+        Go: ``type Server struct{}`` -> ``Server``; a grouped ``type ( ... )`` is named
+        only when it holds a single spec. With several specs it stays unnamed, so one
+        type's findings are never reported under another type's name.
         """
         if node.type == "impl_item":
             target = node.child_by_field_name("type")
@@ -266,9 +267,9 @@ class TreeSitterParser(CodeParser):
                 target = inner if inner is not None else target.child_by_field_name("name")
             return None if target is None else cls._node_text(target, source)
         if node.type == "type_declaration":
-            for spec in node.named_children:
-                if spec.type in ("type_spec", "type_alias"):
-                    return cls._field_name_text(spec, source)
+            specs = [s for s in node.named_children if s.type in ("type_spec", "type_alias")]
+            if len(specs) == 1:
+                return cls._field_name_text(specs[0], source)
         return None
 
     def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
