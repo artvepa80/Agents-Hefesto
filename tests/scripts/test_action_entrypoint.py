@@ -233,8 +233,12 @@ def test_action_yml_passes_every_input_and_uploads_sarif() -> None:
     assert action["runs"]["using"] == "composite"
     steps = action["runs"]["steps"]
     run_step = next(step for step in steps if step.get("id") == "analyze")
+    # multilang is read by the install step (scripts/action_install.sh).
+    install_inputs = {"multilang"}
+    install_step = next(step for step in steps if step.get("name") == "Install HefestoAI")
     for name in action["inputs"]:
-        assert run_step["env"][f"INPUT_{name.upper()}"] == "${{ inputs.%s }}" % name
+        step = install_step if name in install_inputs else run_step
+        assert step["env"][f"INPUT_{name.upper()}"] == "${{ inputs.%s }}" % name
     upload = next(step for step in steps if "upload-sarif" in step.get("uses", ""))
     assert upload["uses"] == "github/codeql-action/upload-sarif@v4"
     assert "always()" in upload["if"]
