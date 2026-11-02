@@ -11,6 +11,7 @@ import argparse
 import contextlib
 import os
 import sys
+import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
@@ -18,6 +19,9 @@ from hefesto.__version__ import __version__
 
 _LEVELS = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
 _ROOT: Path | None = None
+# redirect_stdout replaces process-wide sys.stdout. Overlapping calls would
+# restore the real stdout while the other call is still printing.
+_ENGINE_STDOUT_LOCK = threading.Lock()
 
 
 def _disable_telemetry() -> None:
@@ -115,7 +119,11 @@ def _severity(severity: str | None) -> str:
 
 
 def _run_engine(target: Path, level: str) -> str:
-    """Run the local engine. Its prints go to stderr so stdout stays MCP."""
+    """Run the local engine. Its prints go to stderr so stdout stays MCP.
+
+    The redirect is serialized. Two calls at once would otherwise restore
+    the real stdout under the call that is still printing.
+    """
     from hefesto.cli.main import (
         _apply_line_suppressions,
         _generate_report,
@@ -126,7 +134,7 @@ def _run_engine(target: Path, level: str) -> str:
 
     # These helpers do not call telemetry or the PyPI version check.
     # Those run only from the CLI ``analyze`` command, which is not used here.
-    with contextlib.redirect_stdout(sys.stderr):
+    with _ENGINE_STDOUT_LOCK, contextlib.redirect_stdout(sys.stderr):
         engine = _setup_analyzer_engine(level, quiet=True, json_mode=True)
         if engine is None:
             raise RuntimeError("analyzer engine failed to start")

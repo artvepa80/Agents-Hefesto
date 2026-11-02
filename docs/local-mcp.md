@@ -53,10 +53,10 @@ An MCP client launches the server with stdio.
 | `analyze_local` | `path` (string, inside the sandbox root), `severity` (`LOW`, `MEDIUM`, `HIGH`, or `CRITICAL`; default `MEDIUM`) | JSON report, same shape as `hefesto analyze --output json`. Read-only, no network |
 | `version` | none | Installed engine version string. Reads no files, no network |
 
-`analyze_local` calls the local engine in-process. Text the engine prints is sent to stderr so stdout stays the MCP stream. The scan does not read `.hefesto.yaml`.
+`analyze_local` calls the local engine in-process. Text the engine prints is sent to stderr so stdout stays the MCP stream. That redirect is held under a lock: two overlapping calls cannot restore the real stdout while the other call is still printing. The scan does not read `.hefesto.yaml`.
 
 Startup sets `HEFESTO_TELEMETRY=0` for this process. The tool path does not call the usage-event sender or the PyPI version check. The machine opt-out file used by `hefesto telemetry disable` is left unchanged.
 
 ## Container
 
-`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.4`, sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built from the next release, once that version is on PyPI.
+`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.4`, then runs `hefesto-mcp --help` so a pin that does not provide the command fails the build. It sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built from the next release, once that version is on PyPI.
