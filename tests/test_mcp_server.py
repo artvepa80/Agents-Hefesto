@@ -9,6 +9,8 @@ import os
 import shutil
 import socket
 import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -268,6 +270,69 @@ def test_analyze_local_does_not_use_network(tmp_path, monkeypatch):
     payload = json.loads(analyze_local("sample.py", severity="LOW"))
     assert payload["summary"]["files_analyzed"] == 1
     assert os.environ["HEFESTO_TELEMETRY"] == "0"
+
+
+def _read_fd(fd: int) -> bytes:
+    os.set_blocking(fd, False)
+    chunks: list[bytes] = []
+    while True:
+        try:
+            chunk = os.read(fd, 4096)
+        except BlockingIOError:
+            return b"".join(chunks)
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+
+
+def test_concurrent_engine_prints_do_not_reach_fd_1(monkeypatch):
+    """Two overlapping scans must not write engine text to the real stdout fd."""
+    import hefesto.cli.main as cli
+    from hefesto.mcp_server import _run_engine
+    from hefesto.reports.json_reporter import JSONReporter
+
+    def _printing_setup(*_args, **_kwargs):
+        print("engine-text")
+        time.sleep(0.05)
+        print("engine-text")
+        return object()
+
+    def _printing_loop(*_args, **_kwargs):
+        print("engine-text")
+        return [], 0, 0.0, {}
+
+    def _printing(*_args, **_kwargs):
+        print("engine-text")
+
+    monkeypatch.setattr(cli, "_setup_analyzer_engine", _printing_setup)
+    monkeypatch.setattr(cli, "_run_analysis_loop", _printing_loop)
+    monkeypatch.setattr(cli, "_apply_line_suppressions", _printing)
+    monkeypatch.setattr(cli, "_generate_report", _printing)
+    monkeypatch.setattr(JSONReporter, "generate", lambda self, report: "{}")
+
+    read_fd, write_fd = os.pipe()
+    saved = os.dup(1)
+    os.dup2(write_fd, 1)
+    os.close(write_fd)
+    errors: list[BaseException] = []
+
+    def _call() -> None:
+        try:
+            assert _run_engine(Path("."), "MEDIUM") == "{}"
+        except BaseException as exc:
+            errors.append(exc)
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(_call) for _ in range(2)]
+            for future in futures:
+                future.result(timeout=5)
+        assert errors == []
+        assert _read_fd(read_fd) == b""
+    finally:
+        os.dup2(saved, 1)
+        os.close(saved)
+        os.close(read_fd)
 
 
 def _hefesto_mcp_executable() -> str:

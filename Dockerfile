@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HEFESTO_TELEMETRY=0
 
 RUN pip install --no-cache-dir "hefesto-ai[mcp]==4.20.4" \
+    && hefesto-mcp --help \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin hefesto
 
 USER 10001
