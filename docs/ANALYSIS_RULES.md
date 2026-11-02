@@ -478,7 +478,7 @@ An issue field `metadata.cwe` overrides this table. COBOL rules that already set
 
 An unquoted `$NAME` or `${NAME}` is split into words and expanded as a glob, so `rm -rf $DIR` with `DIR="my dir"` removes `my` and `dir`. The rule reports one finding per line when such a variable is:
 
-- an argument of `rm` or `cd` used as a command (at the start of the line, after `;`, `&&`, `||`, `|`, `(`, or after `sudo`, `then`, `do`, `else`, `exec`, `command`, `nohup`, `!`, `{`);
+- an argument of `rm` or `cd` used as a command (at the start of the line, after `;`, `&&`, `||`, `|`, `(`, or after `sudo`, `then`, `do`, `else`, `exec`, `command`, `nohup`, `!`, `{`, `if`, `elif`, `while`, `until`, `time`, `xargs`);
 - the operand of a single-bracket test, e.g. `[ -f $FILE ]`.
 
 Not reported: quoted expansions (`rm -f "$TMPFILE"`, `rm -rf "$DIR"/cache`, `rm -rf "$(path "$v")"`), single-quoted text, escaped `\$`, `[[ ... ]]` tests (no word splitting there), `rm`/`cd` inside a string (`echo "run: rm $X"`), and subcommands named `rm` (`docker image rm $ID`, `git rm $FILE`, `docker run --rm`).

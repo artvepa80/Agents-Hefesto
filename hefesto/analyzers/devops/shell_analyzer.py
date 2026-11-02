@@ -170,7 +170,23 @@ class ShellAnalyzer:
     _RM_OR_CD = re.compile(r"(?:^|(?<=[\s;&|(`]))(rm|cd)\s")
     # Words after which the next word is still a command, not an argument.
     _COMMAND_PREFIXES = frozenset(
-        {"sudo", "then", "do", "else", "exec", "command", "nohup", "!", "{"}
+        {
+            "sudo",
+            "then",
+            "do",
+            "else",
+            "exec",
+            "command",
+            "nohup",
+            "!",
+            "{",
+            "if",
+            "elif",
+            "while",
+            "until",
+            "time",
+            "xargs",
+        }
     )
     _VAR_NAME = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})")
 

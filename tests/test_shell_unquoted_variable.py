@@ -63,6 +63,12 @@ def test_quoted_or_safe_expansion_is_not_reported(line: str) -> None:
         "if true; then rm -f $OUT; fi",
         "[ -e $X ] && rm -R ../$X",
         "(cd $DIR)",
+        "if [ -d $DIR ]; then echo ok; fi",
+        "if true; then :; elif [ -f $X ]; then :; fi",
+        "while [ -e $LOCK ]; do sleep 1; done",
+        "until [ -f $READY ]; do sleep 1; done",
+        "time rm -rf $CACHE",
+        "find . -name x | xargs rm -f $EXTRA",
     ],
 )
 def test_unquoted_expansion_is_reported(line: str) -> None:
@@ -70,3 +76,17 @@ def test_unquoted_expansion_is_reported(line: str) -> None:
     assert len(issues) == 1, line
     assert issues[0].rule_id == "unquoted-var"
     assert issues[0].line == 3
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        'if [ -d "$DIR" ]; then echo ok; fi',
+        'while [ -e "$LOCK" ]; do sleep 1; done',
+        'time rm -rf "$CACHE"',
+        'find . -name x | xargs rm -f "$EXTRA"',
+        "echo time $X",
+    ],
+)
+def test_keyword_prefix_with_quoted_expansion_is_not_reported(line: str) -> None:
+    assert _unquoted(line) == [], line
