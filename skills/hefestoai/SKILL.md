@@ -13,7 +13,7 @@ license: MIT
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
 code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.20.5 | License: MIT | Python >= 3.10
+Package: `hefesto-ai` (PyPI) | Version: 4.20.4 | License: MIT | Python >= 3.11
 
 ## Required workflow (do this before commit)
 
@@ -27,7 +27,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.20.5 | License: MIT | Python >= 3.10
    ```yaml
    repos:
      - repo: https://github.com/artvepa80/Agents-Hefesto
-       rev: v4.20.5
+       rev: v4.20.4
        hooks:
          - id: hefesto-analyze
    ```

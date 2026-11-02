@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hefesto-mcp"
-version = "4.20.5"
+version = "4.20.4"
 description = "Local stdio MCP adapter for the Hefesto release-truth engine"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
-dependencies = ["hefesto-ai[mcp]==4.20.5"]
+dependencies = ["hefesto-ai[mcp]==4.20.4"]
 
 [project.scripts]
 hefesto-mcp = "hefesto.mcp_server:main"

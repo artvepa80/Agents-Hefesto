@@ -54,9 +54,8 @@ def test_description_fits_the_schema_limit(mod):
 
 def test_committed_document_names_the_public_repo_and_the_closed_server(mod, committed):
     version = mod.read_package_version(ROOT / "pyproject.toml")
-    assert version == "4.20.5"
     assert mod.check_document(committed, version) == []
-    assert committed["version"] == "4.20.5"
+    assert committed["version"] == version
     assert committed["packages"] == [mod._expected_package(version)]
     assert committed["repository"]["url"] == mod.PUBLIC_REPOSITORY_URL
     assert committed["repository"]["id"] == "1079896229"

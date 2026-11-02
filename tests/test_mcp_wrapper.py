@@ -23,19 +23,24 @@ def _load_toml(path: Path) -> dict:
         return tomllib.load(handle)
 
 
+def _project_tables():
+    engine = _load_toml(ROOT / "pyproject.toml")["project"]
+    wrapper = _load_toml(WRAPPER / "pyproject.toml")["project"]
+    return engine, wrapper
+
+
 def test_wrapper_metadata_matches_the_engine_release():
-    engine = _load_toml(ROOT / "pyproject.toml")
-    wrapper = _load_toml(WRAPPER / "pyproject.toml")
-    version = engine["project"]["version"]
-    project = wrapper["project"]
+    engine, project = _project_tables()
+    version = engine["version"]
+    requires_python = engine["requires-python"]
     assert project["name"] == "hefesto-mcp"
-    assert project["version"] == "4.20.5"
     assert project["version"] == version
-    assert project["requires-python"] == ">=3.10"
+    assert project["requires-python"] == requires_python
     assert project["license"] == "MIT"
     assert project["readme"] == "README.md"
     assert project["dependencies"] == [f"hefesto-ai[mcp]=={version}"]
     assert project["scripts"] == {"hefesto-mcp": "hefesto.mcp_server:main"}
+    wrapper = _load_toml(WRAPPER / "pyproject.toml")
     assert wrapper["build-system"]["build-backend"] == "hatchling.build"
     assert wrapper["tool"]["hatch"]["build"]["targets"]["wheel"]["bypass-selection"] is True
 
@@ -52,6 +57,11 @@ def test_root_readme_has_the_mcp_name_line():
 
 def test_wrapper_wheel_has_the_script_and_no_python_modules(tmp_path):
     pytest.importorskip("build")
+    engine, wrapper_project = _project_tables()
+    version = engine["version"]
+    requires_python = engine["requires-python"]
+    assert wrapper_project["version"] == version
+    assert wrapper_project["requires-python"] == requires_python
     out = tmp_path / "dist"
     subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(out), str(WRAPPER)],
@@ -74,5 +84,5 @@ def test_wrapper_wheel_has_the_script_and_no_python_modules(tmp_path):
         metadata = archive.read(
             next(name for name in names if name.endswith(".dist-info/METADATA"))
         ).decode("utf-8")
-    assert "Requires-Dist: hefesto-ai[mcp]==4.20.5" in metadata
-    assert "Requires-Python: >=3.10" in metadata
+    assert f"Requires-Dist: hefesto-ai[mcp]=={version}" in metadata
+    assert f"Requires-Python: {requires_python}" in metadata

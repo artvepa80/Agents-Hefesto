@@ -191,7 +191,7 @@ roadmap:
       - helm
       - arm_templates
       - serverless
-  # 4.20.5 adds packaging/hefesto-mcp (uvx hefesto-mcp) and server.json packages.
+  # The unreleased adapter adds packaging/hefesto-mcp (uvx hefesto-mcp) and server.json packages.
   local_stdio_mcp:
     status: SHIPPED
     items:

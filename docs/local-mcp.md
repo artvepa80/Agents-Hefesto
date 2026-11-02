@@ -2,19 +2,19 @@
 
 `hefesto-mcp` is a local, read-only [MCP](https://modelcontextprotocol.io) server over stdio. It is part of the MIT-licensed `hefesto-ai` package. It does not talk to a hosted service and it does not open network connections.
 
-`uvx hefesto-mcp` becomes available once release 4.20.5 is on PyPI.
+This extra is not on PyPI yet. `uvx hefesto-mcp` becomes available once it is published on PyPI.
 
 ## Install
 
-Python 3.10 or newer. That is the package `requires-python`, and the `mcp` dependency requires the same (`>=3.10`), so the extra does not add an environment marker. The extra requires `mcp>=1.7,<2`.
+Python 3.11 or newer. That is the package `requires-python`; the `mcp` dependency requires `>=3.10`, which every supported Python meets, so the extra does not add an environment marker. The extra requires `mcp>=1.7,<2`.
 
 ```bash
-uvx hefesto-mcp
+pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
 ```
 
-`HEFESTO_MCP_ROOT` is required. Set it to the project directory the tools may read. It must not be `/` or the home directory.
+`HEFESTO_MCP_ROOT` is required for `uvx hefesto-mcp`. Set it to the project directory the tools may read. It must not be `/` or the home directory.
 
-The `hefesto-mcp` distribution (`packaging/hefesto-mcp`) is metadata only: it depends on `hefesto-ai[mcp]==4.20.5` and installs the same console script. The core package dependencies are unchanged. Without the extra, `hefesto analyze` works as before.
+The `hefesto-mcp` distribution (`packaging/hefesto-mcp`) is metadata only: it depends on `hefesto-ai[mcp]==4.20.4` and installs the same console script. The core package dependencies are unchanged. Without the extra, `hefesto analyze` works as before.
 
 ## Sandbox root
 
@@ -59,4 +59,4 @@ Startup sets `HEFESTO_TELEMETRY=0` for this process. The tool path does not call
 
 ## Container
 
-`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.5`, sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built once 4.20.5 is on PyPI.
+`Dockerfile` at the repository root uses `python:3.12-slim`, installs `hefesto-ai[mcp]==4.20.4`, sets `HEFESTO_MCP_ROOT=/workspace` and `HEFESTO_TELEMETRY=0`, and runs `hefesto-mcp` as uid 10001. The image can be built from the next release, once that version is on PyPI.
