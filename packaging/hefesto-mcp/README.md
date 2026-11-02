@@ -4,4 +4,4 @@ Local stdio MCP adapter for the Hefesto release-truth engine. The package depend
 
 <!-- mcp-name: io.github.artvepa80/hefestoai -->
 
-`uvx hefesto-mcp` becomes available once release 4.20.5 is on PyPI. Set `HEFESTO_MCP_ROOT` to the project directory the tools may read. That directory must not be `/` or the home directory.
+`uvx hefesto-mcp` becomes available once it is published on PyPI. Set `HEFESTO_MCP_ROOT` to the project directory the tools may read. That directory must not be `/` or the home directory.

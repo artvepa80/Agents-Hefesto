@@ -6,7 +6,7 @@
 pip install hefesto-ai
 ```
 
-Requires Python >= 3.10. Installs the `hefesto` CLI.
+Requires Python >= 3.11. Installs the `hefesto` CLI.
 
 ## Pre-Commit Hook
 
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.20.5
+      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.20.4
         with:
           target: '.'
           fail_on: 'CRITICAL'

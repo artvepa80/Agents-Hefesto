@@ -574,8 +574,8 @@ def check():
     # Check Python version
     py_version = sys.version_info
     click.echo(f"Python: {py_version.major}.{py_version.minor}.{py_version.micro}")
-    if py_version < (3, 10):
-        click.echo("   [ERROR] Python 3.10+ required", err=True)
+    if py_version < (3, 11):
+        click.echo("   [ERROR] Python 3.11+ required", err=True)
     else:
         click.echo("   [OK] Version OK")
 
@@ -962,13 +962,8 @@ def _is_hefesto_repo(repo_root) -> bool:
         text = pyproject.read_text(encoding="utf-8")
     except OSError:
         return False
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # Python 3.10: read the [project] table by hand
-        import re
+    import tomllib
 
-        section = re.search(r"^\[project\]\s*$(.*?)(?=^\[|\Z)", text, re.M | re.S)
-        return bool(section and re.search(r'^name\s*=\s*"hefesto-ai"\s*$', section.group(1), re.M))
     try:
         return bool(tomllib.loads(text).get("project", {}).get("name") == "hefesto-ai")
     except Exception:
@@ -1206,6 +1201,20 @@ def _not_analyzed_hint(engine, before: int) -> str:
     return f"; {failed} file(s) could not be analyzed" if failed > 0 else ""
 
 
+def _zero_files_cause(engine, before: int) -> str:
+    """Why the last path analyzed nothing: a missing grammar, else the generic cause."""
+    entries = getattr(engine, "_not_analyzed", [])[before:]
+    grammars = sorted(
+        {e.get("grammar") for e in entries if e.get("reason") == "grammar_unavailable"}
+    )
+    if grammars:
+        return (
+            f"tree-sitter grammar could not be loaded for {', '.join(grammars)};"
+            " offline, or an empty or damaged grammar cache?"
+        )
+    return "no supported source files, or every file was excluded"
+
+
 def _missing_parser_hint(engine, before: int) -> str:
     """'; parser unavailable for X (pip install ...)' when the last path hit one."""
     failures = getattr(engine, "_parser_failures", [])[before:]
@@ -1240,7 +1249,7 @@ def _run_analysis_loop(engine, paths_list, exclude_patterns):
             hint += _missing_parser_hint(engine, parser_before)
             click.echo(
                 f"Warning: no files were analyzed in {path} "
-                f"(no supported source files, or every file was excluded){hint}",
+                f"({_zero_files_cause(engine, failed_before)}){hint}",
                 err=True,
             )
         all_file_results.extend(report.file_results)

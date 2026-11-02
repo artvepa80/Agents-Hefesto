@@ -384,7 +384,7 @@ This demonstrated the exact problem it was designed to solve: **catching local/C
 ### Prerequisites
 
 ```bash
-# Python 3.10+
+# Python 3.11+
 python --version
 
 # Hefesto installed
@@ -732,7 +732,7 @@ The `hefesto/hooks/pre_push.py` module described above was never wired to a comm
 
 ### Q: What Python versions are supported?
 
-**A:** Python 3.10+ (same as Hefesto core)
+**A:** Python 3.11+ (same as Hefesto core)
 
 ---
 

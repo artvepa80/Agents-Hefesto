@@ -18,6 +18,12 @@ from pathlib import Path, PurePosixPath
 from typing import List, Tuple
 
 from hefesto.analyzers.eval_calls import find_eval_calls
+from hefesto.analyzers.python_strings import (
+    first_match_outside_strings,
+    inside_string,
+    mask_strings,
+    string_spans_for,
+)
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -216,6 +222,40 @@ def _secret_issue(
     )
 
 
+def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
+    """Return a list of (start_line, end_line, has_sink) for function scopes.
+
+    Uses a simple indentation heuristic: a ``def `` or ``async def `` at
+    column N starts a scope that extends until the next line at the same
+    or lesser indentation (or EOF).
+    """
+    scopes: List[Tuple[int, int, bool]] = []
+    n = len(lines)
+    i = 0
+    while i < n:
+        stripped = lines[i].lstrip()
+        if stripped.startswith("def ") or stripped.startswith("async def "):
+            indent = len(lines[i]) - len(stripped)
+            start = i + 1  # 1-indexed
+            j = i + 1
+            while j < n:
+                if lines[j].strip() == "":
+                    j += 1
+                    continue
+                cur_indent = len(lines[j]) - len(lines[j].lstrip())
+                if cur_indent <= indent:
+                    break
+                j += 1
+            end = j  # 1-indexed inclusive
+            scope_code = "\n".join(lines[i:j])
+            has_sink = bool(_SQL_EXECUTE_SINKS.search(scope_code))
+            scopes.append((start, end, has_sink))
+            i = j
+        else:
+            i += 1
+    return scopes
+
+
 class SecurityAnalyzer:
     """Analyzes code for security vulnerabilities."""
 
@@ -280,13 +320,23 @@ class SecurityAnalyzer:
         issues: List[AnalysisIssue] = []
         lines = code.split("\n")
 
+        # Masking literals only hides text, so a file with no sink in the raw
+        # code has none after masking: skip the literal scan for it.
+        if not _SQL_EXECUTE_SINKS.search(code):
+            return issues
+
+        # In Python, text inside a string literal is data, not code: it does
+        # not count as a sink or a def, and lines inside it are not checked.
+        spans = string_spans_for(tree, file_path, code)
+        code_lines = mask_strings(lines, spans) if spans else lines
+
         # Pre-compute: does this file contain any SQL execute sink at all?
-        file_has_sink = bool(_SQL_EXECUTE_SINKS.search(code))
+        file_has_sink = bool(_SQL_EXECUTE_SINKS.search("\n".join(code_lines)))
         if not file_has_sink:
             return issues
 
         # Build a map of function-scope boundaries (line ranges) for sink lookup.
-        scope_sinks = self._build_scope_sink_map(lines)
+        scope_sinks = _build_scope_sink_map(code_lines)
 
         flagged_lines: set = set()
 
@@ -298,6 +348,12 @@ class SecurityAnalyzer:
                 continue
 
             if not _sql_keyword_in_string(line):
+                continue
+
+            # Known limit (same as before #156): a line that starts inside a
+            # multi-line literal is skipped as a whole, even if code follows
+            # the closing quotes on that line.
+            if spans and inside_string(spans, line_num, len(line) - len(stripped)):
                 continue
 
             if not _has_dynamic_concatenation(line):
@@ -406,40 +462,6 @@ class SecurityAnalyzer:
         return issues
 
     @staticmethod
-    def _build_scope_sink_map(lines: List[str]) -> List[Tuple[int, int, bool]]:
-        """Return a list of (start_line, end_line, has_sink) for function scopes.
-
-        Uses a simple indentation heuristic: a ``def `` or ``async def `` at
-        column N starts a scope that extends until the next line at the same
-        or lesser indentation (or EOF).
-        """
-        scopes: List[Tuple[int, int, bool]] = []
-        n = len(lines)
-        i = 0
-        while i < n:
-            stripped = lines[i].lstrip()
-            if stripped.startswith("def ") or stripped.startswith("async def "):
-                indent = len(lines[i]) - len(stripped)
-                start = i + 1  # 1-indexed
-                j = i + 1
-                while j < n:
-                    if lines[j].strip() == "":
-                        j += 1
-                        continue
-                    cur_indent = len(lines[j]) - len(lines[j].lstrip())
-                    if cur_indent <= indent:
-                        break
-                    j += 1
-                end = j  # 1-indexed inclusive
-                scope_code = "\n".join(lines[i:j])
-                has_sink = bool(_SQL_EXECUTE_SINKS.search(scope_code))
-                scopes.append((start, end, has_sink))
-                i = j
-            else:
-                i += 1
-        return scopes
-
-    @staticmethod
     def _scope_has_sink(
         line_num: int,
         scope_sinks: List[Tuple[int, int, bool]],
@@ -468,13 +490,18 @@ class SecurityAnalyzer:
         """
         issues: List[AnalysisIssue] = []
         lines = code.split("\n")
+        # Literal spans only matter when the file has a sink at all.
+        spans = (
+            string_spans_for(tree, file_path, code) if _CMD_INJECTION_SINKS.search(code) else None
+        )
 
         for line_num, line in enumerate(lines, start=1):
             stripped = line.lstrip()
             if stripped.startswith("#") or stripped.startswith("//"):
                 continue
 
-            sink_match = _CMD_INJECTION_SINKS.search(line)
+            # A sink written inside a Python string literal is data, not a call.
+            sink_match = first_match_outside_strings(_CMD_INJECTION_SINKS, line, line_num, spans)
             if not sink_match:
                 continue
 
