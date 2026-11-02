@@ -1142,7 +1142,7 @@ Is it a minor style or documentation issue?
 
 ## C#, Go and Rust security rules (experimental)
 
-These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
+These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
 
 | Rule | What it reports | Issue type | Severity | CWE |
 |------|-----------------|------------|----------|-----|
@@ -1159,6 +1159,12 @@ These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is 
 | RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
 
 RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` to list every `unsafe` block.
+
+Known limits:
+
+- Rust unit tests that live in the same file under `#[cfg(test)]` are **not** skipped: only the path decides what is test code, so `unsafe` blocks and `transmute` calls in an in-file `mod tests` are reported like any other code.
+- CS004 and GO003 report every use of MD5 and SHA-1, including non-security uses such as file checksums, cache keys, ETags and protocol-mandated digests. The tree does not show why the hash is computed; review these findings. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
+- Deserialization has two issue types. `PICKLE_USAGE` (Python) flags the `import pickle` line and maps to CWE-502 with precision `low`, since the import alone does not show a load of untrusted data. `INSECURE_DESERIALIZATION` (CS002) flags the construction of a .NET formatter whose `Deserialize` is unsafe by design, and also maps to CWE-502 (from the finding's `cwe` metadata). They are separate types so the Python mapping and its precision stay as they are.
 
 Not reported on purpose: a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments; Go `Exec` calls whose literal part has no SQL keyword.
 

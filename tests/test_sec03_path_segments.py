@@ -185,3 +185,38 @@ def test_engine_reports_secret_in_contest_dir(
         if i.issue_type == AnalysisIssueType.HARDCODED_SECRET
     }
     assert secret_files == {"src/contest/config.py"}
+
+
+# --- .NET test projects -------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "file_path",
+    [
+        "Src/Newtonsoft.Json.Tests/ExceptionTests.cs",
+        "src/MyApp.Test/Helpers.cs",
+        "src/MyApp.UnitTests/Crypto/HashFixture.cs",
+        "src/MyApp.IntegrationTests/Db/Setup.cs",
+        "src/Foo.tests/Bar.cs",
+        "src/MyApp/ParserTests.cs",
+        "src/MyApp/ParserTest.cs",
+    ],
+)
+def test_dotnet_test_projects_are_test_code(file_path: str) -> None:
+    assert is_test_path(file_path)
+
+
+@pytest.mark.parametrize(
+    "file_path",
+    [
+        "src/Contest.cs",  # "test" inside a word, lower case
+        "src/Latest.cs",
+        "src/Manifest.cs",
+        "src/MyApp.Testing/Fakes.cs",  # not one of the test project suffixes
+        "src/Tests.Runner.Core/Run.cs",  # .Tests must be the suffix
+        "src/MyApp/ParserTests.go",  # *Tests.cs only applies to C#
+        "src/MyApp.TestsHelper/Run.cs",
+    ],
+)
+def test_dotnet_lookalikes_are_not_test_code(file_path: str) -> None:
+    assert not is_test_path(file_path)

@@ -39,6 +39,11 @@ from hefesto.core.safe_parse import parse_or_none
 # ``contest/``, ``latest_app/`` or ``/tmp/pytest-of-user/`` do not (SEC-03).
 _TEST_DIRS = frozenset({"test", "tests", "__tests__"})
 _EXAMPLE_DIRS = frozenset({"example", "examples"})
+# .NET test projects: a directory named ``<Project>.Tests`` and the like.
+_DOTNET_TEST_DIR_SUFFIXES = (".tests", ".test", ".unittests", ".integrationtests")
+# .NET test classes: ``ParserTests.cs`` / ``ParserTest.cs`` (case-sensitive, so
+# ``Latest.cs`` and ``Contest.cs`` are not test code).
+_DOTNET_TEST_FILE = re.compile(r"(?:^|[a-z0-9_])Tests?\.cs$")
 
 
 def _path_segments(file_path: str) -> List[str]:
@@ -65,7 +70,9 @@ def is_test_path(file_path: str) -> bool:
     True when a directory segment is exactly ``test``, ``tests`` or
     ``__tests__``, or the file name follows a test convention: ``test_*``,
     ``*_test.<ext>``, ``*.test.<ext>``, ``*.spec.<ext>``, ``conftest.py``,
-    ``test.py`` or ``tests.py``. Substrings never count, so
+    ``test.py`` or ``tests.py``. .NET test projects count too: a directory
+    ending in ``.Tests``, ``.Test``, ``.UnitTests`` or ``.IntegrationTests``,
+    or a C# file named ``*Tests.cs`` / ``*Test.cs``. Substrings never count, so
     ``src/contest/config.py`` and ``latest_settings.py`` are not test code.
     There is no special case for ``fixtures``: a fixture under ``tests/`` is
     test code because of the ``tests`` segment.
@@ -74,7 +81,9 @@ def is_test_path(file_path: str) -> bool:
     if not parts:
         return False
     *dirs, name = parts
-    if any(seg in _TEST_DIRS for seg in dirs):
+    if any(seg in _TEST_DIRS or seg.endswith(_DOTNET_TEST_DIR_SUFFIXES) for seg in dirs):
+        return True
+    if _DOTNET_TEST_FILE.search(file_path.replace("\\", "/").rsplit("/", 1)[-1]):
         return True
     stem = name.split(".", 1)[0]
     return (

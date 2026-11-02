@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — test paths
+
+- Test code now also includes .NET test projects: a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs` (case-sensitive, so `Latest.cs` is not test code). This applies to every check that skips test code.
+
 ### Added — security rules for C#, Go and Rust (experimental)
 
 - 11 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 broken hash or cipher; GO001 shell `-c` with a built string, GO002 SQL built from strings, GO003 weak `crypto/...` packages, GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice. Test paths are skipped.
