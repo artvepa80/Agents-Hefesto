@@ -27,7 +27,7 @@ The Action is a composite action with three steps:
    `pip install` of the Action's own checkout (the package is not pulled from
    PyPI; its dependencies are). The virtualenv is only on `PATH` inside the
    Action, so later steps of the job keep their own `python`. Needs `python3`
-   >= 3.10 on the runner; `ubuntu-latest` has it, otherwise add
+   >= 3.11 on the runner; `ubuntu-latest` has it, otherwise add
    `actions/setup-python` before the Action.
 2. **Run HefestoAI**: `scripts/action_entrypoint.sh` builds
    `hefesto analyze <target> --severity <min_severity> --fail-on <fail_on>
@@ -80,6 +80,16 @@ analyzed" with the reason and prints "Gate failure: N file(s) could not be
 analyzed (exit 1)". In 4.20.0 such a file was dropped without a warning. Set
 `allow_not_analyzed: 'true'` to keep the old exit code; the file is still
 listed and warned about.
+
+The Action installs the base package without the `[multilang]` extra, so
+TypeScript, JavaScript, Java, Go, Rust and C# files are still skipped (parser
+unavailable), as before. The "tree-sitter grammar '<name>' could not be loaded"
+reason applies to the CLI installed with `hefesto-ai[multilang]`: with the
+pack installed, a file whose grammar cannot be loaded (offline, or an empty or
+damaged grammar cache) is listed as not analyzed and fails `--fail-on`.
+To fix it: run once with network access (the grammar cache is per pack version), or
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
+or pass `--allow-not-analyzed`.
 
 A file that is not valid UTF-8 is not in this group: it is read with the
 `latin-1` fallback, analyzed, and listed as "decoded with fallback" (a

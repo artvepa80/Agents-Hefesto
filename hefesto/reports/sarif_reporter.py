@@ -102,8 +102,9 @@ class SARIFReporter:
         meta = getattr(report, "meta", None) or {}
         self._not_analyzed = list(meta.get("not_analyzed") or [])
         self._decoded_with_fallback = list(meta.get("decoded_with_fallback") or [])
+        suppressed: List[AnalysisIssue] = list(getattr(report, "get_suppressed_issues", list)())
         issues = sorted(
-            report.get_all_issues(),
+            [*report.get_all_issues(), *suppressed],
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
         )
         notes: List[str] = []
@@ -232,6 +233,10 @@ class SARIFReporter:
         if issue.confidence is not None:
             properties["confidence"] = issue.confidence
         result["properties"] = properties
+        if issue.suppression_reason is not None:
+            result["suppressions"] = [
+                {"kind": "inSource", "justification": issue.suppression_reason}
+            ]
         return result
 
     def _related(self, issue: AnalysisIssue) -> List[Dict[str, Any]]:

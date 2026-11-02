@@ -9,7 +9,7 @@
 HefestoAI runs after your AI assistant writes the code and before it ships. It checks that what your project declares (dependencies, configs, install artifacts) matches what it actually does, and it runs security and complexity checks on the code itself.
 
 [![PyPI version](https://badge.fury.io/py/hefesto-ai.svg)](https://pypi.org/project/hefesto-ai/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Languages](https://img.shields.io/badge/languages-22-green.svg)](https://github.com/artvepa80/Agents-Hefesto)
 
@@ -152,7 +152,7 @@ jobs:
           sarif: 'true'
 ```
 
-The Action is a composite action: it installs HefestoAI from the Action's own checkout into a private virtualenv (needs `python3` >= 3.10 on the runner; `ubuntu-latest` has it), runs `hefesto analyze`, and with `sarif: 'true'` uploads the SARIF file with `github/codeql-action/upload-sarif@v4`, also when the `fail_on` gate fails. Full reference: [docs/github-action.md](docs/github-action.md).
+The Action is a composite action: it installs HefestoAI from the Action's own checkout into a private virtualenv (needs `python3` >= 3.11 on the runner; `ubuntu-latest` has it), runs `hefesto analyze`, and with `sarif: 'true'` uploads the SARIF file with `github/codeql-action/upload-sarif@v4`, also when the `fail_on` gate fails. Full reference: [docs/github-action.md](docs/github-action.md).
 
 **Inputs**:
 
@@ -209,6 +209,29 @@ The button opens Cursor's install prompt through `cursor.com/link` (GitHub does 
 The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`hefesto analyze --no-config`; the hosted MCP runs a recent hefesto-ai release) on the files you send: at most 20 files, 100 KB each, 256 KB in total, 20 seconds. It returns findings with rule ids, severities, lines and SARIF fingerprints. TypeScript, JavaScript, Java, Go, Rust and C# are covered too (`multilang` grammars; the first such request on a fresh server instance is a few seconds slower). Nothing is stored. For a whole repository, run `hefesto analyze .` locally.
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
+
+## Local MCP (stdio) — unreleased
+
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is not on PyPI yet. It needs Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker).
+
+```bash
+pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
+```
+
+Claude Desktop launches it with stdio. `hefesto-mcp` must be on `PATH`. Pass the project directory as `--root` (or set `HEFESTO_MCP_ROOT`). The process refuses to start when that directory resolves to `/` or the home directory. Paths outside it are rejected.
+
+```json
+{
+  "mcpServers": {
+    "hefesto": {
+      "command": "hefesto-mcp",
+      "args": ["--root", "/absolute/path/to/the/project"]
+    }
+  }
+}
+```
+
+Tools: `analyze_local` (a file or directory inside that root) and `version`. Details: [docs/local-mcp.md](docs/local-mcp.md).
 
 ---
 
@@ -309,6 +332,9 @@ pip install "hefesto-ai[multilang]"
 
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
+
+# Optional, unreleased: local stdio MCP adapter (not on PyPI yet)
+pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
@@ -434,11 +460,13 @@ analyzed (its findings count); the text report lists it under "Decoded with
 fallback (latin-1)", `--output json` has it in `meta.decoded_with_fallback`,
 SARIF has a `warning` notification for it, and stderr warns about it.
 
-A file the run found but could not analyze (it could not be read, or its
-analyzer raised an error) is never dropped silently: the text report lists it
+A file the run found but could not analyze (it could not be read, its
+analyzer raised an error, or its tree-sitter grammar could not be loaded, for
+example offline, or with an empty or damaged grammar cache) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
-`meta.not_analyzed` (`path`, `language`, `reason`: `read_error` or
-`analyzer_error`, `exception`), SARIF has an `error` notification for it in
+`meta.not_analyzed` (`path`, `language`, `reason`: `read_error`,
+`analyzer_error` or `grammar_unavailable`, `exception`; a `grammar_unavailable`
+entry also names the `grammar`), SARIF has an `error` notification for it in
 `invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
 with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
 N file(s) could not be analyzed (exit 1)", also when `--allow-no-files` is set.
@@ -450,6 +478,13 @@ all (for example `hefesto analyze a.ts` without the TypeScript parser): that is
 the zero-files case, which still exits 1 with `--fail-on` unless
 `--allow-no-files` is set. When a missing parser is the cause, the warning says
 so: `parser unavailable for typescript (pip install "hefesto-ai[multilang]")`.
+
+A file whose grammar could not be loaded counts as not analyzed even when
+every file hit it, so `--fail-on` with `--allow-no-files` (as in the hooks from
+`hefesto install-hooks`) exits 1 offline with an empty grammar cache. The cache
+is per pack version. To fix it, run once with network access, or
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
+or pass `--allow-not-analyzed`.
 
 ---
 
