@@ -79,6 +79,10 @@ python scripts/verify_readme.py
 python scripts/verify_server_json.py
 ```
 
+### Python versions in CI
+
+Pull requests and pushes to `main` run `lint-and-test` on Python 3.11 (oldest supported) and 3.15 (latest stable). The workflow `.github/workflows/weekly-full-matrix.yml` runs the same `lint-and-test` steps, and the `multilang-smoke` steps with the `[multilang]` extra, on every supported version, 3.11 to 3.15, against `main` once a week (Mondays 06:17 UTC); maintainers can also start it from the Actions tab. When you change the steps of `lint-and-test` in `ci.yml` or of `multilang-smoke.yml`, make the same change in the weekly workflow: `tests/test_weekly_full_matrix_workflow.py` fails otherwise. It is not a required check: a failure there is fixed in a normal pull request.
+
 ### New line suppressions in pull requests
 
 On pull requests the changed-file gate runs with `--fail-on-new-suppressions`:
@@ -142,6 +146,7 @@ Dashboard > Plugins & MCPs; otherwise they use the CLI.
 7. Commit (`git commit -m 'feat: Add amazing feature'`)
 8. Push (`git push origin feature/amazing-feature`)
 9. Open Pull Request
+10. Before or right after merge, the reviewer posts a written review summary as a PR comment: what changed, the risks checked, the test and CI evidence on the final head, and the merge timing. Every merged PR carries this comment. The summary says who wrote it and never states or implies the maintainer's approval.
 
 ### Commit Message Format
 

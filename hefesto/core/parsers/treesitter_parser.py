@@ -243,6 +243,14 @@ class TreeSitterParser(CodeParser):
                 return cls._node_text(child, source)
         return None
 
+    @classmethod
+    def _field_name_text(cls, node, source: bytes) -> Optional[str]:
+        """Text of the node's ``name`` field when it is a plain identifier."""
+        field = node.child_by_field_name("name")
+        if field is None or not field.type.endswith("identifier"):
+            return None
+        return cls._node_text(field, source)
+
     def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
         """Infer a function expression's name from its parent context."""
         if parent.type in _IDENTIFIER_PARENTS:
@@ -259,12 +267,16 @@ class TreeSitterParser(CodeParser):
         Extract name from node with smart inference for arrow functions.
 
         Priority order:
-        1. Direct identifier child (function foo() {})
-        2. Parent variable_declarator, pair/property or assignment name
-        3. Method name
-        4. '<anonymous>' for truly unnamed functions
+        1. The grammar's ``name`` field (C# ``Task Foo()`` -> ``Foo``,
+           Go ``func (s *S) Run()`` -> ``Run``)
+        2. Direct identifier child (function foo() {})
+        3. Parent variable_declarator, pair/property or assignment name
+        4. Method name
+        5. '<anonymous>' for truly unnamed functions
         """
-        name = self._first_child_text(node, source, ("identifier",))
+        name = self._field_name_text(node, source)
+        if name is None:
+            name = self._first_child_text(node, source, ("identifier",))
         if name is None and node.type in _FUNCTION_EXPRESSIONS and parent is not None:
             name = self._name_from_parent(parent, source)
         if name is None and node.type == "method_definition":
