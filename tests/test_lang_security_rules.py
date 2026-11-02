@@ -177,3 +177,26 @@ def test_strings_and_comments_never_match() -> None:
     assert _rules("go", code) == []
     code = _cs('var s = "new BinaryFormatter()";\n// MD5.Create();')
     assert _rules("c_sharp", code) == []
+
+
+def test_both_deserialization_types_carry_cwe_502_in_sarif(tmp_path) -> None:
+    """INSECURE_DESERIALIZATION (C#) and PICKLE_USAGE (Python) are both CWE-502 in SARIF."""
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    pytest.importorskip("tree_sitter_language_pack")
+    (tmp_path / "A.cs").write_text("class A { void F() { var f = new BinaryFormatter(); } }\n")
+    (tmp_path / "b.py").write_text("import pickle\n")
+    out = subprocess.run(
+        [sys.executable, "-m", "hefesto.cli.main", "analyze", str(tmp_path)]
+        + ["--output", "sarif", "--severity", "LOW", "--quiet"],
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parents[1]),
+    ).stdout
+    rules = json.loads(out)["runs"][0]["tool"]["driver"]["rules"]
+    tags = {r["id"]: r["properties"]["tags"] for r in rules}
+    assert "external/cwe/cwe-502" in tags["CS002"]
+    assert "external/cwe/cwe-502" in tags["PICKLE_USAGE"]

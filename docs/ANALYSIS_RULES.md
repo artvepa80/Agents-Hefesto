@@ -1144,6 +1144,8 @@ Is it a minor style or documentation issue?
 
 These rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
 
+**Measured** means: for each rule, its findings on a labelled corpus were checked by hand and reported as `correct/n`. A precision claim of 95% or more needs n ≥ 59 findings for that rule with all of them correct (the smallest n where 0 errors gives a one-sided 95% lower bound of at least 95%). Until a rule is measured, it is experimental.
+
 | Rule | What it reports | Issue type | Severity | CWE |
 |------|-----------------|------------|----------|-----|
 | CS001 | `new SqlCommand(...)` (also OleDb, Odbc, Npgsql, MySql, Sqlite), `CommandText = ...` or `ExecuteSqlRaw`/`FromSqlRaw` whose SQL is built with `+`, `$"...{x}"` or `string.Format` | `SQL_INJECTION_RISK` | HIGH | 89 |
@@ -1164,7 +1166,12 @@ Known limits:
 
 - Rust unit tests that live in the same file under `#[cfg(test)]` are **not** skipped: only the path decides what is test code, so `unsafe` blocks and `transmute` calls in an in-file `mod tests` are reported like any other code.
 - CS004 and GO003 report every use of MD5 and SHA-1, including non-security uses such as file checksums, cache keys, ETags and protocol-mandated digests. The tree does not show why the hash is computed; review these findings. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
-- Deserialization has two issue types. `PICKLE_USAGE` (Python) flags the `import pickle` line and maps to CWE-502 with precision `low`, since the import alone does not show a load of untrusted data. `INSECURE_DESERIALIZATION` (CS002) flags the construction of a .NET formatter whose `Deserialize` is unsafe by design, and also maps to CWE-502 (from the finding's `cwe` metadata). They are separate types so the Python mapping and its precision stay as they are.
+- Deserialization has two issue types, both CWE-502 in SARIF (`external/cwe/cwe-502`). **INSECURE_DESERIALIZATION**: deserializing untrusted data with a formatter that can create arbitrary types (CWE-502). New languages use this type; Python keeps `PICKLE_USAGE`, which flags the `import pickle` line (precision `low`).
+
+  | Language | Rule | Issue type | What is flagged | CWE |
+  |----------|------|------------|-----------------|-----|
+  | Python | `PICKLE_USAGE` | `PICKLE_USAGE` | `import pickle` / `cPickle` | 502 |
+  | C# | CS002 | `INSECURE_DESERIALIZATION` | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | 502 |
 
 Not reported on purpose: a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments; Go `Exec` calls whose literal part has no SQL keyword.
 
