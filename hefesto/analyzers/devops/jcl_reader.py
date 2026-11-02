@@ -161,42 +161,41 @@ class JclModel:
 # ------------------------------------------------------------------ statements
 
 
+# A quoted string (with '' escapes; may run to the end), a parenthesis or comma,
+# a run of other characters, or the blank that ends the operand field.
+_OPERAND_TOKEN = re.compile(r"'(?:[^']|'')*(?:'|$)|[(),]|[^'(), ]+| ")
+
+
+def _paren_depth(depth: int, token: str) -> int:
+    if token == "(":
+        return depth + 1
+    if token == ")":
+        return max(0, depth - 1)
+    return depth
+
+
 def _split_operands(text: str) -> Tuple[List[str], bool]:
     """Operands up to the first blank outside quotes; True when it ends with a comma."""
     out: List[str] = []
     current: List[str] = []
     depth = 0
-    quote = False
-    i = 0
-    while i < len(text):
-        char = text[i]
-        if quote:
-            current.append(char)
-            if char == "'":
-                if i + 1 < len(text) and text[i + 1] == "'":
-                    current.append("'")
-                    i += 1
-                else:
-                    quote = False
-        elif char == "'":
-            quote = True
-            current.append(char)
-        elif char == " ":
+    end = len(text)
+    for match in _OPERAND_TOKEN.finditer(text):
+        token = match.group(0)
+        if token == " ":
+            end = match.start()
             break
-        elif char == "(":
-            depth += 1
-            current.append(char)
-        elif char == ")":
-            depth = max(0, depth - 1)
-            current.append(char)
-        elif char == "," and depth == 0:
+        if token == "," and depth == 0:
             out.append("".join(current))
             current = []
-        else:
-            current.append(char)
-        i += 1
-    tail = "".join(current)
-    continued = tail == "" and bool(out) and text[:i].endswith(",")
+            continue
+        depth = _paren_depth(depth, token)
+        current.append(token)
+    return _close_operands(out, "".join(current), text[:end])
+
+
+def _close_operands(out: List[str], tail: str, field: str) -> Tuple[List[str], bool]:
+    continued = tail == "" and bool(out) and field.endswith(",")
     if tail:
         out.append(tail)
     return out, continued

@@ -256,12 +256,8 @@ _DATA_ITEM = re.compile(r"^\s*(?:0?[1-9]|[1-4][0-9]|77)\s+([A-Za-z0-9][\w-]*)", 
 _DD_NAME = re.compile(r"^[A-Z@#$][A-Z0-9@#$]{0,7}$")
 
 
-def _assigns(raw: List[str], fixed: bool) -> List[Assign]:
-    """DD names of ``SELECT ... ASSIGN TO`` in FILE-CONTROL (EXEC CICS ASSIGN is never read).
-
-    ``[label-]S-name`` / ``AS-name`` keep the part after the last hyphen (the DD name).
-    A data item, ``DYNAMIC``, or a target that cannot be a DD name is unresolved.
-    """
+def _file_control_lines(raw: List[str], fixed: bool) -> List[int]:
+    """Indexes of the FILE-CONTROL paragraph lines (empty when there is none)."""
     numbers: List[int] = []
     inside = False
     for i, line in enumerate(raw):
@@ -274,6 +270,29 @@ def _assigns(raw: List[str], fixed: bool) -> List[Assign]:
         if _FILE_CONTROL_END.search(_mask_line(code)):
             break
         numbers.append(i)
+    return numbers
+
+
+def _assign_of(
+    at: int, text: str, literal: Optional[str], word: str, dynamic: bool, data_items: Set[str]
+) -> Assign:
+    """One ``ASSIGN TO`` target: a DD name, or unresolved with a reason."""
+    name = (literal if literal is not None else word).strip().upper()
+    if dynamic or (literal is None and name in data_items):
+        return Assign(at, expression=text, reason="variable_target")
+    dd = name.rsplit("-", 1)[-1] if literal is None else name
+    if _DD_NAME.match(dd):
+        return Assign(at, dd=dd, expression=text)
+    return Assign(at, expression=text, reason="not_a_dd_name")
+
+
+def _assigns(raw: List[str], fixed: bool) -> List[Assign]:
+    """DD names of ``SELECT ... ASSIGN TO`` in FILE-CONTROL (EXEC CICS ASSIGN is never read).
+
+    ``[label-]S-name`` / ``AS-name`` keep the part after the last hyphen (the DD name).
+    A data item, ``DYNAMIC``, or a target that cannot be a DD name is unresolved.
+    """
+    numbers = _file_control_lines(raw, fixed)
     if not numbers:
         return []
     doc = _Text(raw, numbers, fixed)
@@ -284,20 +303,18 @@ def _assigns(raw: List[str], fixed: bool) -> List[Assign]:
         target = _ASSIGN_TARGET.match(doc.code, match.end())
         if target is None:
             continue
-        at = doc.line_of(target.start())
-        text = target.group(0)
         literal = target.group(1) if target.group(1) is not None else target.group(2)
-        name = (literal if literal is not None else target.group(3)).strip().upper()
-        if match.group(1) and match.group(1).upper() == "DYNAMIC":
-            out.append(Assign(at, expression=text, reason="variable_target"))
-        elif literal is None and name in data_items:
-            out.append(Assign(at, expression=text, reason="variable_target"))
-        else:
-            dd = name.rsplit("-", 1)[-1] if literal is None else name
-            if _DD_NAME.match(dd):
-                out.append(Assign(at, dd=dd, expression=text))
-            else:
-                out.append(Assign(at, expression=text, reason="not_a_dd_name"))
+        dynamic = (match.group(1) or "").upper() == "DYNAMIC"
+        out.append(
+            _assign_of(
+                doc.line_of(target.start()),
+                target.group(0),
+                literal,
+                target.group(3) or "",
+                dynamic,
+                data_items,
+            )
+        )
     return out
 
 
@@ -698,53 +715,54 @@ def _add_copies(index: Any, graph: _Graph, path: str, owners: Dict[str, str]) ->
 # ------------------------------------------------------------------ JCL (WP2)
 
 
-def _add_jcl(
+def _step_programs(
     graph: _Graph,
-    jcl: Any,
+    step_id: str,
+    step: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+) -> List[str]:
+    """Program files a step runs: its EXEC PGM, or the TSO/IMS program it starts."""
+    from hefesto.analyzers.devops import jcl_reader
+
+    if not step.pgm:
+        return []
+    targets: List[str] = []
+    program = _add_exec_pgm(graph, step_id, step.pgm, step.file, step.line, programs, owners)
+    if program:
+        targets.append(program)
+    if step.pgm in jcl_reader.TSO_BATCH:
+        targets += _add_tso_programs(graph, step_id, step, programs, owners)
+    elif step.pgm == jcl_reader.IMS_REGION and step.parm:
+        targets += _add_ims_program(graph, step_id, step, programs, owners)
+    return targets
+
+
+def _add_jcl_step(
+    graph: _Graph,
+    resolved: Any,
     programs: Dict[str, Set[str]],
     owners: Dict[str, str],
     assigns: Dict[str, List[Assign]],
+    reported_assigns: Set[Tuple[str, int]],
 ) -> None:
-    """Jobs, steps, datasets, EXEC PGM targets and ASSIGN DD names of a JCL model."""
-    from hefesto.analyzers.devops import jcl_reader
-
-    job_ids: Dict[int, str] = {}
-    for job in jcl.jobs:
-        job_ids[id(job)] = graph.node(
-            f"jcl_job:{job.name}@{job.file}", "jcl_job", job.name, job.file
-        )
-    reported_assigns: Set[Tuple[str, int]] = set()
-    for resolved in jcl.steps:
-        job, step = resolved.job, resolved.step
-        step_id = graph.node(
-            f"jcl_step:{resolved.path}@{job.file}", "jcl_step", resolved.path, job.file
-        )
-        targets: List[str] = []  # program files the step runs
-        if step.pgm:
-            program = _add_exec_pgm(
-                graph, step_id, step.pgm, step.file, step.line, programs, owners
+    """One step: its node, programs, datasets and the ASSIGN DD names it codes."""
+    job, step = resolved.job, resolved.step
+    step_id = graph.node(
+        f"jcl_step:{resolved.path}@{job.file}", "jcl_step", resolved.path, job.file
+    )
+    targets = _step_programs(graph, step_id, step, programs, owners)
+    dd_names = {dd.name for dd in step.dds}
+    for dd in step.dds:
+        _add_dataset(graph, step_id, dd)
+    for program in targets:
+        for assign in assigns.get(program, []):
+            _add_assign(
+                graph, owners[program], program, step_id, step, dd_names, assign, reported_assigns
             )
-            if program:
-                targets.append(program)
-            if step.pgm in jcl_reader.TSO_BATCH:
-                targets += _add_tso_programs(graph, step_id, step, programs, owners)
-            elif step.pgm == jcl_reader.IMS_REGION and step.parm:
-                targets += _add_ims_program(graph, step_id, step, programs, owners)
-        dd_names = {dd.name for dd in step.dds}
-        for dd in step.dds:
-            _add_dataset(graph, step_id, dd)
-        for program in targets:
-            for assign in assigns.get(program, []):
-                _add_assign(
-                    graph,
-                    owners[program],
-                    program,
-                    step_id,
-                    step,
-                    dd_names,
-                    assign,
-                    reported_assigns,
-                )
+
+
+def _add_jcl_unresolved(graph: _Graph, jcl: Any, job_ids: Dict[int, str]) -> None:
     for job, path, entry in jcl.unresolved:
         owner = (
             f"jcl_step:{path}@{job.file}" if path else job_ids.get(id(job), f"jcl_job:{job.name}")
@@ -759,6 +777,25 @@ def _add_jcl(
                 "line": entry.line,
             }
         )
+
+
+def _add_jcl(
+    graph: _Graph,
+    jcl: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+    assigns: Dict[str, List[Assign]],
+) -> None:
+    """Jobs, steps, datasets, EXEC PGM targets and ASSIGN DD names of a JCL model."""
+    job_ids: Dict[int, str] = {}
+    for job in jcl.jobs:
+        job_ids[id(job)] = graph.node(
+            f"jcl_job:{job.name}@{job.file}", "jcl_job", job.name, job.file
+        )
+    reported_assigns: Set[Tuple[str, int]] = set()
+    for resolved in jcl.steps:
+        _add_jcl_step(graph, resolved, programs, owners, assigns, reported_assigns)
+    _add_jcl_unresolved(graph, jcl, job_ids)
 
 
 def _add_exec_pgm(
