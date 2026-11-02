@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — JCL lineage (`--lineage` only)
+
+- With `--lineage`, a separate JCL reader (`hefesto/analyzers/devops/jcl_reader.py`) reads `.jcl`, `.prc` and `.proc` files and adds jobs, steps and datasets to the `lineage` section: nodes `jcl_job`, `jcl_step`, `dataset`; edges `EXEC_PGM` (step → COBOL program of the scan, with `via` for `RUN PROGRAM` under `IKJEFT01` and the `DFSRRC00` `PARM` program), `DD_DATASET` (step → dataset) and `ASSIGN_DD` (program → step for `SELECT ... ASSIGN TO` DD names, one per step that runs the program). Utilities and other programs go to `references` (`system` / `external`); symbols, temporary datasets, referbacks, `SYSTSIN` datasets, missing PROCs and INCLUDE members go to `unresolved` with a reason. PROC calls are expanded with the PROCs in the scan and `STEP.DD` overrides replace the PROC's DD.
+- A repo with JCL and no COBOL now gets a `lineage` section with `--lineage`.
+- JCL is not registered as a language: without `--lineage` the JCL files are never read and the report is unchanged. `schema_version` stays 1 (new node and edge kinds only).
+- Docs: `docs/cobol.md`. Tests: `tests/test_jcl_lineage.py`.
+
 ### Documentation — written review summary on every merged PR
 
 - `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).

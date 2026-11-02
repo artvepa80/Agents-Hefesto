@@ -319,6 +319,10 @@ class AnalyzerEngine:
         # prepare_cobol_index(); otherwise built per analyze_path() call.
         self._cobol_index: Any = None
         self._cobol_index_pinned = False
+        # Roots and excludes for the JCL reader (read only with --lineage).
+        self._lineage_roots: List[Path] = []
+        self._lineage_excludes: List[str] = []
+        self._lineage_roots_pinned = False
         # Copybook directories outside the scan (copybook_paths / --copybook-path)
         self._copybook_paths: List[Path] = []
         self._copybook_library_names: Optional[Dict[str, str]] = None
@@ -369,14 +373,22 @@ class AnalyzerEngine:
         if index is not None:
             self._cobol_index = index
             self._cobol_index_pinned = True
+        self._lineage_roots = roots
+        self._lineage_excludes = list(exclude_patterns)
+        self._lineage_roots_pinned = True
 
     def cobol_lineage(self) -> Optional[Dict[str, Any]]:
-        """Program lineage of the last COBOL index (None without --lineage or COBOL)."""
-        if not self.collect_lineage or self._cobol_index is None:
+        """Program and JCL lineage of the last run (None without --lineage, COBOL or JCL)."""
+        if not self.collect_lineage:
             return None
         from hefesto.analyzers.devops.cobol_lineage import build_lineage
+        from hefesto.analyzers.devops.jcl_reader import read_model
 
-        return build_lineage(self._cobol_index)
+        # JCL is read only here, so a run without --lineage never opens it.
+        jcl = read_model(self._lineage_roots, self._lineage_excludes)
+        if self._cobol_index is None and not jcl:
+            return None
+        return build_lineage(self._cobol_index, jcl)
 
     def _build_cobol_index(
         self, files: List[Path], roots: List[Path], exclude_patterns: List[str]
@@ -509,6 +521,9 @@ class AnalyzerEngine:
             self._cobol_index = self._build_cobol_index(
                 source_files, [path_obj], exclude_patterns or []
             )
+        if not self._lineage_roots_pinned:
+            self._lineage_roots = [path_obj]
+            self._lineage_excludes = list(exclude_patterns or [])
         source_files = self._with_indexed_copybooks(source_files, path_obj)
 
         not_analyzed_before = len(self._not_analyzed)
