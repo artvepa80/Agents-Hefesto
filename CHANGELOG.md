@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation — written review summary on every merged PR
+
+- `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
+
 ### Added — weekly full-matrix CI run
 
 - New workflow `.github/workflows/weekly-full-matrix.yml` runs against `main` every Monday at 06:17 UTC, and on demand (`workflow_dispatch`), on Python 3.11, 3.12, 3.13, 3.14 and 3.15 (`fail-fast: false`). Job `lint-and-test-full` runs the `lint-and-test` steps of `ci.yml` (without the pull-request commit check and the coverage upload). Job `multilang-smoke-full` runs the steps of `multilang-smoke.yml`: it installs the `[multilang]` extra, prefetches the 6 grammars, parses one sample per language and runs the unit tests that need the grammars. Pull requests and pushes keep testing only 3.11 and 3.15. It is not a required check; actions are pinned by commit SHA like the other workflows.
