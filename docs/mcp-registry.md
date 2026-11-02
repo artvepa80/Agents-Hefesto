@@ -78,7 +78,9 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   he approves each deployment.
 - **Wrapper upload failed:** if `publish-hefesto-mcp` in `release.yml` fails
   (for example the pending publisher for `hefesto-mcp` is not in place), fix
-  that publisher and choose "Re-run failed jobs" on the same workflow run.
+  that publisher and choose only "Re-run failed jobs" on the same workflow run.
+  Never choose "Re-run all jobs": that runs the engine publish again, and PyPI
+  rejects a second upload of the same release. Do not set `skip-existing`.
   The wheel is already in the `hefesto-mcp-distributions` artifact, so the
   rerun publishes that wheel and does not build it again.
 - Registry state on 2026-10-24: 4.20.3 is latest (published 2026-10-24), with

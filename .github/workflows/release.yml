@@ -111,15 +111,32 @@ jobs:
       - name: Smoke install wrapper from local wheels
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
           python -m venv "$RUNNER_TEMP/mcp-venv"
-          "$RUNNER_TEMP/mcp-venv/bin/python" -m pip install \
-            --find-links dist --find-links dist-mcp \
-            "hefesto-mcp==${VERSION}"
+          PY="$RUNNER_TEMP/mcp-venv/bin/python"
+          shopt -s nullglob
+          engines=(dist/hefesto_ai-*.whl)
+          wrappers=(dist-mcp/hefesto_mcp-*.whl)
+          if [ "${#engines[@]}" -ne 1 ] || [ "${#wrappers[@]}" -ne 1 ]; then
+            printf 'expected one engine wheel and one wrapper wheel\n' >&2
+            exit 1
+          fi
+          "$PY" -m pip install "${engines[0]}[mcp]"
+          "$PY" -m pip install --no-index --no-deps "${wrappers[0]}"
+          "$PY" -m pip check
           mkdir -p "$RUNNER_TEMP/proj"
           cd /
+          # The checkout is not on sys.path here, so this reads the venv install.
+          "$PY" - <<'PY'
+          import importlib.metadata
+
+          recorded = importlib.metadata.distribution("hefesto-ai").read_text("direct_url.json")
+          if not recorded or "file:" not in recorded:
+              raise SystemExit("hefesto-ai has no direct_url.json from the local wheel")
+          PY
           HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj" \
             "$RUNNER_TEMP/mcp-venv/bin/hefesto-mcp" --help
+          HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj" \
+            "$PY" -c "from hefesto.mcp_server import build_server; build_server()"
 
       - name: Upload wrapper dist
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

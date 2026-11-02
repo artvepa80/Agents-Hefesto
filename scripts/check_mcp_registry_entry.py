@@ -3,10 +3,13 @@
 
 Used by ``.github/workflows/mcp-registry.yml``. It never publishes.
 
-The canonical ``server.json`` is deployed with the hosted landing page and served at
-``https://hefestoai.narapallc.com/server.json``. This public repository's
-``server.json`` is never sent to the registry: its description and version
-(PyPI) differ from the hosted entry.
+The workflow downloads ``https://hefestoai.narapallc.com/server.json`` and
+passes that file here. This repository's ``server.json`` is not uploaded.
+Its ``description`` is the source of truth: the downloaded document must use
+that same description, and ``packages`` must be exactly one PyPI entry for
+``hefesto-mcp`` (stdio, ``uvx``, version equal to the document version,
+``HEFESTO_MCP_ROOT`` required). ``remotes`` stays the single hosted
+streamable-http URL. The downloaded file is not stored in this repository.
 
 The registry version is the hosted engine version and the PyPI package
 version. The entry's version must equal all of: the hosted ``initialize``
@@ -14,7 +17,8 @@ version. The entry's version must equal all of: the hosted ``initialize``
 ``tools/call analyze`` (as the private ``scripts/verify_hosted_engine.py``
 does), ``changelog.json`` ``latest`` on the landing page, and a release
 already on PyPI (``https://pypi.org/pypi/hefesto-mcp/<version>/json``
-returns 200). A hosted-only hotfix cannot be registered without publishing
+returns 200). ``URLError`` and a timeout on that request fail the check
+with a message. A hosted-only hotfix cannot be registered without publishing
 the package too.
 
 A published registry version can never be changed
@@ -25,12 +29,7 @@ and a warning in a dry run. The lookup is
 (404 means free) plus ``GET /v0.1/servers/{name}/versions?include_deleted=true``
 (``docs/reference/api/openapi.yaml``).
 
-``description`` is read from this repository's ``server.json`` (the source of
-truth). ``packages`` must be exactly one PyPI entry for ``hefesto-mcp``
-(stdio, ``uvx``, version equal to the document version, ``HEFESTO_MCP_ROOT``
-required). ``remotes`` stays the single hosted streamable-http URL. The
-workflow still validates the file downloaded from the hosted URL; that file
-is not stored in this repository.
+``--offline`` skips the hosted engine, the registry, and the PyPI request.
 
 Usage::
 
@@ -198,25 +197,39 @@ def pypi_json_url(version: str, package: str = PACKAGE_ID) -> str:
     return PYPI_JSON_URL.format(package=package, version=quoted)
 
 
+class PypiLookupError(Exception):
+    """PyPI JSON could not be read. The check fails closed."""
+
+
 def pypi_release_status(version: str) -> int:
-    """HTTP status of the PyPI JSON for this package version."""
-    request = urllib.request.Request(
-        pypi_json_url(version),
-        headers={"Accept": "application/json"},
-    )
+    """HTTP status of the PyPI JSON for this package version.
+
+    An HTTP error returns its status code. A transport error or a timeout
+    raises ``PypiLookupError``.
+    """
+    url = pypi_json_url(version)
+    request = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
             return int(response.status)
     except urllib.error.HTTPError as exc:
+        # HTTPError is a URLError. Handle it first so a 404 stays a status.
         return int(exc.code)
+    except urllib.error.URLError as exc:
+        raise PypiLookupError(f"{url} could not be reached: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise PypiLookupError(f"{url} timed out after {TIMEOUT_SECONDS}s") from exc
 
 
 def check_pypi_release(version: str) -> List[str]:
     """The registry version must already be the published hefesto-mcp release."""
-    status = pypi_release_status(version)
+    url = pypi_json_url(version)
+    try:
+        status = pypi_release_status(version)
+    except PypiLookupError as exc:
+        return [str(exc)]
     if status == 200:
         return []
-    url = pypi_json_url(version)
     return [f"{url} returned {status}, expected 200"]
 
 

@@ -219,6 +219,24 @@ def test_pypi_json_must_return_200(mod, monkeypatch):
     assert "returned 404, expected 200" in errors[0]
 
 
+def test_pypi_lookup_fails_closed_on_urlerror_and_timeout(mod, monkeypatch):
+    url = "https://pypi.org/pypi/hefesto-mcp/1.2.3/json"
+
+    def unreachable(request, timeout=None):
+        raise mod.urllib.error.URLError("name resolution failed")
+
+    monkeypatch.setattr(mod.urllib.request, "urlopen", unreachable)
+    errors = mod.check_pypi_release("1.2.3")
+    assert errors == [f"{url} could not be reached: name resolution failed"]
+
+    def timed_out(request, timeout=None):
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr(mod.urllib.request, "urlopen", timed_out)
+    errors = mod.check_pypi_release("1.2.3")
+    assert errors == [f"{url} timed out after {mod.TIMEOUT_SECONDS}s"]
+
+
 def test_registry_other_errors_propagate(mod, monkeypatch):
     def server_error(url):
         raise mod.urllib.error.HTTPError(url, 503, "Unavailable", None, None)

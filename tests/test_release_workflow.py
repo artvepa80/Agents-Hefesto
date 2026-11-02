@@ -62,9 +62,19 @@ def test_build_keeps_guard_tag_check_and_twine_check():
     assert "python -m twine check dist-mcp/*" in build_text
     assert "Requires-Dist: hefesto-ai[mcp]==" in build_text
     assert "Requires-Python:" in build_text
-    assert "--find-links dist --find-links dist-mcp" in build_text
-    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in build_text
-    assert "cd /" in build_text
+    smoke = next(
+        step for step in build["steps"] if step["name"] == "Smoke install wrapper from local wheels"
+    )
+    smoke_run = smoke["run"]
+    assert "--find-links" not in smoke_run
+    assert '"${engines[0]}[mcp]"' in smoke_run
+    assert "--no-index --no-deps" in smoke_run
+    assert "pip check" in smoke_run
+    assert "direct_url.json" in smoke_run
+    assert '"file:"' in smoke_run
+    assert "build_server()" in smoke_run
+    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in smoke_run
+    assert "cd /" in smoke_run
     assert "id-token" not in build.get("permissions", {})
 
 
@@ -117,7 +127,12 @@ def test_wrapper_publishes_after_hefesto_ai_on_the_same_environment():
 
 
 def test_token_jobs_do_not_build_or_install():
-    """A job that can publish must not build or pip-install."""
+    """A job that can publish must not build or pip-install.
+
+    ``id-token`` is also absent from the workflow-level permissions, so no
+    job inherits a PyPI identity.
+    """
+    assert "id-token" not in (_workflow().get("permissions") or {})
     for name, job in _workflow()["jobs"].items():
         permissions = job.get("permissions") or {}
         if permissions.get("id-token") != "write":
