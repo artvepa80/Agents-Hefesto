@@ -1253,6 +1253,23 @@ exclude_types:
 
 ---
 
+## Declaration names in tree-sitter languages
+
+For Java, Go, Rust, C#, JavaScript and TypeScript, a finding names its function,
+method or type with the name the declaration declares (the grammar's `name`
+field), not the first identifier inside it:
+
+| Declaration | Name in findings |
+|---|---|
+| C# `public async Task WriteLazy()` | `WriteLazy` |
+| Go `func (s *Server) Run()` | `Run` |
+| Go `type Server struct{}` | `Server` (a grouped `type (A int; B string)` is named `A`) |
+| Rust `impl<T> Display for Vec<T>` | `Vec` |
+| Rust `impl a::B` | `B` |
+| Rust `impl Tr for (A, B)` | no name (tuple and array types have none) |
+
+---
+
 ## 📚 Related Documentation
 
 - **[Getting Started](GETTING_STARTED.md)** - Quick tutorial

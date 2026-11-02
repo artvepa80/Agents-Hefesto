@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
+
+A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type (A int; B string)` is named after its first spec, `A`. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
+
 ### Documentation — written review summary on every merged PR
 
 - `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
