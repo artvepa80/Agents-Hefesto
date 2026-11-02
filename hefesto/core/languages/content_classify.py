@@ -7,6 +7,7 @@ files a directory walk opens; this module only refines that guess.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -124,6 +125,41 @@ def _refine_yaml(guessed: Language, file_path: Path, content: Optional[str]) -> 
     return guessed
 
 
+# C++-only syntax, matched after comments and string/char literals are removed.
+# ``extern "C"`` is not a marker: C headers wrap their declarations in it.
+_CPP_MARKERS = re.compile(
+    r"^[ \t]*(?:class|namespace)[ \t]+\w"
+    r"|\btemplate[ \t]*<"
+    r"|\bstd::"
+    r"|^[ \t]*using[ \t]+namespace\b"
+    r"|^[ \t]*(?:public|private|protected)[ \t]*:"
+    r"|^[ \t]*#[ \t]*include[ \t]*<[A-Za-z_]+>",
+    re.MULTILINE,
+)
+_C_NOISE = re.compile(
+    r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'",
+    re.DOTALL,
+)
+_CPP_SOURCE_SUFFIXES = (".cpp", ".cc", ".cxx", ".c++")
+
+
+def _header_language(file_path: Path, content: Optional[str]) -> Language:
+    """C or C++ for a ``.h`` header.
+
+    C++ when the text (comments and literals removed) has C++-only syntax,
+    or when a C++ source with the same stem sits next to it; C otherwise.
+    """
+    if content and _CPP_MARKERS.search(_C_NOISE.sub(" ", content)):
+        return Language.CPP
+    try:
+        for suffix in _CPP_SOURCE_SUFFIXES:
+            if file_path.with_suffix(suffix).is_file():
+                return Language.CPP
+    except OSError:
+        pass
+    return Language.C
+
+
 def refine_language(guessed: Language, file_path: Path, content: Optional[str]) -> Language:
     """Apply the precedence table to a path-based guess."""
     name = file_path.name.lower()
@@ -143,6 +179,9 @@ def refine_language(guessed: Language, file_path: Path, content: Optional[str]) 
         or (guessed == Language.CLOUDFORMATION and suffix in _YAML_SUFFIXES)
     ):
         return _refine_yaml(guessed, file_path, content)
+
+    if guessed == Language.C and suffix == ".h":
+        return _header_language(file_path, content)
 
     if guessed == Language.HELM and not _is_helm_values_path(file_path):
         return Language.YAML

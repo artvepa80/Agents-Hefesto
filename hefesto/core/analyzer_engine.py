@@ -188,6 +188,8 @@ def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
             f"tree-sitter grammar '{entry.get('grammar')}' could not be loaded"
             f" ({entry.get('exception')}; offline, or an empty or damaged grammar cache?)"
         )
+    if entry.get("reason") == "parse_error":
+        return "the grammar could not parse any declaration in it"
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
     return f"{what} ({entry.get('exception')})"
 
@@ -837,6 +839,16 @@ class AnalyzerEngine:
                 tree = parser.parse(code, str(file_path))
             except Exception as exc:
                 self._record_parser_failure(file_path, language, exc)
+                return None
+            if getattr(tree, "unparseable", False):
+                self._not_analyzed.append(
+                    {
+                        "path": str(file_path),
+                        "language": language.value,
+                        "reason": "parse_error",
+                        "exception": "UnparseableSource",
+                    }
+                )
                 return None
 
             # LOC already calculated above

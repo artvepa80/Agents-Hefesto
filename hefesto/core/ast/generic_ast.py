@@ -68,6 +68,10 @@ class GenericAST:
         self.root = root
         self.language = language
         self.source = source
+        # Set by a parser whose grammar recovered nothing from the file
+        # (C/C++: every top-level node is an ERROR). The engine reports
+        # such a file in ``meta.not_analyzed`` instead of analyzing it.
+        self.unparseable = False
 
     def walk(self) -> List[GenericNode]:
         """Walk all nodes in tree."""
