@@ -50,7 +50,7 @@ These analyzers look for drift between what your project **declares** and what i
 | **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
 | **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
 | **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
-| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not read by any `scripts/action_*.sh`; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
 | **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
 
 ```bash

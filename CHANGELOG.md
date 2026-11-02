@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — opt-in `multilang` input for the GitHub Action
 
 - `multilang: 'true'` installs the `[multilang]` extra in the Action, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed in CI as with `pip install "hefesto-ai[multilang]"`. Default `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out). The install step moved from `action.yml` into `scripts/action_install.sh` (same commands; tested with `tests/scripts/test_action_install.py`). `action-smoke.yml` gains a `smoke-multilang` job (not a required check) that runs a TypeScript file with the input off (exit 1, no file analyzed) and on (exit 0, 1 file analyzed).
+- `OT-INSTALL-001` (an `action.yml` input that no script reads) now reads every `scripts/action_*.sh`, not only `scripts/action_entrypoint.sh`, so the `multilang` input read by `scripts/action_install.sh` is not reported. The message now says "no scripts/action_*.sh reads INPUT_<NAME>".
 
 ### Removed — Python 3.10 support (minimum is now Python 3.11)
 
