@@ -129,25 +129,34 @@ def _literal_text(node: GenericNode) -> str:
     return " ".join(n.text for n in _walk(node) if _ts(n) in _LITERALS or "string" in _ts(n))
 
 
+def _concat_builds_string(node: GenericNode) -> bool:
+    """``"a" + x``: a ``+`` with a literal part and a non-literal part."""
+    ops = [c.text for c in node.children if not c.metadata.get("named", True)]
+    if "+" not in ops:
+        return False
+    parts = _named(node)
+    has_literal = any(_is_literal(p) or _built_string(p) for p in parts)
+    return has_literal and not all(_is_literal(p) for p in parts)
+
+
+def _format_call_builds_string(node: GenericNode) -> bool:
+    """``string.Format(fmt, x)`` or ``fmt.Sprintf(fmt, x)`` with at least one value."""
+    parts = _named(node)
+    if not parts:
+        return False
+    name = parts[0].text.replace(" ", "")
+    return name in ("string.Format", "String.Format", "fmt.Sprintf") and len(_args(node)) > 1
+
+
 def _built_string(node: GenericNode) -> bool:
     """True when ``node`` builds a string from a literal and a non-literal."""
     t = _ts(node)
     if t == "interpolated_string_expression":
         return any(_ts(n) == "interpolation" for n in _walk(node))
     if t == "binary_expression":
-        ops = [c.text for c in node.children if not c.metadata.get("named", True)]
-        if "+" not in ops:
-            return False
-        parts = _named(node)
-        has_literal = any(_is_literal(p) or _built_string(p) for p in parts)
-        return has_literal and not all(_is_literal(p) for p in parts)
+        return _concat_builds_string(node)
     if t in ("invocation_expression", "call_expression"):
-        func = _named(node)[0] if _named(node) else None
-        if func is None:
-            return False
-        name = func.text.replace(" ", "")
-        if name in ("string.Format", "String.Format", "fmt.Sprintf"):
-            return len(_args(node)) > 1
+        return _format_call_builds_string(node)
     if t == "parenthesized_expression":
         return any(_built_string(c) for c in _named(node))
     return False
@@ -239,54 +248,74 @@ def _cs_weak(ctx: _Ctx, node: GenericNode, name: str) -> None:
     )
 
 
+def _cs_creation(ctx: _Ctx, node: GenericNode) -> None:
+    parts = _named(node)
+    type_name = _last_name(parts[0].text) if parts else ""
+    args = _args(node)
+    if type_name in _CS_SQL_TYPES and args and _built_string(args[0]):
+        _cs_sql(ctx, node)
+    elif type_name in _CS_FORMATTERS:
+        ctx.add(
+            node,
+            "CS002",
+            AnalysisIssueType.INSECURE_DESERIALIZATION,
+            AnalysisIssueSeverity.HIGH,
+            f"{type_name} deserializes untrusted data unsafely",
+            "Use System.Text.Json or DataContractSerializer with known types.",
+            "CWE-502",
+        )
+    elif type_name == "ProcessStartInfo" and any(_built_string(a) for a in args):
+        _cs_process(ctx, node)
+    elif type_name in _CS_WEAK_TYPES:
+        _cs_weak(ctx, node, type_name)
+
+
+def _cs_weak_factory(func: str) -> Optional[str]:
+    """``MD5`` for ``MD5.Create``/``HashData``; None for anything else."""
+    if "." not in func:
+        return None
+    owner = _last_name(func.rsplit(".", 1)[0])
+    if owner in _CS_WEAK_FACTORIES and _last_name(func) in ("Create", "HashData"):
+        return owner
+    return None
+
+
+def _cs_invocation(ctx: _Ctx, node: GenericNode) -> None:
+    parts = _named(node)
+    if not parts:
+        return
+    func = parts[0].text.replace(" ", "")
+    args = _args(node)
+    is_process = func == "Process.Start" or func.endswith(".Process.Start")
+    weak = _cs_weak_factory(func)
+    if _last_name(func) in _CS_SQL_RAW and args and _built_string(args[0]):
+        _cs_sql(ctx, node)
+    elif is_process and any(_built_string(a) for a in args):
+        _cs_process(ctx, node)
+    elif weak:
+        _cs_weak(ctx, node, weak)
+
+
+def _cs_assignment(ctx: _Ctx, node: GenericNode) -> None:
+    parts = _named(node)
+    if len(parts) < 2:
+        return
+    if _last_name(parts[0].text) == "CommandText" and _built_string(parts[-1]):
+        _cs_sql(ctx, node)
+
+
+_CS_HANDLERS: Dict[str, Callable[[_Ctx, GenericNode], None]] = {
+    "object_creation_expression": _cs_creation,
+    "invocation_expression": _cs_invocation,
+    "assignment_expression": _cs_assignment,
+}
+
+
 def _check_csharp(ctx: _Ctx, root: GenericNode) -> None:
     for node in _walk(root):
-        t = _ts(node)
-        if t == "object_creation_expression":
-            parts = _named(node)
-            type_name = _last_name(parts[0].text) if parts else ""
-            args = _args(node)
-            if type_name in _CS_SQL_TYPES and args and _built_string(args[0]):
-                _cs_sql(ctx, node)
-            elif type_name in _CS_FORMATTERS:
-                ctx.add(
-                    node,
-                    "CS002",
-                    AnalysisIssueType.INSECURE_DESERIALIZATION,
-                    AnalysisIssueSeverity.HIGH,
-                    f"{type_name} deserializes untrusted data unsafely",
-                    "Use System.Text.Json or DataContractSerializer with known types.",
-                    "CWE-502",
-                )
-            elif type_name == "ProcessStartInfo" and any(_built_string(a) for a in args):
-                _cs_process(ctx, node)
-            elif type_name in _CS_WEAK_TYPES:
-                _cs_weak(ctx, node, type_name)
-        elif t == "invocation_expression":
-            parts = _named(node)
-            if not parts:
-                continue
-            func = parts[0].text.replace(" ", "")
-            member = _last_name(func)
-            args = _args(node)
-            if member in _CS_SQL_RAW and args and _built_string(args[0]):
-                _cs_sql(ctx, node)
-            elif (func == "Process.Start" or func.endswith(".Process.Start")) and any(
-                _built_string(a) for a in args
-            ):
-                _cs_process(ctx, node)
-            elif "." in func:
-                owner = _last_name(func.rsplit(".", 1)[0])
-                if owner in _CS_WEAK_FACTORIES and member in ("Create", "HashData"):
-                    _cs_weak(ctx, node, owner)
-        elif t == "assignment_expression":
-            parts = _named(node)
-            if (
-                len(parts) >= 2
-                and _last_name(parts[0].text) == "CommandText"
-                and _built_string(parts[-1])
-            ):
-                _cs_sql(ctx, node)
+        handler = _CS_HANDLERS.get(_ts(node))
+        if handler is not None:
+            handler(ctx, node)
 
 
 # --- Go ------------------------------------------------------------------------
@@ -324,77 +353,96 @@ def _go_imports(root: GenericNode) -> Dict[str, str]:
     return out
 
 
+def _go_shell(ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode]) -> None:
+    rest = args[1:] if func == "exec.CommandContext" else args
+    if len(rest) < 3 or _string_value(rest[0]) not in _SHELLS:
+        return
+    if _string_value(rest[1]) == "-c" and any(_built_string(a) for a in rest[2:]):
+        ctx.add(
+            node,
+            "GO001",
+            AnalysisIssueType.COMMAND_INJECTION,
+            AnalysisIssueSeverity.HIGH,
+            "Shell command built from strings and run with -c",
+            "Call the program directly with exec.Command(name, args...).",
+            "CWE-78",
+        )
+
+
+def _go_sql(ctx: _Ctx, node: GenericNode, sql: GenericNode) -> None:
+    if _built_string(sql) and _SQL_WORDS.search(_literal_text(sql)):
+        ctx.add(
+            node,
+            "GO002",
+            AnalysisIssueType.SQL_INJECTION_RISK,
+            AnalysisIssueSeverity.HIGH,
+            "SQL query built from strings",
+            "Use placeholders ($1 or ?) and pass values as arguments.",
+            "CWE-89",
+        )
+
+
+def _go_weak(ctx: _Ctx, node: GenericNode, path: str) -> None:
+    ctx.add(
+        node,
+        "GO003",
+        AnalysisIssueType.INSECURE_CRYPTOGRAPHY,
+        AnalysisIssueSeverity.MEDIUM,
+        f"Broken or weak algorithm: {path}",
+        "Use crypto/sha256 or stronger, and crypto/aes with GCM.",
+        "CWE-327",
+    )
+
+
+def _go_method_call(
+    ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode], imports: Dict[str, str]
+) -> None:
+    owner, method = func.rsplit(".", 1)
+    index = _GO_SQL_METHODS.get(method)
+    if index is not None and len(args) > index:
+        _go_sql(ctx, node, args[index])
+        return
+    path = imports.get(owner)
+    if path and method in _GO_WEAK[path][1]:
+        _go_weak(ctx, node, path)
+
+
+def _go_call(ctx: _Ctx, node: GenericNode, imports: Dict[str, str]) -> None:
+    parts = _named(node)
+    if not parts:
+        return
+    func = parts[0].text.replace(" ", "")
+    args = _args(node)
+    if func in ("exec.Command", "exec.CommandContext"):
+        _go_shell(ctx, node, func, args)
+    elif _ts(parts[0]) == "selector_expression" and "." in func:
+        _go_method_call(ctx, node, func, args, imports)
+
+
+def _go_keyed(ctx: _Ctx, node: GenericNode) -> None:
+    parts = _named(node)
+    if len(parts) != 2 or parts[0].text.strip() != "InsecureSkipVerify":
+        return
+    if parts[1].text.strip() == "true":
+        ctx.add(
+            node,
+            "GO004",
+            AnalysisIssueType.INSECURE_COMMUNICATION,
+            AnalysisIssueSeverity.HIGH,
+            "TLS certificate verification is disabled",
+            "Remove InsecureSkipVerify, or set RootCAs to trust a private CA.",
+            "CWE-295",
+        )
+
+
 def _check_go(ctx: _Ctx, root: GenericNode) -> None:
     imports = _go_imports(root)
     for node in _walk(root):
         t = _ts(node)
         if t == "call_expression":
-            parts = _named(node)
-            if not parts:
-                continue
-            func = parts[0].text.replace(" ", "")
-            args = _args(node)
-            if func in ("exec.Command", "exec.CommandContext"):
-                rest = args[1:] if func == "exec.CommandContext" else args
-                if (
-                    len(rest) >= 3
-                    and _string_value(rest[0]) in _SHELLS
-                    and _string_value(rest[1]) == "-c"
-                    and any(_built_string(a) for a in rest[2:])
-                ):
-                    ctx.add(
-                        node,
-                        "GO001",
-                        AnalysisIssueType.COMMAND_INJECTION,
-                        AnalysisIssueSeverity.HIGH,
-                        "Shell command built from strings and run with -c",
-                        "Call the program directly with exec.Command(name, args...).",
-                        "CWE-78",
-                    )
-                continue
-            if _ts(parts[0]) == "selector_expression" and "." in func:
-                owner, method = func.rsplit(".", 1)
-                index = _GO_SQL_METHODS.get(method)
-                if index is not None and len(args) > index:
-                    sql = args[index]
-                    if _built_string(sql) and _SQL_WORDS.search(_literal_text(sql)):
-                        ctx.add(
-                            node,
-                            "GO002",
-                            AnalysisIssueType.SQL_INJECTION_RISK,
-                            AnalysisIssueSeverity.HIGH,
-                            "SQL query built from strings",
-                            "Use placeholders ($1 or ?) and pass values as arguments.",
-                            "CWE-89",
-                        )
-                    continue
-                path = imports.get(owner)
-                if path and method in _GO_WEAK[path][1]:
-                    ctx.add(
-                        node,
-                        "GO003",
-                        AnalysisIssueType.INSECURE_CRYPTOGRAPHY,
-                        AnalysisIssueSeverity.MEDIUM,
-                        f"Broken or weak algorithm: {path}",
-                        "Use crypto/sha256 or stronger, and crypto/aes with GCM.",
-                        "CWE-327",
-                    )
+            _go_call(ctx, node, imports)
         elif t == "keyed_element":
-            parts = _named(node)
-            if (
-                len(parts) == 2
-                and parts[0].text.strip() == "InsecureSkipVerify"
-                and parts[1].text.strip() == "true"
-            ):
-                ctx.add(
-                    node,
-                    "GO004",
-                    AnalysisIssueType.INSECURE_COMMUNICATION,
-                    AnalysisIssueSeverity.HIGH,
-                    "TLS certificate verification is disabled",
-                    "Remove InsecureSkipVerify, or set RootCAs to trust a private CA.",
-                    "CWE-295",
-                )
+            _go_keyed(ctx, node)
 
 
 # --- Rust ----------------------------------------------------------------------
@@ -406,62 +454,82 @@ _RS_SHELL_CHAIN = re.compile(r'Command::new\(\s*"(?:/bin/)?(?:sh|bash|zsh|dash)"
 _RS_DASH_C = re.compile(r'(?:\.arg\(\s*"-c"\s*\)|\.args\(\s*[\[&]*\s*"-c")')
 
 
+def _walk_with_parent(root: GenericNode) -> Iterator[Tuple[GenericNode, str]]:
+    """Pre-order walk yielding each node with its parent's tree-sitter type."""
+    stack: List[Tuple[GenericNode, str]] = [(root, "")]
+    while stack:
+        node, parent_type = stack.pop()
+        yield node, parent_type
+        t = _ts(node)
+        stack.extend((child, t) for child in reversed(node.children))
+
+
+def _rs_unsafe(ctx: _Ctx, node: GenericNode, message: str, suggestion: str) -> None:
+    ctx.add(
+        node, "RS001", AnalysisIssueType.UNSAFE_CODE, AnalysisIssueSeverity.LOW, message, suggestion
+    )
+
+
+def _rs_is_unsafe_fn(node: GenericNode) -> bool:
+    return any(_ts(c) == "function_modifiers" and "unsafe" in c.text for c in node.children)
+
+
+def _rs_transmute(ctx: _Ctx, node: GenericNode) -> None:
+    parts = _named(node)
+    if not parts:
+        return
+    name = parts[0].text.replace(" ", "")
+    if _ts(parts[0]) == "generic_function":
+        name = re.sub(r"::<.*>$", "", name)
+    if name in _RS_TRANSMUTE:
+        ctx.add(
+            node,
+            "RS002",
+            AnalysisIssueType.UNSAFE_CODE,
+            AnalysisIssueSeverity.MEDIUM,
+            "mem::transmute reinterprets bits without checks",
+            "Prefer from_bits/to_bits, from_ne_bytes or a safe cast.",
+            "CWE-843",
+        )
+
+
+def _rs_shell(ctx: _Ctx, node: GenericNode) -> None:
+    text = node.text
+    if _RS_SHELL_CHAIN.search(text) and _RS_DASH_C.search(text) and "format!" in text:
+        ctx.add(
+            node,
+            "RS003",
+            AnalysisIssueType.COMMAND_INJECTION,
+            AnalysisIssueSeverity.HIGH,
+            "Shell command built with format! and run with -c",
+            "Call the program directly with Command::new(program).args(...).",
+            "CWE-78",
+        )
+
+
+def _rs_call(ctx: _Ctx, node: GenericNode, parent_type: str) -> None:
+    _rs_transmute(ctx, node)
+    # Only the outermost call of a method chain, so one chain gives one finding.
+    if parent_type not in ("field_expression", "call_expression"):
+        _rs_shell(ctx, node)
+
+
 def _check_rust(ctx: _Ctx, root: GenericNode) -> None:
-    def visit(node: GenericNode, parent_type: str) -> None:
+    for node, parent_type in _walk_with_parent(root):
         t = _ts(node)
         if t == "unsafe_block":
-            ctx.add(
+            _rs_unsafe(
+                ctx,
                 node,
-                "RS001",
-                AnalysisIssueType.UNSAFE_CODE,
-                AnalysisIssueSeverity.LOW,
                 "unsafe block",
                 "Keep unsafe blocks small and document the invariants (// SAFETY:).",
             )
-        elif t == "function_item" and any(
-            _ts(c) == "function_modifiers" and "unsafe" in c.text for c in node.children
-        ):
-            ctx.add(
-                node,
-                "RS001",
-                AnalysisIssueType.UNSAFE_CODE,
-                AnalysisIssueSeverity.LOW,
-                "unsafe fn",
-                "Document the caller's obligations in a # Safety section.",
+        elif t == "function_item" and _rs_is_unsafe_fn(node):
+            _rs_unsafe(
+                ctx, node, "unsafe fn", "Document the caller's obligations in a # Safety section."
             )
         elif t == "call_expression":
-            parts = _named(node)
-            func = parts[0] if parts else None
-            if func is not None:
-                name = func.text.replace(" ", "")
-                if _ts(func) == "generic_function":
-                    name = re.sub(r"::<.*>$", "", name)
-                if name in _RS_TRANSMUTE:
-                    ctx.add(
-                        node,
-                        "RS002",
-                        AnalysisIssueType.UNSAFE_CODE,
-                        AnalysisIssueSeverity.MEDIUM,
-                        "mem::transmute reinterprets bits without checks",
-                        "Prefer from_bits/to_bits, from_ne_bytes or a safe cast.",
-                        "CWE-843",
-                    )
-            if parent_type not in ("field_expression", "call_expression"):
-                text = node.text
-                if _RS_SHELL_CHAIN.search(text) and _RS_DASH_C.search(text) and "format!" in text:
-                    ctx.add(
-                        node,
-                        "RS003",
-                        AnalysisIssueType.COMMAND_INJECTION,
-                        AnalysisIssueSeverity.HIGH,
-                        "Shell command built with format! and run with -c",
-                        "Call the program directly with Command::new(program).args(...).",
-                        "CWE-78",
-                    )
-        for child in node.children:
-            visit(child, t)
-
-    visit(root, "")
+            _rs_call(ctx, node, parent_type)
 
 
 _CHECKS: Dict[str, Callable[[_Ctx, GenericNode], None]] = {
