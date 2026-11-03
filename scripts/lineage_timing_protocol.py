@@ -56,7 +56,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 SIZES = (2000, 4000, 8000, 16000)
 STEPS_PER_JOB = 6
@@ -213,7 +213,7 @@ def percentile(values: List[float], q: float) -> float:
     return ordered[lo] + (ordered[hi] - ordered[lo]) * (pos - lo)
 
 
-def analyse(sizes: Sequence[int], added: Dict[int, List[float]]) -> Dict[str, object]:
+def analyse(sizes: Sequence[int], added: Dict[int, List[float]]) -> Dict[str, Any]:
     """Medians, k, and bootstrap intervals over resampled rounds."""
     n = len(added[sizes[0]])
     medians = {s: statistics.median(added[s]) for s in sizes}
@@ -287,56 +287,57 @@ def flag_off_check(
     return ok, lines, steps
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+class Log:
+    """Prints a line and appends it to ``result.txt``."""
+
+    def __init__(self, path: Path) -> None:
+        self.handle = path.open("w")
+
+    def __call__(self, text: str) -> None:
+        print(text, flush=True)
+        self.handle.write(text + "\n")
+        self.handle.flush()
+
+
+def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
     parser.add_argument("--repo", type=Path, required=True, help="checkout under test")
     parser.add_argument("--main", type=Path, required=True, help="main checkout")
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--smoke", action="store_true", help="tiny sizes; not a protocol run")
-    opts = parser.parse_args(argv)
+    return parser.parse_args(argv)
 
-    sizes = (20, 40, 80, 160) if opts.smoke else SIZES
-    rounds = 2 if opts.smoke else ROUNDS
-    repo, main_tree = opts.repo.resolve(), opts.main.resolve()
-    opts.out.mkdir(parents=True, exist_ok=True)
-    log_path = opts.out / "result.txt"
-    log = log_path.open("w")
 
-    def say(text: str) -> None:
-        print(text, flush=True)
-        log.write(text + "\n")
-        log.flush()
-
-    script_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+def header(say: Log, opts: argparse.Namespace, repo: Path, main_tree: Path, sha: str) -> None:
     say("SMOKE RUN - NOT A PROTOCOL RUN" if opts.smoke else "lineage timing protocol run")
     say(f"repo {repo} commit {git_sha(repo)} dirty={git_dirty(repo)}")
     say(f"main {main_tree} commit {git_sha(main_tree)} dirty={git_dirty(main_tree)}")
-    say(f"script {Path(__file__).resolve()} sha256 {script_sha}")
+    say(f"script {Path(__file__).resolve()} sha256 {sha}")
     say(f"python {opts.python}")
     say(f"machine {json.dumps(machine(), sort_keys=True)}")
     say(f"started {time.strftime('%Y-%m-%dT%H:%M:%S%z')} loadavg {os.getloadavg()}")
 
+
+def prepare(say: Log, workdir: Path, sizes: Sequence[int]) -> Dict[int, Path]:
     corpora: Dict[int, Path] = {}
     for size in sizes:
-        corpus = opts.workdir / f"syn{size}"
+        corpus = workdir / f"syn{size}"
         if not corpus.exists():
             generate(size, corpus)
         corpora[size] = corpus
         say(f"corpus {size} jobs: {corpus} tree sha256 {tree_digest(corpus)}")
+    return corpora
 
-    ok_off, lines, steps = flag_off_check(opts.python, repo, main_tree, corpora)
-    for line in lines:
-        say(line)
-    for size in sizes:
-        if steps.get(size) != size * STEPS_PER_JOB:
-            say(f"step count {steps.get(size)} != {size * STEPS_PER_JOB} for {size} jobs")
-            ok_off = False
 
-    configs = [(s, flag) for s in sizes for flag in (False, True)]
-    rows = []
-    with (opts.out / "rounds.csv").open("w", newline="") as handle:
+def run_rounds(
+    say: Log, py: str, repo: Path, corpora: Dict[int, Path], rounds: int, csv_path: Path
+) -> List[List[float]]:
+    """Warm-up round 0, then rounds 1..N; one CSV row per CLI run."""
+    configs = [(s, flag) for s in corpora for flag in (False, True)]
+    rows: List[List[float]] = []
+    with csv_path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(
             ["round", "warmup", "order", "jobs", "lineage", "ns", "rc", "maxrss_kib", "load1"]
@@ -346,78 +347,116 @@ def main(argv: Sequence[str] | None = None) -> int:
             random.Random(SHUFFLE_SEED + rnd_no).shuffle(order)
             load_start = os.getloadavg()[0]
             for pos, (size, flag) in enumerate(order):
-                ns, rc, rss = timed(opts.python, repo, corpora[size], flag)
+                ns, rc, rss = timed(py, repo, corpora[size], flag)
                 row = [rnd_no, int(rnd_no == 0), pos, size, int(flag), ns, rc, rss, load_start]
                 writer.writerow(row)
                 handle.flush()
                 rows.append(row)
-            say(
-                f"round {rnd_no}{' (warm-up)' if rnd_no == 0 else ''}: load1 start"
-                f" {load_start:.2f} end {os.getloadavg()[0]:.2f}"
-            )
+            warm = " (warm-up)" if rnd_no == 0 else ""
+            say(f"round {rnd_no}{warm}: load1 start {load_start:.2f} end {os.getloadavg()[0]:.2f}")
+    return rows
 
-    bad_rc = [r for r in rows if r[6] not in (0, 1)]
-    timing = {(r[0], r[3], r[4]): r[5] / 1e9 for r in rows if r[0] > 0}
-    added = {
-        s: [timing[(n, s, 1)] - timing[(n, s, 0)] for n in range(1, rounds + 1)] for s in sizes
-    }
-    stats = analyse(sizes, added)
-    medians = stats["median_added_s"]
-    assert isinstance(medians, dict)
+
+def per_100k(median_s: float, jobs: int) -> float:
+    return median_s * 100_000 / (jobs * STEPS_PER_JOB)
+
+
+def report_sizes(
+    say: Log,
+    rows: List[List[float]],
+    timing: Dict[Tuple[float, float, float], float],
+    sizes: Sequence[int],
+    rounds: int,
+    medians: Dict[int, float],
+) -> None:
     for size in sizes:
         on = [timing[(n, size, 1)] for n in range(1, rounds + 1)]
         off = [timing[(n, size, 0)] for n in range(1, rounds + 1)]
         rss_on = max(r[7] for r in rows if r[3] == size and r[4] == 1) / 1024
         rss_off = max(r[7] for r in rows if r[3] == size and r[4] == 0) / 1024
-        per100k = medians[size] * 100_000 / (size * STEPS_PER_JOB)
         say(
-            f"{size} jobs: median added {medians[size]:.4f}s = {per100k:.2f}s per 100k steps;"
+            f"{size} jobs: median added {medians[size]:.4f}s ="
+            f" {per_100k(medians[size], size):.2f}s per 100k steps;"
             f" off best {min(off):.4f} median {statistics.median(off):.4f};"
             f" on best {min(on):.4f} median {statistics.median(on):.4f};"
             f" peak RSS off {rss_off:.0f} MB on {rss_on:.0f} MB"
         )
-    ratios = stats["ratios"]
-    assert isinstance(ratios, dict)
-    for key, value in ratios.items():
-        say(f"ratio {key}: {value['point']:.3f} ci95 {value['ci95']} (info)")
+
+
+def criteria(
+    stats: Dict[str, Any],
+    medians: Dict[int, float],
+    sizes: Sequence[int],
+    ok_off: bool,
+    rows: List[List[float]],
+) -> Dict[str, bool]:
     k, ci = stats["k"], stats["k_ci95"]
-    say(f"k = {k:.4f} ci95 {ci} (bootstrap {BOOTSTRAP}, seed {BOOTSTRAP_SEED})")
+    # A resample with a non-positive median has no log: the interval is then
+    # undefined and this criterion fails rather than dropping resamples.
+    upper_ok = ci is not None and not stats["bootstrap_invalid"] and ci[1] <= K_UPPER_MAX
+    return {
+        "k <= 1.25": k <= K_MAX,
+        "k upper bound <= 1.35": upper_ok,
+        "<= 10 s per 100k steps at every size": all(
+            per_100k(medians[s], s) <= PER_100K_MAX_S for s in sizes
+        ),
+        "flag off identical and no JCL opened": ok_off,
+        "every run exited 0 or 1": all(r[6] in (0, 1) for r in rows),
+    }
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    opts = parse_args(argv)
+    sizes = (20, 40, 80, 160) if opts.smoke else SIZES
+    rounds = 2 if opts.smoke else ROUNDS
+    repo, main_tree = opts.repo.resolve(), opts.main.resolve()
+    opts.out.mkdir(parents=True, exist_ok=True)
+    say = Log(opts.out / "result.txt")
+    script_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    header(say, opts, repo, main_tree, script_sha)
+    corpora = prepare(say, opts.workdir, sizes)
+
+    ok_off, lines, steps = flag_off_check(opts.python, repo, main_tree, corpora)
+    for line in lines:
+        say(line)
+    for size in sizes:
+        if steps.get(size) != size * STEPS_PER_JOB:
+            say(f"step count {steps.get(size)} != {size * STEPS_PER_JOB} for {size} jobs")
+            ok_off = False
+
+    rows = run_rounds(say, opts.python, repo, corpora, rounds, opts.out / "rounds.csv")
+    timing = {(r[0], r[3], r[4]): r[5] / 1e9 for r in rows if r[0] > 0}
+    added = {
+        s: [timing[(n, s, 1)] - timing[(n, s, 0)] for n in range(1, rounds + 1)] for s in sizes
+    }
+    stats = analyse(sizes, added)
+    medians: Dict[int, float] = stats["median_added_s"]
+    report_sizes(say, rows, timing, sizes, rounds, medians)
+    for key, value in stats["ratios"].items():
+        say(f"ratio {key}: {value['point']:.3f} ci95 {value['ci95']} (info)")
+    say(
+        f"k = {stats['k']:.4f} ci95 {stats['k_ci95']}"
+        f" (bootstrap {BOOTSTRAP}, seed {BOOTSTRAP_SEED})"
+    )
     if stats["bootstrap_invalid"]:
         say(f"bootstrap resamples with a non-positive median: {stats['bootstrap_invalid']}")
 
-    checks = {
-        "k <= 1.25": isinstance(k, float) and k <= K_MAX,
-        # A resample with a non-positive median has no log: the interval is then
-        # undefined and this criterion fails rather than dropping resamples.
-        "k upper bound <= 1.35": bool(ci)
-        and not stats["bootstrap_invalid"]
-        and ci[1] <= K_UPPER_MAX,  # type: ignore[index]
-        "<= 10 s per 100k steps at every size": all(
-            medians[s] * 100_000 / (s * STEPS_PER_JOB) <= PER_100K_MAX_S for s in sizes
-        ),
-        "flag off identical and no JCL opened": ok_off,
-        "every run exited 0 or 1": not bad_rc,
-    }
+    checks = criteria(stats, medians, sizes, ok_off, rows)
     for name, passed in checks.items():
         say(f"criterion {name}: {'PASS' if passed else 'FAIL'}")
     verdict = all(checks.values())
     say(f"finished {time.strftime('%Y-%m-%dT%H:%M:%S%z')} loadavg {os.getloadavg()}")
     suffix = " (smoke, not a protocol run)" if opts.smoke else ""
     say(f"VERDICT {'PASS' if verdict else 'FAIL'}{suffix}")
-    (opts.out / "summary.json").write_text(
-        json.dumps(
-            {
-                "script_sha256": script_sha,
-                "commit": git_sha(repo),
-                "smoke": opts.smoke,
-                "stats": {**stats, "median_added_s": {str(s): v for s, v in medians.items()}},
-                "checks": checks,
-                "verdict": verdict,
-            },
-            indent=2,
-        )
-    )
-    log.close()
+    summary = {
+        "script_sha256": script_sha,
+        "commit": git_sha(repo),
+        "smoke": opts.smoke,
+        "stats": {**stats, "median_added_s": {str(s): v for s, v in medians.items()}},
+        "checks": checks,
+        "verdict": verdict,
+    }
+    (opts.out / "summary.json").write_text(json.dumps(summary, indent=2))
     return 0 if verdict else 1
 
 
