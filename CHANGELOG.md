@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 11 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 broken hash or cipher; GO001 shell `-c` with a built string, GO002 SQL built from strings, GO003 weak `crypto/...` packages, GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice. Test paths are skipped, including .NET test projects (`*.Tests/`, `*Tests.cs`, ...); the other checks keep their test-path rules.
 - New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY` and `UNSAFE_CODE`. CWE names for 295, 327 and 843 added to the SARIF taxonomy.
 - Docs: rule table in `docs/ANALYSIS_RULES.md`. Tests: `tests/test_lang_security_rules.py`.
+### Added — C and C++ files are analyzed (experimental, opt-in)
+
+- New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml` turn on experimental features: off by default, results not measured yet, and a run without them gives unchanged output. The first name is `c-cpp`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for it and the MCP server never enables it.
+- Everything below applies only with `--experimental c-cpp`; without it C and C++ files are not found.
+
+- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks; there are no C/C++-specific rules yet. They are not counted in the 22-format total.
+- A `.h` header is C++ when its code (comments and literals removed) has C++-only syntax (`class`/`namespace` at line start, `template <`, `std::`, `using namespace`, an access label, `#include <vector>`-style includes) or a C++ source with the same name sits next to it; otherwise it is C. `extern "C"` alone keeps a header C.
+- A `.h` header with Objective-C syntax (`@interface`, `@protocol`, `@implementation`, `@end`, `@class`, `@property` or `NS_ASSUME_NONNULL_BEGIN` at line start; comments and literals removed; `#import` alone does not count) is treated as an unrecognized file, so it is never analyzed as C or C++, never reported as not analyzed and never fails the gate. Objective-C and C++ syntax together count as Objective-C.
+- Functions are named as declared (`Widget::size`, `Widget::~Widget`, `operator+`), types by their tag (`cache<double>`); `f(void)` has 0 parameters; a macro before `namespace` is not reported as a function.
+- A file with parse errors is analyzed when any declaration was recovered; a file where none was recovered goes to `meta.not_analyzed` with `reason: parse_error`.
+- With `--experimental c-cpp` and `[multilang]` installed, repositories that contain C or C++ files get new findings from these checks, and offline runs with an empty grammar cache report those files as not analyzed (`grammar_unavailable`), which fails `--fail-on` unless `--allow-not-analyzed` is passed. The Action installs the base package and is unchanged.
+- Peak memory with `c-cpp` on: zlib 42→107 MB, fmt 39→122 MB, react-native 175→196 MB (see `docs/c-cpp.md`).
+- On zlib `51b7f2ab` and fmt `12391371`, all 74 and 70 C/C++ files were analyzed (no `parse_error`). See `docs/c-cpp.md`.
 
 ### Documentation — written review summary on every merged PR
 

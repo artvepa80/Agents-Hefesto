@@ -23,6 +23,8 @@ class Language(Enum):
     GO = "go"
     RUST = "rust"
     CSHARP = "csharp"
+    C = "c"
+    CPP = "cpp"
 
     # Ola 1 DevOps languages (v4.4.0)
     YAML = "yaml"
@@ -130,6 +132,22 @@ LANGUAGE_SPECS: List[LanguageSpec] = [
         display_name="C#",
         file_globs=["*.cs"],
         parser_type="treesitter:c_sharp",
+        internal_analyzers=["code_smells", "complexity", "security", "best_practices"],
+    ),
+    # A ``.h`` header is C unless its text or a sibling source says C++
+    # (see content_classify.refine_language).
+    LanguageSpec(
+        language=Language.C,
+        display_name="C",
+        file_globs=["*.c", "*.h"],
+        parser_type="treesitter:c",
+        internal_analyzers=["code_smells", "complexity", "security", "best_practices"],
+    ),
+    LanguageSpec(
+        language=Language.CPP,
+        display_name="C++",
+        file_globs=["*.cpp", "*.cc", "*.cxx", "*.c++", "*.hpp", "*.hh", "*.hxx"],
+        parser_type="treesitter:cpp",
         internal_analyzers=["code_smells", "complexity", "security", "best_practices"],
     ),
     # Ola 1 DevOps languages (v4.4.0)

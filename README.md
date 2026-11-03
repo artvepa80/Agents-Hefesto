@@ -281,12 +281,22 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 | Go | TreeSitter | Supported¹ |
 | Rust | TreeSitter | Supported¹ |
 | C# | TreeSitter | Supported¹ |
+| C | TreeSitter | Experimental¹ ³ |
+| C++ | TreeSitter | Experimental¹ ³ |
 
 ¹ TreeSitter languages require the `[multilang]` extra:
 `pip install "hefesto-ai[multilang]"`. Without it, files in these
 languages are skipped at parse time and Hefesto emits a stderr warning
 pointing to the install command (also exposed via
 `report.meta.parser_failures` in JSON output).
+
+³ C and C++ are experimental and off by default: turn them on with
+`--experimental c-cpp` (or `experimental: [c-cpp]` in `.hefesto.yaml`). The generic complexity and size checks run on
+them; there are no C/C++-specific rules yet, and they are not counted in the
+format total below. `.h` headers are read as C unless they contain C++-only
+syntax or sit next to a C++ source with the same name; headers with
+Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
+[docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
 
 ### DevOps & Configuration
 
@@ -313,7 +323,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Yes |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Yes |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs all 22. When a suffix matches more than one format, the precedence table in [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md) chooses one analyzer.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs all 22, plus C and C++ with `--experimental c-cpp` and `[multilang]`. When a suffix matches more than one format, the precedence table in [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md) chooses one analyzer.
 
 ² COBOL: all 16 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009/COBOL016, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 
@@ -465,7 +475,8 @@ analyzer raised an error, or its tree-sitter grammar could not be loaded, for
 example offline, or with an empty or damaged grammar cache) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
 `meta.not_analyzed` (`path`, `language`, `reason`: `read_error`,
-`analyzer_error` or `grammar_unavailable`, `exception`; a `grammar_unavailable`
+`analyzer_error`, `grammar_unavailable` or `parse_error` (an experimental C/C++
+file where the grammar recovered no declaration), `exception`; a `grammar_unavailable`
 entry also names the `grammar`), SARIF has an `error` notification for it in
 `invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
 with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
@@ -483,7 +494,7 @@ A file whose grammar could not be loaded counts as not analyzed even when
 every file hit it, so `--fail-on` with `--allow-no-files` (as in the hooks from
 `hefesto install-hooks`) exits 1 offline with an empty grammar cache. The cache
 is per pack version. To fix it, run once with network access, or
-`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`,
 or pass `--allow-not-analyzed`. A grammar that fails to load is tried once
 per run: later files of that language are reported as not analyzed without
 waiting for the download again.
@@ -693,6 +704,7 @@ copybook_paths:             # --copybook-path (COBOL copybook directories outsid
   - ../copylib              # relative paths are resolved from this file's directory
 include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
 experimental:               # --experimental (comma-separated; the CLI value replaces this list)
+  - c-cpp                   # C and C++ files (docs/c-cpp.md)
   - lang-security           # C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)
 ```
 
