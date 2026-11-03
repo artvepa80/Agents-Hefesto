@@ -494,7 +494,8 @@ def is_program_path(path: str) -> bool:
 class _Graph:
     """Collects nodes, edges, references and unresolved entries, then sorts them."""
 
-    def __init__(self) -> None:
+    def __init__(self, root: Optional[Path] = None) -> None:
+        self.root = root
         self.nodes: Dict[str, Dict[str, Any]] = {}
         self.edges: List[Dict[str, Any]] = []
         self.references: List[Dict[str, Any]] = []
@@ -521,6 +522,7 @@ class _Graph:
 
         return {
             "schema_version": SCHEMA_VERSION,
+            "root": str(self.root) if self.root is not None else None,
             "nodes": [self.nodes[k] for k in sorted(self.nodes)],
             "edges": sorted(_merge_edges(self.edges), key=key),
             "references": sorted(self.references, key=key),
@@ -553,17 +555,43 @@ def _merge_edges(edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return list(merged.values())
 
 
-def build_lineage(index: Any, jcl: Any = None) -> Optional[Dict[str, Any]]:
+def lineage_root() -> Path:
+    """The root lineage ids are relative to: the same root as SARIF paths
+    (nearest ``.git`` above the cwd, else ``$GITHUB_WORKSPACE``, else the cwd)."""
+    from hefesto.reports.sarif_reporter import _default_root
+
+    return _default_root()
+
+
+def _id_path(path: str, root: Optional[Path]) -> str:
+    """``path`` for a node id: POSIX and relative to ``root``; absolute outside it."""
+    resolved = Path(path).resolve()
+    if root is not None:
+        try:
+            return resolved.relative_to(root).as_posix()
+        except ValueError:
+            pass
+    return resolved.as_posix()
+
+
+def build_lineage(
+    index: Any, jcl: Any = None, root: Optional[Path] = None
+) -> Optional[Dict[str, Any]]:
     """The ``lineage`` section for a :class:`CobolProjectIndex` and an optional JCL model.
 
     None when there is neither COBOL nor JCL. A JCL model without COBOL still
     yields jobs, steps and datasets; every program it names is then a
     reference (system or external), never an edge.
+
+    Ids that carry a file path use it relative to ``root`` (default
+    :func:`lineage_root`), so they are the same in every checkout; ``file`` and
+    ``source_file`` keep the paths the rest of the report uses.
     """
     files = sorted(index.lineage_by_file) if index is not None else []
     if not files and not jcl:
         return None
-    graph = _Graph()
+    root = (root or lineage_root()).resolve()
+    graph = _Graph(root)
     programs = _program_names(index, files)
     owners = _program_ids(index, files, programs, graph)
     for path in files:
@@ -601,7 +629,7 @@ def _program_ids(
         name = index.lineage_by_file[path].program_id or Path(path).stem.upper()
         node_id = f"program:{name}"
         if len(programs.get(name, ())) > 1:
-            node_id = f"program:{name}@{path}"
+            node_id = f"program:{name}@{_id_path(path, graph.root)}"
         owners[path] = graph.node(node_id, "program", name, path)
     return owners
 
