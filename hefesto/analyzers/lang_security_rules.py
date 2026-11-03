@@ -645,40 +645,53 @@ def _cc_add(ctx: _Ctx, node: GenericNode, rule: str, func: str) -> None:
         )
 
 
+def _cc_arg_literal(args: List[GenericNode], idx: int) -> Tuple[bool, Optional[str]]:
+    """(present, literal text) for argument ``idx``."""
+    if len(args) <= idx:
+        return False, None
+    return True, _cc_literal(args[idx])
+
+
+def _cc_format_rule(func: str, args: List[GenericNode]) -> Optional[str]:
+    present, fmt = _cc_arg_literal(args, _CC_FORMAT[func])
+    if not present:
+        return None
+    if fmt is None:
+        fmt_node = args[_CC_FORMAT[func]]
+        # An all-caps name is a macro holding a literal (``LOG_FMT``).
+        if _ts(fmt_node) == "identifier" and fmt_node.text.isupper():
+            return None
+        return "CC003"
+    if func in ("sprintf", "vsprintf") and _CC_UNBOUNDED_S.search(fmt):
+        return "CC002"
+    return None
+
+
+def _cc_rule(func: str, args: List[GenericNode]) -> Optional[str]:
+    """The rule a call to ``func`` with ``args`` breaks, if any."""
+    if func == "gets":
+        return "CC001"
+    if func in _CC_COPY:
+        present, src = _cc_arg_literal(args, 1)
+        return "CC002" if present and src is None else None
+    if func in _CC_SCANF:
+        _, fmt = _cc_arg_literal(args, _CC_SCANF[func])
+        return "CC002" if fmt is not None and _CC_SCANF_S.search(fmt) else None
+    if func in _CC_FORMAT:
+        return _cc_format_rule(func, args)
+    if func in _CC_SHELL:
+        present, cmd = _cc_arg_literal(args, 0)
+        return "CC004" if present and cmd is None else None
+    return None
+
+
 def _cc_call(ctx: _Ctx, node: GenericNode) -> None:
     func = _cc_func_name(node)
     if func is None:
         return
-    args = _cc_args(node)
-    if func == "gets":
-        _cc_add(ctx, node, "CC001", func)
-        return
-    if func in _CC_COPY and len(args) >= 2 and _cc_literal(args[1]) is None:
-        _cc_add(ctx, node, "CC002", func)
-        return
-    if func in _CC_SCANF:
-        idx = _CC_SCANF[func]
-        fmt = _cc_literal(args[idx]) if len(args) > idx else None
-        if fmt is not None and _CC_SCANF_S.search(fmt):
-            _cc_add(ctx, node, "CC002", func)
-        return
-    if func in _CC_FORMAT:
-        idx = _CC_FORMAT[func]
-        if len(args) <= idx:
-            return
-        fmt_node = args[idx]
-        fmt = _cc_literal(fmt_node)
-        if fmt is None:
-            # An all-caps name is a macro holding a literal (``LOG_FMT``).
-            if _ts(fmt_node) == "identifier" and fmt_node.text.isupper():
-                return
-            _cc_add(ctx, node, "CC003", func)
-            return
-        if func in ("sprintf", "vsprintf") and _CC_UNBOUNDED_S.search(fmt):
-            _cc_add(ctx, node, "CC002", func)
-        return
-    if func in _CC_SHELL and args and _cc_literal(args[0]) is None:
-        _cc_add(ctx, node, "CC004", func)
+    rule = _cc_rule(func, _cc_args(node))
+    if rule is not None:
+        _cc_add(ctx, node, rule, func)
 
 
 def _check_c_cpp(ctx: _Ctx, root: GenericNode) -> None:
