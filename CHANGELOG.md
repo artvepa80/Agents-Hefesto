@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — JCL lineage (`--lineage` only)
 
 - With `--lineage`, a separate JCL reader (`hefesto/analyzers/devops/jcl_reader.py`) reads `.jcl`, `.prc` and `.proc` files and adds jobs, steps and datasets to the `lineage` section: nodes `jcl_job`, `jcl_step`, `dataset`; edges `EXEC_PGM` (step → COBOL program of the scan, with `via` for `RUN PROGRAM` under `IKJEFT01` and the `DFSRRC00` `PARM` program), `DD_DATASET` (step → dataset) and `ASSIGN_DD` (program → step for `SELECT ... ASSIGN TO` DD names, one per step that runs the program). Utilities and other programs go to `references` (`system` / `external`); symbols, temporary datasets, referbacks, `SYSTSIN` datasets, missing PROCs and INCLUDE members go to `unresolved` with a reason. PROC calls are expanded with the PROCs in the scan and `STEP.DD` overrides replace the PROC's DD.
+- JCL ids (`jcl_job:JOB@path`, `jcl_step:JOB.STEP@path`, and the `from` of JCL `unresolved` entries) use the JCL file path relative to `lineage.root`, like program ids, so they are the same in every checkout; a file outside the root keeps its absolute path.
 - A repo with JCL and no COBOL now gets a `lineage` section with `--lineage`.
 - JCL is not registered as a language: without `--lineage` the JCL files are never read and the report is unchanged. `schema_version` stays 1 (new node and edge kinds only).
 - Docs: `docs/cobol.md`. Tests: `tests/test_jcl_lineage.py`.

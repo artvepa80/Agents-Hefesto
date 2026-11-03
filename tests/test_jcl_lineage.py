@@ -475,3 +475,62 @@ def test_cataloged_proc_is_found_by_member_name_not_by_its_label(tmp_path):
     assert unresolved(lin) == [
         ("EXEC_PROC", f"jcl_step:PAYJOB.S2@{path}", "BLDONL", "proc_not_found")
     ]
+
+
+# ------------------------------------------------------- ids relative to the root
+
+
+def _jcl_checkout(base: Path) -> Path:
+    """A git checkout with a job whose step runs a COBOL program and has an unresolved DSN."""
+    repo = base / "repo"
+    (repo / ".git").mkdir(parents=True)
+    write(
+        repo,
+        {
+            "src/PAYROLL.cbl": prog("PAYROLL"),
+            "jcl/NIGHTLY.jcl": jcl(
+                "//NIGHTLY JOB (ACCT),'X'",
+                "//STEP1   EXEC PGM=PAYROLL",
+                "//IN      DD DSN=&HLQ..IN,DISP=SHR",
+            ),
+        },
+    )
+    return repo
+
+
+def _jcl_lineage(repo: Path, monkeypatch) -> dict:
+    monkeypatch.chdir(repo)
+    return run(repo, "--lineage")["lineage"]
+
+
+def test_jcl_ids_are_relative_to_the_root(tmp_path, monkeypatch):
+    section = _jcl_lineage(_jcl_checkout(tmp_path), monkeypatch)
+    ids = {n["id"] for n in section["nodes"] if n["kind"].startswith("jcl_")}
+    assert ids == {"jcl_job:NIGHTLY@jcl/NIGHTLY.jcl", "jcl_step:NIGHTLY.STEP1@jcl/NIGHTLY.jcl"}
+    froms = {u["from"] for u in section["unresolved"]}
+    assert froms == {"jcl_step:NIGHTLY.STEP1@jcl/NIGHTLY.jcl"}
+
+
+def test_jcl_ids_are_the_same_in_two_checkouts(tmp_path, monkeypatch):
+    first = _jcl_lineage(_jcl_checkout(tmp_path / "one"), monkeypatch)
+    second = _jcl_lineage(_jcl_checkout(tmp_path / "two"), monkeypatch)
+    for key in ("nodes", "edges", "unresolved"):
+        a = [{k: v for k, v in e.items() if k not in ("file", "source_file")} for e in first[key]]
+        b = [{k: v for k, v in e.items() if k not in ("file", "source_file")} for e in second[key]]
+        assert a == b, key
+
+
+def test_jcl_node_file_keeps_the_report_path(tmp_path, monkeypatch):
+    repo = _jcl_checkout(tmp_path)
+    section = _jcl_lineage(repo, monkeypatch)
+    job = next(n for n in section["nodes"] if n["kind"] == "jcl_job")
+    assert Path(job["file"]).resolve() == (repo / "jcl/NIGHTLY.jcl").resolve()
+
+
+def test_jcl_outside_the_root_keeps_an_absolute_id(tmp_path, monkeypatch):
+    repo = _jcl_checkout(tmp_path)
+    outside = write(tmp_path / "elsewhere", {"J2.jcl": jcl("//J2 JOB (A)", "//S EXEC PGM=IEFBR14")})
+    monkeypatch.chdir(repo)
+    section = run(repo, str(outside), "--lineage")["lineage"]
+    absolute = (outside / "J2.jcl").resolve().as_posix()
+    assert f"jcl_job:J2@{absolute}" in {n["id"] for n in section["nodes"]}

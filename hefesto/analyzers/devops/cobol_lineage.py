@@ -777,7 +777,10 @@ def _add_jcl_step(
     """One step: its node, programs, datasets and the ASSIGN DD names it codes."""
     job, step = resolved.job, resolved.step
     step_id = graph.node(
-        f"jcl_step:{resolved.path}@{job.file}", "jcl_step", resolved.path, job.file
+        f"jcl_step:{resolved.path}@{_id_path(job.file, graph.root)}",
+        "jcl_step",
+        resolved.path,
+        job.file,
     )
     targets = _step_programs(graph, step_id, step, programs, owners)
     dd_names = {dd.name for dd in step.dds}
@@ -793,7 +796,9 @@ def _add_jcl_step(
 def _add_jcl_unresolved(graph: _Graph, jcl: Any, job_ids: Dict[int, str]) -> None:
     for job, path, entry in jcl.unresolved:
         owner = (
-            f"jcl_step:{path}@{job.file}" if path else job_ids.get(id(job), f"jcl_job:{job.name}")
+            f"jcl_step:{path}@{_id_path(job.file, graph.root)}"
+            if path
+            else job_ids.get(id(job), f"jcl_job:{job.name}")
         )
         graph.unresolved.append(
             {
@@ -818,7 +823,7 @@ def _add_jcl(
     job_ids: Dict[int, str] = {}
     for job in jcl.jobs:
         job_ids[id(job)] = graph.node(
-            f"jcl_job:{job.name}@{job.file}", "jcl_job", job.name, job.file
+            f"jcl_job:{job.name}@{_id_path(job.file, graph.root)}", "jcl_job", job.name, job.file
         )
     reported_assigns: Set[Tuple[str, int]] = set()
     for resolved in jcl.steps:
