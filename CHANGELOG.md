@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A repo with JCL and no COBOL now gets a `lineage` section with `--lineage`.
 - JCL is not registered as a language: without `--lineage` the JCL files are never read and the report is unchanged. `schema_version` stays 1 (new node and edge kinds only).
 - Docs: `docs/cobol.md`. Tests: `tests/test_jcl_lineage.py`.
+- Memory: `--lineage` on JCL grows by about 59 MB per 1,000 jobs (6 steps per job; about 1 GB at 16,000 jobs) on the synthetic tree; plan for it on large estates.
+- `scripts/lineage_timing_protocol.py`: the pre-registered timing protocol for the JCL part of `--lineage` (sizes, rounds, statistic and pass criteria fixed in the script; no subprocess `timeout=`). Committed before its run.
 
 ### Changed — lineage ids relative to the root
 

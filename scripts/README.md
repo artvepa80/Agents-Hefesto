@@ -4,6 +4,16 @@ Utility scripts for development and operations.
 
 ## Available Scripts
 
+### `lineage_timing_protocol.py`
+Pre-registered timing protocol for the JCL part of `--lineage`: seeded synthetic trees (2k/4k/8k/16k jobs, seed 7), a flag-off check against a main checkout (identical JSON and SARIF, no JCL opened), 1 warm-up + 21 shuffled rounds timed with `perf_counter_ns`, the growth exponent `k` with a 10,000-resample bootstrap, and a PASS/FAIL verdict. It prints the commit SHA and its own sha256, and writes `result.txt`, `rounds.csv` and `summary.json`. It never passes `timeout=` to a subprocess (that quantises timings at about 50 ms); run it under an outside watchdog:
+
+```bash
+timeout 14400 python scripts/lineage_timing_protocol.py --repo . --main ../main \
+  --python /path/to/venv/bin/python --workdir /tmp/lt --out /tmp/lt/result
+```
+
+`--smoke` uses tiny sizes and 2 rounds to check the script; its output is not a measurement.
+
 ### `test_e2e.sh`
 End-to-end testing suite. Run before launch or after major changes.
 
