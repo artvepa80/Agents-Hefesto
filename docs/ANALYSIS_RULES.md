@@ -1166,8 +1166,8 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C a
 | RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
 | RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
 | CC001 | `gets(...)` (also `std::gets`) | `UNSAFE_BUFFER_FUNCTION` | HIGH | 242 |
-| CC002 | `strcpy`/`strcat`/`wcscpy`/`wcscat` whose source is not a string literal; `sprintf`/`vsprintf` with a literal format holding `%s` without precision; `scanf` family with `%s` or `%[` without a width | `UNSAFE_BUFFER_FUNCTION` | MEDIUM | 120 |
-| CC003 | `printf` family (`printf`, `fprintf`, `sprintf`, `snprintf`, `vprintf`..., `syslog`, `err`/`warn`) whose format argument is not a string literal (an all-caps macro name counts as a literal) | `FORMAT_STRING_RISK` | MEDIUM | 134 |
+| CC002 | `strcpy`/`strcat`/`wcscpy`/`wcscat` whose source is not a constant string (literal, ALL-CAPS macro) and whose length is not taken with `strlen`/`strnlen` in the three statements before; `sprintf`/`vsprintf` with a literal format holding `%s` without precision; `scanf` family with `%s` or `%[` without a width | `UNSAFE_BUFFER_FUNCTION` | MEDIUM | 120 |
+| CC003 | `printf` family (`printf`, `fprintf`, `sprintf`, `snprintf`, `vprintf`..., `syslog`, `err`/`warn`) whose format argument is not a constant string. Literals, ALL-CAPS macro names, `"lit" + n`, `c ? "a" : "b"` and `_("lit")`/`gettext("lit")` count as constant. A format that is a parameter of a variadic or `va_list` function (a forwarding wrapper) is skipped. | `FORMAT_STRING_RISK` | MEDIUM | 134 |
 | CC004 | `system`/`popen` (also `std::system`, `_popen`, `_wsystem`) whose command is not a string literal | `COMMAND_INJECTION` | HIGH | 78 |
 
 RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` to list every `unsafe` block.

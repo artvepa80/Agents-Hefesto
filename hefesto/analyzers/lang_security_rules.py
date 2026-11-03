@@ -601,6 +601,49 @@ def _cc_literal(node: GenericNode) -> Optional[str]:
     return None
 
 
+_CC_GETTEXT = frozenset({"_", "N_", "gettext", "dgettext", "ngettext"})
+
+
+def _cc_const_binary(node: GenericNode, kids: List[GenericNode]) -> bool:
+    return len(kids) == 2 and "+" in node.text and _cc_const(kids[0])
+
+
+def _cc_const_ternary(node: GenericNode, kids: List[GenericNode]) -> bool:
+    return len(kids) == 3 and _cc_const(kids[1]) and _cc_const(kids[2])
+
+
+def _cc_const_call(node: GenericNode, kids: List[GenericNode]) -> bool:
+    args = _cc_args(node)
+    return _cc_func_name(node) in _CC_GETTEXT and bool(args) and _cc_const(args[-1])
+
+
+def _cc_const_paren(node: GenericNode, kids: List[GenericNode]) -> bool:
+    return bool(kids) and _cc_const(kids[0])
+
+
+_CC_CONST_CHECKS: Dict[str, Callable[[GenericNode, List[GenericNode]], bool]] = {
+    "binary_expression": _cc_const_binary,
+    "conditional_expression": _cc_const_ternary,
+    "call_expression": _cc_const_call,
+    "parenthesized_expression": _cc_const_paren,
+}
+
+
+def _cc_const(node: GenericNode) -> bool:
+    """True when ``node`` always yields a constant string.
+
+    Covers literals, ALL-CAPS macro names, ``"lit" + n``, ``c ? "a" : "b"``
+    and gettext calls on a literal such as ``_("text")``.
+    """
+    t = _ts(node)
+    if t in _CC_STRING_TYPES:
+        return True
+    if t == "identifier":
+        return node.text.isupper()
+    check = _CC_CONST_CHECKS.get(t)
+    return check is not None and check(node, _named(node))
+
+
 def _cc_add(ctx: _Ctx, node: GenericNode, rule: str, func: str) -> None:
     if rule == "CC001":
         ctx.add(
@@ -645,21 +688,35 @@ def _cc_add(ctx: _Ctx, node: GenericNode, rule: str, func: str) -> None:
         )
 
 
-def _cc_arg_literal(args: List[GenericNode], idx: int) -> Tuple[bool, Optional[str]]:
-    """(present, literal text) for argument ``idx``."""
-    if len(args) <= idx:
-        return False, None
-    return True, _cc_literal(args[idx])
+class _CcScope:
+    """Where a call sits: the wrapper's forwarded parameters and earlier statements."""
+
+    def __init__(self, forwarded: frozenset, before: str) -> None:
+        self.forwarded = forwarded
+        self.before = before
 
 
-def _cc_format_rule(func: str, args: List[GenericNode]) -> Optional[str]:
-    present, fmt = _cc_arg_literal(args, _CC_FORMAT[func])
-    if not present:
+def _cc_arg(args: List[GenericNode], idx: int) -> Optional[GenericNode]:
+    return args[idx] if len(args) > idx else None
+
+
+def _cc_length_checked(src: GenericNode, scope: _CcScope) -> bool:
+    """``strlen(src)``/``strnlen(src`` appears in the few statements before."""
+    if _ts(src) != "identifier":
+        return False
+    pattern = r"\bstrn?len\s*\(\s*" + re.escape(src.text) + r"\b"
+    return re.search(pattern, scope.before) is not None
+
+
+def _cc_format_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Optional[str]:
+    fmt_node = _cc_arg(args, _CC_FORMAT[func])
+    if fmt_node is None:
         return None
+    fmt = _cc_literal(fmt_node)
     if fmt is None:
-        fmt_node = args[_CC_FORMAT[func]]
-        # An all-caps name is a macro holding a literal (``LOG_FMT``).
-        if _ts(fmt_node) == "identifier" and fmt_node.text.isupper():
+        if _cc_const(fmt_node):
+            return None
+        if _ts(fmt_node) == "identifier" and fmt_node.text in scope.forwarded:
             return None
         return "CC003"
     if func in ("sprintf", "vsprintf") and _CC_UNBOUNDED_S.search(fmt):
@@ -667,37 +724,75 @@ def _cc_format_rule(func: str, args: List[GenericNode]) -> Optional[str]:
     return None
 
 
-def _cc_rule(func: str, args: List[GenericNode]) -> Optional[str]:
+def _cc_copy_rule(args: List[GenericNode], scope: _CcScope) -> Optional[str]:
+    src = _cc_arg(args, 1)
+    if src is None or _cc_const(src) or _cc_length_checked(src, scope):
+        return None
+    return "CC002"
+
+
+def _cc_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Optional[str]:
     """The rule a call to ``func`` with ``args`` breaks, if any."""
     if func == "gets":
         return "CC001"
     if func in _CC_COPY:
-        present, src = _cc_arg_literal(args, 1)
-        return "CC002" if present and src is None else None
+        return _cc_copy_rule(args, scope)
     if func in _CC_SCANF:
-        _, fmt = _cc_arg_literal(args, _CC_SCANF[func])
+        fmt_node = _cc_arg(args, _CC_SCANF[func])
+        fmt = _cc_literal(fmt_node) if fmt_node is not None else None
         return "CC002" if fmt is not None and _CC_SCANF_S.search(fmt) else None
     if func in _CC_FORMAT:
-        return _cc_format_rule(func, args)
+        return _cc_format_rule(func, args, scope)
     if func in _CC_SHELL:
-        present, cmd = _cc_arg_literal(args, 0)
-        return "CC004" if present and cmd is None else None
+        cmd = _cc_arg(args, 0)
+        return "CC004" if cmd is not None and _cc_literal(cmd) is None else None
     return None
 
 
-def _cc_call(ctx: _Ctx, node: GenericNode) -> None:
+def _cc_call(ctx: _Ctx, node: GenericNode, scope: _CcScope) -> None:
     func = _cc_func_name(node)
     if func is None:
         return
-    rule = _cc_rule(func, _cc_args(node))
+    rule = _cc_rule(func, _cc_args(node), scope)
     if rule is not None:
         _cc_add(ctx, node, rule, func)
 
 
+def _cc_forwarded(fn: GenericNode) -> frozenset:
+    """Parameter names of a variadic or ``va_list`` function (its format is the caller's)."""
+    for node in _walk(fn):
+        if _ts(node) == "parameter_list":
+            text = node.text
+            if "..." not in text and "va_list" not in text:
+                return frozenset()
+            return frozenset(re.findall(r"([A-Za-z_]\w*)\s*(?:\[\s*\])?\s*(?=[,)])", text))
+    return frozenset()
+
+
+_CC_BEFORE = 3
+
+
 def _check_c_cpp(ctx: _Ctx, root: GenericNode) -> None:
-    for node in _walk(root):
-        if _ts(node) == "call_expression":
-            _cc_call(ctx, node)
+    stack: List[Tuple[GenericNode, _CcScope]] = [(root, _CcScope(frozenset(), ""))]
+    while stack:
+        node, scope = stack.pop()
+        t = _ts(node)
+        if t == "function_definition":
+            scope = _CcScope(_cc_forwarded(node), "")
+        if t == "call_expression":
+            _cc_call(ctx, node, scope)
+        kids = node.children
+        if t == "compound_statement":
+            named = _named(node)
+            scopes = [
+                _CcScope(
+                    scope.forwarded, "\n".join(c.text for c in named[max(0, i - _CC_BEFORE) : i])
+                )
+                for i in range(len(named))
+            ]
+            stack.extend(reversed(list(zip(named, scopes))))
+            continue
+        stack.extend((child, scope) for child in reversed(kids))
 
 
 _CHECKS: Dict[str, Callable[[_Ctx, GenericNode], None]] = {

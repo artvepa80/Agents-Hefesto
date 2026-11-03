@@ -127,3 +127,39 @@ def test_system_line_is_reported_once() -> None:
         if i.issue_type.value == "COMMAND_INJECTION"
     ]
     assert len(cmd) == 1 and cmd[0].rule_id == "CC004"
+
+
+EXCLUSION_CASES = [
+    # CC003: format forwarded by a variadic or va_list wrapper
+    ("void lg(const char *fmt, ...) { va_list ap; vprintf(fmt, ap); }", []),
+    ("void lv(const char *fmt, va_list ap) { vfprintf(stderr, fmt, ap); }", []),
+    ("void nv(const char *fmt) { printf(fmt); }", [("CC003", 1, "MEDIUM")]),
+    # CC003: literal + offset, ternary of literals, gettext literals
+    ('void g(int k) { printf(" %u" + k, 3); }', []),
+    ('void g(int k) { printf(k ? "%d\\n" : "%d", k); }', []),
+    ('void g(int k, char *s) { printf(k ? s : "%d", k); }', [("CC003", 1, "MEDIUM")]),
+    ('void g(void) { printf(_("hello")); }', []),
+    ('void g(void) { printf(gettext("hello %d"), 1); }', []),
+    ("void g(char *s) { printf(_(s)); }", [("CC003", 1, "MEDIUM")]),
+    # CC002: ALL-CAPS macro source is a literal
+    ("void g(char *d) { strcpy(d, DEFAULT_NAME); }", []),
+    ("void g(char *d, char *Name) { strcpy(d, Name); }", [("CC002", 1, "MEDIUM")]),
+    # CC002: source length checked just before
+    (
+        "void g(char *d, char *s) {\n if (strlen(s) >= 16) return;\n strcpy(d, s);\n}",
+        [],
+    ),
+    (
+        "void g(char *s) {\n char *d = malloc(strlen(s) + 1);\n strcpy(d, s);\n}",
+        [],
+    ),
+    (
+        "void g(char *d, char *s, char *t) {\n if (strlen(t) > 3) return;\n strcpy(d, s);\n}",
+        [("CC002", 3, "MEDIUM")],
+    ),
+]
+
+
+@pytest.mark.parametrize("code,expected", EXCLUSION_CASES)
+def test_exclusions(code: str, expected) -> None:
+    assert _rules("c", code + "\n") == expected
