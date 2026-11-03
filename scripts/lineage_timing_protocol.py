@@ -28,6 +28,20 @@ One run of this script is the measurement. It does, in order:
    Consecutive ratios with intervals, best and median per size and peak RSS are
    reported, not decisive. There is no lower bound.
 
+Additions beyond the pre-registered protocol (all make the verdict stricter):
+
+(a) a bootstrap resample whose median added time is <= 0 makes the upper
+    bound of ``k`` undefined, so that criterion fails (no resample is dropped);
+(b) each size must yield exactly 6 ``jcl_step`` nodes per job (own criterion);
+(c) every timed run must exit 0 or 1, and the checkout under test and the
+    main checkout must be clean; otherwise the run is INVALID (exit 2) and no
+    statistic is computed or printed;
+(d) in the flag-off check the exit codes of main and the checkout must match;
+(e) with ``--lineage`` at least one JCL file must be opened.
+A real run also requires the ``--python`` interpreter to be 3.13 and refuses
+to reuse an existing ``workdir/syn{size}`` directory. The interpreter's
+version and a sha256 of its ``pip freeze`` are recorded.
+
 Usage::
 
     timeout 14400 python scripts/lineage_timing_protocol.py \\
@@ -172,6 +186,18 @@ def git_dirty(tree: Path) -> bool:
     return bool(out.strip())
 
 
+def interpreter(py: str) -> Tuple[str, str]:
+    """(version of ``py``, sha256 of its ``pip freeze`` or ``unavailable``)."""
+    version = subprocess.check_output(
+        [py, "-c", "import platform; print(platform.python_version())"], text=True
+    ).strip()
+    freeze = subprocess.run(
+        [py, "-m", "pip", "freeze", "--all"], capture_output=True, text=True, check=False
+    )
+    digest = hashlib.sha256(freeze.stdout.encode()).hexdigest() if freeze.returncode == 0 else ""
+    return version, digest or "unavailable"
+
+
 def machine() -> Dict[str, object]:
     cpu = platform.processor()
     try:
@@ -193,7 +219,6 @@ def machine() -> Dict[str, object]:
         "cores": os.cpu_count(),
         "memory": mem,
         "os": platform.platform(),
-        "python": sys.version.split()[0],
     }
 
 
@@ -283,7 +308,7 @@ def flag_off_check(
             f"{size} jobs JCL opens: main={opens[0]} off={opens[1]} lineage={opens[2]}"
             f" -> {'ok' if none_off else 'JCL OPENED WITHOUT FLAG'}"
         )
-        lines.append(f"{size} jobs jcl_step nodes with --lineage: {steps[size]}")
+        lines.append(f"{size} jobs jcl_step nodes with --lineage: {steps.get(size)}")
     return ok, lines, steps
 
 
@@ -310,20 +335,29 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def header(say: Log, opts: argparse.Namespace, repo: Path, main_tree: Path, sha: str) -> None:
+def header(
+    say: Log, opts: argparse.Namespace, repo: Path, main_tree: Path, sha: str, version: str
+) -> bool:
+    """Print the run header; False when a checkout is dirty."""
     say("SMOKE RUN - NOT A PROTOCOL RUN" if opts.smoke else "lineage timing protocol run")
-    say(f"repo {repo} commit {git_sha(repo)} dirty={git_dirty(repo)}")
-    say(f"main {main_tree} commit {git_sha(main_tree)} dirty={git_dirty(main_tree)}")
+    dirty = git_dirty(repo), git_dirty(main_tree)
+    say(f"repo {repo} commit {git_sha(repo)} dirty={dirty[0]}")
+    say(f"main {main_tree} commit {git_sha(main_tree)} dirty={dirty[1]}")
     say(f"script {Path(__file__).resolve()} sha256 {sha}")
-    say(f"python {opts.python}")
+    _, freeze = interpreter(opts.python)
+    say(f"python {opts.python} version {version} pip-freeze sha256 {freeze}")
     say(f"machine {json.dumps(machine(), sort_keys=True)}")
     say(f"started {time.strftime('%Y-%m-%dT%H:%M:%S%z')} loadavg {os.getloadavg()}")
+    return not any(dirty)
 
 
-def prepare(say: Log, workdir: Path, sizes: Sequence[int]) -> Dict[int, Path]:
+def prepare(say: Log, workdir: Path, sizes: Sequence[int], reuse: bool) -> Dict[int, Path]:
+    """Generate every tree; a real run refuses an existing tree directory."""
     corpora: Dict[int, Path] = {}
     for size in sizes:
         corpus = workdir / f"syn{size}"
+        if corpus.exists() and not reuse:
+            raise SystemExit(f"{corpus} already exists; use a fresh --workdir")
         if not corpus.exists():
             generate(size, corpus)
         corpora[size] = corpus
@@ -388,7 +422,7 @@ def criteria(
     medians: Dict[int, float],
     sizes: Sequence[int],
     ok_off: bool,
-    rows: List[List[float]],
+    steps_ok: bool,
 ) -> Dict[str, bool]:
     k, ci = stats["k"], stats["k_ci95"]
     # A resample with a non-positive median has no log: the interval is then
@@ -400,8 +434,8 @@ def criteria(
         "<= 10 s per 100k steps at every size": all(
             per_100k(medians[s], s) <= PER_100K_MAX_S for s in sizes
         ),
-        "flag off identical and no JCL opened": ok_off,
-        "every run exited 0 or 1": all(r[6] in (0, 1) for r in rows),
+        "flag off identical (output and exit code), no JCL opened, JCL opened with flag": ok_off,
+        "6 jcl_step nodes per job at every size": steps_ok,
     }
 
 
@@ -413,18 +447,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     opts.out.mkdir(parents=True, exist_ok=True)
     say = Log(opts.out / "result.txt")
     script_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    header(say, opts, repo, main_tree, script_sha)
-    corpora = prepare(say, opts.workdir, sizes)
+    version, _ = interpreter(opts.python)
+    if not opts.smoke and not version.startswith("3.13."):
+        say(f"ABORT: --python is {version}; the protocol requires Python 3.13")
+        return 2
+    clean = header(say, opts, repo, main_tree, script_sha, version)
+    if not clean:
+        say("INVALID RUN: a checkout is dirty")
+        return 2
+    corpora = prepare(say, opts.workdir, sizes, reuse=opts.smoke)
 
     ok_off, lines, steps = flag_off_check(opts.python, repo, main_tree, corpora)
     for line in lines:
         say(line)
-    for size in sizes:
-        if steps.get(size) != size * STEPS_PER_JOB:
-            say(f"step count {steps.get(size)} != {size * STEPS_PER_JOB} for {size} jobs")
-            ok_off = False
+    steps_ok = all(steps.get(size) == size * STEPS_PER_JOB for size in sizes)
 
     rows = run_rounds(say, opts.python, repo, corpora, rounds, opts.out / "rounds.csv")
+    bad = [r for r in rows if r[6] not in (0, 1)]
+    if bad:
+        say(f"INVALID RUN: {len(bad)} timed runs exited outside 0/1, first {bad[0]}")
+        return 2
     timing = {(r[0], r[3], r[4]): r[5] / 1e9 for r in rows if r[0] > 0}
     added = {
         s: [timing[(n, s, 1)] - timing[(n, s, 0)] for n in range(1, rounds + 1)] for s in sizes
@@ -441,7 +483,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if stats["bootstrap_invalid"]:
         say(f"bootstrap resamples with a non-positive median: {stats['bootstrap_invalid']}")
 
-    checks = criteria(stats, medians, sizes, ok_off, rows)
+    checks = criteria(stats, medians, sizes, ok_off, steps_ok)
     for name, passed in checks.items():
         say(f"criterion {name}: {'PASS' if passed else 'FAIL'}")
     verdict = all(checks.values())
