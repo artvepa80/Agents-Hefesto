@@ -1,4 +1,4 @@
-"""Security rules for C#, Go and Rust.
+"""Security rules for C#, Go, Rust, C and C++.
 
 The rules read the tree-sitter syntax tree that the multi-language parser
 builds, so string literals and comments never match. Each rule reports one
@@ -11,6 +11,10 @@ finding per construct with a stable ``rule_id``:
   GO004 ``InsecureSkipVerify: true``.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
   ``-c`` with a ``format!`` string.
+* C and C++: CC001 ``gets``, CC002 unbounded copy or write (``strcpy``,
+  ``strcat``, ``sprintf`` with ``%s``, ``scanf`` ``%s`` without a width),
+  CC003 format string that is not a literal, CC004 ``system``/``popen`` with
+  a command that is not a literal.
 
 Test files are skipped.
 """
@@ -27,7 +31,7 @@ from hefesto.core.analysis_models import (
 )
 from hefesto.core.ast.generic_ast import GenericAST, GenericNode
 
-LANGUAGES = frozenset({"c_sharp", "go", "rust"})
+LANGUAGES = frozenset({"c_sharp", "go", "rust", "c", "cpp"})
 
 _SQL_WORDS = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC)\b", re.I)
 _SHELLS = frozenset({"sh", "bash", "zsh", "dash", "/bin/sh", "/bin/bash", "/usr/bin/env"})
@@ -532,15 +536,168 @@ def _check_rust(ctx: _Ctx, root: GenericNode) -> None:
             _rs_call(ctx, node, parent_type)
 
 
+# --- C and C++ -------------------------------------------------------------------
+
+# Copy/append functions with no size limit (the source is not a literal).
+_CC_COPY = frozenset(
+    {"strcpy", "strcat", "wcscpy", "wcscat", "lstrcpy", "lstrcat", "StrCpy", "StrCat"}
+)
+# scanf family -> index of the format argument.
+_CC_SCANF = {"scanf": 0, "vscanf": 0, "sscanf": 1, "fscanf": 1, "vsscanf": 1, "vfscanf": 1}
+# printf family -> index of the format argument.
+_CC_FORMAT = {
+    "printf": 0,
+    "vprintf": 0,
+    "fprintf": 1,
+    "vfprintf": 1,
+    "dprintf": 1,
+    "sprintf": 1,
+    "vsprintf": 1,
+    "snprintf": 2,
+    "vsnprintf": 2,
+    "syslog": 1,
+    "vsyslog": 1,
+    "err": 1,
+    "warn": 0,
+    "warnx": 0,
+    "errx": 1,
+}
+_CC_SHELL = {"system": 0, "popen": 0, "_popen": 0, "_wsystem": 0, "_wpopen": 0}
+_CC_UNBOUNDED_S = re.compile(r"%(?:\d+\$)?[-+ #0]*(?:\d+|\*)?l?s")
+_CC_SCANF_S = re.compile(r"%\*?(?:s|\[)")
+_CC_STRING_TYPES = frozenset({"string_literal", "concatenated_string", "raw_string_literal"})
+
+
+def _cc_func_name(call: GenericNode) -> Optional[str]:
+    """``gets``, ``std::gets`` or ``::gets``; None for ``obj.f`` and ``p->f``."""
+    parts = _named(call)
+    if not parts:
+        return None
+    func = parts[0]
+    t = _ts(func)
+    if t == "identifier":
+        return func.text
+    if t == "qualified_identifier":
+        text = func.text.replace(" ", "")
+        if text.startswith("::"):
+            text = text[2:]
+        if text.startswith("std::"):
+            text = text[5:]
+        return text if re.fullmatch(r"[A-Za-z_]\w*", text) else None
+    return None
+
+
+def _cc_args(call: GenericNode) -> List[GenericNode]:
+    for child in _named(call):
+        if _ts(child) == "argument_list":
+            return _named(child)
+    return []
+
+
+def _cc_literal(node: GenericNode) -> Optional[str]:
+    """The text of a string literal (adjacent literals joined); None otherwise."""
+    if _ts(node) in _CC_STRING_TYPES:
+        return node.text
+    return None
+
+
+def _cc_add(ctx: _Ctx, node: GenericNode, rule: str, func: str) -> None:
+    if rule == "CC001":
+        ctx.add(
+            node,
+            "CC001",
+            AnalysisIssueType.UNSAFE_BUFFER_FUNCTION,
+            AnalysisIssueSeverity.HIGH,
+            "gets() reads a line with no size limit",
+            "Use fgets(buf, sizeof buf, stdin).",
+            "CWE-242",
+        )
+    elif rule == "CC002":
+        ctx.add(
+            node,
+            "CC002",
+            AnalysisIssueType.UNSAFE_BUFFER_FUNCTION,
+            AnalysisIssueSeverity.MEDIUM,
+            f"{func}() writes into a buffer with no size limit",
+            "Use a bounded form (snprintf, strlcpy/strncat with the buffer size, "
+            "or a width such as %31s) and check the length.",
+            "CWE-120",
+        )
+    elif rule == "CC003":
+        ctx.add(
+            node,
+            "CC003",
+            AnalysisIssueType.FORMAT_STRING_RISK,
+            AnalysisIssueSeverity.MEDIUM,
+            f"{func}() format string is not a literal",
+            'Pass a literal format, for example printf("%s", text).',
+            "CWE-134",
+        )
+    else:
+        ctx.add(
+            node,
+            "CC004",
+            AnalysisIssueType.COMMAND_INJECTION,
+            AnalysisIssueSeverity.HIGH,
+            f"{func}() runs a shell command that is not a literal",
+            "Run a fixed program with execv/posix_spawn and pass each argument separately.",
+            "CWE-78",
+        )
+
+
+def _cc_call(ctx: _Ctx, node: GenericNode) -> None:
+    func = _cc_func_name(node)
+    if func is None:
+        return
+    args = _cc_args(node)
+    if func == "gets":
+        _cc_add(ctx, node, "CC001", func)
+        return
+    if func in _CC_COPY and len(args) >= 2 and _cc_literal(args[1]) is None:
+        _cc_add(ctx, node, "CC002", func)
+        return
+    if func in _CC_SCANF:
+        idx = _CC_SCANF[func]
+        fmt = _cc_literal(args[idx]) if len(args) > idx else None
+        if fmt is not None and _CC_SCANF_S.search(fmt):
+            _cc_add(ctx, node, "CC002", func)
+        return
+    if func in _CC_FORMAT:
+        idx = _CC_FORMAT[func]
+        if len(args) <= idx:
+            return
+        fmt_node = args[idx]
+        fmt = _cc_literal(fmt_node)
+        if fmt is None:
+            # An all-caps name is a macro holding a literal (``LOG_FMT``).
+            if _ts(fmt_node) == "identifier" and fmt_node.text.isupper():
+                return
+            _cc_add(ctx, node, "CC003", func)
+            return
+        if func in ("sprintf", "vsprintf") and _CC_UNBOUNDED_S.search(fmt):
+            _cc_add(ctx, node, "CC002", func)
+        return
+    if func in _CC_SHELL and args and _cc_literal(args[0]) is None:
+        _cc_add(ctx, node, "CC004", func)
+
+
+def _check_c_cpp(ctx: _Ctx, root: GenericNode) -> None:
+    for node in _walk(root):
+        if _ts(node) == "call_expression":
+            _cc_call(ctx, node)
+
+
 _CHECKS: Dict[str, Callable[[_Ctx, GenericNode], None]] = {
     "c_sharp": _check_csharp,
     "go": _check_go,
     "rust": _check_rust,
+    "c": _check_c_cpp,
+    "cpp": _check_c_cpp,
 }
 
 
 def find_language_rule_issues(tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
-    """Run the C#, Go or Rust rules for ``tree``; other languages return []."""
+    """Run the C#, Go, Rust, C or C++ rules for ``tree``; other languages return []."""
     check = _CHECKS.get(tree.language)
     if check is None:
         return []

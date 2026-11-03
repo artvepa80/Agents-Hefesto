@@ -30,6 +30,9 @@ CWE_NAMES: Dict[int, str] = {
     95: (
         "Improper Neutralization of Directives in Dynamically Evaluated Code " "('Eval Injection')"
     ),
+    120: "Buffer Copy without Checking Size of Input ('Classic Buffer Overflow')",
+    134: "Use of Externally-Controlled Format String",
+    242: "Use of Inherently Dangerous Function",
     295: "Improper Certificate Validation",
     327: "Use of a Broken or Risky Cryptographic Algorithm",
     396: "Declaration of Catch for Generic Exception",
