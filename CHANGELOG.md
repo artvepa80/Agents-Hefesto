@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — release gate for 4.22.0: no-flag output must not change
+
+- `scripts/release_gate.py` and the `Release Gate` workflow run main and the branch with no flags on five pinned corpora (Python, JavaScript, Go, C, Rust). They ignore timing fields and fail on any difference in findings, counts or exit code. Opt-in experimental rules cannot change default output unnoticed.
+- `docs/MEASUREMENT_METHOD.md`: how a rule earns a precision claim. Held-out pinned repositories, a recorded random seed, per-repository and per-root-cause counts, label B (actionable) with n ≥ 59 and 0 errors (exact one-sided), Wilson as context, and a second labeller on a blind subset.
+
 ### Changed — test paths
 
 - Test code now also includes .NET test projects: a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs` (case-sensitive, so `Latest.cs` is not test code). This applies to every check that skips test code.
