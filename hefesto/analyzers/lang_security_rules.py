@@ -709,7 +709,9 @@ def _cc_format_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Opti
         return None
     fmt = _cc_literal(fmt_node)
     if fmt is None:
-        if _cc_const(fmt_node):
+        # Only a format with nothing after it: printf(buf) treats data as a
+        # format; printf(fmt, x) passes values to a format chosen in code.
+        if len(args) > _CC_FORMAT[func] + 1 or _cc_const(fmt_node):
             return None
         if _ts(fmt_node) == "identifier" and fmt_node.text in scope.forwarded:
             return None

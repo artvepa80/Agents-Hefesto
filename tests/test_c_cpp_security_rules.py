@@ -137,7 +137,7 @@ EXCLUSION_CASES = [
     # CC003: literal + offset, ternary of literals, gettext literals
     ('void g(int k) { printf(" %u" + k, 3); }', []),
     ('void g(int k) { printf(k ? "%d\\n" : "%d", k); }', []),
-    ('void g(int k, char *s) { printf(k ? s : "%d", k); }', [("CC003", 1, "MEDIUM")]),
+    ('void g(int k, char *s) { printf(k ? s : "x"); }', [("CC003", 1, "MEDIUM")]),
     ('void g(void) { printf(_("hello")); }', []),
     ('void g(void) { printf(gettext("hello %d"), 1); }', []),
     ("void g(char *s) { printf(_(s)); }", [("CC003", 1, "MEDIUM")]),
@@ -162,4 +162,23 @@ EXCLUSION_CASES = [
 
 @pytest.mark.parametrize("code,expected", EXCLUSION_CASES)
 def test_exclusions(code: str, expected) -> None:
+    assert _rules("c", code + "\n") == expected
+
+
+NO_ARGS_CASES = [
+    # CC003 reports a non-constant format only when nothing follows it:
+    # printf(buf) prints the buffer as a format; printf(fmt, x) is a chosen format.
+    ("void g(char *s) { printf(s); }", [("CC003", 1, "MEDIUM")]),
+    ("void g(FILE *f, char *m) { fprintf(f, m); }", [("CC003", 1, "MEDIUM")]),
+    ("void g(char *m) { syslog(3, m); }", [("CC003", 1, "MEDIUM")]),
+    ("void g(char *d, char *m) { sprintf(d, m); }", [("CC003", 1, "MEDIUM")]),
+    ("void g(char *s, int n) { printf(s, n); }", []),
+    ("void g(FILE *f, char *fmt, int n) { fprintf(f, fmt, n); }", []),
+    ("void g(char *m, char *x) { syslog(3, m, x); }", []),
+    ("void g(char *d, char *fmt, int n) { snprintf(d, 8, fmt, n); }", []),
+]
+
+
+@pytest.mark.parametrize("code,expected", NO_ARGS_CASES)
+def test_cc003_only_without_format_arguments(code: str, expected) -> None:
     assert _rules("c", code + "\n") == expected
