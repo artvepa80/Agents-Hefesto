@@ -65,9 +65,13 @@ CS_CASES = [
     ('Process.Start("notepad.exe", path);', []),
     ('Process.Start("git", "status");', []),
     # CS004 broken algorithms
-    ("var h = MD5.Create();", [("CS004", 3, "MEDIUM")]),
-    ("var h = new SHA1CryptoServiceProvider();", [("CS004", 3, "MEDIUM")]),
+    # MD5 and SHA-1 are an inventory (LOW); broken ciphers stay MEDIUM.
+    ("var h = MD5.Create();", [("CS004", 3, "LOW")]),
+    ("var h = SHA1.HashData(b);", [("CS004", 3, "LOW")]),
+    ("var h = new SHA1CryptoServiceProvider();", [("CS004", 3, "LOW")]),
     ("var d = DES.Create();", [("CS004", 3, "MEDIUM")]),
+    ("var d = TripleDES.Create();", [("CS004", 3, "MEDIUM")]),
+    ("var d = new RC2CryptoServiceProvider();", [("CS004", 3, "MEDIUM")]),
     ("var h = SHA256.Create();", []),
     ("var h = Aes.Create();", []),
 ]
@@ -86,12 +90,10 @@ GO_CASES = [
     ('exec.Command("ls", d)', []),
     ('exec.Command("sh", "-c", "ls -la")', []),
     ('exec.Command("sh", "-c", d)', []),
-    ('db.Query("SELECT * FROM t WHERE a=" + a)', [("GO002", 4, "HIGH")]),
-    (
-        'db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))',
-        [("GO002", 4, "HIGH")],
-    ),
-    ('tx.Exec(fmt.Sprintf("DELETE FROM %s", d))', [("GO002", 4, "HIGH")]),
+    # GO002 was dropped from v1 (57/57 non-actionable on the measured corpus).
+    ('db.Query("SELECT * FROM t WHERE a=" + a)', []),
+    ('db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))', []),
+    ('tx.Exec(fmt.Sprintf("DELETE FROM %s", d))', []),
     ('db.Query("SELECT * FROM t WHERE a=$1", a)', []),
     ('r.Exec(fmt.Sprintf("hello %s", d))', []),
     ("_ = tls.Config{InsecureSkipVerify: true}", [("GO004", 4, "HIGH")]),
@@ -108,7 +110,7 @@ def test_go_rules(body: str, expected) -> None:
 def test_go_weak_hash_only_from_crypto_packages() -> None:
     imports = 'import (\n\t"crypto/md5"\n\t"crypto/sha1"\n)\n'
     code = _go("_ = md5.Sum([]byte(d))\n_ = sha1.New()", imports)
-    assert _rules("go", code) == [("GO003", 8, "MEDIUM"), ("GO003", 9, "MEDIUM")]
+    assert _rules("go", code) == [("GO003", 8, "LOW"), ("GO003", 9, "LOW")]
     # A local package that happens to be called md5 is not crypto/md5.
     assert _rules("go", _go("_ = md5.Sum([]byte(d))", 'import "example.com/md5"\n')) == []
 
@@ -165,17 +167,27 @@ def test_rule_issue_types_and_cwe() -> None:
     }
 
 
-def test_rule_replaces_the_generic_finding_on_the_same_line() -> None:
+def test_go_broken_ciphers_stay_medium() -> None:
+    imports = 'import (\n\t"crypto/des"\n\t"crypto/rc4"\n)\n'
+    code = _go("_, _ = des.NewTripleDESCipher(k)\n_, _ = rc4.NewCipher(k)", imports)
+    assert _rules("go", code) == [("GO003", 8, "MEDIUM"), ("GO003", 9, "MEDIUM")]
+
+
+def test_weak_hash_message_says_inventory() -> None:
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    code = _cs("var h = MD5.Create();")
+    tree = TreeSitterParser("c_sharp").parse(code, "a.cs")
+    msgs = [i.message for i in _analyzer().analyze(tree, "a.cs", code) if i.rule_id]
+    assert len(msgs) == 1 and "(inventory)" in msgs[0]
+
+
+def test_go_sql_has_no_rule_finding() -> None:
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     code = _go('db.Query("SELECT * FROM t WHERE a=" + a)')
     tree = TreeSitterParser("go").parse(code, "a.go")
-    sql = [
-        i
-        for i in _analyzer().analyze(tree, "a.go", code)
-        if i.issue_type.value == "SQL_INJECTION_RISK"
-    ]
-    assert [(i.rule_id, i.line) for i in sql] == [("GO002", 4)]
+    assert [i.rule_id for i in _analyzer().analyze(tree, "a.go", code) if i.rule_id] == []
 
 
 def test_strings_and_comments_never_match() -> None:

@@ -5,10 +5,12 @@ builds, so string literals and comments never match. Each rule reports one
 finding per construct with a stable ``rule_id``:
 
 * C#: CS001 SQL built from strings, CS002 dangerous formatters, CS003
-  ``Process.Start`` with a built string, CS004 broken hash or cipher.
-* Go: GO001 shell ``-c`` with a built string, GO002 SQL built from strings,
-  GO003 ``crypto/md5``, ``crypto/sha1``, ``crypto/des`` or ``crypto/rc4``,
-  GO004 ``InsecureSkipVerify: true``.
+  ``Process.Start`` with a built string, CS004 MD5/SHA-1 (LOW inventory) or broken
+  cipher (MEDIUM).
+* Go: GO001 shell ``-c`` with a built string, GO003 ``crypto/md5``,
+  ``crypto/sha1`` (LOW inventory), ``crypto/des`` or ``crypto/rc4`` (MEDIUM),
+  GO004 ``InsecureSkipVerify: true``. GO002 (SQL built from strings) was
+  dropped from v1: every measured hit was non-actionable.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
   ``-c`` with a ``format!`` string.
 
@@ -29,7 +31,6 @@ from hefesto.core.ast.generic_ast import GenericAST, GenericNode
 
 LANGUAGES = frozenset({"c_sharp", "go", "rust"})
 
-_SQL_WORDS = re.compile(r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC)\b", re.I)
 _SHELLS = frozenset({"sh", "bash", "zsh", "dash", "/bin/sh", "/bin/bash", "/usr/bin/env"})
 
 
@@ -123,10 +124,6 @@ def _is_literal(node: GenericNode) -> bool:
     if t == "binary_expression":
         return all(_is_literal(c) for c in _named(node))
     return False
-
-
-def _literal_text(node: GenericNode) -> str:
-    return " ".join(n.text for n in _walk(node) if _ts(n) in _LITERALS or "string" in _ts(n))
 
 
 def _concat_builds_string(node: GenericNode) -> bool:
@@ -236,15 +233,46 @@ def _cs_process(ctx: _Ctx, node: GenericNode) -> None:
     )
 
 
-def _cs_weak(ctx: _Ctx, node: GenericNode, name: str) -> None:
+_WEAK_HASH_NAMES = frozenset(
+    {
+        "MD5",
+        "SHA1",
+        "MD5CryptoServiceProvider",
+        "SHA1CryptoServiceProvider",
+        "SHA1Managed",
+        "crypto/md5",
+        "crypto/sha1",
+    }
+)
+
+
+def _weak_algorithm(ctx: _Ctx, node: GenericNode, rule: str, name: str, suggestion: str) -> None:
+    """MD5/SHA-1 are an inventory (LOW): most uses are checksums or protocol-mandated.
+
+    Broken ciphers (DES, 3DES, RC2, RC4) stay MEDIUM.
+    """
+    if name in _WEAK_HASH_NAMES:
+        severity = AnalysisIssueSeverity.LOW
+        message = (
+            f"Weak hash {name} (inventory): fine for checksums, not for passwords or signatures"
+        )
+    else:
+        severity = AnalysisIssueSeverity.MEDIUM
+        message = f"Broken cipher: {name}"
     ctx.add(
         node,
-        "CS004",
+        rule,
         AnalysisIssueType.INSECURE_CRYPTOGRAPHY,
-        AnalysisIssueSeverity.MEDIUM,
-        f"Broken or weak algorithm: {name}",
-        "Use SHA256 or stronger for hashing and Aes (GCM) for encryption.",
+        severity,
+        message,
+        suggestion,
         "CWE-327",
+    )
+
+
+def _cs_weak(ctx: _Ctx, node: GenericNode, name: str) -> None:
+    _weak_algorithm(
+        ctx, node, "CS004", name, "Use SHA256 or stronger for hashing and Aes (GCM) for encryption."
     )
 
 
@@ -320,16 +348,6 @@ def _check_csharp(ctx: _Ctx, root: GenericNode) -> None:
 
 # --- Go ------------------------------------------------------------------------
 
-_GO_SQL_METHODS = {
-    "Query": 0,
-    "QueryRow": 0,
-    "Exec": 0,
-    "Prepare": 0,
-    "QueryContext": 1,
-    "QueryRowContext": 1,
-    "ExecContext": 1,
-    "PrepareContext": 1,
-}
 _GO_WEAK = {
     "crypto/md5": ("md5", {"New", "Sum"}),
     "crypto/sha1": ("sha1", {"New", "Sum"}),
@@ -369,28 +387,9 @@ def _go_shell(ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode]) 
         )
 
 
-def _go_sql(ctx: _Ctx, node: GenericNode, sql: GenericNode) -> None:
-    if _built_string(sql) and _SQL_WORDS.search(_literal_text(sql)):
-        ctx.add(
-            node,
-            "GO002",
-            AnalysisIssueType.SQL_INJECTION_RISK,
-            AnalysisIssueSeverity.HIGH,
-            "SQL query built from strings",
-            "Use placeholders ($1 or ?) and pass values as arguments.",
-            "CWE-89",
-        )
-
-
 def _go_weak(ctx: _Ctx, node: GenericNode, path: str) -> None:
-    ctx.add(
-        node,
-        "GO003",
-        AnalysisIssueType.INSECURE_CRYPTOGRAPHY,
-        AnalysisIssueSeverity.MEDIUM,
-        f"Broken or weak algorithm: {path}",
-        "Use crypto/sha256 or stronger, and crypto/aes with GCM.",
-        "CWE-327",
+    _weak_algorithm(
+        ctx, node, "GO003", path, "Use crypto/sha256 or stronger, and crypto/aes with GCM."
     )
 
 
@@ -398,10 +397,6 @@ def _go_method_call(
     ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode], imports: Dict[str, str]
 ) -> None:
     owner, method = func.rsplit(".", 1)
-    index = _GO_SQL_METHODS.get(method)
-    if index is not None and len(args) > index:
-        _go_sql(ctx, node, args[index])
-        return
     path = imports.get(owner)
     if path and method in _GO_WEAK[path][1]:
         _go_weak(ctx, node, path)
