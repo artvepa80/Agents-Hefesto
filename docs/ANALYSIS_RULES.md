@@ -1157,10 +1157,9 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C a
 | CS001 | `new SqlCommand(...)` (also OleDb, Odbc, Npgsql, MySql, Sqlite), `CommandText = ...` or `ExecuteSqlRaw`/`FromSqlRaw` whose SQL is built with `+`, `$"...{x}"` or `string.Format` | `SQL_INJECTION_RISK` | HIGH | 89 |
 | CS002 | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | `INSECURE_DESERIALIZATION` | HIGH | 502 |
 | CS003 | `Process.Start(...)` or `new ProcessStartInfo(...)` with an argument built from strings | `COMMAND_INJECTION` | MEDIUM | 78 |
-| CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | MEDIUM | 327 |
+| CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | LOW for MD5/SHA-1 (inventory); MEDIUM for DES/TripleDES/RC2 | 327 |
 | GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` | `COMMAND_INJECTION` | HIGH | 78 |
-| GO002 | `Query`, `QueryRow`, `Exec`, `Prepare` (and `...Context`) whose SQL text is built by `fmt.Sprintf` or `+` | `SQL_INJECTION_RISK` | HIGH | 89 |
-| GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | MEDIUM | 327 |
+| GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | LOW for md5/sha1 (inventory); MEDIUM for des/rc4 | 327 |
 | GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
 | RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
 | RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
@@ -1175,7 +1174,13 @@ RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` 
 Known limits:
 
 - Rust unit tests that live in the same file under `#[cfg(test)]` are **not** skipped: only the path decides what is test code, so `unsafe` blocks and `transmute` calls in an in-file `mod tests` are reported like any other code.
-- CS004 and GO003 report every use of MD5 and SHA-1, including non-security uses such as file checksums, cache keys, ETags and protocol-mandated digests. The tree does not show why the hash is computed; review these findings. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
+- CS004 and GO003 report every use of MD5 and SHA-1 as LOW "(inventory)", the same way RS001 lists `unsafe`. The earlier MEDIUM claim was refuted by measurement. On pinned repositories (MailKit, ShareX, jellyfin, gitea, rclone; 2026-11-03), 0/20 CS004 hits and 1/24 sampled GO003 hits needed action. The rest were protocol-mandated digests (SASL DIGEST-MD5/CRAM-MD5/SCRAM-SHA-1, APOP, OAuth 1, S3 Content-MD5 and SSE-C, storage APIs) or non-security checksums and cache keys. DES, TripleDES, RC2 and RC4 stay MEDIUM. The tree does not show why a hash is computed, so the default `--severity MEDIUM` hides the inventory; use `--severity LOW` to list it. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
+- GO002 (Go SQL built with `fmt.Sprintf` or `+`) was dropped from v1. All 57 hits on gitea were non-actionable:
+  - 38 were DDL with internal schema identifiers.
+  - 11 were a table name interpolated, with values passed as placeholders.
+  - 5 were `setval('%s')` sequence names.
+  - 3 were `%d` row counts.
+  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. Go SQL lines get the generic SQL check, as without the feature.
 - Deserialization has two issue types, both CWE-502 in SARIF (`external/cwe/cwe-502`). **INSECURE_DESERIALIZATION**: deserializing untrusted data with a formatter that can create arbitrary types (CWE-502). New languages use this type; Python keeps `PICKLE_USAGE`, which flags the `import pickle` line (precision `low`).
 
   | Language | Rule | Issue type | What is flagged | CWE |
@@ -1185,7 +1190,7 @@ Known limits:
 
 C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::f(...)`) count; `obj.f(...)` and `p->f(...)` do not. Macros are not expanded, so a call hidden behind a macro is not seen, and a macro named like a function (`#define strcpy safe_strcpy`) is still reported. Bounded calls (`snprintf`, `strncpy`, `strlcpy`, `%31s`, `%.8s`) and literal commands (`system("ls")`) are not reported.
 
-Not reported on purpose: a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments; Go `Exec` calls whose literal part has no SQL keyword.
+Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
 
 ## 📊 Quick Reference
 
