@@ -534,3 +534,96 @@ def test_jcl_outside_the_root_keeps_an_absolute_id(tmp_path, monkeypatch):
     section = run(repo, str(outside), "--lineage")["lineage"]
     absolute = (outside / "J2.jcl").resolve().as_posix()
     assert f"jcl_job:J2@{absolute}" in {n["id"] for n in section["nodes"]}
+
+
+def _old_id_path(path: str, root) -> str:
+    """The pathlib form the cached id path must match exactly."""
+    resolved = Path(path).resolve()
+    if root is not None:
+        try:
+            return resolved.relative_to(root).as_posix()
+        except ValueError:
+            pass
+    return resolved.as_posix()
+
+
+def test_id_path_matches_the_pathlib_form(tmp_path, monkeypatch):
+    from hefesto.analyzers.devops import cobol_lineage
+
+    root = tmp_path / "repo"
+    (root / "jcl").mkdir(parents=True)
+    (root / "jcl" / "A.jcl").write_text("//A JOB\n")
+    outside = tmp_path / "out"
+    outside.mkdir()
+    (outside / "B.jcl").write_text("//B JOB\n")
+    (root / "link.jcl").symlink_to(outside / "B.jcl")
+    (root / "inlink").symlink_to(root / "jcl")
+    (tmp_path / "repo2").mkdir()
+    monkeypatch.chdir(root)
+    cases = [
+        str(root / "jcl" / "A.jcl"),
+        "jcl/A.jcl",
+        "./jcl//A.jcl",
+        "jcl/../jcl/A.jcl",
+        "jcl/A.jcl/",
+        "link.jcl",
+        "inlink/A.jcl",
+        str(outside / "B.jcl"),
+        "../out/B.jcl",
+        "../repo2/x.jcl",
+        "missing/Z.jcl",
+        str(root),
+        ".",
+        "",
+    ]
+    resolved_root = root.resolve()
+    for root_arg in (resolved_root, None, Path("/")):
+        graph = cobol_lineage._Graph(root_arg)
+        for case in cases:
+            assert graph.id_path(case) == _old_id_path(case, root_arg), (case, root_arg)
+
+
+def test_id_path_is_computed_once_per_distinct_file(tmp_path, monkeypatch):
+    from hefesto.analyzers.devops import cobol_lineage
+
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    files = {"src/PAYROLL.cbl": prog("PAYROLL"), "src/OTHER.cbl": prog("OTHER")}
+    for j in range(3):
+        files[f"jcl/J{j}.jcl"] = jcl(
+            f"//J{j} JOB (ACCT),'X'",
+            "//S1 EXEC PGM=PAYROLL",
+            "//IN DD DSN=A.B,DISP=SHR",
+            "//S2 EXEC PGM=OTHER",
+            "//S3 EXEC PGM=IEFBR14",
+        )
+    for rel, text in files.items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text(text)
+    calls: List[str] = []
+    real = cobol_lineage._compute_id_path
+
+    def counting(path, root):
+        calls.append(path)
+        return real(path, root)
+
+    monkeypatch.setattr(cobol_lineage, "_compute_id_path", counting)
+    section = _jcl_lineage(repo, monkeypatch)
+    assert any(n["kind"] == "jcl_step" for n in section["nodes"])
+    assert len(calls) == len(set(calls))
+    assert len(set(calls)) <= 3
+
+
+def test_lineage_leaves_the_collector_as_it_found_it(tmp_path, monkeypatch):
+    import gc
+
+    repo = _jcl_checkout(tmp_path)
+    assert gc.isenabled()
+    _jcl_lineage(repo, monkeypatch)
+    assert gc.isenabled()
+    gc.disable()
+    try:
+        _jcl_lineage(repo, monkeypatch)
+        assert not gc.isenabled()
+    finally:
+        gc.enable()

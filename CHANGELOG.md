@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs: `docs/cobol.md`. Tests: `tests/test_jcl_lineage.py`.
 - Memory: `--lineage` on JCL grows by about 59 MB per 1,000 jobs (6 steps per job; about 1 GB at 16,000 jobs) on the synthetic tree; plan for it on large estates.
 - `scripts/lineage_timing_protocol.py`: the pre-registered timing protocol for the JCL part of `--lineage` (sizes, rounds, statistic and pass criteria fixed in the script; no subprocess `timeout=`). Committed before its run.
+- `scripts/lineage_timing_protocol.py` amendment 7.3 (measurement conditions only; criteria unchanged): a `cpu model` line in `result.txt` and `--expect-cpu`, a quiet gate before every round (1-minute load <= 0.25 x cores, up to 30 minutes, else INVALID), and the flag-off check in its own process; peak RSS stays report-only. Tests: `tests/test_lineage_timing_protocol.py`.
+- Faster `--lineage` on JCL: the id path of each file is computed once per file (string operations, same result as before, ids unchanged) and the cyclic garbage collector is paused while JCL is read and the graph is built (restored after). On the synthetic 16,000-job tree the added time drops from about 10.4 s to about 4.5 s on a development machine; the lineage output is byte-identical.
 
 ### Changed — lineage ids relative to the root
 

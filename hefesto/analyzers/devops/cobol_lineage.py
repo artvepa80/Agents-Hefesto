@@ -29,6 +29,7 @@ Every literal CALL/LINK/XCTL target is classified exactly once: an edge, a
 reference or an unresolved entry (``ambiguous``).
 """
 
+import os
 import re
 from bisect import bisect_right
 from dataclasses import dataclass, field
@@ -496,10 +497,18 @@ class _Graph:
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = root
+        self._id_paths: Dict[str, str] = {}
         self.nodes: Dict[str, Dict[str, Any]] = {}
         self.edges: List[Dict[str, Any]] = []
         self.references: List[Dict[str, Any]] = []
         self.unresolved: List[Dict[str, Any]] = []
+
+    def id_path(self, path: str) -> str:
+        """:func:`_compute_id_path` of ``path``, computed once per distinct path."""
+        cached = self._id_paths.get(path)
+        if cached is None:
+            cached = self._id_paths[path] = _compute_id_path(path, self.root)
+        return cached
 
     def node(self, node_id: str, kind: str, name: str, file: Optional[str] = None) -> str:
         entry: Dict[str, Any] = {"id": node_id, "kind": kind, "name": name}
@@ -563,15 +572,31 @@ def lineage_root() -> Path:
     return _default_root()
 
 
-def _id_path(path: str, root: Optional[Path]) -> str:
-    """``path`` for a node id: POSIX and relative to ``root``; absolute outside it."""
-    resolved = Path(path).resolve()
+def _compute_id_path(path: str, root: Optional[Path]) -> str:
+    """``path`` for a node id: POSIX and relative to ``root``; absolute outside it.
+
+    Same result as ``Path(path).resolve().relative_to(root).as_posix()`` (or the
+    resolved path when it is not under ``root``), with string operations: on
+    POSIX ``Path.resolve`` is ``os.path.realpath`` and ``relative_to`` is a
+    component-wise prefix test. Other systems keep the pathlib form (case rules).
+    """
+    if os.name != "posix":
+        resolved = Path(path).resolve()
+        if root is not None:
+            try:
+                return resolved.relative_to(root).as_posix()
+            except ValueError:
+                pass
+        return resolved.as_posix()
+    real = os.path.realpath(path or ".")
     if root is not None:
-        try:
-            return resolved.relative_to(root).as_posix()
-        except ValueError:
-            pass
-    return resolved.as_posix()
+        base = str(root)
+        if real == base:
+            return "."
+        prefix = base if base.endswith("/") else base + "/"
+        if real.startswith(prefix):
+            return real[len(prefix) :]
+    return real
 
 
 def build_lineage(
@@ -629,7 +654,7 @@ def _program_ids(
         name = index.lineage_by_file[path].program_id or Path(path).stem.upper()
         node_id = f"program:{name}"
         if len(programs.get(name, ())) > 1:
-            node_id = f"program:{name}@{_id_path(path, graph.root)}"
+            node_id = f"program:{name}@{graph.id_path(path)}"
         owners[path] = graph.node(node_id, "program", name, path)
     return owners
 
@@ -777,7 +802,7 @@ def _add_jcl_step(
     """One step: its node, programs, datasets and the ASSIGN DD names it codes."""
     job, step = resolved.job, resolved.step
     step_id = graph.node(
-        f"jcl_step:{resolved.path}@{_id_path(job.file, graph.root)}",
+        f"jcl_step:{resolved.path}@{graph.id_path(job.file)}",
         "jcl_step",
         resolved.path,
         job.file,
@@ -796,7 +821,7 @@ def _add_jcl_step(
 def _add_jcl_unresolved(graph: _Graph, jcl: Any, job_ids: Dict[int, str]) -> None:
     for job, path, entry in jcl.unresolved:
         owner = (
-            f"jcl_step:{path}@{_id_path(job.file, graph.root)}"
+            f"jcl_step:{path}@{graph.id_path(job.file)}"
             if path
             else job_ids.get(id(job), f"jcl_job:{job.name}")
         )
@@ -823,7 +848,7 @@ def _add_jcl(
     job_ids: Dict[int, str] = {}
     for job in jcl.jobs:
         job_ids[id(job)] = graph.node(
-            f"jcl_job:{job.name}@{_id_path(job.file, graph.root)}", "jcl_job", job.name, job.file
+            f"jcl_job:{job.name}@{graph.id_path(job.file)}", "jcl_job", job.name, job.file
         )
     reported_assigns: Set[Tuple[str, int]] = set()
     for resolved in jcl.steps:

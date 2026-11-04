@@ -12,6 +12,7 @@ Pipeline:
 Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
+import gc
 import logging
 import os
 import threading
@@ -385,10 +386,19 @@ class AnalyzerEngine:
         from hefesto.analyzers.devops.jcl_reader import read_model
 
         # JCL is read only here, so a run without --lineage never opens it.
-        jcl = read_model(self._lineage_roots, self._lineage_excludes)
-        if self._cobol_index is None and not jcl:
-            return None
-        return build_lineage(self._cobol_index, jcl)
+        # The cyclic collector is paused while JCL is read and the graph is built
+        # (and resumed after, if it was on): its repeated passes over the growing
+        # graph were about a third of the added time at 16,000 jobs.
+        was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            jcl = read_model(self._lineage_roots, self._lineage_excludes)
+            if self._cobol_index is None and not jcl:
+                return None
+            return build_lineage(self._cobol_index, jcl)
+        finally:
+            if was_enabled:
+                gc.enable()
 
     def _build_cobol_index(
         self, files: List[Path], roots: List[Path], exclude_patterns: List[str]
