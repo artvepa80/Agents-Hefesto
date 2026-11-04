@@ -38,6 +38,19 @@ Additions beyond the pre-registered protocol (all make the verdict stricter):
     statistic is computed or printed;
 (d) in the flag-off check the exit codes of main and the checkout must match;
 (e) with ``--lineage`` at least one JCL file must be opened.
+Amendment 7.3 (measurement conditions only; every criterion above and the
+sizes, seeds, rounds and the single run are unchanged):
+
+- the CPU model is printed on its own ``cpu model`` line of ``result.txt``;
+  with ``--expect-cpu`` a different model makes the run INVALID (exit 2);
+- quiet gate: before every round (warm-up included) the script waits until
+  the 1-minute load average is <= 0.25 x cores, polling every 15 s for up to
+  30 minutes; if the machine is not quiet by then the run is INVALID (exit 2)
+  and no statistic is computed or printed;
+- the flag-off check runs in its own process, so the process that launches
+  the timed runs stays small (on Linux a child's peak RSS starts from its
+  parent's); peak RSS is reported only and is not a criterion.
+
 A real run also requires the ``--python`` interpreter to be 3.13 and refuses
 to reuse an existing ``workdir/syn{size}`` directory. The interpreter's
 version and a sha256 of its ``pip freeze`` are recorded.
@@ -46,7 +59,11 @@ Usage::
 
     timeout 14400 python scripts/lineage_timing_protocol.py \\
         --repo . --main ../main-checkout --python /path/to/venv/bin/python \\
-        --workdir /tmp/lineage-timing --out /tmp/lineage-timing/result
+        --workdir /tmp/lineage-timing --out /tmp/lineage-timing/result \\
+        --expect-cpu "<cpu model line of the official 7.2 run>"
+
+The watchdog has to allow for the quiet gate (up to 30 minutes per round).
+``--smoke`` skips the quiet gate.
 
 ``--python`` must be an interpreter where ``hefesto`` imports from
 ``PYTHONPATH``; each tree is selected with ``PYTHONPATH``. ``--smoke`` runs tiny
@@ -70,7 +87,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 SIZES = (2000, 4000, 8000, 16000)
 STEPS_PER_JOB = 6
@@ -82,6 +99,9 @@ GEN_SEED = 7
 K_MAX = 1.25
 K_UPPER_MAX = 1.35
 PER_100K_MAX_S = 10.0
+QUIET_LOAD_PER_CORE = 0.25
+QUIET_WAIT_S = 30 * 60
+QUIET_POLL_S = 15.0
 
 JCL_SUFFIXES = (".jcl", ".prc", ".proc", ".jcllib")
 OPENS_SHIM = (
@@ -132,6 +152,29 @@ def generate(jobs: int, out: Path) -> None:
             ]
         lines.append(f"//S4 EXEC PR{rnd.randrange(20):03d}")
         (out / "jcl" / f"J{j:05d}.jcl").write_text("\n".join(lines) + "\n")
+
+
+def wait_quiet(
+    load: Callable[[], float],
+    cores: int,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> Tuple[bool, float, float]:
+    """Wait until ``load()`` <= 0.25 x ``cores``: (quiet, seconds waited, last load)."""
+    limit = QUIET_LOAD_PER_CORE * cores
+    start = clock()
+    while True:
+        current = load()
+        waited = clock() - start
+        if current <= limit:
+            return True, waited, current
+        if waited >= QUIET_WAIT_S:
+            return False, waited, current
+        sleep(min(QUIET_POLL_S, max(QUIET_WAIT_S - waited, 0.0)))
+
+
+def load1() -> float:
+    return os.getloadavg()[0]
 
 
 def tree_digest(root: Path) -> str:
@@ -332,6 +375,8 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--workdir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--smoke", action="store_true", help="tiny sizes; not a protocol run")
+    parser.add_argument("--expect-cpu", help="CPU model the run must be on (7.3)")
+    parser.add_argument("--flag-off-only", type=Path, help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -347,6 +392,7 @@ def header(
     _, freeze = interpreter(opts.python)
     say(f"python {opts.python} version {version} pip-freeze sha256 {freeze}")
     say(f"machine {json.dumps(machine(), sort_keys=True)}")
+    say(f"cpu model {machine()['cpu']}")
     say(f"started {time.strftime('%Y-%m-%dT%H:%M:%S%z')} loadavg {os.getloadavg()}")
     return not any(dirty)
 
@@ -366,9 +412,18 @@ def prepare(say: Log, workdir: Path, sizes: Sequence[int], reuse: bool) -> Dict[
 
 
 def run_rounds(
-    say: Log, py: str, repo: Path, corpora: Dict[int, Path], rounds: int, csv_path: Path
-) -> List[List[float]]:
-    """Warm-up round 0, then rounds 1..N; one CSV row per CLI run."""
+    say: Log,
+    py: str,
+    repo: Path,
+    corpora: Dict[int, Path],
+    rounds: int,
+    csv_path: Path,
+    gate: Optional[Callable[[], Tuple[bool, float, float]]] = None,
+) -> Optional[List[List[float]]]:
+    """Warm-up round 0, then rounds 1..N; one CSV row per CLI run.
+
+    None when the quiet gate times out before a round (the run is INVALID).
+    """
     configs = [(s, flag) for s in corpora for flag in (False, True)]
     rows: List[List[float]] = []
     with csv_path.open("w", newline="") as handle:
@@ -379,6 +434,12 @@ def run_rounds(
         for rnd_no in range(rounds + 1):
             order = list(configs)
             random.Random(SHUFFLE_SEED + rnd_no).shuffle(order)
+            if gate is not None:
+                quiet, waited, last = gate()
+                say(f"round {rnd_no} quiet gate: load1 {last:.2f} after {waited:.0f}s")
+                if not quiet:
+                    say(f"INVALID RUN: machine not quiet before round {rnd_no} in 30 min")
+                    return None
             load_start = os.getloadavg()[0]
             for pos, (size, flag) in enumerate(order):
                 ns, rc, rss = timed(py, repo, corpora[size], flag)
@@ -439,9 +500,35 @@ def criteria(
     }
 
 
+def flag_off_in_own_process(
+    opts: argparse.Namespace, repo: Path, main_tree: Path, sizes: Sequence[int]
+) -> Tuple[bool, List[str], Dict[int, int]]:
+    """:func:`flag_off_check` in a child of this script (7.3: keeps this process small)."""
+    result = opts.out / "flag_off.json"
+    cmd = [sys.executable, str(Path(__file__).resolve()), "--repo", str(repo), "--main"]
+    cmd += [str(main_tree), "--python", opts.python, "--workdir", str(opts.workdir)]
+    cmd += ["--out", str(opts.out), "--flag-off-only", str(result)]
+    if opts.smoke:
+        cmd.append("--smoke")
+    subprocess.run(cmd, check=True)
+    data = json.loads(result.read_text())
+    return data["ok"], data["lines"], {int(k): v for k, v in data["steps"].items()}
+
+
+def flag_off_only(opts: argparse.Namespace, sizes: Sequence[int]) -> int:
+    corpora = {size: opts.workdir / f"syn{size}" for size in sizes}
+    ok, lines, steps = flag_off_check(
+        opts.python, opts.repo.resolve(), opts.main.resolve(), corpora
+    )
+    opts.flag_off_only.write_text(json.dumps({"ok": ok, "lines": lines, "steps": steps}))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     opts = parse_args(argv)
     sizes = (20, 40, 80, 160) if opts.smoke else SIZES
+    if opts.flag_off_only is not None:
+        return flag_off_only(opts, sizes)
     rounds = 2 if opts.smoke else ROUNDS
     repo, main_tree = opts.repo.resolve(), opts.main.resolve()
     opts.out.mkdir(parents=True, exist_ok=True)
@@ -455,14 +542,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not clean:
         say("INVALID RUN: a checkout is dirty")
         return 2
+    cpu = str(machine()["cpu"])
+    if opts.expect_cpu is not None and cpu != opts.expect_cpu:
+        say(f"INVALID RUN: cpu model {cpu!r} is not --expect-cpu {opts.expect_cpu!r}")
+        return 2
     corpora = prepare(say, opts.workdir, sizes, reuse=opts.smoke)
 
-    ok_off, lines, steps = flag_off_check(opts.python, repo, main_tree, corpora)
+    ok_off, lines, steps = flag_off_in_own_process(opts, repo, main_tree, sizes)
     for line in lines:
         say(line)
     steps_ok = all(steps.get(size) == size * STEPS_PER_JOB for size in sizes)
 
-    rows = run_rounds(say, opts.python, repo, corpora, rounds, opts.out / "rounds.csv")
+    cores = os.cpu_count() or 1
+    rows = run_rounds(
+        say,
+        opts.python,
+        repo,
+        corpora,
+        rounds,
+        opts.out / "rounds.csv",
+        gate=None if opts.smoke else (lambda: wait_quiet(load1, cores)),
+    )
+    if rows is None:
+        return 2
     bad = [r for r in rows if r[6] not in (0, 1)]
     if bad:
         say(f"INVALID RUN: {len(bad)} timed runs exited outside 0/1, first {bad[0]}")
