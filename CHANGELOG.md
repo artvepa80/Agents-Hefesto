@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
+
+A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
+
 ### Changed — lineage ids relative to the root
 
 - With `--lineage`, a program id that carries a path (`program:NAME@path`, used when two files share a name) now uses the path relative to the new `lineage.root` (nearest `.git` above the working directory, else `$GITHUB_WORKSPACE`, else the working directory, as for SARIF), so ids are the same in every checkout. A file outside the root keeps its absolute path. `file` and `source_file` are unchanged. `schema_version` stays 1.
