@@ -105,3 +105,17 @@ def test_header_prints_the_cpu_model(protocol, tmp_path, monkeypatch):
     opts = protocol.parse_args(["--repo", ".", "--main", ".", "--workdir", "w", "--out", "o"])
     assert protocol.header(lines.append, opts, tmp_path, tmp_path, "sha", "3.13.5")
     assert "cpu model Fake CPU 9000" in lines
+
+
+def test_another_cpu_makes_the_run_invalid(protocol, tmp_path, monkeypatch):
+    monkeypatch.setattr(protocol, "machine", lambda: {"cpu": "Other CPU", "cores": 8})
+    monkeypatch.setattr(protocol, "git_dirty", lambda tree: False)
+    monkeypatch.setattr(protocol, "git_sha", lambda tree: "0" * 40)
+    monkeypatch.setattr(protocol, "interpreter", lambda py: ("3.13.5", "x"))
+    argv = ["--repo", ".", "--main", ".", "--workdir", "w", "--out", "o"]
+    opts = protocol.parse_args([*argv, "--expect-cpu", "Fake CPU 9000"])
+    lines = []
+    assert not protocol.preflight(lines.append, opts, tmp_path, tmp_path, "sha")
+    assert lines[-1] == "INVALID RUN: cpu model 'Other CPU' is not --expect-cpu 'Fake CPU 9000'"
+    opts = protocol.parse_args([*argv, "--expect-cpu", "Other CPU"])
+    assert protocol.preflight(lambda text: None, opts, tmp_path, tmp_path, "sha")

@@ -524,6 +524,24 @@ def flag_off_only(opts: argparse.Namespace, sizes: Sequence[int]) -> int:
     return 0
 
 
+def preflight(
+    say: Log, opts: argparse.Namespace, repo: Path, main_tree: Path, script_sha: str
+) -> bool:
+    """Python 3.13, the header, clean checkouts and the expected CPU; False stops the run."""
+    version, _ = interpreter(opts.python)
+    if not opts.smoke and not version.startswith("3.13."):
+        say(f"ABORT: --python is {version}; the protocol requires Python 3.13")
+        return False
+    if not header(say, opts, repo, main_tree, script_sha, version):
+        say("INVALID RUN: a checkout is dirty")
+        return False
+    cpu = str(machine()["cpu"])
+    if opts.expect_cpu is not None and cpu != opts.expect_cpu:
+        say(f"INVALID RUN: cpu model {cpu!r} is not --expect-cpu {opts.expect_cpu!r}")
+        return False
+    return True
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     opts = parse_args(argv)
     sizes = (20, 40, 80, 160) if opts.smoke else SIZES
@@ -534,17 +552,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     opts.out.mkdir(parents=True, exist_ok=True)
     say = Log(opts.out / "result.txt")
     script_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    version, _ = interpreter(opts.python)
-    if not opts.smoke and not version.startswith("3.13."):
-        say(f"ABORT: --python is {version}; the protocol requires Python 3.13")
-        return 2
-    clean = header(say, opts, repo, main_tree, script_sha, version)
-    if not clean:
-        say("INVALID RUN: a checkout is dirty")
-        return 2
-    cpu = str(machine()["cpu"])
-    if opts.expect_cpu is not None and cpu != opts.expect_cpu:
-        say(f"INVALID RUN: cpu model {cpu!r} is not --expect-cpu {opts.expect_cpu!r}")
+    if not preflight(say, opts, repo, main_tree, script_sha):
         return 2
     corpora = prepare(say, opts.workdir, sizes, reuse=opts.smoke)
 
