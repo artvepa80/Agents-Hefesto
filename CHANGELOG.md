@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — JCL lineage (`--lineage` only)
+
+- With `--lineage`, a separate JCL reader (`hefesto/analyzers/devops/jcl_reader.py`) reads `.jcl`, `.prc` and `.proc` files and adds jobs, steps and datasets to the `lineage` section: nodes `jcl_job`, `jcl_step`, `dataset`; edges `EXEC_PGM` (step → COBOL program of the scan, with `via` for `RUN PROGRAM` under `IKJEFT01` and the `DFSRRC00` `PARM` program), `DD_DATASET` (step → dataset) and `ASSIGN_DD` (program → step for `SELECT ... ASSIGN TO` DD names, one per step that runs the program). Utilities and other programs go to `references` (`system` / `external`); symbols, temporary datasets, referbacks, `SYSTSIN` datasets, missing PROCs and INCLUDE members go to `unresolved` with a reason. PROC calls are expanded with the PROCs in the scan and `STEP.DD` overrides replace the PROC's DD.
+- JCL ids (`jcl_job:JOB@path`, `jcl_step:JOB.STEP@path`, and the `from` of JCL `unresolved` entries) use the JCL file path relative to `lineage.root`, like program ids, so they are the same in every checkout; a file outside the root keeps its absolute path.
+- A repo with JCL and no COBOL now gets a `lineage` section with `--lineage`.
+- JCL is not registered as a language: without `--lineage` the JCL files are never read and the report is unchanged. `schema_version` stays 1 (new node and edge kinds only).
+- Docs: `docs/cobol.md`. Tests: `tests/test_jcl_lineage.py`.
+- Memory: `--lineage` on JCL grows by about 59 MB per 1,000 jobs (6 steps per job; about 1 GB at 16,000 jobs) on the synthetic tree; plan for it on large estates.
+- `scripts/lineage_timing_protocol.py`: the pre-registered timing protocol for the JCL part of `--lineage` (sizes, rounds, statistic and pass criteria fixed in the script; no subprocess `timeout=`). Committed before its run.
+- `scripts/lineage_timing_protocol.py` amendment 7.3 (measurement conditions only; criteria unchanged): a `cpu model` line in `result.txt` and `--expect-cpu`, a quiet gate before every round (1-minute load <= 0.25 x cores, up to 30 minutes, else INVALID), and the flag-off check in its own process; peak RSS stays report-only. Tests: `tests/test_lineage_timing_protocol.py`.
+- Faster `--lineage` on JCL: the id path of each file is computed once per file (string operations, same result as before, ids unchanged) and the cyclic garbage collector is paused while JCL is read and the graph is built (restored after). On the synthetic 16,000-job tree the added time drops from about 10.4 s to about 4.5 s on a development machine; the lineage output is byte-identical.
+
 ### Changed — lineage ids relative to the root
 
 - With `--lineage`, a program id that carries a path (`program:NAME@path`, used when two files share a name) now uses the path relative to the new `lineage.root` (nearest `.git` above the working directory, else `$GITHUB_WORKSPACE`, else the working directory, as for SARIF), so ids are the same in every checkout. A file outside the root keeps its absolute path. `file` and `source_file` are unchanged. `schema_version` stays 1.

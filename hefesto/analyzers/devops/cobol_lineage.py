@@ -29,6 +29,7 @@ Every literal CALL/LINK/XCTL target is classified exactly once: an edge, a
 reference or an unresolved entry (``ambiguous``).
 """
 
+import os
 import re
 from bisect import bisect_right
 from dataclasses import dataclass, field
@@ -110,12 +111,23 @@ class Ref:
     op: str = ""  # SQL statement for table references
 
 
+@dataclass(frozen=True)
+class Assign:
+    """``SELECT file ASSIGN TO name`` in FILE-CONTROL: the DD name the program opens."""
+
+    line: int
+    dd: str = ""  # DD name (empty when unresolved)
+    expression: str = ""  # source text of the target
+    reason: str = ""  # why it is unresolved (empty for a DD name)
+
+
 @dataclass
 class FileLineage:
     """References of one file, extracted from its text once."""
 
     program_id: Optional[str] = None
     refs: List[Ref] = field(default_factory=list)
+    assigns: List[Assign] = field(default_factory=list)
 
 
 # ------------------------------------------------------------------ text
@@ -207,20 +219,21 @@ class _Text:
 
 
 def extract(text: str, fixed: Optional[bool] = None) -> FileLineage:
-    """PROGRAM-ID and CALL/LINK/XCTL/SQL references of one COBOL source."""
+    """PROGRAM-ID, CALL/LINK/XCTL/SQL references and ASSIGN DD names of one COBOL source."""
     upper = text.upper()
     if "CALL" not in upper and "EXEC" not in upper and "PROGRAM-ID" not in upper:
         return FileLineage()
     raw = text.splitlines()
-    numbers = _wanted_lines(upper, raw)
-    if not numbers:
-        return FileLineage()
     if fixed is None:
         from hefesto.analyzers.devops.cobol_project_index import is_fixed_format
 
         fixed = is_fixed_format(text)
+    assigns = _assigns(raw, fixed) if "FILE-CONTROL" in upper else []
+    numbers = _wanted_lines(upper, raw)
+    if not numbers:
+        return FileLineage(assigns=assigns)
     doc = _Text(raw, numbers, fixed)
-    result = FileLineage(program_id=_program_id(doc))
+    result = FileLineage(program_id=_program_id(doc), assigns=assigns)
     matches = list(_EXEC_BLOCK.finditer(doc.masked))
     blocks = [(m.start(), m.end()) for m in matches]
     result.refs.extend(_calls(doc, blocks))
@@ -228,6 +241,82 @@ def extract(text: str, fixed: Optional[bool] = None) -> FileLineage:
         result.refs.extend(_exec_refs(doc, match))
     result.refs.sort(key=lambda r: (r.line, r.kind, r.target, r.expression))
     return result
+
+
+_FILE_CONTROL = re.compile(r"(?<![\w-])FILE-CONTROL\b", re.I)
+_FILE_CONTROL_END = re.compile(
+    r"(?<![\w-])(I-O-CONTROL|DATA\s+DIVISION|FILE\s+SECTION|PROCEDURE\s+DIVISION)\b", re.I
+)
+_SELECT = re.compile(
+    r"(?<![\w-])SELECT\s+(?:OPTIONAL\s+)?[A-Za-z0-9][\w-]*\s+ASSIGN\s+(?:TO\s+)?"
+    r"(?:(DYNAMIC|EXTERNAL)\s+)?",
+    re.I,
+)
+_ASSIGN_TARGET = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"|([A-Za-z0-9][\w-]*)")
+_DATA_ITEM = re.compile(r"^\s*(?:0?[1-9]|[1-4][0-9]|77)\s+([A-Za-z0-9][\w-]*)", re.M)
+_DD_NAME = re.compile(r"^[A-Z@#$][A-Z0-9@#$]{0,7}$")
+
+
+def _file_control_lines(raw: List[str], fixed: bool) -> List[int]:
+    """Indexes of the FILE-CONTROL paragraph lines (empty when there is none)."""
+    numbers: List[int] = []
+    inside = False
+    for i, line in enumerate(raw):
+        code = _code_line(line, fixed)
+        if not inside:
+            inside = bool(_FILE_CONTROL.search(code))
+            if inside:
+                numbers.append(i)
+            continue
+        if _FILE_CONTROL_END.search(_mask_line(code)):
+            break
+        numbers.append(i)
+    return numbers
+
+
+def _assign_of(
+    at: int, text: str, literal: Optional[str], word: str, dynamic: bool, data_items: Set[str]
+) -> Assign:
+    """One ``ASSIGN TO`` target: a DD name, or unresolved with a reason."""
+    name = (literal if literal is not None else word).strip().upper()
+    if dynamic or (literal is None and name in data_items):
+        return Assign(at, expression=text, reason="variable_target")
+    dd = name.rsplit("-", 1)[-1] if literal is None else name
+    if _DD_NAME.match(dd):
+        return Assign(at, dd=dd, expression=text)
+    return Assign(at, expression=text, reason="not_a_dd_name")
+
+
+def _assigns(raw: List[str], fixed: bool) -> List[Assign]:
+    """DD names of ``SELECT ... ASSIGN TO`` in FILE-CONTROL (EXEC CICS ASSIGN is never read).
+
+    ``[label-]S-name`` / ``AS-name`` keep the part after the last hyphen (the DD name).
+    A data item, ``DYNAMIC``, or a target that cannot be a DD name is unresolved.
+    """
+    numbers = _file_control_lines(raw, fixed)
+    if not numbers:
+        return []
+    doc = _Text(raw, numbers, fixed)
+    code_lines = [_code_line(line, fixed) for line in raw]
+    data_items = {m.group(1).upper() for m in _DATA_ITEM.finditer("\n".join(code_lines))}
+    out: List[Assign] = []
+    for match in _SELECT.finditer(doc.masked):
+        target = _ASSIGN_TARGET.match(doc.code, match.end())
+        if target is None:
+            continue
+        literal = target.group(1) if target.group(1) is not None else target.group(2)
+        dynamic = (match.group(1) or "").upper() == "DYNAMIC"
+        out.append(
+            _assign_of(
+                doc.line_of(target.start()),
+                target.group(0),
+                literal,
+                target.group(3) or "",
+                dynamic,
+                data_items,
+            )
+        )
+    return out
 
 
 def _program_id(doc: _Text) -> Optional[str]:
@@ -408,10 +497,18 @@ class _Graph:
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = root
+        self._id_paths: Dict[str, str] = {}
         self.nodes: Dict[str, Dict[str, Any]] = {}
         self.edges: List[Dict[str, Any]] = []
         self.references: List[Dict[str, Any]] = []
         self.unresolved: List[Dict[str, Any]] = []
+
+    def id_path(self, path: str) -> str:
+        """:func:`_compute_id_path` of ``path``, computed once per distinct path."""
+        cached = self._id_paths.get(path)
+        if cached is None:
+            cached = self._id_paths[path] = _compute_id_path(path, self.root)
+        return cached
 
     def node(self, node_id: str, kind: str, name: str, file: Optional[str] = None) -> str:
         entry: Dict[str, Any] = {"id": node_id, "kind": kind, "name": name}
@@ -443,10 +540,18 @@ class _Graph:
 
 
 def _merge_edges(edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """One edge per (kind, from, to, op, source_file); its lines sorted in ``lines``."""
+    """One edge per (kind, from, to, op, dd, via, source_file); its lines in ``lines``."""
     merged: Dict[Tuple[str, ...], Dict[str, Any]] = {}
     for edge in edges:
-        ident = (edge["kind"], edge["from"], edge["to"], edge.get("op", ""), edge["source_file"])
+        ident = (
+            edge["kind"],
+            edge["from"],
+            edge["to"],
+            edge.get("op", ""),
+            edge.get("dd", ""),
+            edge.get("via", ""),
+            edge["source_file"],
+        )
         entry = merged.get(ident)
         if entry is None:
             entry = {k: v for k, v in edge.items() if k != "line"}
@@ -467,26 +572,48 @@ def lineage_root() -> Path:
     return _default_root()
 
 
-def _id_path(path: str, root: Optional[Path]) -> str:
-    """``path`` for a node id: POSIX and relative to ``root``; absolute outside it."""
-    resolved = Path(path).resolve()
+def _compute_id_path(path: str, root: Optional[Path]) -> str:
+    """``path`` for a node id: POSIX and relative to ``root``; absolute outside it.
+
+    Same result as ``Path(path).resolve().relative_to(root).as_posix()`` (or the
+    resolved path when it is not under ``root``), with string operations: on
+    POSIX ``Path.resolve`` is ``os.path.realpath`` and ``relative_to`` is a
+    component-wise prefix test. Other systems keep the pathlib form (case rules).
+    """
+    if os.name != "posix":
+        resolved = Path(path).resolve()
+        if root is not None:
+            try:
+                return resolved.relative_to(root).as_posix()
+            except ValueError:
+                pass
+        return resolved.as_posix()
+    real = os.path.realpath(path or ".")
     if root is not None:
-        try:
-            return resolved.relative_to(root).as_posix()
-        except ValueError:
-            pass
-    return resolved.as_posix()
+        base = str(root)
+        if real == base:
+            return "."
+        prefix = base if base.endswith("/") else base + "/"
+        if real.startswith(prefix):
+            return real[len(prefix) :]
+    return real
 
 
-def build_lineage(index: Any, root: Optional[Path] = None) -> Optional[Dict[str, Any]]:
-    """The ``lineage`` report section for a :class:`CobolProjectIndex` (None without COBOL).
+def build_lineage(
+    index: Any, jcl: Any = None, root: Optional[Path] = None
+) -> Optional[Dict[str, Any]]:
+    """The ``lineage`` section for a :class:`CobolProjectIndex` and an optional JCL model.
+
+    None when there is neither COBOL nor JCL. A JCL model without COBOL still
+    yields jobs, steps and datasets; every program it names is then a
+    reference (system or external), never an edge.
 
     Ids that carry a file path use it relative to ``root`` (default
     :func:`lineage_root`), so they are the same in every checkout; ``file`` and
     ``source_file`` keep the paths the rest of the report uses.
     """
-    files = sorted(index.lineage_by_file)
-    if not files:
+    files = sorted(index.lineage_by_file) if index is not None else []
+    if not files and not jcl:
         return None
     root = (root or lineage_root()).resolve()
     graph = _Graph(root)
@@ -497,6 +624,9 @@ def build_lineage(index: Any, root: Optional[Path] = None) -> Optional[Dict[str,
         for ref in index.lineage_by_file[path].refs:
             _add_ref(graph, ref, path, sources, programs, owners)
         _add_copies(index, graph, path, owners)
+    if jcl:
+        assigns = {p: index.lineage_by_file[p].assigns for p in owners} if owners else {}
+        _add_jcl(graph, jcl, programs, owners, assigns)
     return graph.to_dict()
 
 
@@ -524,7 +654,7 @@ def _program_ids(
         name = index.lineage_by_file[path].program_id or Path(path).stem.upper()
         node_id = f"program:{name}"
         if len(programs.get(name, ())) > 1:
-            node_id = f"program:{name}@{_id_path(path, graph.root)}"
+            node_id = f"program:{name}@{graph.id_path(path)}"
         owners[path] = graph.node(node_id, "program", name, path)
     return owners
 
@@ -632,4 +762,282 @@ def _add_copies(index: Any, graph: _Graph, path: str, owners: Dict[str, str]) ->
         )
         graph.edges.append(
             {"kind": "COPY", "from": source, "to": to, "source_file": path, "line": line}
+        )
+
+
+# ------------------------------------------------------------------ JCL (WP2)
+
+
+def _step_programs(
+    graph: _Graph,
+    step_id: str,
+    step: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+) -> List[str]:
+    """Program files a step runs: its EXEC PGM, or the TSO/IMS program it starts."""
+    from hefesto.analyzers.devops import jcl_reader
+
+    if not step.pgm:
+        return []
+    targets: List[str] = []
+    program = _add_exec_pgm(graph, step_id, step.pgm, step.file, step.line, programs, owners)
+    if program:
+        targets.append(program)
+    if step.pgm in jcl_reader.TSO_BATCH:
+        targets += _add_tso_programs(graph, step_id, step, programs, owners)
+    elif step.pgm == jcl_reader.IMS_REGION and step.parm:
+        targets += _add_ims_program(graph, step_id, step, programs, owners)
+    return targets
+
+
+def _add_jcl_step(
+    graph: _Graph,
+    resolved: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+    assigns: Dict[str, List[Assign]],
+    reported_assigns: Set[Tuple[str, int]],
+) -> None:
+    """One step: its node, programs, datasets and the ASSIGN DD names it codes."""
+    job, step = resolved.job, resolved.step
+    step_id = graph.node(
+        f"jcl_step:{resolved.path}@{graph.id_path(job.file)}",
+        "jcl_step",
+        resolved.path,
+        job.file,
+    )
+    targets = _step_programs(graph, step_id, step, programs, owners)
+    dd_names = {dd.name for dd in step.dds}
+    for dd in step.dds:
+        _add_dataset(graph, step_id, dd)
+    for program in targets:
+        for assign in assigns.get(program, []):
+            _add_assign(
+                graph, owners[program], program, step_id, step, dd_names, assign, reported_assigns
+            )
+
+
+def _add_jcl_unresolved(graph: _Graph, jcl: Any, job_ids: Dict[int, str]) -> None:
+    for job, path, entry in jcl.unresolved:
+        owner = (
+            f"jcl_step:{path}@{graph.id_path(job.file)}"
+            if path
+            else job_ids.get(id(job), f"jcl_job:{job.name}")
+        )
+        graph.unresolved.append(
+            {
+                "kind": entry.kind,
+                "from": owner,
+                "expression": entry.expression,
+                "reason": entry.reason,
+                "file": entry.file,
+                "line": entry.line,
+            }
+        )
+
+
+def _add_jcl(
+    graph: _Graph,
+    jcl: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+    assigns: Dict[str, List[Assign]],
+) -> None:
+    """Jobs, steps, datasets, EXEC PGM targets and ASSIGN DD names of a JCL model."""
+    job_ids: Dict[int, str] = {}
+    for job in jcl.jobs:
+        job_ids[id(job)] = graph.node(
+            f"jcl_job:{job.name}@{graph.id_path(job.file)}", "jcl_job", job.name, job.file
+        )
+    reported_assigns: Set[Tuple[str, int]] = set()
+    for resolved in jcl.steps:
+        _add_jcl_step(graph, resolved, programs, owners, assigns, reported_assigns)
+    _add_jcl_unresolved(graph, jcl, job_ids)
+
+
+def _add_exec_pgm(
+    graph: _Graph,
+    step_id: str,
+    name: str,
+    file: str,
+    line: int,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+    via: str = "",
+) -> Optional[str]:
+    """Classify one program name run by a step; returns the program file for an edge."""
+    from hefesto.analyzers.devops.jcl_reader import UTILITIES
+
+    place: Dict[str, Any] = {"source_file": file, "line": line}
+    if via:
+        place["via"] = via
+    reason = ""
+    if "&" in name:
+        reason = "symbol"
+    elif name.startswith("*."):
+        reason = "referback"
+    elif len(programs.get(name, ())) > 1:
+        reason = "ambiguous"
+    if reason:
+        graph.unresolved.append(
+            {
+                "kind": "EXEC_PGM",
+                "from": step_id,
+                "expression": name,
+                "reason": reason,
+                "file": file,
+                "line": line,
+            }
+        )
+        return None
+    targets = programs.get(name, set())
+    if targets:
+        program = next(iter(targets))
+        graph.edges.append({"kind": "EXEC_PGM", "from": step_id, "to": owners[program], **place})
+        return program
+    cls = "system" if name in UTILITIES else "external"
+    graph.references.append(
+        {"kind": "EXEC_PGM", "class": cls, "target": name, "from": step_id, **place}
+    )
+    return None
+
+
+def _add_tso_programs(
+    graph: _Graph,
+    step_id: str,
+    step: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+) -> List[str]:
+    """``RUN PROGRAM(X)`` in an in-stream SYSTSIN; a SYSTSIN dataset is unresolved."""
+    from hefesto.analyzers.devops.jcl_reader import run_programs
+
+    found: List[str] = []
+    for dd in step.dds:
+        if dd.name != "SYSTSIN":
+            continue
+        if dd.data:
+            for line, name in run_programs(dd):
+                program = _add_exec_pgm(
+                    graph, step_id, name, dd.file, line, programs, owners, via=step.pgm
+                )
+                if program:
+                    found.append(program)
+        elif dd.dsn:
+            graph.unresolved.append(
+                {
+                    "kind": "EXEC_PGM",
+                    "from": step_id,
+                    "expression": dd.dsn,
+                    "reason": "systsin_not_inline",
+                    "file": dd.file,
+                    "line": dd.line,
+                }
+            )
+    return found
+
+
+def _add_ims_program(
+    graph: _Graph,
+    step_id: str,
+    step: Any,
+    programs: Dict[str, Set[str]],
+    owners: Dict[str, str],
+) -> List[str]:
+    """The 2nd ``PARM`` operand of a ``DFSRRC00`` step (region type, program, PSB, ...)."""
+    from hefesto.analyzers.devops.jcl_reader import parm_operands
+
+    operands = parm_operands(step.parm)
+    if len(operands) < 2 or not operands[1]:
+        return []
+    name = operands[1].upper()
+    program = _add_exec_pgm(
+        graph, step_id, name, step.file, step.line, programs, owners, via=step.pgm
+    )
+    return [program] if program else []
+
+
+def _add_dataset(graph: _Graph, step_id: str, dd: Any) -> None:
+    dsn = dd.dsn
+    if not dsn or dsn == "NULLFILE":
+        return
+    reason = ""
+    if dsn.startswith("&&"):
+        reason = "temporary"
+    elif "&" in dsn:
+        reason = "symbol"
+    elif dsn.startswith("*."):
+        reason = "referback"
+    if reason:
+        graph.unresolved.append(
+            {
+                "kind": "DD_DATASET",
+                "from": step_id,
+                "expression": dsn,
+                "reason": reason,
+                "file": dd.file,
+                "line": dd.line,
+            }
+        )
+        return
+    to = graph.node(f"dataset:{dsn}", "dataset", dsn)
+    graph.edges.append(
+        {
+            "kind": "DD_DATASET",
+            "from": step_id,
+            "to": to,
+            "dd": dd.name,
+            "source_file": dd.file,
+            "line": dd.line,
+        }
+    )
+
+
+def _add_assign(
+    graph: _Graph,
+    program_id: str,
+    program_file: str,
+    step_id: str,
+    step: Any,
+    dd_names: Set[str],
+    assign: Assign,
+    reported: Set[Tuple[str, int]],
+) -> None:
+    """One ``ASSIGN_DD`` edge per step that runs the program and has the DD."""
+    if assign.reason:
+        if (program_file, assign.line) in reported:
+            return
+        reported.add((program_file, assign.line))
+        graph.unresolved.append(
+            {
+                "kind": "ASSIGN_DD",
+                "from": program_id,
+                "expression": assign.expression,
+                "reason": assign.reason,
+                "file": program_file,
+                "line": assign.line,
+            }
+        )
+    elif assign.dd in dd_names:
+        graph.edges.append(
+            {
+                "kind": "ASSIGN_DD",
+                "from": program_id,
+                "to": step_id,
+                "dd": assign.dd,
+                "source_file": program_file,
+                "line": assign.line,
+            }
+        )
+    else:
+        graph.unresolved.append(
+            {
+                "kind": "ASSIGN_DD",
+                "from": program_id,
+                "expression": assign.dd,
+                "reason": "dd_not_found",
+                "file": step.file,
+                "line": step.line,
+            }
         )
