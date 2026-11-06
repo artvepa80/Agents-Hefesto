@@ -8,6 +8,9 @@ import json
 import os
 import shutil
 import socket
+import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -91,7 +94,10 @@ def test_refuses_filesystem_root(capsys):
     with pytest.raises(SystemExit) as caught:
         main(["--root", "/"])
     assert caught.value.code == 2
-    assert "filesystem root" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "filesystem root" in err
+    assert "HEFESTO_MCP_ROOT" in err
+    assert "--root" in err
 
 
 def test_refuses_home_directory(capsys, monkeypatch):
@@ -104,7 +110,10 @@ def test_refuses_home_directory(capsys, monkeypatch):
     with pytest.raises(SystemExit) as caught:
         main([])
     assert caught.value.code == 2
-    assert "home directory" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "home directory" in err
+    assert "HEFESTO_MCP_ROOT" in err
+    assert "--root" in err
 
 
 def test_path_outside_root_is_rejected(tmp_path, monkeypatch):
@@ -137,12 +146,96 @@ def test_path_outside_root_is_rejected(tmp_path, monkeypatch):
     assert resolve_inside_root("ok.py", root=work) == inside.resolve()
 
 
+def test_relative_path_joins_the_sandbox_root_not_cwd(tmp_path, monkeypatch):
+    proj = tmp_path / "proj"
+    app = proj / "src" / "app.py"
+    app.parent.mkdir(parents=True)
+    app.write_text("x = 1\n", encoding="utf-8")
+    outside = tmp_path / "outside.py"
+    outside.write_text("x = 1\n", encoding="utf-8")
+    link = proj / "escape.py"
+    link.symlink_to(outside)
+    monkeypatch.chdir("/")
+    monkeypatch.setenv("HEFESTO_MCP_ROOT", str(proj))
+
+    from hefesto.mcp_server import analyze_local, prepare_startup, resolve_inside_root
+
+    assert prepare_startup([]) == proj.resolve()
+    assert resolve_inside_root("src/app.py") == app.resolve()
+    payload = json.loads(analyze_local("src/app.py", severity="LOW"))
+    assert payload["summary"]["files_analyzed"] == 1
+    with pytest.raises(ValueError):
+        resolve_inside_root("/etc/passwd")
+    with pytest.raises(ValueError):
+        resolve_inside_root("../etc/passwd")
+    with pytest.raises(ValueError):
+        resolve_inside_root("escape.py")
+
+
+def test_sync_tools_run_off_the_event_loop(monkeypatch):
+    pytest.importorskip("anyio")
+    import contextlib
+
+    import hefesto.mcp_server as mcp_server
+
+    saw = {"thread": None, "ticks": 0, "result": None, "loop": None}
+
+    def slow(_path, _severity=None):
+        import time
+
+        saw["thread"] = threading.get_ident()
+        time.sleep(0.2)
+        return "ok"
+
+    monkeypatch.setattr(mcp_server, "analyze_local", slow)
+
+    async def _run():
+        saw["loop"] = threading.get_ident()
+
+        async def _tick():
+            while True:
+                await asyncio.sleep(0.02)
+                saw["ticks"] += 1
+
+        ticker = asyncio.create_task(_tick())
+        try:
+            saw["result"] = await mcp_server._analyze_local_tool("src/app.py")
+        finally:
+            ticker.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await ticker
+
+    asyncio.run(_run())
+    assert saw["result"] == "ok"
+    assert saw["thread"] not in (None, saw["loop"])
+    assert saw["ticks"] >= 2
+
+
 def test_version_matches_package():
     from hefesto.__version__ import __version__
     from hefesto.mcp_server import version
 
     assert version() == __version__
     assert version()
+    text = version.__doc__ or ""
+    assert "installed engine version string" in text
+    assert "No args" in text
+    assert "Reads no files" in text
+    assert "no network" in text
+    assert "which engine produced a result" in text
+
+
+def test_analyze_local_docstring_states_the_contract():
+    from hefesto.mcp_server import analyze_local
+
+    text = analyze_local.__doc__ or ""
+    assert "HEFESTO_MCP_ROOT" in text
+    assert "--root" in text
+    for level in ("LOW", "MEDIUM", "HIGH", "CRITICAL"):
+        assert level in text
+    assert "JSON" in text
+    assert "Read-only" in text
+    assert "no network" in text
 
 
 def test_startup_forces_telemetry_off(tmp_path, monkeypatch):
@@ -177,6 +270,91 @@ def test_analyze_local_does_not_use_network(tmp_path, monkeypatch):
     payload = json.loads(analyze_local("sample.py", severity="LOW"))
     assert payload["summary"]["files_analyzed"] == 1
     assert os.environ["HEFESTO_TELEMETRY"] == "0"
+
+
+def _drain(fd: int) -> bytes:
+    os.set_blocking(fd, False)
+    out = b""
+    while True:
+        try:
+            chunk = os.read(fd, 4096)
+        except BlockingIOError:
+            return out
+        if not chunk:
+            return out
+        out += chunk
+
+
+def _race_events(monkeypatch):
+    """Stand in for the engine so the second scan prints after the first returns."""
+    import hefesto.cli.main as cli
+    from hefesto.reports.json_reporter import JSONReporter
+
+    first_inside = threading.Event()
+    first_done = threading.Event()
+    calls = iter(("first", "second"))
+    order = threading.Lock()
+
+    def setup(*_args, **_kwargs):
+        with order:
+            who = next(calls)
+        if who == "first":
+            first_inside.set()
+            return "first"
+        first_done.wait(timeout=2)
+        print("engine-text", flush=True)
+        return "second"
+
+    def loop(engine, *_args, **_kwargs):
+        if engine == "first":
+            first_inside.wait(timeout=2)
+            threading.Event().wait(0.2)
+        return [], 0, 0.0, {}
+
+    monkeypatch.setattr(cli, "_setup_analyzer_engine", setup)
+    monkeypatch.setattr(cli, "_run_analysis_loop", loop)
+    monkeypatch.setattr(cli, "_apply_line_suppressions", lambda *_a, **_k: None)
+    monkeypatch.setattr(cli, "_generate_report", lambda *_a, **_k: None)
+    monkeypatch.setattr(JSONReporter, "generate", lambda self, report: "{}")
+    return first_inside, first_done
+
+
+def test_overlapping_scans_keep_fd_1_clean(monkeypatch):
+    """Overlapping scans must not write engine text to the real stdout fd.
+
+    pytest replaces ``sys.stdout``, so the test points it back at descriptor 1
+    before the calls. The second call prints only after the first has restored
+    stdout, which is the race the lock closes.
+    """
+    from hefesto.mcp_server import _run_engine
+
+    first_inside, first_done = _race_events(monkeypatch)
+    read_fd, write_fd = os.pipe()
+    saved = os.dup(1)
+    os.dup2(write_fd, 1)
+    os.close(write_fd)
+    real_stdout = open(1, "w", closefd=False, buffering=1)
+    monkeypatch.setattr(sys, "stdout", real_stdout)
+
+    def run_first():
+        try:
+            return _run_engine(Path("."), "MEDIUM")
+        finally:
+            first_done.set()
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(run_first)
+            assert first_inside.wait(timeout=2)
+            second = pool.submit(_run_engine, Path("."), "MEDIUM")
+            assert first.result(timeout=5) == "{}"
+            assert second.result(timeout=5) == "{}"
+        real_stdout.flush()
+        assert _drain(read_fd) == b""
+    finally:
+        os.dup2(saved, 1)
+        os.close(saved)
+        os.close(read_fd)
 
 
 def _hefesto_mcp_executable() -> str:

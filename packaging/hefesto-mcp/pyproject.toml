@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hefesto-mcp"
+version = "4.21.0"
+description = "Local stdio MCP adapter for the Hefesto release-truth engine"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["hefesto-ai[mcp]==4.21.0"]
+
+[project.scripts]
+hefesto-mcp = "hefesto.mcp_server:main"
+
+# Metadata-only distribution: the script lives in hefesto-ai.
+# bypass-selection makes the wheel include empty (no Python modules).
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
