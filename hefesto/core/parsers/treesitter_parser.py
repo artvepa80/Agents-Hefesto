@@ -243,6 +243,35 @@ class TreeSitterParser(CodeParser):
                 return cls._node_text(child, source)
         return None
 
+    @classmethod
+    def _field_name_text(cls, node, source: bytes) -> Optional[str]:
+        """Text of the node's ``name`` field when it is a plain identifier."""
+        field = node.child_by_field_name("name")
+        if field is None or not field.type.endswith("identifier"):
+            return None
+        return cls._node_text(field, source)
+
+    @classmethod
+    def _type_block_name(cls, node, source: bytes) -> Optional[str]:
+        """Name of the type a Rust ``impl`` block or Go ``type`` declaration declares.
+
+        Rust: ``impl<T> Tr for Vec<T>`` -> ``Vec``; ``impl a::B`` -> ``B``.
+        Go: ``type Server struct{}`` -> ``Server``; a grouped ``type ( ... )`` is named
+        only when it holds a single spec. With several specs it stays unnamed, so one
+        type's findings are never reported under another type's name.
+        """
+        if node.type == "impl_item":
+            target = node.child_by_field_name("type")
+            while target is not None and target.type != "type_identifier":
+                inner = target.child_by_field_name("type")
+                target = inner if inner is not None else target.child_by_field_name("name")
+            return None if target is None else cls._node_text(target, source)
+        if node.type == "type_declaration":
+            specs = [s for s in node.named_children if s.type in ("type_spec", "type_alias")]
+            if len(specs) == 1:
+                return cls._field_name_text(specs[0], source)
+        return None
+
     def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
         """Infer a function expression's name from its parent context."""
         if parent.type in _IDENTIFIER_PARENTS:
@@ -259,12 +288,19 @@ class TreeSitterParser(CodeParser):
         Extract name from node with smart inference for arrow functions.
 
         Priority order:
-        1. Direct identifier child (function foo() {})
-        2. Parent variable_declarator, pair/property or assignment name
-        3. Method name
-        4. '<anonymous>' for truly unnamed functions
+        1. The grammar's ``name`` field (C# ``Task Foo()`` -> ``Foo``,
+           Go ``func (s *S) Run()`` -> ``Run``)
+        2. Direct identifier child (function foo() {})
+        3. Parent variable_declarator, pair/property or assignment name
+        4. Method name
+        5. Rust ``impl`` block / Go ``type`` declaration: the declared type's name
+        6. '<anonymous>' for truly unnamed functions
         """
-        name = self._first_child_text(node, source, ("identifier",))
+        name = self._field_name_text(node, source)
+        if name is None:
+            name = self._type_block_name(node, source)
+        if name is None:
+            name = self._first_child_text(node, source, ("identifier",))
         if name is None and node.type in _FUNCTION_EXPRESSIONS and parent is not None:
             name = self._name_from_parent(parent, source)
         if name is None and node.type == "method_definition":
