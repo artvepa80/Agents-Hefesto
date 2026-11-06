@@ -297,8 +297,9 @@ pointing to the install command (also exposed via
 
 ³ C and C++ are experimental and off by default: turn them on with
 `--experimental c-cpp` (or `experimental: [c-cpp]` in `.hefesto.yaml`). The generic complexity and size checks run on
-them; there are no C/C++-specific rules yet, and they are not counted in the
-format total below. `.h` headers are read as C unless they contain C++-only
+them; they are not counted in the format total below. C/C++ security rules
+(CC001-CC004) ship in the same release under `--experimental c-cpp,lang-security`
+(see docs/ANALYSIS_RULES.md). `.h` headers are read as C unless they contain C++-only
 syntax or sit next to a C++ source with the same name; headers with
 Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
