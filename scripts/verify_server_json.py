@@ -10,8 +10,8 @@ draft). Confirmed 2026-10-15:
   is ``2025-12-11``.
 
 This script does not publish to the registry. ``version`` must keep matching
-``pyproject.toml``. The live registry entry is updated only by a separate
-publish, which this check never performs.
+``pyproject.toml`` (4.21.0 at the time of writing). The live registry entry
+is updated only by a separate publish, which this check never performs.
 
 ``packages`` lists the local stdio adapter (``hefesto-mcp`` on PyPI, ``uvx``,
 stdio). The hosted remote stays as it is. The canonical hosted entry checked
