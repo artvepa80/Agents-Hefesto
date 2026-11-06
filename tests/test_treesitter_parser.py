@@ -128,3 +128,104 @@ def test_node_text_is_sliced_by_bytes() -> None:
     func = next(n for n in ast.root.children if n.name == "calcularTotal")
 
     assert func.text == "function calcularTotal() { return 1; }"
+
+
+def _declared_names(language: str, code: str) -> list:
+    from hefesto.core.ast.generic_ast import NodeType
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    out: list = []
+
+    def walk(node):
+        if node.type in (NodeType.FUNCTION, NodeType.METHOD, NodeType.CLASS):
+            out.append(node.name)
+        for child in node.children:
+            walk(child)
+
+    walk(TreeSitterParser(language).parse(code, f"sample.{language}").root)
+    return out
+
+
+@pytest.mark.parametrize(
+    "language, code, expected",
+    [
+        (
+            "c_sharp",
+            "class A { public async Task WriteLazy() { } }",
+            ["A", "WriteLazy"],
+        ),
+        (
+            "c_sharp",
+            "class A { private TestClass Make(string s) { return null; } }",
+            ["A", "Make"],
+        ),
+        (
+            "c_sharp",
+            "class A { public void Throws<T>() where T : Exception { } }",
+            ["A", "Throws"],
+        ),
+        (
+            "go",
+            "package p\n\nfunc (s *Server) Run(x int) int { return x }\n",
+            ["Run"],
+        ),
+        (
+            "c_sharp",
+            "class A { public TException Throws<TException>()"
+            " where TException : Exception { return null; } }",
+            ["A", "Throws"],
+        ),
+        ("typescript", "class Foo {}", ["Foo"]),
+        (
+            "java",
+            "class A { List<String> items() { return null; } }",
+            ["A", "items"],
+        ),
+    ],
+)
+def test_declared_name_not_return_type_or_receiver(language: str, code: str, expected) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+
+    assert _declared_names(language, code) == expected
+
+
+@pytest.mark.parametrize(
+    "language, code, expected",
+    [
+        ("rust", "struct S;\nimpl S { fn run(&self) {} }\n", ["S", "S", "run"]),
+        ("rust", "impl<T> Tr for Vec<T> { fn go() {} }\n", ["Vec", "go"]),
+        ("rust", "impl a::B { }\n", ["B"]),
+        ("rust", "impl<'a> Tr for &'a S { }\n", ["S"]),
+        ("rust", "impl Tr for (A, B) { }\n", [None]),
+        ("rust", "impl Tr for [u8; 4] { }\n", [None]),
+        ("go", "package p\n\ntype Server struct{}\n", ["Server"]),
+        ("go", "package p\n\ntype ID = int\n", ["ID"]),
+        ("go", "package p\n\ntype (\n\tA int\n\tB string\n)\n", [None]),
+        ("go", "package p\n\ntype (\n\tA int\n)\n", ["A"]),
+        # A group is not named after its first spec: Big must not be reported as Small.
+        (
+            "go",
+            "package p\n\ntype (\n\tSmall struct{}\n\tBig struct {\n\t\tA, B, C int\n\t}\n)\n",
+            [None],
+        ),
+    ],
+)
+def test_type_blocks_named_after_their_type(language: str, code: str, expected) -> None:
+    """Rust ``impl`` blocks and Go ``type`` declarations carry the type's name."""
+    pytest.importorskip("tree_sitter_language_pack")
+
+    assert _declared_names(language, code) == expected
+
+
+def test_god_class_on_rust_impl_names_the_type() -> None:
+    """End to end: GOD_CLASS on a large Rust ``impl`` names the type, not ``<anonymous>``."""
+    pytest.importorskip("tree_sitter_language_pack")
+    from hefesto.analyzers.code_smells import GOD_CLASS_THRESHOLD, CodeSmellAnalyzer
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    body = "\n".join(f"    fn f{i}() {{}}" for i in range(GOD_CLASS_THRESHOLD + 5))
+    code = f"struct Big;\nimpl Big {{\n{body}\n}}\n"
+    tree = TreeSitterParser("rust").parse(code, "big.rs")
+    issues = CodeSmellAnalyzer()._check_god_classes(tree, "big.rs", code)
+
+    assert [i.message.split(" is ")[0] for i in issues] == ["Class 'Big'"]

@@ -492,7 +492,9 @@ every file hit it, so `--fail-on` with `--allow-no-files` (as in the hooks from
 `hefesto install-hooks`) exits 1 offline with an empty grammar cache. The cache
 is per pack version. To fix it, run once with network access, or
 `python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
-or pass `--allow-not-analyzed`.
+or pass `--allow-not-analyzed`. A grammar that fails to load is tried once
+per run: later files of that language are reported as not analyzed without
+waiting for the download again.
 
 ---
 
