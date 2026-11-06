@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — release gate for 4.22.0: no-flag output must not change
+### Added — release gate for 4.21.0: no-flag output must not change
 
 - `scripts/release_gate.py` and the `Release Gate` workflow run main and the branch with no flags on five pinned corpora (Python, JavaScript, Go, C, Rust). They ignore timing fields and fail on any difference in findings, counts or exit code. Opt-in experimental rules cannot change default output unnoticed.
 - `docs/MEASUREMENT_METHOD.md`: how a rule earns a precision claim. Held-out pinned repositories, a recorded random seed, per-repository and per-root-cause counts, label B (actionable) with n ≥ 59 and 0 errors (exact one-sided), Wilson as context, and a second labeller on a blind subset.
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml` turn on experimental features: off by default, results not measured yet, and a run without them gives unchanged output. The first name is `c-cpp`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for it and the MCP server never enables it.
 - Everything below applies only with `--experimental c-cpp`; without it C and C++ files are not found.
 
-- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks; there are no C/C++-specific rules yet. They are not counted in the 22-format total.
+- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks. They are not counted in the 22-format total. C/C++ security rules (CC001-CC004) need `--experimental c-cpp,lang-security` (see above).
 - A `.h` header is C++ when its code (comments and literals removed) has C++-only syntax (`class`/`namespace` at line start, `template <`, `std::`, `using namespace`, an access label, `#include <vector>`-style includes) or a C++ source with the same name sits next to it; otherwise it is C. `extern "C"` alone keeps a header C.
 - A `.h` header with Objective-C syntax (`@interface`, `@protocol`, `@implementation`, `@end`, `@class`, `@property` or `NS_ASSUME_NONNULL_BEGIN` at line start; comments and literals removed; `#import` alone does not count) is treated as an unrecognized file, so it is never analyzed as C or C++, never reported as not analyzed and never fails the gate. Objective-C and C++ syntax together count as Objective-C.
 - Functions are named as declared (`Widget::size`, `Widget::~Widget`, `operator+`), types by their tag (`cache<double>`); `f(void)` has 0 parameters; a macro before `namespace` is not reported as a function.
