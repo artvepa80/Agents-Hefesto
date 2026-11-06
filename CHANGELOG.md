@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY` and `UNSAFE_CODE`. CWE names for 295, 327 and 843 added to the SARIF taxonomy.
 - Docs: rule table in `docs/ANALYSIS_RULES.md`. Tests: `tests/test_lang_security_rules.py`.
 
+### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
+
+A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
+
+### Changed — lineage ids relative to the root
+
+- With `--lineage`, a program id that carries a path (`program:NAME@path`, used when two files share a name) now uses the path relative to the new `lineage.root` (nearest `.git` above the working directory, else `$GITHUB_WORKSPACE`, else the working directory, as for SARIF), so ids are the same in every checkout. A file outside the root keeps its absolute path. `file` and `source_file` are unchanged. `schema_version` stays 1.
+
 ### Documentation — written review summary on every merged PR
 
 - `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
@@ -29,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New workflow `.github/workflows/weekly-full-matrix.yml` runs against `main` every Monday at 06:17 UTC, and on demand (`workflow_dispatch`), on Python 3.11, 3.12, 3.13, 3.14 and 3.15 (`fail-fast: false`). Job `lint-and-test-full` runs the `lint-and-test` steps of `ci.yml` (without the pull-request commit check and the coverage upload). Job `multilang-smoke-full` runs the steps of `multilang-smoke.yml`: it installs the `[multilang]` extra, prefetches the 6 grammars, parses one sample per language and runs the unit tests that need the grammars. Pull requests and pushes keep testing only 3.11 and 3.15. It is not a required check; actions are pinned by commit SHA like the other workflows.
 - `tests/test_weekly_full_matrix_workflow.py` fails when the steps of either weekly job drift from the workflow they copy.
+
+### Fixed — a file reached through several symlinks is analyzed once
+
+- File discovery now dedupes by the resolved path. Before, a file linked from several directories was analyzed once per link and every finding was repeated (seen as 6 copies of each finding in a repository that symlinks one helper into five crates).
 
 ### Fixed — a grammar that fails to load is tried once per run, not once per file
 
@@ -64,11 +76,14 @@ In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report c
 
 `MF002` (Makefile) and `GJ002` (Jenkinsfile) each had two overlapping patterns, so one `curl ... | sh` line was reported twice. Each analyzer now keeps one finding per line and rule, the one with the highest confidence: `MF002` keeps "Downloading and piping to (sudo) shell is a high-confidence RCE." (0.98) and `GJ002` keeps "Downloading and piping to shell in pipeline is RCE risk." (0.97) when the line is an `sh`/`bat` step, otherwise the generic message (0.95). CRITICAL counts and SARIF results for these files go down; which lines are flagged, and pass/fail, are unchanged. Other rules are not deduplicated.
 
-### Added — local stdio MCP adapter (unreleased)
+### Added — local stdio MCP adapter
 
-- Optional extra `mcp` and console script `hefesto-mcp`. Not on PyPI yet. Install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. Python >= 3.11, the package `requires-python` (`mcp` requires `>=3.10`, which every supported Python meets, so the extra has no separate environment marker).
-- Two read-only tools over stdio: `analyze_local` and `version`. The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory. A path that resolves outside the root, including through a symlink, is rejected (`Path.resolve()` and `is_relative_to()`).
-- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. See [docs/local-mcp.md](docs/local-mcp.md).
+- Optional extra `mcp` (`mcp>=1.7,<2`, for `ToolAnnotations` and `add_tool(annotations=)`) and console script `hefesto-mcp`. Not on PyPI yet. Install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. `uvx hefesto-mcp` becomes available once it is published on PyPI. `HEFESTO_MCP_ROOT` is required for that install: the project directory the tools may read, not `/` or the home directory. Python >= 3.11, the package `requires-python` (`mcp` requires `>=3.10`, which every supported Python meets, so the extra has no separate environment marker).
+- Metadata-only package `packaging/hefesto-mcp`. It depends on `hefesto-ai[mcp]` at the same version as this package, exposes `hefesto-mcp = hefesto.mcp_server:main`, and ships no Python modules of its own.
+- `server.json` keeps the streamable-http remote and adds the PyPI package (`uvx`, stdio, required `HEFESTO_MCP_ROOT`). `Dockerfile` installs `hefesto-ai[mcp]` at that same version, runs `hefesto-mcp --help` and `build_server()` (a pin that does not provide the command, or that does not import `mcp`, fails the build), and runs `hefesto-mcp` as uid 10001 with `HEFESTO_MCP_ROOT=/workspace`. The image can be built from the next release, once that version is on PyPI.
+- Two read-only tools over stdio: `analyze_local` and `version`. `version` returns the installed engine version string, takes no args, reads no files, and uses no network. `analyze_local` returns JSON for a path inside the sandbox root. Severity is `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` (default `MEDIUM`). The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory, and the stderr message names `HEFESTO_MCP_ROOT` and `--root`. A relative path is joined to that root, not to the process working directory. A path that resolves outside the root, including through `..` or a symlink, is rejected (`Path.resolve()` and `is_relative_to()`). Both tools run with `anyio.to_thread.run_sync`, because FastMCP calls a synchronous tool on the stdio event-loop thread.
+- `server.json` `description` is "Release-truth gate for AI-generated code: local stdio server (MIT) plus a hosted remote." (88 characters; schema maxLength 100). It does not lead with closed-source.
+- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. The redirect is held under a lock, so two overlapping calls cannot write that text to the real stdout. See [docs/local-mcp.md](docs/local-mcp.md).
 
 ### Security — release workflow
 

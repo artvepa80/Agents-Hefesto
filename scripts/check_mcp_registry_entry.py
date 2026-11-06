@@ -22,9 +22,10 @@ and a warning in a dry run. The lookup is
 (404 means free) plus ``GET /v0.1/servers/{name}/versions?include_deleted=true``
 (``docs/reference/api/openapi.yaml``).
 
-There is no ``packages`` entry: a PyPI package entry needs a decision from
-the owner and an ``mcp-name:`` line in the README. Until then the entry is a
-remote (streamable-http) only.
+The canonical hosted file has no ``packages`` entry. This script rejects one.
+The public repository ``server.json`` is a different document: it lists the
+local stdio package and is not what this workflow publishes. The published
+entry stays a remote (streamable-http) until a separate publish.
 
 Usage::
 

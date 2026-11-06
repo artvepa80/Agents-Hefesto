@@ -1,5 +1,7 @@
 # HefestoAI — release truth engine for AI-generated code
 
+<!-- mcp-name: io.github.artvepa80/hefestoai -->
+
 **English** | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 <p align="center">
@@ -210,22 +212,25 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
-## Local MCP (stdio) — unreleased
+## Local MCP (stdio)
 
-The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is not on PyPI yet. It needs Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker).
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is not on PyPI yet. Until then, install from git: `pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"`. `uvx hefesto-mcp` becomes available once it is published on PyPI. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
 
 ```bash
 pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
 ```
 
-Claude Desktop launches it with stdio. `hefesto-mcp` must be on `PATH`. Pass the project directory as `--root` (or set `HEFESTO_MCP_ROOT`). The process refuses to start when that directory resolves to `/` or the home directory. Paths outside it are rejected.
+An MCP client launches it with stdio. Pass the project directory in `HEFESTO_MCP_ROOT` (`--root` still overrides it). Paths outside that directory are rejected.
 
 ```json
 {
   "mcpServers": {
     "hefesto": {
-      "command": "hefesto-mcp",
-      "args": ["--root", "/absolute/path/to/the/project"]
+      "command": "uvx",
+      "args": ["hefesto-mcp"],
+      "env": {
+        "HEFESTO_MCP_ROOT": "/absolute/path/to/the/project"
+      }
     }
   }
 }
@@ -333,8 +338,11 @@ pip install "hefesto-ai[multilang]"
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
 
-# Optional, unreleased: local stdio MCP adapter (not on PyPI yet)
+# Optional, not on PyPI yet: local stdio MCP adapter
 pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
+
+# uvx hefesto-mcp once it is published on PyPI.
+# HEFESTO_MCP_ROOT is required (project directory; not / or home).
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
