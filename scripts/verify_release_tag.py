@@ -29,7 +29,7 @@ else:
         sys.exit(1)
 
 
-def get_project_version(root_path: Path) -> str:
+def get_project_version(root_path: Path, expected_name: str = "hefesto-ai") -> str:
     """Read version from pyproject.toml."""
     pyproject_path = root_path / "pyproject.toml"
     if not pyproject_path.exists():
@@ -41,8 +41,8 @@ def get_project_version(root_path: Path) -> str:
 
     try:
         name = data["project"]["name"]
-        if name != "hefesto-ai":
-            print(f"Error: project.name '{name}' != 'hefesto-ai'", file=sys.stderr)
+        if name != expected_name:
+            print(f"Error: project.name '{name}' != '{expected_name}'", file=sys.stderr)
             sys.exit(1)
         return data["project"]["version"]
     except KeyError as e:
@@ -89,6 +89,11 @@ def main():
         default=".",
         help="Path to project root (directory containing pyproject.toml)",
     )
+    parser.add_argument(
+        "--project-name",
+        default="hefesto-ai",
+        help="Expected project.name (default: hefesto-ai)",
+    )
 
     args = parser.parse_args()
 
@@ -99,7 +104,7 @@ def main():
         sys.exit(1)
 
     root_path = Path(args.project_root).resolve()
-    project_version = get_project_version(root_path)
+    project_version = get_project_version(root_path, args.project_name)
 
     if not verify_tag(tag, project_version):
         sys.exit(2)
