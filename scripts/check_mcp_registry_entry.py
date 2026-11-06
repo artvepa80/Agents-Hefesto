@@ -3,16 +3,23 @@
 
 Used by ``.github/workflows/mcp-registry.yml``. It never publishes.
 
-The canonical ``server.json`` is deployed with the hosted landing page and served at
-``https://hefestoai.narapallc.com/server.json``. This public repository's
-``server.json`` is never sent to the registry: its description and version
-(PyPI) differ from the hosted entry.
+The workflow downloads ``https://hefestoai.narapallc.com/server.json`` and
+passes that file here. This repository's ``server.json`` is not uploaded.
+Its ``description`` is the source of truth: the downloaded document must use
+that same description, and ``packages`` must be exactly one PyPI entry for
+``hefesto-mcp`` (stdio, ``uvx``, version equal to the document version,
+``HEFESTO_MCP_ROOT`` required). ``remotes`` stays the single hosted
+streamable-http URL. The downloaded file is not stored in this repository.
 
-The registry version tracks the deployed engine, not PyPI. The entry's
-version must equal all of: the hosted ``initialize`` ``serverInfo.version``,
-the ``engine.version`` returned by a minimal ``tools/call analyze`` (as the
-private ``scripts/verify_hosted_engine.py`` does), and ``changelog.json``
-``latest`` on the landing page.
+The registry version is the hosted engine version and the PyPI package
+version. The entry's version must equal all of: the hosted ``initialize``
+``serverInfo.version``, the ``engine.version`` returned by a minimal
+``tools/call analyze`` (as the private ``scripts/verify_hosted_engine.py``
+does), ``changelog.json`` ``latest`` on the landing page, and a release
+already on PyPI (``https://pypi.org/pypi/hefesto-mcp/<version>/json``
+returns 200). ``URLError`` and a timeout on that request fail the check
+with a message. A hosted-only hotfix cannot be registered without publishing
+the package too.
 
 A published registry version can never be changed
 (``docs/modelcontextprotocol-io/versioning.mdx``), so a version that is
@@ -22,10 +29,7 @@ and a warning in a dry run. The lookup is
 (404 means free) plus ``GET /v0.1/servers/{name}/versions?include_deleted=true``
 (``docs/reference/api/openapi.yaml``).
 
-The canonical hosted file has no ``packages`` entry. This script rejects one.
-The public repository ``server.json`` is a different document: it lists the
-local stdio package and is not what this workflow publishes. The published
-entry stays a remote (streamable-http) until a separate publish.
+``--offline`` skips the hosted engine, the registry, and the PyPI request.
 
 Usage::
 
@@ -46,13 +50,15 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 SERVER_NAME = "io.github.artvepa80/hefestoai"
-DESCRIPTION = "HefestoAI checks AI-generated code before you ship it."
+PACKAGE_ID = "hefesto-mcp"
+ROOT_ENV = "HEFESTO_MCP_ROOT"
 PUBLIC_REPOSITORY_URL = "https://github.com/artvepa80/Agents-Hefesto"
 REMOTE_TYPE = "streamable-http"
 REMOTE_URL = "https://hefestoai.narapallc.com/api/mcp-protocol"
 CANONICAL_URL = "https://hefestoai.narapallc.com/server.json"
 HOSTED_CHANGELOG_URL = "https://hefestoai.narapallc.com/changelog.json"
 REGISTRY_BASE = "https://registry.modelcontextprotocol.io"
+PYPI_JSON_URL = "https://pypi.org/pypi/{package}/{version}/json"
 OFFICIAL_META = "io.modelcontextprotocol.registry/official"
 INITIALIZE_PARAMS = {
     "protocolVersion": "2025-06-18",
@@ -65,6 +71,19 @@ ANALYZE_PARAMS = {
     "arguments": {"files": [{"path": "registry_probe.py", "content": "VALUE = 1\n"}]},
 }
 TIMEOUT_SECONDS = 90
+_REPO_SERVER = Path(__file__).resolve().parent.parent / "server.json"
+
+
+def _repo_description() -> str:
+    """Description in this repository's server.json."""
+    document = json.loads(_REPO_SERVER.read_text(encoding="utf-8"))
+    description = document.get("description")
+    if not isinstance(description, str) or not description:
+        raise RuntimeError("repo server.json description is missing")
+    return description
+
+
+DESCRIPTION = _repo_description()
 
 
 def _expected_fields(expected_version: str) -> List[Tuple[str, Tuple[str, ...], str]]:
@@ -101,9 +120,59 @@ def check_document(document: dict, expected_version: str) -> List[str]:
         for label, path, expected in _expected_fields(expected_version)
         if _lookup(document, path) != expected
     ]
-    if "packages" in document:
-        errors.append("packages is not allowed (PyPI entry needs the owner's decision)")
+    errors.extend(_package_errors(document))
     return errors + _remote_errors(document.get("remotes"))
+
+
+def _package_identity_errors(package: dict, version: str) -> List[str]:
+    errors: List[str] = []
+    if package.get("registryType") != "pypi" or package.get("identifier") != PACKAGE_ID:
+        errors.append("packages[0] must be the pypi package hefesto-mcp")
+    if package.get("version") != version:
+        errors.append("packages[0].version must equal the document version")
+    if package.get("runtimeHint") != "uvx":
+        errors.append("packages[0].runtimeHint must be uvx")
+    return errors
+
+
+def _stdio_transport(package: dict) -> bool:
+    transport = package.get("transport")
+    return isinstance(transport, dict) and transport.get("type") == "stdio"
+
+
+def _root_env_required(variables: object) -> bool:
+    if not isinstance(variables, list):
+        return False
+    for item in variables:
+        if not isinstance(item, dict):
+            continue
+        if item.get("name") == ROOT_ENV and item.get("isRequired") is True:
+            return True
+    return False
+
+
+def _one_package(document: dict) -> Optional[dict]:
+    version = document.get("version")
+    packages = document.get("packages")
+    if not isinstance(version, str) or not isinstance(packages, list) or len(packages) != 1:
+        return None
+    package = packages[0]
+    if not isinstance(package, dict):
+        return None
+    return package
+
+
+def _package_errors(document: dict) -> List[str]:
+    package = _one_package(document)
+    if package is None:
+        return ["packages must hold exactly one hefesto-mcp entry"]
+    version = str(document.get("version"))
+    errors = _package_identity_errors(package, version)
+    if not _stdio_transport(package):
+        errors.append("packages[0].transport must be stdio")
+    if not _root_env_required(package.get("environmentVariables")):
+        errors.append("packages[0] must require HEFESTO_MCP_ROOT")
+    return errors
 
 
 def check_hosted_version(document: dict, hosted: Dict[str, str]) -> List[str]:
@@ -121,6 +190,47 @@ def check_not_published(version: str, published: Iterable[str]) -> List[str]:
     if version in set(published):
         return [f"version {version} is already in the MCP Registry (versions are immutable)"]
     return []
+
+
+def pypi_json_url(version: str, package: str = PACKAGE_ID) -> str:
+    quoted = urllib.parse.quote(version, safe="")
+    return PYPI_JSON_URL.format(package=package, version=quoted)
+
+
+class PypiLookupError(Exception):
+    """PyPI JSON could not be read. The check fails closed."""
+
+
+def pypi_release_status(version: str) -> int:
+    """HTTP status of the PyPI JSON for this package version.
+
+    An HTTP error returns its status code. A transport error or a timeout
+    raises ``PypiLookupError``.
+    """
+    url = pypi_json_url(version)
+    request = urllib.request.Request(url, headers={"Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
+            return int(response.status)
+    except urllib.error.HTTPError as exc:
+        # HTTPError is a URLError. Handle it first so a 404 stays a status.
+        return int(exc.code)
+    except urllib.error.URLError as exc:
+        raise PypiLookupError(f"{url} could not be reached: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise PypiLookupError(f"{url} timed out after {TIMEOUT_SECONDS}s") from exc
+
+
+def check_pypi_release(version: str) -> List[str]:
+    """The registry version must already be the published hefesto-mcp release."""
+    url = pypi_json_url(version)
+    try:
+        status = pypi_release_status(version)
+    except PypiLookupError as exc:
+        return [str(exc)]
+    if status == 200:
+        return []
+    return [f"{url} returned {status}, expected 200"]
 
 
 def _open(request: urllib.request.Request) -> str:
@@ -231,6 +341,7 @@ def network_findings(version: str, mode: str) -> Tuple[List[str], List[str], Dic
     """(errors, warnings, facts) from the hosted engine and the registry."""
     hosted = fetch_hosted_versions()
     errors = check_hosted_version({"version": version}, hosted)
+    errors.extend(check_pypi_release(version))
     entries = fetch_registry_versions()
     listed = [str(e.get("server", {}).get("version")) for e in entries]
     already = check_not_published(version, listed + ([version] if is_published(version) else []))

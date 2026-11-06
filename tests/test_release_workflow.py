@@ -24,6 +24,18 @@ def test_trigger_and_workflow_permissions_stay_minimal():
     assert data["concurrency"]["group"] == "release-${{ github.ref }}"
 
 
+def _assert_local_wheel_smoke(smoke_run: str) -> None:
+    assert "--find-links" not in smoke_run
+    assert '"${engines[0]}[mcp]"' in smoke_run
+    assert "--no-index --no-deps" in smoke_run
+    assert "pip check" in smoke_run
+    assert "direct_url.json" in smoke_run
+    assert '"file:"' in smoke_run
+    assert "build_server()" in smoke_run
+    assert 'HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj"' in smoke_run
+    assert "cd /" in smoke_run
+
+
 def test_build_keeps_guard_tag_check_and_twine_check():
     build = _workflow()["jobs"]["build"]
     names = [step["name"] for step in build["steps"]]
@@ -36,17 +48,37 @@ def test_build_keeps_guard_tag_check_and_twine_check():
         "Build sdist + wheel",
         "Twine check",
         "Upload dist",
+        "Verify wrapper version matches the tag",
+        "Build wrapper wheel",
+        "Twine check wrapper",
+        "Check wrapper wheel metadata",
+        "Smoke install wrapper from local wheels",
+        "Upload wrapper dist",
     ]
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "scripts/guard_public_repo.py" in text
     assert "scripts/verify_release_tag.py" in text
     assert "python -m build" in text
     assert "python -m twine check dist/*" in text
-    upload = build["steps"][-1]
+    upload = next(step for step in build["steps"] if step["name"] == "Upload dist")
     assert re.fullmatch(r"actions/upload-artifact@[0-9a-f]{40}", upload["uses"])
     assert upload["with"]["name"] == "python-package-distributions"
     assert upload["with"]["path"] == "dist/"
     assert upload["with"]["if-no-files-found"] == "error"
+    wrapper_upload = build["steps"][-1]
+    assert wrapper_upload["name"] == "Upload wrapper dist"
+    assert wrapper_upload["with"]["name"] == "hefesto-mcp-distributions"
+    assert wrapper_upload["with"]["path"] == "dist-mcp/"
+    build_text = "\n".join(step.get("run", "") for step in build["steps"])
+    assert "--project-name hefesto-mcp" in build_text
+    assert "python -m twine check dist-mcp/*" in build_text
+    assert "Requires-Dist: hefesto-ai[mcp]==" in build_text
+    assert "Requires-Python:" in build_text
+    smoke = next(
+        step for step in build["steps"] if step["name"] == "Smoke install wrapper from local wheels"
+    )
+    _assert_local_wheel_smoke(smoke["run"])
+    assert "id-token" not in build.get("permissions", {})
 
 
 def test_publish_is_trusted_publishing_fail_closed():
@@ -72,9 +104,56 @@ def test_publish_is_trusted_publishing_fail_closed():
     assert download["with"]["name"] == "python-package-distributions"
 
 
+def test_wrapper_publishes_after_hefesto_ai_on_the_same_environment():
+    job = _workflow()["jobs"]["publish-hefesto-mcp"]
+    assert job["needs"] == "publish"
+    assert job["environment"] == {
+        "name": "pypi",
+        "url": "https://pypi.org/p/hefesto-mcp",
+    }
+    assert job["permissions"] == {"id-token": "write"}
+    assert [step["name"] for step in job["steps"]] == [
+        "Download wrapper dist",
+        "Publish hefesto-mcp to PyPI",
+    ]
+    download = job["steps"][0]
+    assert re.fullmatch(r"actions/download-artifact@[0-9a-f]{40}", download["uses"])
+    assert download["with"]["name"] == "hefesto-mcp-distributions"
+    assert download["with"]["path"] == "dist-mcp"
+    publish = job["steps"][-1]
+    assert publish["name"] == "Publish hefesto-mcp to PyPI"
+    assert publish["with"]["packages-dir"] == "dist-mcp"
+    assert "run" not in publish
+    engine = _workflow()["jobs"]["publish"]
+    assert engine["environment"]["url"] == "https://pypi.org/p/hefesto-ai"
+    assert "packages-dir" not in engine["steps"][-1]
+
+
+def test_token_jobs_do_not_build_or_install():
+    """A job that can publish must not build or pip-install.
+
+    ``id-token`` is also absent from the workflow-level permissions, so no
+    job inherits a PyPI identity.
+    """
+    assert "id-token" not in (_workflow().get("permissions") or {})
+    for name, job in _workflow()["jobs"].items():
+        permissions = job.get("permissions") or {}
+        if permissions.get("id-token") != "write":
+            continue
+        for step in job["steps"]:
+            run = step.get("run") or ""
+            assert "python -m build" not in run, name
+            assert "pip install" not in run, name
+    wrapper = _workflow()["jobs"]["publish-hefesto-mcp"]
+    assert any(
+        str(step.get("uses", "")).startswith("actions/download-artifact@")
+        for step in wrapper["steps"]
+    )
+
+
 def test_github_release_runs_only_after_publish():
     job = _workflow()["jobs"]["github-release"]
-    assert job["needs"] == "publish"
+    assert job["needs"] == ["publish", "publish-hefesto-mcp"]
     assert job["permissions"] == {"contents": "write"}
     release = next(step for step in job["steps"] if step["name"] == "Create GitHub Release")
     script = release["run"]
