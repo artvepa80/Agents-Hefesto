@@ -129,6 +129,7 @@ class TestValidation:
                 "enable_memory_budget_gate": False,
                 "copybook_paths": ["copylib", " ../shared "],
                 "include_vendored": True,
+                "experimental": [" C-CPP "],
             }
         )
         assert values == {
@@ -143,6 +144,7 @@ class TestValidation:
             "enable_memory_budget_gate": False,
             "copybook_paths": ["copylib", "../shared"],
             "include_vendored": True,
+            "experimental": "c-cpp",
         }
         assert set(values) == set(SUPPORTED_KEYS)
 

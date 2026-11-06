@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — C and C++ files are analyzed (experimental, opt-in)
+
+- New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml` turn on experimental features: off by default, results not measured yet, and a run without them gives unchanged output. The first name is `c-cpp`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for it and the MCP server never enables it.
+- Everything below applies only with `--experimental c-cpp`; without it C and C++ files are not found.
+
+- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks. They are not counted in the 22-format total. C/C++ security rules (CC001-CC004) ship in the same release under `--experimental c-cpp,lang-security`.
+- A `.h` header is C++ when its code (comments and literals removed) has C++-only syntax (`class`/`namespace` at line start, `template <`, `std::`, `using namespace`, an access label, `#include <vector>`-style includes) or a C++ source with the same name sits next to it; otherwise it is C. `extern "C"` alone keeps a header C.
+- A `.h` header with Objective-C syntax (`@interface`, `@protocol`, `@implementation`, `@end`, `@class`, `@property` or `NS_ASSUME_NONNULL_BEGIN` at line start; comments and literals removed; `#import` alone does not count) is treated as an unrecognized file, so it is never analyzed as C or C++, never reported as not analyzed and never fails the gate. Objective-C and C++ syntax together count as Objective-C.
+- Functions are named as declared (`Widget::size`, `Widget::~Widget`, `operator+`), types by their tag (`cache<double>`); `f(void)` has 0 parameters; a macro before `namespace` is not reported as a function.
+- A file with parse errors is analyzed when any declaration was recovered; a file where none was recovered goes to `meta.not_analyzed` with `reason: parse_error`.
+- With `--experimental c-cpp` and `[multilang]` installed, repositories that contain C or C++ files get new findings from these checks, and offline runs with an empty grammar cache report those files as not analyzed (`grammar_unavailable`), which fails `--fail-on` unless `--allow-not-analyzed` is passed. The Action installs the base package and is unchanged.
+- Peak memory with `c-cpp` on: zlib 42→107 MB, fmt 39→122 MB, react-native 175→196 MB (see `docs/c-cpp.md`).
+- On zlib `51b7f2ab` and fmt `12391371`, all 74 and 70 C/C++ files were analyzed (no `parse_error`). See `docs/c-cpp.md`.
+
 ### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
 
 A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
