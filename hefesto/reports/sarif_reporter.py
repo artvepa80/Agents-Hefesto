@@ -93,6 +93,7 @@ class SARIFReporter:
         self._lines: Dict[str, List[str]] = {}
         self._not_analyzed: List[Dict[str, Any]] = []
         self._decoded_with_fallback: List[Dict[str, Any]] = []
+        self._experimental: List[str] = []
 
     def generate(self, report: AnalysisReport) -> str:
         """SARIF log as a JSON string."""
@@ -102,6 +103,7 @@ class SARIFReporter:
         meta = getattr(report, "meta", None) or {}
         self._not_analyzed = list(meta.get("not_analyzed") or [])
         self._decoded_with_fallback = list(meta.get("decoded_with_fallback") or [])
+        self._experimental = list(meta.get("experimental") or [])
         suppressed: List[AnalysisIssue] = list(getattr(report, "get_suppressed_issues", list)())
         issues = sorted(
             [*report.get_all_issues(), *suppressed],
@@ -162,6 +164,8 @@ class SARIFReporter:
         taxonomy = _cwe_taxonomy(rules)
         if taxonomy:
             run["taxonomies"] = [taxonomy]
+        if self._experimental:
+            run["properties"] = {"experimental": list(self._experimental)}
         run["results"] = results
         return {
             "$schema": SARIF_SCHEMA,

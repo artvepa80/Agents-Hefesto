@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — test paths
+
+- Test code now also includes .NET test projects: a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs` (case-sensitive, so `Latest.cs` is not test code). This applies to every check that skips test code.
+
+### Added — security rules for C#, Go and Rust (experimental, opt-in)
+
+- New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml` turn on experimental features: off by default, results not measured yet, and a run without them gives unchanged output. The first name is `lang-security`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for it and the MCP server never enables it.
+- Everything below runs only with `--experimental lang-security`.
+
+- 10 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 MD5/SHA-1 (LOW inventory) or DES/TripleDES/RC2 (MEDIUM); GO001 shell `-c` with a built string, GO003 `crypto/md5`/`sha1` (LOW inventory) or `crypto/des`/`rc4` (MEDIUM), GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice. Test paths are skipped, including .NET test projects (`*.Tests/`, `*Tests.cs`, ...); the other checks keep their test-path rules.
+- Measured on pinned repositories (2026-11-03): MD5/SHA-1 at MEDIUM was refuted (0/20 CS004 and 1/24 GO003 hits needed action), so they are LOW inventory now. GO002 (Go SQL built from strings) was dropped because 57/57 hits were non-actionable; see `docs/ANALYSIS_RULES.md`.
+- New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY` and `UNSAFE_CODE`. CWE names for 295, 327 and 843 added to the SARIF taxonomy.
+- Docs: rule table in `docs/ANALYSIS_RULES.md`. Tests: `tests/test_lang_security_rules.py`.
+
 ### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
 
 A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
