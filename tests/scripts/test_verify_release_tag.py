@@ -79,6 +79,26 @@ version = "1.2.3"
     assert "project.name 'wrong-name' != 'hefesto-ai'" in result.stderr
 
 
+def test_wrapper_name_and_version_match_the_tag(tmp_path):
+    content = """
+[project]
+name = "hefesto-mcp"
+version = "1.2.3"
+"""
+    (tmp_path / "pyproject.toml").write_text(content, encoding="utf-8")
+    result = run_script(
+        tmp_path,
+        ["--tag", "v1.2.3", "--project-name", "hefesto-mcp"],
+    )
+    assert result.returncode == 0
+    assert "SUCCESS" in result.stdout
+    mismatch = run_script(
+        tmp_path,
+        ["--tag", "v9.9.9", "--project-name", "hefesto-mcp"],
+    )
+    assert mismatch.returncode == 2
+
+
 def test_env_var_fallback(tmp_path):
     """Test GITHUB_REF_NAME env var fallback."""
     create_pyproject(tmp_path, "1.2.3")
