@@ -28,10 +28,14 @@ Workflow: `.github/workflows/mcp-registry.yml`, built from the registry's guide
   `GET /v0.1/servers/{name}/versions/{version}?include_deleted=true` must return 404,
   and `GET /v0.1/servers/{name}/versions?include_deleted=true` lists every version,
   including deleted ones.
-- No `packages` entry until a local MCP server exists (Arturo, 2026-10-18).
-  When that changes, the README will also need
-  `mcp-name: io.github.artvepa80/hefestoai` (registry ownership check for
-  PyPI).
+- This repository's `server.json` lists the local stdio package
+  (`hefesto-mcp` on PyPI, `uvx`, transport `stdio`, required
+  `HEFESTO_MCP_ROOT`) and keeps the hosted remote. The README and the
+  wrapper README each contain `mcp-name: io.github.artvepa80/hefestoai`
+  for the PyPI ownership check. The canonical hosted entry that this
+  workflow publishes is still remote-only: `scripts/check_mcp_registry_entry.py`
+  rejects a `packages` key on that file. Publishing the package entry is a
+  separate step and is not done from this repository's workflow.
 
 ## How to run it
 

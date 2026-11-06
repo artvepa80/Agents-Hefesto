@@ -11,13 +11,17 @@ import argparse
 import contextlib
 import os
 import sys
-from collections.abc import Mapping
+import threading
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from hefesto.__version__ import __version__
 
 _LEVELS = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
 _ROOT: Path | None = None
+# redirect_stdout replaces process-wide sys.stdout. Overlapping calls would
+# restore the real stdout while the other call is still printing.
+_ENGINE_STDOUT_LOCK = threading.Lock()
 
 
 def _disable_telemetry() -> None:
@@ -40,10 +44,11 @@ def _explicit_root(argv: list[str], env: Mapping[str, str]) -> str | None:
 
 
 def _reject_broad_root(root: Path) -> None:
+    hint = "set HEFESTO_MCP_ROOT or pass --root"
     if root == Path(root.anchor).resolve():
-        raise ValueError("sandbox root cannot be the filesystem root")
+        raise ValueError(f"sandbox root cannot be the filesystem root; {hint}")
     if root == Path.home().resolve():
-        raise ValueError("sandbox root cannot be the home directory")
+        raise ValueError(f"sandbox root cannot be the home directory; {hint}")
 
 
 def resolve_sandbox_root(
@@ -74,10 +79,18 @@ def current_root() -> Path:
     return resolve_sandbox_root([])
 
 
+def _anchored(path: str, root: Path) -> Path:
+    """Join a relative path to ``root``. Absolute paths stay absolute."""
+    raw = Path(path)
+    if raw.is_absolute():
+        return raw
+    return root / raw
+
+
 def resolve_inside_root(path: str, root: Path | None = None) -> Path:
-    """Resolve ``path`` and reject anything outside ``root``."""
+    """Resolve ``path`` against the sandbox root and reject anything outside it."""
     base = (root if root is not None else current_root()).resolve()
-    resolved = Path(path).resolve()
+    resolved = _anchored(path, base).resolve()
     if not resolved.is_relative_to(base) or _symlink_escapes(path, base):
         raise ValueError(f"path is outside the sandbox root: {path}")
     return resolved
@@ -85,9 +98,8 @@ def resolve_inside_root(path: str, root: Path | None = None) -> Path:
 
 def _symlink_escapes(path: str, root: Path) -> bool:
     raw = Path(path)
-    absolute = raw.is_absolute()
-    cursor = Path(raw.anchor) if absolute else Path.cwd().resolve()
-    parts = raw.parts[1:] if absolute else raw.parts
+    cursor = Path(raw.anchor) if raw.is_absolute() else root
+    parts = raw.parts[1:] if raw.is_absolute() else raw.parts
     for part in parts:
         cursor = cursor / part
         if _linked_outside(cursor, root):
@@ -107,7 +119,11 @@ def _severity(severity: str | None) -> str:
 
 
 def _run_engine(target: Path, level: str) -> str:
-    """Run the local engine. Its prints go to stderr so stdout stays MCP."""
+    """Run the local engine. Its prints go to stderr so stdout stays MCP.
+
+    The redirect is serialized. Two calls at once would otherwise restore
+    the real stdout under the call that is still printing.
+    """
     from hefesto.cli.main import (
         _apply_line_suppressions,
         _generate_report,
@@ -118,7 +134,7 @@ def _run_engine(target: Path, level: str) -> str:
 
     # These helpers do not call telemetry or the PyPI version check.
     # Those run only from the CLI ``analyze`` command, which is not used here.
-    with contextlib.redirect_stdout(sys.stderr):
+    with _ENGINE_STDOUT_LOCK, contextlib.redirect_stdout(sys.stderr):
         engine = _setup_analyzer_engine(level, quiet=True, json_mode=True)
         if engine is None:
             raise RuntimeError("analyzer engine failed to start")
@@ -131,15 +147,51 @@ def _run_engine(target: Path, level: str) -> str:
 
 
 def analyze_local(path: str, severity: str | None = None) -> str:
-    """Analyze a path inside the sandbox root. Returns JSON. Read-only."""
+    """Analyze a file or directory with the local engine and return JSON.
+
+    Runs the same local checks as ``hefesto analyze`` (security, complexity,
+    and the formats that engine registers). ``path`` must resolve inside the
+    sandbox root (``HEFESTO_MCP_ROOT`` or ``--root``). A relative path is
+    joined to that root, not to the process working directory. ``severity``
+    must be one of LOW, MEDIUM, HIGH, or CRITICAL (default MEDIUM). The
+    result is the JSON report. Read-only: it writes no files.
+    It uses no network.
+    """
     _disable_telemetry()
     target = resolve_inside_root(path)
     return _run_engine(target, _severity(severity))
 
 
 def version() -> str:
-    """Return the engine version."""
+    """Return the installed engine version string.
+
+    No args. Reads no files and uses no network.
+    Use it to confirm which engine produced a result.
+    """
     return __version__
+
+
+async def _call_on_worker(fn: Callable[..., str], *args: object) -> str:
+    """Run a sync tool off the stdio event loop.
+
+    FastMCP calls a synchronous tool on the loop thread. A directory scan
+    would block the session until it returned.
+    """
+    import anyio
+
+    return await anyio.to_thread.run_sync(fn, *args)
+
+
+async def _analyze_local_tool(path: str, severity: str | None = None) -> str:
+    return await _call_on_worker(analyze_local, path, severity)
+
+
+async def _version_tool() -> str:
+    return await _call_on_worker(version)
+
+
+_analyze_local_tool.__doc__ = analyze_local.__doc__
+_version_tool.__doc__ = version.__doc__
 
 
 def build_server():
@@ -153,8 +205,8 @@ def build_server():
         openWorldHint=False,
     )
     server = FastMCP("hefesto")
-    server.add_tool(analyze_local, annotations=hints)
-    server.add_tool(version, annotations=hints)
+    server.add_tool(_analyze_local_tool, name="analyze_local", annotations=hints)
+    server.add_tool(_version_tool, name="version", annotations=hints)
     return server
 
 

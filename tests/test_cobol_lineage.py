@@ -575,3 +575,76 @@ def test_keyword_lines_equal_the_whole_word_regex_on_random_text():
         text = "".join(rng.choice(parts) for _ in range(rng.randint(0, 30)))
         expected = sorted({text.count("\n", 0, m.start()) for m in whole.finditer(text)})
         assert _keyword_lines(text) == expected, repr(text)
+
+
+# ------------------------------------------------------- ids relative to the root
+
+
+def _checkout(base: Path) -> Path:
+    """A git checkout with two programs named B (so their ids carry the path)."""
+    repo = base / "repo"
+    (repo / ".git").mkdir(parents=True)
+    for rel, code in {
+        "x/B.cbl": prog("B"),
+        "y/B.cbl": prog("B"),
+        "A.cbl": prog("A", "    CALL 'B'."),
+    }.items():
+        path = repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(code)
+    return repo
+
+
+def _lineage_json(repo: Path, monkeypatch) -> dict:
+    monkeypatch.chdir(repo)
+    result = CliRunner().invoke(
+        cli, ["analyze", str(repo), "--output", "json", "--quiet", "--lineage"]
+    )
+    return json.loads(result.output[result.output.index("{") :])["lineage"]
+
+
+def test_lineage_ids_are_relative_to_the_root(tmp_path, monkeypatch):
+    repo = _checkout(tmp_path)
+    section = _lineage_json(repo, monkeypatch)
+    ids = sorted(n["id"] for n in section["nodes"])
+    assert ids == ["program:A", "program:B@x/B.cbl", "program:B@y/B.cbl"]
+    assert section["root"] == str(repo.resolve())
+
+
+def test_lineage_ids_are_the_same_in_two_checkouts(tmp_path, monkeypatch):
+    first = _lineage_json(_checkout(tmp_path / "one"), monkeypatch)
+    second = _lineage_json(_checkout(tmp_path / "two"), monkeypatch)
+    assert [n["id"] for n in first["nodes"]] == [n["id"] for n in second["nodes"]]
+    assert [u["from"] for u in first["unresolved"]] == [u["from"] for u in second["unresolved"]]
+
+
+def test_file_fields_stay_as_in_the_rest_of_the_report(tmp_path, monkeypatch):
+    """Only ids change: ``file`` and ``source_file`` keep the report's own paths."""
+    repo = _checkout(tmp_path)
+    monkeypatch.chdir(repo)
+    result = CliRunner().invoke(
+        cli, ["analyze", str(repo), "--output", "json", "--quiet", "--lineage"]
+    )
+    data = json.loads(result.output[result.output.index("{") :])
+    report_files = {f["file"] for f in data["files"]}
+    node_files = {n["file"] for n in data["lineage"]["nodes"] if n.get("file")}
+    assert node_files and node_files <= report_files
+
+
+def test_program_outside_the_root_keeps_an_absolute_id(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    outside = tmp_path / "elsewhere"
+    for base in (repo, outside):
+        (base / "B.cbl").parent.mkdir(parents=True, exist_ok=True)
+        (base / "B.cbl").write_text(prog("B"))
+    monkeypatch.chdir(repo)
+    result = CliRunner().invoke(
+        cli,
+        ["analyze", str(repo), str(outside), "--output", "json", "--quiet", "--lineage"],
+    )
+    section = json.loads(result.output[result.output.index("{") :])["lineage"]
+    ids = sorted(n["id"] for n in section["nodes"])
+    assert ids == sorted(
+        ["program:B@B.cbl", f"program:B@{(outside / 'B.cbl').resolve().as_posix()}"]
+    )
