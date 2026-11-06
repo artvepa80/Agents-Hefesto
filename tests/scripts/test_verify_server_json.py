@@ -1,9 +1,9 @@
-"""server.json is a truthful official-registry entry for the hosted MCP server.
+"""server.json is a truthful official-registry entry.
 
 ``repository`` stays on this public repo (the hefesto-ai engine ``analyze``
-runs). The description states that the hosted MCP server is closed-source and
-operated by Narapa LLC. The schema check downloads the official 2025-12-11
-schema named by ``$schema``; nothing here publishes to the registry.
+runs). The description names the local stdio server and the hosted remote.
+The schema check downloads the official 2025-12-11 schema named by
+``$schema``; nothing here publishes to the registry.
 """
 
 import importlib.util
@@ -45,16 +45,18 @@ def official_schema(mod):
 
 
 def test_description_fits_the_schema_limit(mod):
+    assert mod.DESCRIPTION == (
+        "Release-truth gate for AI-generated code: local stdio server (MIT) plus a hosted remote."
+    )
     assert len(mod.DESCRIPTION) <= mod.DESCRIPTION_MAX_LENGTH
-    assert "closed-source" in mod.DESCRIPTION
-    assert "Narapa LLC" in mod.DESCRIPTION
+    assert "closed-source" not in mod.DESCRIPTION
 
 
 def test_committed_document_names_the_public_repo_and_the_closed_server(mod, committed):
     version = mod.read_package_version(ROOT / "pyproject.toml")
-    assert version == "4.20.4"
     assert mod.check_document(committed, version) == []
-    assert committed["version"] == "4.20.4"
+    assert committed["version"] == version
+    assert committed["packages"] == [mod._expected_package(version)]
     assert committed["repository"]["url"] == mod.PUBLIC_REPOSITORY_URL
     assert committed["repository"]["id"] == "1079896229"
     assert isinstance(committed["repository"]["id"], str)
@@ -73,15 +75,22 @@ def test_public_docs_state_the_hosted_server_is_closed_source():
 def test_check_document_rejects_a_private_repository(mod, committed):
     document = json.loads(json.dumps(committed))
     document["repository"]["url"] = "https://github.com/example/closed-source-fork"
-    errors = mod.check_document(document, "4.20.4")
+    errors = mod.check_document(document, committed["version"])
     assert any("repository.url" in error for error in errors)
 
 
 def test_check_document_rejects_a_numeric_repository_id(mod, committed):
     document = json.loads(json.dumps(committed))
     document["repository"]["id"] = 1079896229
-    errors = mod.check_document(document, "4.20.4")
+    errors = mod.check_document(document, committed["version"])
     assert any("repository.id" in error for error in errors)
+
+
+def test_check_document_rejects_missing_packages(mod, committed):
+    document = json.loads(json.dumps(committed))
+    document.pop("packages")
+    errors = mod.check_document(document, committed["version"])
+    assert any("packages" in error for error in errors)
 
 
 def test_check_document_rejects_a_version_bump(mod, committed):
