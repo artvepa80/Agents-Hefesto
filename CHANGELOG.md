@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Peak memory with `c-cpp` on: zlib 42→107 MB, fmt 39→122 MB, react-native 175→196 MB (see `docs/c-cpp.md`).
 - On zlib `51b7f2ab` and fmt `12391371`, all 74 and 70 C/C++ files were analyzed (no `parse_error`). See `docs/c-cpp.md`.
 
+### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
+
+A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
+
+### Changed — lineage ids relative to the root
+
+- With `--lineage`, a program id that carries a path (`program:NAME@path`, used when two files share a name) now uses the path relative to the new `lineage.root` (nearest `.git` above the working directory, else `$GITHUB_WORKSPACE`, else the working directory, as for SARIF), so ids are the same in every checkout. A file outside the root keeps its absolute path. `file` and `source_file` are unchanged. `schema_version` stays 1.
+
 ### Documentation — written review summary on every merged PR
 
 - `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
@@ -29,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - New workflow `.github/workflows/weekly-full-matrix.yml` runs against `main` every Monday at 06:17 UTC, and on demand (`workflow_dispatch`), on Python 3.11, 3.12, 3.13, 3.14 and 3.15 (`fail-fast: false`). Job `lint-and-test-full` runs the `lint-and-test` steps of `ci.yml` (without the pull-request commit check and the coverage upload). Job `multilang-smoke-full` runs the steps of `multilang-smoke.yml`: it installs the `[multilang]` extra, prefetches the 6 grammars, parses one sample per language and runs the unit tests that need the grammars. Pull requests and pushes keep testing only 3.11 and 3.15. It is not a required check; actions are pinned by commit SHA like the other workflows.
 - `tests/test_weekly_full_matrix_workflow.py` fails when the steps of either weekly job drift from the workflow they copy.
+
+### Fixed — a file reached through several symlinks is analyzed once
+
+- File discovery now dedupes by the resolved path. Before, a file linked from several directories was analyzed once per link and every finding was repeated (seen as 6 copies of each finding in a repository that symlinks one helper into five crates).
 
 ### Fixed — a grammar that fails to load is tried once per run, not once per file
 

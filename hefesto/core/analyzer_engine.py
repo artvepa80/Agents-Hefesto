@@ -272,6 +272,13 @@ def _relative_parts(path: Path, root: Path) -> Tuple[str, ...]:
         return path.parts
 
 
+def _real_path(file: Path) -> Path:
+    try:
+        return file.resolve()
+    except (OSError, RuntimeError):
+        return file
+
+
 class AnalyzerEngine:
     """Main analysis engine that orchestrates all analyzers."""
 
@@ -682,8 +689,13 @@ class AnalyzerEngine:
                 if LanguageDetector.is_supported(file):
                     supported_files.append(file)
 
-        # Dedupe preserving order
-        return list(dict.fromkeys(supported_files))
+        # Dedupe preserving order. Symlinks that point at the same file are
+        # analyzed once: the file is resolved before analysis, so each link
+        # would otherwise repeat every finding.
+        unique: Dict[Path, Path] = {}
+        for file in supported_files:
+            unique.setdefault(_real_path(file), file)
+        return list(unique.values())
 
     def _single_file_supported(self, path: Path) -> bool:
         """A file named on the command line, with shebang-aware detection."""
