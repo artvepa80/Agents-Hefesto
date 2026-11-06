@@ -155,3 +155,4 @@ build/languages.so
 
 # MCP Registry tokens
 .mcpregistry_*
+.release-gate/
