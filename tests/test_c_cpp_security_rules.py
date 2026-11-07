@@ -6,10 +6,13 @@ from typing import List, Tuple
 
 import pytest
 
-pytest.importorskip("tree_sitter_language_pack")
+
+def _need_pack() -> None:
+    pytest.importorskip("tree_sitter_language_pack")
 
 
 def _rules(language: str, code: str, path: str = "src/app.c") -> List[Tuple[str, int, str]]:
+    _need_pack()
     from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
@@ -83,6 +86,7 @@ def test_test_paths_are_skipped() -> None:
 
 
 def test_off_by_default() -> None:
+    _need_pack()
     from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
@@ -93,6 +97,7 @@ def test_off_by_default() -> None:
 
 
 def test_cwe_and_types() -> None:
+    _need_pack()
     from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
@@ -114,6 +119,7 @@ def test_cwe_and_types() -> None:
 
 
 def test_system_line_is_reported_once() -> None:
+    _need_pack()
     from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
@@ -182,3 +188,33 @@ NO_ARGS_CASES = [
 @pytest.mark.parametrize("code,expected", NO_ARGS_CASES)
 def test_cc003_only_without_format_arguments(code: str, expected) -> None:
     assert _rules("c", code + "\n") == expected
+
+
+def _measured_complexity(name: str) -> int:
+    """Complexity of the one function named ``name``, from the analyzer."""
+    from pathlib import Path
+
+    from hefesto.analyzers.complexity import ComplexityAnalyzer
+    from hefesto.core.parsers.python_parser import PythonParser
+
+    relative = "hefesto/analyzers/lang_security_rules.py"
+    code = (Path(__file__).resolve().parents[1] / relative).read_text(encoding="utf-8")
+    tree = PythonParser().parse(code, relative)
+    found = [node for node in tree.get_functions() if node.name == name]
+    assert len(found) == 1, name
+    analyzer = ComplexityAnalyzer()
+    score = analyzer._calculate_complexity(found[0])
+    for issue in analyzer.analyze(tree, relative, code):
+        if issue.function_name == name:
+            assert issue.metadata["complexity"] == score
+    return score
+
+
+@pytest.mark.parametrize("name", ["_cc_func_name", "_cc_format_rule", "_cc_rule"])
+def test_flagged_c_cpp_rule_functions_stay_below_medium(name: str) -> None:
+    from hefesto.analyzers.complexity import _THRESHOLDS
+    from hefesto.core.analysis_models import AnalysisIssueSeverity
+
+    medium = _THRESHOLDS[AnalysisIssueSeverity.MEDIUM]
+    score = _measured_complexity(name)
+    assert score < medium, (name, score, medium)

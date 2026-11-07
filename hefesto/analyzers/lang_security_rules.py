@@ -563,6 +563,15 @@ _CC_SCANF_S = re.compile(r"%\*?(?:s|\[)")
 _CC_STRING_TYPES = frozenset({"string_literal", "concatenated_string", "raw_string_literal"})
 
 
+def _cc_strip_qualifiers(text: str) -> Optional[str]:
+    """``::gets`` and ``std::gets`` become ``gets``; other qualifiers are None."""
+    if text.startswith("::"):
+        text = text[2:]
+    if text.startswith("std::"):
+        text = text[5:]
+    return text if re.fullmatch(r"[A-Za-z_]\w*", text) else None
+
+
 def _cc_func_name(call: GenericNode) -> Optional[str]:
     """``gets``, ``std::gets`` or ``::gets``; None for ``obj.f`` and ``p->f``."""
     parts = _named(call)
@@ -573,12 +582,7 @@ def _cc_func_name(call: GenericNode) -> Optional[str]:
     if t == "identifier":
         return func.text
     if t == "qualified_identifier":
-        text = func.text.replace(" ", "")
-        if text.startswith("::"):
-            text = text[2:]
-        if text.startswith("std::"):
-            text = text[5:]
-        return text if re.fullmatch(r"[A-Za-z_]\w*", text) else None
+        return _cc_strip_qualifiers(func.text.replace(" ", ""))
     return None
 
 
@@ -703,6 +707,17 @@ def _cc_length_checked(src: GenericNode, scope: _CcScope) -> bool:
     return re.search(pattern, scope.before) is not None
 
 
+def _cc_nonliteral_format(
+    func: str, args: List[GenericNode], fmt_node: GenericNode, scope: _CcScope
+) -> Optional[str]:
+    """CC003 when a non-constant format has no arguments after it."""
+    if len(args) > _CC_FORMAT[func] + 1 or _cc_const(fmt_node):
+        return None
+    if _ts(fmt_node) == "identifier" and fmt_node.text in scope.forwarded:
+        return None
+    return "CC003"
+
+
 def _cc_format_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Optional[str]:
     fmt_node = _cc_arg(args, _CC_FORMAT[func])
     if fmt_node is None:
@@ -711,11 +726,7 @@ def _cc_format_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Opti
     if fmt is None:
         # Only a format with nothing after it: printf(buf) treats data as a
         # format; printf(fmt, x) passes values to a format chosen in code.
-        if len(args) > _CC_FORMAT[func] + 1 or _cc_const(fmt_node):
-            return None
-        if _ts(fmt_node) == "identifier" and fmt_node.text in scope.forwarded:
-            return None
-        return "CC003"
+        return _cc_nonliteral_format(func, args, fmt_node, scope)
     if func in ("sprintf", "vsprintf") and _CC_UNBOUNDED_S.search(fmt):
         return "CC002"
     return None
@@ -728,22 +739,35 @@ def _cc_copy_rule(args: List[GenericNode], scope: _CcScope) -> Optional[str]:
     return "CC002"
 
 
+def _cc_scanf_rule(func: str, args: List[GenericNode]) -> Optional[str]:
+    fmt_node = _cc_arg(args, _CC_SCANF[func])
+    fmt = _cc_literal(fmt_node) if fmt_node is not None else None
+    return "CC002" if fmt is not None and _CC_SCANF_S.search(fmt) else None
+
+
+def _cc_shell_rule(args: List[GenericNode]) -> Optional[str]:
+    cmd = _cc_arg(args, 0)
+    return "CC004" if cmd is not None and _cc_literal(cmd) is None else None
+
+
+def _cc_format_family(func: str, args: List[GenericNode], scope: _CcScope) -> Optional[str]:
+    """Scanf, then the printf family, then shell. That order is the rule order."""
+    if func in _CC_SCANF:
+        return _cc_scanf_rule(func, args)
+    if func in _CC_FORMAT:
+        return _cc_format_rule(func, args, scope)
+    if func in _CC_SHELL:
+        return _cc_shell_rule(args)
+    return None
+
+
 def _cc_rule(func: str, args: List[GenericNode], scope: _CcScope) -> Optional[str]:
     """The rule a call to ``func`` with ``args`` breaks, if any."""
     if func == "gets":
         return "CC001"
     if func in _CC_COPY:
         return _cc_copy_rule(args, scope)
-    if func in _CC_SCANF:
-        fmt_node = _cc_arg(args, _CC_SCANF[func])
-        fmt = _cc_literal(fmt_node) if fmt_node is not None else None
-        return "CC002" if fmt is not None and _CC_SCANF_S.search(fmt) else None
-    if func in _CC_FORMAT:
-        return _cc_format_rule(func, args, scope)
-    if func in _CC_SHELL:
-        cmd = _cc_arg(args, 0)
-        return "CC004" if cmd is not None and _cc_literal(cmd) is None else None
-    return None
+    return _cc_format_family(func, args, scope)
 
 
 def _cc_call(ctx: _Ctx, node: GenericNode, scope: _CcScope) -> None:

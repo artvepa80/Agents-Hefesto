@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — C and C++ helpers stay under the medium complexity threshold
+
+- The `.h` classifier and the C/C++ helpers `_cc_func_name`, `_cc_format_rule` and `_cc_rule` were split so each stays below the medium complexity threshold. Header classification, qualified-name handling, and which calls the rules report are unchanged.
+
 ### Added — release gate for 4.21.0: no-flag output must not change
 
 - `scripts/release_gate.py` and the `Release Gate` workflow run main and the branch with no flags on five pinned corpora (Python, JavaScript, Go, C, Rust). They ignore timing fields and fail on any difference in findings, counts or exit code. Opt-in experimental rules cannot change default output unnoticed.
