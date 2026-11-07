@@ -212,6 +212,7 @@ class TreeSitterParser(CodeParser):
                 "treesitter_type": node.type,
                 "language": self.language,
                 "param_count": param_count,
+                "named": node.is_named,
             },
         )
 

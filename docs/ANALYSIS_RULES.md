@@ -1140,6 +1140,52 @@ Is it a minor style or documentation issue?
 
 ---
 
+## C#, Go and Rust security rules (experimental)
+
+These rules are an experimental feature, named `lang-security`, and are off by default. Turn them on with `hefesto analyze . --experimental lang-security` or with `experimental: [lang-security]` in `.hefesto.yaml`.
+
+**Experimental** means: off by default; its results have not been measured yet; and a run without it gives the same output as a run of a release that did not have it. A name given on the command line replaces the list in `.hefesto.yaml`. An unknown name stops the run with exit code 2; a name that is no longer experimental only prints a warning. When the feature is on, the JSON report lists it in `meta.experimental` and the SARIF run in `properties.experimental`. The GitHub Action has no input for it, and the MCP server never turns it on.
+
+**Memory and time:** the rules walk the syntax tree the generic checks already built, so they add no parser. Peak resident memory of the `hefesto` process, off / on, `--severity LOW --output json`, one run each: Newtonsoft.Json `0a2e291` 106 / 107 MB (9.9 / 9.3 s), gin 73 / 73 MB (2.6 / 2.6 s), ripgrep 83 / 83 MB (3.8 / 3.9 s).
+
+With the feature on, these rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. The .NET test-project paths apply to these rules only; the other checks keep the SEC-03 test paths. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
+
+**Measured** means: for each rule, its findings on a labelled corpus were checked by hand and reported as `correct/n`. A precision claim of 95% or more needs n ≥ 59 findings for that rule with all of them correct (the smallest n where 0 errors gives a one-sided 95% lower bound of at least 95%). Until a rule is measured, it is experimental.
+
+| Rule | What it reports | Issue type | Severity | CWE |
+|------|-----------------|------------|----------|-----|
+| CS001 | `new SqlCommand(...)` (also OleDb, Odbc, Npgsql, MySql, Sqlite), `CommandText = ...` or `ExecuteSqlRaw`/`FromSqlRaw` whose SQL is built with `+`, `$"...{x}"` or `string.Format` | `SQL_INJECTION_RISK` | HIGH | 89 |
+| CS002 | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | `INSECURE_DESERIALIZATION` | HIGH | 502 |
+| CS003 | `Process.Start(...)` or `new ProcessStartInfo(...)` with an argument built from strings | `COMMAND_INJECTION` | MEDIUM | 78 |
+| CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | LOW for MD5/SHA-1 (inventory); MEDIUM for DES/TripleDES/RC2 | 327 |
+| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` | `COMMAND_INJECTION` | HIGH | 78 |
+| GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | LOW for md5/sha1 (inventory); MEDIUM for des/rc4 | 327 |
+| GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
+| RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
+| RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
+| RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
+
+RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` to list every `unsafe` block.
+
+Known limits:
+
+- Rust unit tests that live in the same file under `#[cfg(test)]` are **not** skipped: only the path decides what is test code, so `unsafe` blocks and `transmute` calls in an in-file `mod tests` are reported like any other code.
+- CS004 and GO003 report every use of MD5 and SHA-1 as LOW "(inventory)", the same way RS001 lists `unsafe`. The earlier MEDIUM claim was refuted by measurement. On pinned repositories (MailKit, ShareX, jellyfin, gitea, rclone; 2026-11-03), 0/20 CS004 hits and 1/24 sampled GO003 hits needed action. The rest were protocol-mandated digests (SASL DIGEST-MD5/CRAM-MD5/SCRAM-SHA-1, APOP, OAuth 1, S3 Content-MD5 and SSE-C, storage APIs) or non-security checksums and cache keys. DES, TripleDES, RC2 and RC4 stay MEDIUM. The tree does not show why a hash is computed, so the default `--severity MEDIUM` hides the inventory; use `--severity LOW` to list it. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
+- GO002 (Go SQL built with `fmt.Sprintf` or `+`) was dropped from v1. All 57 hits on gitea were non-actionable:
+  - 38 were DDL with internal schema identifiers.
+  - 11 were a table name interpolated, with values passed as placeholders.
+  - 5 were `setval('%s')` sequence names.
+  - 3 were `%d` row counts.
+  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. Go SQL lines get the generic SQL check, as without the feature.
+- Deserialization has two issue types, both CWE-502 in SARIF (`external/cwe/cwe-502`). **INSECURE_DESERIALIZATION**: deserializing untrusted data with a formatter that can create arbitrary types (CWE-502). New languages use this type; Python keeps `PICKLE_USAGE`, which flags the `import pickle` line (precision `low`).
+
+  | Language | Rule | Issue type | What is flagged | CWE |
+  |----------|------|------------|-----------------|-----|
+  | Python | `PICKLE_USAGE` | `PICKLE_USAGE` | `import pickle` / `cPickle` | 502 |
+  | C# | CS002 | `INSECURE_DESERIALIZATION` | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | 502 |
+
+Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
+
 ## 📊 Quick Reference
 
 ### All Rules Summary

@@ -300,7 +300,7 @@ def _load_project_config(paths, config_path, option_names):
     default=None,
     metavar="NAMES",
     help=(
-        "Comma-separated experimental features to turn on (known: c-cpp). "
+        "Comma-separated experimental features to turn on (known: c-cpp, lang-security). "
         "Off by default; their results are not measured yet."
     ),
 )

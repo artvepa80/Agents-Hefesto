@@ -304,7 +304,7 @@ class AnalyzerEngine:
         # COBOL program lineage (``--lineage``); off by default so the default run is unchanged.
         self.collect_lineage = False
         # ``--experimental`` names; empty by default (MCP and library callers never set it).
-        self.experimental: FrozenSet[str] = frozenset()
+        self._experimental: FrozenSet[str] = frozenset()
         self.analyzers: List[Any] = []
         self._project_analyzers: List[Any] = []
         self.verbose = verbose
@@ -459,8 +459,24 @@ class AnalyzerEngine:
     def _is_cobol_path(path: Path) -> bool:
         return path.suffix.lower() in (".cbl", ".cob", ".cobol", ".cpy", ".pco")
 
+    @property
+    def experimental(self) -> FrozenSet[str]:
+        """Enabled ``--experimental`` names."""
+        return self._experimental
+
+    @experimental.setter
+    def experimental(self, names: Iterable[str]) -> None:
+        self._experimental = frozenset(names)
+        for analyzer in self.analyzers:
+            self._apply_experimental(analyzer)
+
+    def _apply_experimental(self, analyzer: Any) -> None:
+        if hasattr(analyzer, "lang_rules"):
+            analyzer.lang_rules = "lang-security" in self._experimental
+
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
+        self._apply_experimental(analyzer)
         self.analyzers.append(analyzer)
 
     def register_project_analyzer(self, analyzer):
@@ -1325,8 +1341,8 @@ class AnalyzerEngine:
     def _build_meta(self) -> dict:
         """Assemble the ``meta`` dict for the report from PRO features."""
         meta: dict = {}
-        if self.experimental:
-            meta["experimental"] = sorted(self.experimental)
+        if self._experimental:
+            meta["experimental"] = sorted(self._experimental)
 
         # Scope gating summary (EPIC 1)
         if self._scope_config is not None and self._scope_skipped:

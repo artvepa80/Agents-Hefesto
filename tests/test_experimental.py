@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import re
 from pathlib import Path
@@ -13,6 +14,27 @@ from hefesto.cli.main import cli
 from hefesto.core import experimental
 from hefesto.core.experimental import ExperimentalError, parse
 
+# Findings only the C#/Go/Rust rules report (a generic check reports none of them).
+_RULE_FILES = {
+    "src/Load.cs": (
+        "using System.Runtime.Serialization.Formatters.Binary;\n"
+        "class Load {\n"
+        "  object Run(System.IO.Stream s) {\n"
+        "    var f = new BinaryFormatter();\n"
+        "    return f.Deserialize(s);\n"
+        "  }\n"
+        "}\n"
+    ),
+    "src/MyApp.Tests/LoadTests.cs": (
+        "using System.Runtime.Serialization.Formatters.Binary;\n"
+        "class LoadTests { object R(System.IO.Stream s) {"
+        " return new BinaryFormatter().Deserialize(s); } }\n"
+    ),
+    "cmd/hash.go": (
+        'package main\n\nimport "crypto/md5"\n\n'
+        "func H(b []byte) [16]byte {\n\treturn md5.Sum(b)\n}\n"
+    ),
+}
 _C_FILES = {
     "src/a.c": "int add(int a, int b) { return a + b; }\n",
     "src/a.h": "int add(int a, int b);\n",
@@ -20,6 +42,7 @@ _C_FILES = {
     "src/b.hpp": "namespace n { int f(int a); }\n",
 }
 _PY = {"app.py": "def run(x):\n    return eval(x)\n"}
+_RULE_TYPES = {"INSECURE_DESERIALIZATION", "INSECURE_CRYPTOGRAPHY", "UNSAFE_CODE"}
 
 
 def _tree(root: Path, files: dict) -> Path:
@@ -36,8 +59,6 @@ def _run(path: Path, *args: str, cwd: Path | None = None):
 
 
 def _mix_ok() -> bool:
-    import inspect
-
     return "mix_stderr" in inspect.signature(CliRunner.__init__).parameters
 
 
@@ -50,15 +71,24 @@ def _stable(text: str) -> str:
     return blob.replace(str(Path.cwd()), "<cwd>")
 
 
+def _types(stdout: str) -> set:
+    data = json.loads(stdout)
+    return {i["type"] for f in data["files"] for i in f["issues"]}
+
+
 def test_parse_accepts_comma_string_and_list() -> None:
     assert parse("c-cpp")[0] == {"c-cpp"}
     assert parse([" C-CPP "])[0] == {"c-cpp"}
+    assert parse("lang-security")[0] == {"lang-security"}
+    assert parse([" LANG-SECURITY "])[0] == {"lang-security"}
+    assert parse("c-cpp,lang-security")[0] == {"c-cpp", "lang-security"}
     assert parse(None) == (frozenset(), [])
 
 
 def test_parse_rejects_unknown_names() -> None:
-    with pytest.raises(ExperimentalError, match="unknown experimental feature"):
-        parse("c-cpp,nope")
+    for name in ("c-cpp,nope", "lang-security,nope"):
+        with pytest.raises(ExperimentalError, match="unknown experimental feature"):
+            parse(name)
 
 
 def test_graduated_name_warns(monkeypatch) -> None:
@@ -66,6 +96,31 @@ def test_graduated_name_warns(monkeypatch) -> None:
     enabled, warnings = parse("old")
     assert enabled == frozenset()
     assert warnings and "no longer experimental" in warnings[0]
+
+
+def test_off_by_default_rules_do_not_run(tmp_path: Path) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+    root = _tree(tmp_path, {**_PY, **_RULE_FILES})
+    out = _run(root, "--output", "json", "--quiet", "--severity", "LOW")
+    assert not _types(out.stdout) & _RULE_TYPES
+    assert '"experimental"' not in out.stdout
+    sarif = _run(root, "--output", "sarif", "--quiet", "--severity", "LOW")
+    assert '"experimental"' not in sarif.stdout
+
+
+def test_on_runs_rules_and_reports_meta_and_sarif(tmp_path: Path) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+    root = _tree(tmp_path, {**_PY, **_RULE_FILES})
+    args = ("--experimental", "lang-security", "--severity", "LOW", "--quiet")
+    out = _run(root, *args, "--output", "json")
+    data = json.loads(out.stdout)
+    assert data["meta"]["experimental"] == ["lang-security"]
+    assert {"INSECURE_DESERIALIZATION", "INSECURE_CRYPTOGRAPHY"} <= _types(out.stdout)
+    # .NET test projects are skipped by the rules.
+    rule_files = {f["file"] for f in data["files"] for i in f["issues"] if i["type"] in _RULE_TYPES}
+    assert not any("Tests" in name for name in rule_files)
+    sarif = json.loads(_run(root, *args, "--output", "sarif").stdout)
+    assert sarif["runs"][0]["properties"] == {"experimental": ["lang-security"]}
 
 
 def test_off_by_default_output_is_unchanged(tmp_path: Path) -> None:
@@ -98,9 +153,11 @@ def test_on_reports_meta_and_sarif_property(tmp_path: Path) -> None:
 
 def test_unknown_cli_name_exits_2(tmp_path: Path) -> None:
     root = _tree(tmp_path, _PY)
-    result = _run(root, "--experimental", "c-cpp,bogus")
-    assert result.exit_code == 2
-    assert "unknown experimental feature(s): bogus" in (result.stderr or result.output)
+    for name in ("c-cpp,bogus", "lang-security,bogus"):
+        result = _run(root, "--experimental", name)
+        assert result.exit_code == 2
+        assert "unknown experimental feature(s): bogus" in (result.stderr or result.output)
+        assert "known: c-cpp, lang-security" in (result.stderr or result.output)
 
 
 def test_unknown_config_name_exits_2(tmp_path: Path) -> None:
@@ -110,7 +167,7 @@ def test_unknown_config_name_exits_2(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
-def test_config_list_turns_features_on(tmp_path: Path) -> None:
+def test_config_list_turns_c_cpp_on(tmp_path: Path) -> None:
     pytest.importorskip("tree_sitter_language_pack")
     root = _tree(tmp_path, {**_PY, **_C_FILES})
     (root / ".hefesto.yaml").write_text("experimental:\n  - c-cpp\n")
@@ -118,7 +175,16 @@ def test_config_list_turns_features_on(tmp_path: Path) -> None:
     assert data["meta"]["experimental"] == ["c-cpp"]
 
 
-def test_cli_list_replaces_config_list(tmp_path: Path, monkeypatch) -> None:
+def test_config_list_turns_lang_security_on(tmp_path: Path) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+    root = _tree(tmp_path, {**_PY, **_RULE_FILES})
+    (root / ".hefesto.yaml").write_text("experimental:\n  - lang-security\n")
+    out = _run(root, "--output", "json", "--quiet", "--severity", "LOW", cwd=root)
+    assert json.loads(out.stdout)["meta"]["experimental"] == ["lang-security"]
+    assert _types(out.stdout) & _RULE_TYPES
+
+
+def test_cli_list_replaces_c_cpp_config(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setitem(experimental.FEATURES, "other", "test only")
     root = _tree(tmp_path, {**_PY, **_C_FILES})
     (root / ".hefesto.yaml").write_text("experimental: [c-cpp]\n")
@@ -129,7 +195,33 @@ def test_cli_list_replaces_config_list(tmp_path: Path, monkeypatch) -> None:
     assert not {"c", "cpp"} & {f["language"] for f in data["files"]}
 
 
+def test_cli_list_replaces_lang_security_config(tmp_path: Path, monkeypatch) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+    monkeypatch.setitem(experimental.FEATURES, "other", "test only")
+    root = _tree(tmp_path, {**_PY, **_RULE_FILES})
+    (root / ".hefesto.yaml").write_text("experimental: [lang-security]\n")
+    out = _run(
+        root,
+        "--experimental",
+        "other",
+        "--output",
+        "json",
+        "--quiet",
+        "--severity",
+        "LOW",
+        cwd=root,
+    )
+    assert json.loads(out.stdout)["meta"]["experimental"] == ["other"]
+    assert not _types(out.stdout) & _RULE_TYPES
+
+
 def test_mcp_and_library_engine_are_off() -> None:
+    from hefesto.analyzers.security import SecurityAnalyzer
     from hefesto.core.analyzer_engine import AnalyzerEngine
 
-    assert AnalyzerEngine(severity_threshold="LOW", quiet=True).experimental == frozenset()
+    engine = AnalyzerEngine(severity_threshold="LOW", quiet=True)
+    engine.register_analyzer(SecurityAnalyzer())
+    assert engine.experimental == frozenset()
+    assert engine.analyzers[-1].lang_rules is False
+    engine.experimental = {"lang-security"}
+    assert engine.analyzers[-1].lang_rules is True

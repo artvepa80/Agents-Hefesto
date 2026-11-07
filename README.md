@@ -714,6 +714,7 @@ copybook_paths:             # --copybook-path (COBOL copybook directories outsid
 include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
 experimental:               # --experimental (comma-separated; the CLI value replaces this list)
   - c-cpp                   # C and C++ files (docs/c-cpp.md)
+  - lang-security           # C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)
 ```
 
 - **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,
