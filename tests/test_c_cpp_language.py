@@ -100,11 +100,7 @@ def test_c_function_and_struct_names() -> None:
         "struct point { int x; };\n"
         "int no_args(void) { return 0; }\n"
     )
-    assert _decls("c", code) == [
-        ("alloc_buf", 1, 2),
-        ("point", 2, 0),
-        ("no_args", 3, 0),
-    ]
+    assert _decls("c", code) == [("alloc_buf", 1, 2), ("point", 2, 0), ("no_args", 3, 0)]
 
 
 def test_cpp_method_names() -> None:
@@ -170,9 +166,7 @@ def test_unparseable_file_is_not_analyzed(tmp_path: Path) -> None:
     assert [(e["reason"], e["language"]) for e in engine._not_analyzed] == [("parse_error", "c")]
 
 
-def test_error_at_top_level_with_recovered_functions_is_analyzed(
-    tmp_path: Path,
-) -> None:
+def test_error_at_top_level_with_recovered_functions_is_analyzed(tmp_path: Path) -> None:
     """A file whose whole body is one ERROR node, but with functions inside it, is analyzed.
 
     Real headers do this when a macro breaks the top level (fmt's format.h).
@@ -272,14 +266,7 @@ def test_react_native_tree_does_not_fail_the_gate(tmp_path: Path) -> None:
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / rel).write_text(text)
     result = _cli(
-        tmp_path,
-        "--experimental",
-        "c-cpp",
-        "--fail-on",
-        "HIGH",
-        "--output",
-        "json",
-        "--quiet",
+        tmp_path, "--experimental", "c-cpp", "--fail-on", "HIGH", "--output", "json", "--quiet"
     )
     assert result.returncode == 0, result.stdout + result.stderr
     for header in ("AppDelegate.h", "RCTBridgeModule.h", "TurboBridge.h"):
