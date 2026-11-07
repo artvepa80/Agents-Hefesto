@@ -41,7 +41,7 @@ PRO and OMEGA features ship in the private distribution, not in this tree.
 ## Key Facts
 
 - **Version:** 4.21.0
-- **Tests:** 531 across 38 test files
+- **Tests:** the suite lives under `tests/`. Run it; this file does not keep a count.
 - **Languages:** Python (native AST), TypeScript, JavaScript, Java, Go, Rust, C# (TreeSitter — requires `pip install "hefesto-ai[multilang]"`)
 - **DevOps:** YAML, Terraform, Shell, Dockerfile, SQL, COBOL, PowerShell, JSON, TOML, Makefile, Groovy
 - **Cloud:** CloudFormation, ARM Templates, Helm Charts, Serverless Framework
