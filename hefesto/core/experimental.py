@@ -14,7 +14,7 @@ DEFINITION = (
 # name -> what it turns on
 FEATURES: Dict[str, str] = {
     "c-cpp": "analyze C and C++ files (.c, .h, .cpp, .cc, .cxx, .c++, .hpp, .hh, .hxx)",
-    "lang-security": "run the C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)",
+    "lang-security": "run the C#, Go, Rust, C and C++ security rules (docs/ANALYSIS_RULES.md)",
 }
 
 # name -> release where it became on by default (a warning, not an error)

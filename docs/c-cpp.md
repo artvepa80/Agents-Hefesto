@@ -44,8 +44,11 @@ grows with the size of the largest file, not with the number of files.
 
 The generic analyzers that run on every tree-sitter language: complexity
 (`HIGH_COMPLEXITY`, `VERY_HIGH_COMPLEXITY`), size (`LONG_FUNCTION`,
-`LONG_PARAMETER_LIST`, `GOD_CLASS`) and nesting (`DEEP_NESTING`). There are no
-C/C++-specific security rules yet.
+`LONG_PARAMETER_LIST`, `GOD_CLASS`) and nesting (`DEEP_NESTING`). With `--experimental c-cpp,lang-security`, the
+C/C++ security rules CC001-CC004 also run: `gets`, unbounded copies
+(`strcpy`/`strcat`, `sprintf` with `%s`, `scanf` `%s`), a non-constant format with
+no arguments after it (`printf(buf)`), and `system`/`popen` with a non-literal command. See the rule
+table in `docs/ANALYSIS_RULES.md`. They are experimental.
 
 Functions are named as declared: `alloc_buf`, `Widget::size`,
 `Widget::~Widget`, `operator+`. Structs, unions, enums and classes use their

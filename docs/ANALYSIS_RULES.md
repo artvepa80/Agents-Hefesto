@@ -1148,9 +1148,9 @@ These rules are an experimental feature, named `lang-security`, and are off by d
 
 **Memory and time:** the rules walk the syntax tree the generic checks already built, so they add no parser. Peak resident memory of the `hefesto` process, off / on, `--severity LOW --output json`, one run each: Newtonsoft.Json `0a2e291` 106 / 107 MB (9.9 / 9.3 s), gin 73 / 73 MB (2.6 / 2.6 s), ripgrep 83 / 83 MB (3.8 / 3.9 s).
 
-With the feature on, these rules run on `.cs`, `.go` and `.rs` files when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. The .NET test-project paths apply to these rules only; the other checks keep the SEC-03 test paths. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. The rules are new and have not been measured on a labelled corpus; treat them as experimental.
+With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C and C++ files when `--experimental c-cpp` is also on (`--experimental c-cpp,lang-security`), when the `[multilang]` extra is installed. They read the syntax tree, so text inside string literals and comments never matches. Files under test paths are skipped: `test`/`tests`/`__tests__` directories and test file names (see SEC-03), plus .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`) and C# files named `*Tests.cs` or `*Test.cs`. The .NET test-project paths apply to these rules only; the other checks keep the SEC-03 test paths. When a rule and the generic SQL or command check report the same line, only the rule's finding is kept. A labelled measurement on 2026-11-03 (public pinned corpora, recorded seed, labels A and B) is summarised in the rule notes and CHANGELOG; several rules are below the published bar or were narrowed, so they stay experimental until a rule meets the bar in `docs/MEASUREMENT_METHOD.md`.
 
-**Measured** means: for each rule, its findings on a labelled corpus were checked by hand and reported as `correct/n`. A precision claim of 95% or more needs n ≥ 59 findings for that rule with all of them correct (the smallest n where 0 errors gives a one-sided 95% lower bound of at least 95%). Until a rule is measured, it is experimental.
+**Measured** means: for each rule, its findings on a labelled corpus were checked by hand and reported as `correct/n`. A precision claim of 95% or more needs n ≥ 59 findings for that rule with all of them correct (the smallest n where 0 errors gives a one-sided 95% lower bound of at least 95%). Until a rule is measured, it is experimental. The method (held-out repositories, recorded seed, labels A and B, second labeller) is in `docs/MEASUREMENT_METHOD.md`; the published number is label B.
 
 | Rule | What it reports | Issue type | Severity | CWE |
 |------|-----------------|------------|----------|-----|
@@ -1164,6 +1164,10 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files when the `[
 | RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
 | RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
 | RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
+| CC001 | `gets(...)` (also `std::gets`) | `UNSAFE_BUFFER_FUNCTION` | HIGH | 242 |
+| CC002 | `strcpy`/`strcat`/`wcscpy`/`wcscat` whose source is not a constant string (literal, ALL-CAPS macro) and whose length is not taken with `strlen`/`strnlen` in the three statements before; `sprintf`/`vsprintf` with a literal format holding `%s` without precision; `scanf` family with `%s` or `%[` without a width | `UNSAFE_BUFFER_FUNCTION` | MEDIUM | 120 |
+| CC003 | `printf` family (`printf`, `fprintf`, `sprintf`, `snprintf`, `syslog`, `err`/`warn`...) called with a format that is not a constant string and **no arguments after it** (`printf(buf)`, `fprintf(f, msg)`, `syslog(p, msg)`). Literals, ALL-CAPS macro names, `"lit" + n`, `c ? "a" : "b"` and `_("lit")`/`gettext("lit")` count as constant; a format forwarded by a variadic or `va_list` wrapper is skipped | `FORMAT_STRING_RISK` | MEDIUM | 134 |
+| CC004 | `system`/`popen` (also `std::system`, `_popen`, `_wsystem`) whose command is not a string literal | `COMMAND_INJECTION` | HIGH | 78 |
 
 RS001 is LOW, so the default `--severity MEDIUM` hides it; use `--severity LOW` to list every `unsafe` block.
 
@@ -1183,6 +1187,8 @@ Known limits:
   |----------|------|------------|-----------------|-----|
   | Python | `PICKLE_USAGE` | `PICKLE_USAGE` | `import pickle` / `cPickle` | 502 |
   | C# | CS002 | `INSECURE_DESERIALIZATION` | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | 502 |
+
+C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::f(...)`) count; `obj.f(...)` and `p->f(...)` do not. Macros are not expanded, so a call hidden behind a macro is not seen, and a macro named like a function (`#define strcpy safe_strcpy`) is still reported. Bounded calls (`snprintf`, `strncpy`, `strlcpy`, `%31s`, `%.8s`) and literal commands (`system("ls")`) are not reported.
 
 Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
 

@@ -297,9 +297,9 @@ pointing to the install command (also exposed via
 
 ³ C and C++ are experimental and off by default: turn them on with
 `--experimental c-cpp` (or `experimental: [c-cpp]` in `.hefesto.yaml`). The generic complexity and size checks run on
-them; they are not counted in the format total below. C/C++ security rules
-(CC001-CC004) ship in the same release under `--experimental c-cpp,lang-security`
-(see docs/ANALYSIS_RULES.md). `.h` headers are read as C unless they contain C++-only
+them; with `--experimental c-cpp,lang-security` the C/C++ security rules
+CC001-CC004 also run (docs/ANALYSIS_RULES.md). They are not counted in the
+format total below. `.h` headers are read as C unless they contain C++-only
 syntax or sit next to a C++ source with the same name; headers with
 Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
@@ -714,7 +714,7 @@ copybook_paths:             # --copybook-path (COBOL copybook directories outsid
 include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
 experimental:               # --experimental (comma-separated; the CLI value replaces this list)
   - c-cpp                   # C and C++ files (docs/c-cpp.md)
-  - lang-security           # C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)
+  - lang-security           # C#, Go, Rust, C and C++ security rules (docs/ANALYSIS_RULES.md)
 ```
 
 - **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,

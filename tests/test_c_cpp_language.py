@@ -359,3 +359,76 @@ def test_cpp_marker_does_not_scan_siblings(tmp_path: Path, monkeypatch) -> None:
 
     monkeypatch.setattr(Path, "is_file", scanned)
     assert LanguageDetector.detect(header, text) == Language.CPP
+
+
+def test_c_cpp_rule_families_are_disjoint() -> None:
+    """A name belongs to one family, so the check order cannot hide a second rule."""
+    from hefesto.analyzers.lang_security_rules import (
+        _CC_COPY,
+        _CC_FORMAT,
+        _CC_SCANF,
+        _CC_SHELL,
+    )
+
+    families = {
+        "copy": set(_CC_COPY),
+        "scanf": set(_CC_SCANF),
+        "format": set(_CC_FORMAT),
+        "shell": set(_CC_SHELL),
+    }
+    names = list(families)
+    for index, left in enumerate(names):
+        for right in names[index + 1 :]:
+            overlap = families[left] & families[right]
+            assert overlap == set(), (left, right, overlap)
+    assert "gets" not in set().union(*families.values())
+
+
+def test_qualification_and_rule_order() -> None:
+    """One ``::`` and one ``std::`` strip. Scanf stays before format, then shell."""
+    from hefesto.analyzers.lang_security_rules import (
+        _cc_func_name,
+        _cc_rule,
+        _CcScope,
+    )
+    from hefesto.core.ast.generic_ast import GenericNode, NodeType
+
+    def node(ts_type: str, text: str, children: list | None = None) -> GenericNode:
+        return GenericNode(
+            type=NodeType.UNKNOWN,
+            name=None,
+            line_start=1,
+            line_end=1,
+            column_start=0,
+            column_end=0,
+            text=text,
+            children=children or [],
+            metadata={"treesitter_type": ts_type, "named": True},
+        )
+
+    def call(func_type: str, func_text: str) -> GenericNode:
+        return node(
+            "call_expression",
+            func_text + "(b)",
+            [
+                node(func_type, func_text),
+                node("argument_list", "(b)", [node("identifier", "b")]),
+            ],
+        )
+
+    assert _cc_func_name(call("identifier", "gets")) == "gets"
+    assert _cc_func_name(call("qualified_identifier", "::std::gets")) == "gets"
+    assert _cc_func_name(call("qualified_identifier", "std::std::gets")) is None
+    assert _cc_func_name(call("qualified_identifier", "foo::gets")) is None
+    assert _cc_func_name(call("field_expression", "obj.gets")) is None
+
+    scope = _CcScope(frozenset(), "")
+    buf = node("identifier", "d")
+    src = node("identifier", "s")
+    fmt_s = node("string_literal", '"%s"')
+    assert _cc_rule("gets", [], scope) == "CC001"
+    assert _cc_rule("scanf", [fmt_s, buf], scope) == "CC002"
+    assert _cc_rule("sprintf", [buf, fmt_s, src], scope) == "CC002"
+    assert _cc_rule("printf", [src], scope) == "CC003"
+    assert _cc_rule("printf", [src, buf], scope) is None
+    assert _cc_rule("system", [src], scope) == "CC004"
