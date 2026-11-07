@@ -389,6 +389,9 @@ class TreeSitterParser(CodeParser):
         """
         Extract name from node with smart inference for arrow functions.
 
+        C and C++ ``function_definition`` and class-like specifiers are named
+        from their declarator or tag before this list.
+
         Priority order:
         1. The grammar's ``name`` field (C# ``Task Foo()`` -> ``Foo``,
            Go ``func (s *S) Run()`` -> ``Run``)
