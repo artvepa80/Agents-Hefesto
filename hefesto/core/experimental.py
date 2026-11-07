@@ -13,6 +13,7 @@ DEFINITION = (
 
 # name -> what it turns on
 FEATURES: Dict[str, str] = {
+    "c-cpp": "analyze C and C++ files (.c, .h, .cpp, .cc, .cxx, .c++, .hpp, .hh, .hxx)",
     "lang-security": "run the C#, Go and Rust security rules (docs/ANALYSIS_RULES.md)",
 }
 

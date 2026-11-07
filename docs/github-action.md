@@ -88,7 +88,7 @@ reason applies to the CLI installed with `hefesto-ai[multilang]`: with the
 pack installed, a file whose grammar cannot be loaded (offline, or an empty or
 damaged grammar cache) is listed as not analyzed and fails `--fail-on`.
 To fix it: run once with network access (the grammar cache is per pack version), or
-`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`,
 or pass `--allow-not-analyzed`.
 
 A file that is not valid UTF-8 is not in this group: it is read with the

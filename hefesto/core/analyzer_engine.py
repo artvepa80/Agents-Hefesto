@@ -153,6 +153,8 @@ _SUFFIX_EXCLUDES = frozenset({".egg-info"})
 # analyzes it). Only JavaScript files are affected; a Go or PHP ``vendor/``
 # tree stays in scope.
 _JS_SUFFIXES = (".js", ".mjs", ".cjs")
+# Files of the experimental ``c-cpp`` feature (globs of the C and C++ specs).
+_C_CPP_SUFFIXES = frozenset({".c", ".h", ".cpp", ".cc", ".cxx", ".c++", ".hpp", ".hh", ".hxx"})
 # Directories that only ever hold copied or installed third-party packages.
 _VENDOR_DIRS = frozenset({"vendor", "vendors", "bower_components", "jspm_packages"})
 # Web static-asset roots, and the library directories that hold copied
@@ -188,6 +190,8 @@ def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
             f"tree-sitter grammar '{entry.get('grammar')}' could not be loaded"
             f" ({entry.get('exception')}; offline, or an empty or damaged grammar cache?)"
         )
+    if entry.get("reason") == "parse_error":
+        return "the grammar could not parse any declaration in it"
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
     return f"{what} ({entry.get('exception')})"
 
@@ -681,18 +685,14 @@ class AnalyzerEngine:
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():
-            try:
-                txt = path.read_text(encoding="utf-8", errors="ignore")
-            except Exception:
-                txt = None
-            return [path] if LanguageDetector.is_supported(path, txt) else []
+            return [path] if self._single_file_supported(path) else []
 
         supported_files: List[Path] = []
 
         # Use registry-backed globs to discover files (Dockerfile.*, *.tf.json, etc.)
         for glob in LanguageDetector.get_supported_file_globs():
             for file in path.rglob(glob):
-                if excluded(file) or not file.is_file():
+                if excluded(file) or not self._discoverable(file):
                     continue
                 supported_files.append(file)
 
@@ -712,6 +712,36 @@ class AnalyzerEngine:
         for file in supported_files:
             unique.setdefault(_real_path(file), file)
         return list(unique.values())
+
+    def _single_file_supported(self, path: Path) -> bool:
+        """A file named on the command line, with shebang-aware detection."""
+        try:
+            txt: Optional[str] = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            txt = None
+        return LanguageDetector.is_supported(path, txt) and self._experiment_allows(path)
+
+    def _discoverable(self, file_path: Path) -> bool:
+        """A regular file that no experimental gate holds back."""
+        return file_path.is_file() and self._experiment_allows(file_path)
+
+    def _experiment_allows(self, file_path: Path) -> bool:
+        """C and C++ files are found only with ``--experimental c-cpp``.
+
+        An Objective-C ``.h`` is then left out like any unrecognized file.
+        """
+        suffix = file_path.suffix.lower()
+        if suffix not in _C_CPP_SUFFIXES:
+            return True
+        if "c-cpp" not in self.experimental:
+            return False
+        if suffix != ".h":
+            return True
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return False
+        return LanguageDetector.detect(file_path, text) != Language.UNKNOWN
 
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
@@ -867,6 +897,16 @@ class AnalyzerEngine:
                 tree = parser.parse(code, str(file_path))
             except Exception as exc:
                 self._record_parser_failure(file_path, language, exc)
+                return None
+            if getattr(tree, "unparseable", False):
+                self._not_analyzed.append(
+                    {
+                        "path": str(file_path),
+                        "language": language.value,
+                        "reason": "parse_error",
+                        "exception": "UnparseableSource",
+                    }
+                )
                 return None
 
             # LOC already calculated above
