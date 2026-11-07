@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `.h` classification stays under the medium complexity threshold
+
+- The `.h` classifier was split so its complexity stays below the medium threshold. Classification is unchanged: `#import` alone stays C, C++ syntax is decided before any sibling lookup, and an error while checking one sibling suffix leaves the header C.
+
 ### Added — C and C++ files are analyzed (experimental, opt-in)
 
 - New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml` turn on experimental features: off by default, results not measured yet, and a run without them gives unchanged output. The first name is `c-cpp`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for it and the MCP server never enables it.

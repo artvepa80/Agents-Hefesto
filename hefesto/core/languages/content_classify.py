@@ -150,26 +150,29 @@ _OBJC_MARKERS = re.compile(
 _CPP_SOURCE_SUFFIXES = (".cpp", ".cc", ".cxx", ".c++")
 
 
+def _cpp_sibling(file_path: Path) -> bool:
+    """True when a C++ source with the same stem sits next to the header."""
+    try:
+        return any(file_path.with_suffix(suffix).is_file() for suffix in _CPP_SOURCE_SUFFIXES)
+    except OSError:
+        return False
+
+
 def _header_language(file_path: Path, content: Optional[str]) -> Language:
     """C, C++ or UNKNOWN (Objective-C, skipped) for a ``.h`` header.
 
     UNKNOWN when the text (comments and literals removed) has Objective-C
-    syntax: ``@interface``, ``@protocol``, ``@implementation`` or ``@end`` at
-    the start of a line, ``#import``, or ``NS_ASSUME_NONNULL_BEGIN``.
+    syntax at the start of a line: ``@interface``, ``@protocol``,
+    ``@implementation``, ``@end``, ``@class``, ``@property`` or
+    ``NS_ASSUME_NONNULL_BEGIN``. ``#import`` alone does not count.
     C++ when the text (comments and literals removed) has C++-only syntax,
     or when a C++ source with the same stem sits next to it; C otherwise.
     """
     code = _C_NOISE.sub(" ", content) if content else ""
     if _OBJC_MARKERS.search(code):
         return Language.UNKNOWN
-    if _CPP_MARKERS.search(code):
+    if _CPP_MARKERS.search(code) or _cpp_sibling(file_path):
         return Language.CPP
-    try:
-        for suffix in _CPP_SOURCE_SUFFIXES:
-            if file_path.with_suffix(suffix).is_file():
-                return Language.CPP
-    except OSError:
-        pass
     return Language.C
 
 

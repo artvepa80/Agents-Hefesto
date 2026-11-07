@@ -100,7 +100,11 @@ def test_c_function_and_struct_names() -> None:
         "struct point { int x; };\n"
         "int no_args(void) { return 0; }\n"
     )
-    assert _decls("c", code) == [("alloc_buf", 1, 2), ("point", 2, 0), ("no_args", 3, 0)]
+    assert _decls("c", code) == [
+        ("alloc_buf", 1, 2),
+        ("point", 2, 0),
+        ("no_args", 3, 0),
+    ]
 
 
 def test_cpp_method_names() -> None:
@@ -166,7 +170,9 @@ def test_unparseable_file_is_not_analyzed(tmp_path: Path) -> None:
     assert [(e["reason"], e["language"]) for e in engine._not_analyzed] == [("parse_error", "c")]
 
 
-def test_error_at_top_level_with_recovered_functions_is_analyzed(tmp_path: Path) -> None:
+def test_error_at_top_level_with_recovered_functions_is_analyzed(
+    tmp_path: Path,
+) -> None:
     """A file whose whole body is one ERROR node, but with functions inside it, is analyzed.
 
     Real headers do this when a macro breaks the top level (fmt's format.h).
@@ -266,7 +272,14 @@ def test_react_native_tree_does_not_fail_the_gate(tmp_path: Path) -> None:
         (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / rel).write_text(text)
     result = _cli(
-        tmp_path, "--experimental", "c-cpp", "--fail-on", "HIGH", "--output", "json", "--quiet"
+        tmp_path,
+        "--experimental",
+        "c-cpp",
+        "--fail-on",
+        "HIGH",
+        "--output",
+        "json",
+        "--quiet",
     )
     assert result.returncode == 0, result.stdout + result.stderr
     for header in ("AppDelegate.h", "RCTBridgeModule.h", "TurboBridge.h"):
@@ -291,3 +304,71 @@ def test_only_objective_c_headers_match_the_default_run(tmp_path: Path) -> None:
     assert "Gate failure: no files were analyzed (exit 1)" in on.stdout
     assert _normalized(on.stdout) == _normalized(default.stdout)
     assert on.stderr == default.stderr
+
+
+def _measured_complexity(relative_path: str, name: str) -> int:
+    """Complexity of the one function named ``name``, from the analyzer."""
+    from hefesto.analyzers.complexity import ComplexityAnalyzer
+    from hefesto.core.parsers.python_parser import PythonParser
+
+    path = Path(__file__).resolve().parents[1] / relative_path
+    code = path.read_text(encoding="utf-8")
+    tree = PythonParser().parse(code, relative_path)
+    found = [node for node in tree.get_functions() if node.name == name]
+    assert len(found) == 1, name
+    analyzer = ComplexityAnalyzer()
+    score = analyzer._calculate_complexity(found[0])
+    for issue in analyzer.analyze(tree, relative_path, code):
+        if issue.function_name == name:
+            assert issue.metadata["complexity"] == score
+    return score
+
+
+def test_header_language_stays_below_medium_complexity() -> None:
+    from hefesto.analyzers.complexity import _THRESHOLDS
+    from hefesto.core.analysis_models import AnalysisIssueSeverity
+
+    medium = _THRESHOLDS[AnalysisIssueSeverity.MEDIUM]
+    score = _measured_complexity("hefesto/core/languages/content_classify.py", "_header_language")
+    assert score < medium, (score, medium)
+
+
+def test_import_alone_stays_c(tmp_path: Path) -> None:
+    """``#import`` by itself is C. Objective-C needs a line-start marker."""
+    text = '#import "Other.h"\nint f(void);\n'
+    path = tmp_path / "plain.h"
+    path.write_text(text)
+    assert LanguageDetector.detect(path, text) == Language.C
+
+
+def test_oserror_on_first_sibling_suffix_keeps_header_c(tmp_path: Path, monkeypatch) -> None:
+    """An OSError on ``.cpp`` stops the scan. A later ``.cc`` sibling stays unseen."""
+    header = tmp_path / "widget.h"
+    text = "int w(void);\n"
+    header.write_text(text)
+    (tmp_path / "widget.cc").write_text("int w() { return 1; }\n")
+    real_is_file = Path.is_file
+
+    def scanned(self: Path) -> bool:
+        if self.suffix == ".cpp":
+            raise OSError("denied")
+        return real_is_file(self)
+
+    monkeypatch.setattr(Path, "is_file", scanned)
+    assert LanguageDetector.detect(header, text) == Language.C
+
+
+def test_cpp_marker_does_not_scan_siblings(tmp_path: Path, monkeypatch) -> None:
+    """C++ syntax wins before any sibling lookup, including one that would fail."""
+    header = tmp_path / "widget.h"
+    text = "class Foo { int x; };\n"
+    header.write_text(text)
+    real_is_file = Path.is_file
+
+    def scanned(self: Path) -> bool:
+        if self.suffix in {".cpp", ".cc", ".cxx", ".c++"}:
+            raise OSError("sibling scan")
+        return real_is_file(self)
+
+    monkeypatch.setattr(Path, "is_file", scanned)
+    assert LanguageDetector.detect(header, text) == Language.CPP
