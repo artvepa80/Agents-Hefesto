@@ -16,7 +16,7 @@ Java
     field or parameter declared ``Runtime``) and ``eval`` on a
     ``ScriptEngine`` (declared type, or ``getEngineBy*()`` result). A class's
     own ``exec`` method is not code execution.
-Go, Rust, C#
+Go, Rust, C#, C, C++
     No eval/exec builtin exists, so nothing is reported.
 """
 

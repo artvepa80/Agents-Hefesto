@@ -4,6 +4,13 @@ Utility scripts for development and operations.
 
 ## Available Scripts
 
+### `release_gate.py`
+Runs `hefesto analyze --output json` with no flags from main and from the branch on pinned corpora (`release_gate_corpora.txt`, fetched by SHA and only read). It ignores timing fields and exits 1 on any difference. CI: `.github/workflows/release-gate.yml`.
+
+```bash
+python scripts/release_gate.py --base origin/main --head HEAD
+```
+
 ### `test_e2e.sh`
 End-to-end testing suite. Run before launch or after major changes.
 

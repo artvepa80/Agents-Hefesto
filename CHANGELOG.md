@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-<!-- After #225, #226 and #230 merge into this branch, fold their Unreleased entries into [4.21.0] before cutting the tag. Do not invent that fold before they merge, and do not describe those changes as missing from 4.21.0. JCL (#227) is 4.22 and stays out of [4.21.0]. -->
-
 ## [4.21.0] - 2026-11-07
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
@@ -18,7 +16,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1. **Python 3.11 or newer is required.** The Action now stops with an error when the runner's `python3` is 3.10 (for example on `ubuntu-22.04`). Add `actions/setup-python` with Python 3.11 or newer before the Action, or pin `artvepa80/Agents-Hefesto@v4.20.4`. On Python 3.10, `pip` keeps installing 4.20.x.
 2. **A file whose tree-sitter grammar cannot be loaded now fails `--fail-on` (exit 1).** Such a file used to be skipped as a parse error, so the gate passed over code it never checked. It is now listed in `meta.not_analyzed` with `reason: grammar_unavailable`, and the not-analyzed gate fails the run; `--allow-not-analyzed` opts out. The Action installs the base package without `[multilang]`, so a missing grammar pack is still a skip with an install hint there. The case that changes is a CLI or hook run with `[multilang]` installed, an empty grammar cache and no network.
 
+C and C++ files, and the security rules for C#, Go, Rust, C and C++, stay off. A workflow on `@v4` does not enable them. They run only with `--experimental` (`c-cpp`, `lang-security`, or both). A run that does not pass those names keeps the same output as before.
+
 Also in this release: tree-sitter function and class names are no longer cut or shifted after a UTF-8 BOM or other non-ASCII text; C# methods and Go methods with a receiver are reported under their declared name instead of their return type or `<anonymous>`; Rust `impl` blocks and Go `type` declarations carry their type's name. Finding messages change for those declarations (line numbers, rule types and counts do not), so pull requests that were already reviewed may get those comments once more. Details below.
+
+### Added — experimental features, off by default
+
+- New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml`. Off by default: a run without them gives unchanged output. The names in this release are `c-cpp` and `lang-security`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for them and the MCP server never enables them.
+
+### Added — C and C++ files (`c-cpp`, experimental)
+
+- Everything in this section applies only with `--experimental c-cpp`. Without it, C and C++ files are not found.
+- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks. They are not counted in the 22-format total.
+- A `.h` header is C++ when its code (comments and literals removed) has C++-only syntax (`class`/`namespace` at line start, `template <`, `std::`, `using namespace`, an access label, `#include <vector>`-style includes) or a C++ source with the same name sits next to it; otherwise it is C. `extern "C"` alone keeps a header C.
+- A `.h` header with Objective-C syntax (`@interface`, `@protocol`, `@implementation`, `@end`, `@class`, `@property` or `NS_ASSUME_NONNULL_BEGIN` at line start; comments and literals removed; `#import` alone does not count) is treated as an unrecognized file, so it is never analyzed as C or C++, never reported as not analyzed and never fails the gate. Objective-C and C++ syntax together count as Objective-C.
+- Functions are named as declared (`Widget::size`, `Widget::~Widget`, `operator+`), types by their tag (`cache<double>`); `f(void)` has 0 parameters; a macro before `namespace` is not reported as a function.
+- A file with parse errors is analyzed when any declaration was recovered; a file where none was recovered goes to `meta.not_analyzed` with `reason: parse_error`.
+- With `--experimental c-cpp` and `[multilang]` installed, repositories that contain C or C++ files get new findings from these checks, and offline runs with an empty grammar cache report those files as not analyzed (`grammar_unavailable`), which fails `--fail-on` unless `--allow-not-analyzed` is passed. The Action installs the base package and is unchanged.
+- Peak memory with `c-cpp` on: zlib 42→107 MB, fmt 39→122 MB, react-native 175→196 MB (see `docs/c-cpp.md`).
+- On zlib `51b7f2ab` and fmt `12391371`, all 74 and 70 C/C++ files were analyzed (no `parse_error`). See `docs/c-cpp.md`.
+
+### Added — security rules for C#, Go, Rust, C and C++ (`lang-security`, experimental)
+
+- Everything in this section runs only with `--experimental lang-security`. The C and C++ rules also need `--experimental c-cpp` (`--experimental c-cpp,lang-security`).
+- 10 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 MD5/SHA-1 (LOW inventory) or DES/TripleDES/RC2 (MEDIUM); GO001 shell `-c` with a built string, GO003 `crypto/md5`/`sha1` (LOW inventory) or `crypto/des`/`rc4` (MEDIUM), GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice.
+- With both flags, four more rules read the syntax tree of C and C++ files (needs the `[multilang]` extra): CC001 `gets` (HIGH, CWE-242), CC002 unbounded copy or write: `strcpy`/`strcat` with a non-literal source, `sprintf` with `%s` and no precision, `scanf` `%s` with no width (MEDIUM, CWE-120), CC003 a non-constant format with no arguments after it, such as `printf(buf)` (MEDIUM, CWE-134), CC004 `system`/`popen` with a command that is not a literal (HIGH, CWE-78). CC002 and CC003 treat ALL-CAPS macros, `"lit" + n`, ternaries of literals and gettext literals as constant. CC003 skips formats forwarded by variadic or `va_list` wrappers. CC002 skips a copy whose source length was checked with `strlen` just before. A CC004 finding replaces the generic command finding on the same line.
+- Test paths are skipped for these rules, including .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs`). Those .NET paths apply only to these rules. The other checks keep their existing test paths.
+- Measured on pinned repositories (2026-11-03): MD5/SHA-1 at MEDIUM was refuted (0/20 CS004 and 1/24 GO003 hits needed action), so they are LOW inventory now. GO002 (Go SQL built from strings) was dropped because 57/57 hits were non-actionable; see `docs/ANALYSIS_RULES.md`.
+- New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY`, `UNSAFE_CODE`, `UNSAFE_BUFFER_FUNCTION` and `FORMAT_STRING_RISK`. CWE names for 120, 134, 242, 295, 327 and 843 added to the SARIF taxonomy.
+- Docs: rule table in `docs/ANALYSIS_RULES.md`, `docs/c-cpp.md`. Tests: `tests/test_lang_security_rules.py`, `tests/test_c_cpp_security_rules.py`.
+
+### Changed — test paths for the experimental language rules
+
+- .NET test projects are test code for the experimental language-security rules: a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs` (case-sensitive, so `Latest.cs` is not test code). `is_dotnet_test_path` is used only by those rules. Other checks keep their existing test paths.
+
+### Changed — C and C++ helpers stay under the medium complexity threshold
+
+- The `.h` classifier and the C/C++ helpers `_cc_func_name`, `_cc_format_rule` and `_cc_rule` were split so each stays below the medium complexity threshold. Header classification is unchanged: `#import` alone stays C, C++ syntax is decided before any sibling lookup, and an error while checking one sibling suffix leaves the header C. Qualified-name handling, and which calls the rules report, are unchanged.
+
+### Added — release gate: no-flag output must not change
+
+- `scripts/release_gate.py` and the `Release Gate` workflow run main and the branch with no flags on five pinned corpora (Python, JavaScript, Go, C, Rust). They ignore timing fields and fail on any difference in findings, counts or exit code. Opt-in experimental rules cannot change default output unnoticed.
+- `docs/MEASUREMENT_METHOD.md`: how a rule earns a precision claim. Held-out pinned repositories, a recorded random seed, per-repository and per-root-cause counts, label B (actionable) with n ≥ 59 and 0 errors (exact one-sided), Wilson as context, and a second labeller on a blind subset.
+
 
 ### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
 
