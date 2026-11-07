@@ -17,6 +17,8 @@ class ParserFactory:
         Language.GO: "go",
         Language.RUST: "rust",
         Language.CSHARP: "c_sharp",
+        Language.C: "c",
+        Language.CPP: "cpp",
     }
 
     @staticmethod
