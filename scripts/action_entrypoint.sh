@@ -31,6 +31,8 @@ SARIF_ENABLED=$(is_true "${INPUT_SARIF:-false}")
 UPLOAD_SARIF=$(is_true "${INPUT_UPLOAD_SARIF:-true}")
 ALLOW_NO_FILES=$(is_true "${INPUT_ALLOW_NO_FILES:-false}")
 ALLOW_NOT_ANALYZED=$(is_true "${INPUT_ALLOW_NOT_ANALYZED:-false}")
+# Same true/1/yes rule as the install step. This reports the input only.
+MULTILANG=$(is_true "${INPUT_MULTILANG:-false}")
 if [ "$SARIF_ENABLED" != "1" ]; then
     UPLOAD_SARIF=0
 fi
@@ -58,6 +60,7 @@ echo "Target: ${TARGET}"
 echo "Fail On: ${FAIL_ON}"
 echo "Allow no files: $([ "$ALLOW_NO_FILES" = "1" ] && echo "yes (--allow-no-files)" || echo no)"
 echo "Allow not analyzed: $([ "$ALLOW_NOT_ANALYZED" = "1" ] && echo "yes (--allow-not-analyzed)" || echo no)"
+echo "Multilang input: $([ "$MULTILANG" = "1" ] && echo yes || echo no)"
 echo "Min Severity: ${SEVERITY}"
 echo "Format: ${FORMAT}"
 echo "Telemetry: ${HEFESTO_TELEMETRY}"

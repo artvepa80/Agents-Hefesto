@@ -227,14 +227,44 @@ def test_stale_sarif_file_is_removed_before_the_run(tmp_path: Path) -> None:
     assert "sarif_file" not in _outputs(r)
 
 
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, "no"),
+        ("", "no"),
+        ("false", "no"),
+        ("0", "no"),
+        ("no", "no"),
+        ("off", "no"),
+        ("multilang", "no"),
+        ("true", "yes"),
+        ("TRUE", "yes"),
+        ("1", "yes"),
+        ("yes", "yes"),
+        (" true ", "yes"),
+    ],
+)
+def test_multilang_input_is_logged_without_claiming_install(
+    tmp_path: Path, value: Optional[str], expected: str
+) -> None:
+    """The log reports the normalized input. It does not say the extra is installed."""
+    result = _run(tmp_path, {"multilang": value})
+    assert result["proc"].returncode == 0, result["proc"].stdout + result["proc"].stderr
+    assert f"Multilang input: {expected}" in result["proc"].stdout
+    assert "installed" not in result["proc"].stdout.lower()
+    assert "[multilang]" not in result["proc"].stdout
+
+
 def test_action_yml_passes_every_input_and_uploads_sarif() -> None:
     yaml = pytest.importorskip("yaml")
     action = yaml.safe_load((ENTRYPOINT.parents[1] / "action.yml").read_text(encoding="utf-8"))
     assert action["runs"]["using"] == "composite"
     steps = action["runs"]["steps"]
     run_step = next(step for step in steps if step.get("id") == "analyze")
+    install_step = next(step for step in steps if step.get("name") == "Install HefestoAI")
     for name in action["inputs"]:
         assert run_step["env"][f"INPUT_{name.upper()}"] == "${{ inputs.%s }}" % name
+    assert install_step["env"]["INPUT_MULTILANG"] == "${{ inputs.multilang }}"
     upload = next(step for step in steps if "upload-sarif" in step.get("uses", ""))
     assert upload["uses"] == "github/codeql-action/upload-sarif@v4"
     assert "always()" in upload["if"]

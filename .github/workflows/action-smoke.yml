@@ -77,3 +77,36 @@ jobs:
         run: |
           test "${{ steps.sarif_scan.outputs.sarif_file }}" = "smoke.sarif"
           python3 -c 'import json; log = json.load(open("smoke.sarif")); assert log["version"] == "2.1.0"; r = log["runs"][0]["results"]; assert any(x["level"] == "error" for x in r), r; print("OK:", len(r), "SARIF results")'
+
+  # multilang: 'true' is opt-in. Not a required check: it downloads the
+  # TypeScript grammar from the network on a cold runner.
+  smoke-multilang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # Default (multilang off): the .ts file is skipped (parser unavailable),
+      # so no file is analyzed and the gate fails (exit 1), as in 4.20.x.
+      - name: Test Action (TypeScript, multilang off)
+        id: ts_off
+        uses: ./
+        with:
+          target: '.github/action-smoke/clean.ts'
+          fail_on: 'CRITICAL'
+        continue-on-error: true
+
+      - name: Test Action (TypeScript, multilang on)
+        id: ts_on
+        uses: ./
+        with:
+          target: '.github/action-smoke/clean.ts'
+          fail_on: 'CRITICAL'
+          multilang: 'true'
+        continue-on-error: true
+
+      - name: Verify multilang opt-in
+        if: always()
+        run: |
+          echo "multilang off: exit ${{ steps.ts_off.outputs.exit_code }}; on: exit ${{ steps.ts_on.outputs.exit_code }}"
+          test "${{ steps.ts_off.outputs.exit_code }}" = "1" || { echo "::error::multilang off must skip the .ts file (exit 1)"; exit 1; }
+          test "${{ steps.ts_on.outputs.exit_code }}" = "0" || { echo "::error::multilang on must analyze the .ts file (exit 0)"; exit 1; }

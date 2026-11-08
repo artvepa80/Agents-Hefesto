@@ -23,8 +23,9 @@ findings to GitHub code scanning as SARIF 2.1.0.
 
 The Action is a composite action with three steps:
 
-1. **Install HefestoAI**: `python3 -m venv $RUNNER_TEMP/hefesto-venv`, then
-   `pip install` of the Action's own checkout (the package is not pulled from
+1. **Install HefestoAI** (`scripts/action_install.sh`): `python3 -m venv
+   $RUNNER_TEMP/hefesto-venv`, then `pip install` of the Action's own checkout
+   (with the `[multilang]` extra when `multilang: 'true'`) (the package is not pulled from
    PyPI; its dependencies are). The virtualenv is only on `PATH` inside the
    Action, so later steps of the job keep their own `python`. Needs `python3`
    >= 3.11 on the runner; `ubuntu-latest` has it, otherwise add
@@ -58,6 +59,7 @@ That image is still in the repository for running the same entrypoint with
 | `sarif_file` | `hefesto.sarif` | Where the SARIF file is written (relative to the workspace) |
 | `upload_sarif` | `true` | With `sarif: true`, `false` writes the file without uploading it |
 | `sarif_category` | `hefesto` | Code scanning category (use one per Hefesto job in the same repository) |
+| `multilang` | `false` | Opt-in. `true`/`1`/`yes`: install the `[multilang]` extra too, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed (see below) |
 | `telemetry` | `0` | Opt-in anonymous telemetry, see the README |
 
 ### Runs that analyze no files
@@ -81,11 +83,13 @@ analyzed (exit 1)". In 4.20.0 such a file was dropped without a warning. Set
 `allow_not_analyzed: 'true'` to keep the old exit code; the file is still
 listed and warned about.
 
-The Action installs the base package without the `[multilang]` extra, so
-TypeScript, JavaScript, Java, Go, Rust and C# files are still skipped (parser
-unavailable), as before. The "tree-sitter grammar '<name>' could not be loaded"
-reason applies to the CLI installed with `hefesto-ai[multilang]`: with the
-pack installed, a file whose grammar cannot be loaded (offline, or an empty or
+By default the Action installs the base package without the `[multilang]`
+extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are skipped
+(parser unavailable), as before. Set `multilang: 'true'` to install the extra
+(opt-in; see "TypeScript, JavaScript, Java, Go, Rust and C#" below). The
+"tree-sitter grammar '<name>' could not be loaded" reason applies when the
+extra is installed (`multilang: 'true'`, or the CLI with
+`hefesto-ai[multilang]`): with the pack installed, a file whose grammar cannot be loaded (offline, or an empty or
 damaged grammar cache) is listed as not analyzed and fails `--fail-on`.
 To fix it: run once with network access (the grammar cache is per pack version), or
 `python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`,
@@ -94,6 +98,28 @@ or pass `--allow-not-analyzed`.
 A file that is not valid UTF-8 is not in this group: it is read with the
 `latin-1` fallback, analyzed, and listed as "decoded with fallback" (a
 `warning` notification in SARIF). Only its findings can fail the step.
+
+### TypeScript, JavaScript, Java, Go, Rust and C#
+
+`multilang: 'true'` makes the install step run
+`pip install "<action path>[multilang]"` instead of the base package. It is
+off by default, so existing `@v4` workflows keep their results: turning it on
+can add findings in those languages, and they count for `fail_on` like any
+other finding. The analysis log prints `Multilang input: yes` or
+`Multilang input: no` (true, 1, or yes, ignoring case and surrounding spaces).
+That line is the input value. It does not mean the extra was installed: the
+Docker image runs the analysis script and does not run the install step. The grammars are downloaded on the first run of a fresh
+runner, so the step needs network access to the grammar source; a file whose
+grammar cannot be downloaded or loaded is listed as not analyzed and fails
+`fail_on` unless `allow_not_analyzed: 'true'` is set.
+
+```yaml
+- uses: artvepa80/Agents-Hefesto@v4
+  with:
+    target: '.'
+    fail_on: 'CRITICAL'
+    multilang: 'true'
+```
 
 ## Outputs
 
