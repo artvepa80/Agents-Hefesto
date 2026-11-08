@@ -406,3 +406,18 @@ def test_quote_scan_runs_once_when_a_line_has_many_substitutions(monkeypatch) ->
     line = "; ".join(['x=$(cd "$D" && pwd)'] * 40)
     ShellAnalyzer()._check_unquoted_vars("script.sh", 1, line)
     assert calls["n"] == 1
+
+
+def test_repeated_rm_without_a_separator_classifies_each_index_once(monkeypatch) -> None:
+    """``(rm `` repeated has no ``$`` and no ``;|&``, so every match used to rescan the suffix."""
+    calls = {"n": 0}
+    orig = ShellAnalyzer._index_is_expansion
+
+    def wrapped(self, line, index):
+        calls["n"] += 1
+        return orig(self, line, index)
+
+    monkeypatch.setattr(ShellAnalyzer, "_index_is_expansion", wrapped)
+    line = "(rm " * 200
+    assert ShellAnalyzer()._check_unquoted_vars("s.sh", 1, line) == []
+    assert calls["n"] <= len(line)

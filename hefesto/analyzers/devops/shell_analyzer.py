@@ -434,24 +434,33 @@ class ShellAnalyzer:
         """``"rm"`` or ``"cd"`` if that command gets an unquoted expansion on this line.
 
         The quote scan runs once and keeps each substitution body separate.
-        A match uses only the outside-quote indexes of its own context.
+        Each context's argument scan is tabulated once; a match does not
+        walk the suffix again.
         """
         contexts, context_at = self._scan_quotes(line)
         outside_sets = [set(indexes) for indexes in contexts]
+        reaches = [self._argument_reaches_expansion(line, indexes) for indexes in contexts]
         for match in self._RM_OR_CD.finditer(line):
             context = context_at[match.start()] if context_at else 0
-            if self._rm_match_reports(line, match, contexts[context], outside_sets[context]):
+            if self._rm_match_reports(
+                line, match, contexts[context], outside_sets[context], reaches[context]
+            ):
                 return match.group(1)
         return None
 
     def _rm_match_reports(
-        self, line: str, match: re.Match, outside: List[int], outside_set: set
+        self,
+        line: str,
+        match: re.Match,
+        outside: List[int],
+        outside_set: set,
+        reaches: List[bool],
     ) -> bool:
         if match.start() not in outside_set:
             return False
         if not self._command_boundary(line, match.start(), outside_set):
             return False
-        return self._expansion_from(line, match.end(), outside)
+        return self._expansion_from(match.end(), outside, reaches)
 
     # POSIX operators and newline. ")" is handled apart from this string: only a
     # ")" that is outside quotes and substitutions ends a word. Space and tab are
@@ -518,16 +527,28 @@ class ShellAnalyzer:
             k -= 1
         return line[k + 1 : end]
 
-    def _expansion_from(self, line: str, start: int, outside: List[int]) -> bool:
+    def _argument_reaches_expansion(self, line: str, outside: List[int]) -> List[bool]:
+        """Whether each outside index sees an expansion before ``;``, ``&`` or ``|``.
+
+        Computed once from the end of the context. A later match only looks up
+        the first index at or after its arguments.
+        """
+        reaches = [False] * len(outside)
+        later = False
+        for pos in range(len(outside) - 1, -1, -1):
+            index = outside[pos]
+            if line[index] in ";&|":
+                later = False
+            elif self._index_is_expansion(line, index):
+                later = True
+            reaches[pos] = later
+        return reaches
+
+    def _expansion_from(self, start: int, outside: List[int], reaches: List[bool]) -> bool:
         pos = bisect.bisect_left(outside, start)
-        while pos < len(outside):
-            i = outside[pos]
-            if line[i] in ";&|":
-                return False
-            if self._index_is_expansion(line, i):
-                return True
-            pos += 1
-        return False
+        if pos >= len(outside):
+            return False
+        return reaches[pos]
 
     def _index_is_expansion(self, line: str, i: int) -> bool:
         if line[i] == "`":
