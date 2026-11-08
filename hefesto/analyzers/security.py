@@ -18,6 +18,8 @@ from pathlib import Path, PurePosixPath
 from typing import List, Tuple
 
 from hefesto.analyzers.eval_calls import find_eval_calls
+from hefesto.analyzers.lang_security_rules import LANGUAGES as _RULE_LANGUAGES
+from hefesto.analyzers.lang_security_rules import find_language_rule_issues, rule_lines
 from hefesto.analyzers.python_strings import (
     first_match_outside_strings,
     inside_string,
@@ -37,6 +39,11 @@ from hefesto.core.safe_parse import parse_or_none
 # ``contest/``, ``latest_app/`` or ``/tmp/pytest-of-user/`` do not (SEC-03).
 _TEST_DIRS = frozenset({"test", "tests", "__tests__"})
 _EXAMPLE_DIRS = frozenset({"example", "examples"})
+# .NET test projects: a directory named ``<Project>.Tests`` and the like.
+_DOTNET_TEST_DIR_SUFFIXES = (".tests", ".test", ".unittests", ".integrationtests")
+# .NET test classes: ``ParserTests.cs`` / ``ParserTest.cs`` (case-sensitive, so
+# ``Latest.cs`` and ``Contest.cs`` are not test code).
+_DOTNET_TEST_FILE = re.compile(r"(?:^|[a-z0-9_])Tests?\.cs$")
 
 
 def _path_segments(file_path: str) -> List[str]:
@@ -96,6 +103,16 @@ def is_example_path(file_path: str) -> bool:
         return False
     *dirs, name = parts
     return any(seg in _EXAMPLE_DIRS for seg in dirs) or name.endswith(".example")
+
+
+def is_dotnet_test_path(file_path: str) -> bool:
+    """A .NET test project file: a directory ending in ``.Tests``, ``.Test``,
+    ``.UnitTests`` or ``.IntegrationTests``, or a C# file named ``*Tests.cs`` /
+    ``*Test.cs``. Used only by the experimental language rules."""
+    parts = _path_segments(file_path)
+    if any(seg.endswith(_DOTNET_TEST_DIR_SUFFIXES) for seg in parts[:-1]):
+        return True
+    return bool(_DOTNET_TEST_FILE.search(file_path.replace("\\", "/").rsplit("/", 1)[-1]))
 
 
 def is_test_or_example_path(file_path: str) -> bool:
@@ -271,13 +288,43 @@ class SecurityAnalyzer:
         (r"(?-i:AKIA[0-9A-Z]{16})", "AWS Access Key ID"),
     ]
 
+    # ``--experimental lang-security``: set by the engine; off by default.
+    lang_rules = False
+
+    def _runs_language_rules(self, tree: GenericAST, file_path: str) -> bool:
+        if not self.lang_rules or tree.language not in _RULE_LANGUAGES:
+            return False
+        return not (is_test_or_example_path(file_path) or is_dotnet_test_path(file_path))
+
+    def _with_language_rules(
+        self, tree: GenericAST, file_path: str, generic: List[AnalysisIssue]
+    ) -> List[AnalysisIssue]:
+        """The C#/Go/Rust rules plus the generic SQL and command findings.
+
+        One finding per line: a language rule replaces the generic one.
+        """
+        if not self._runs_language_rules(tree, file_path):
+            return generic
+        rules = find_language_rule_issues(tree, file_path)
+        sql_lines, cmd_lines = rule_lines(rules)
+        kept = [
+            g
+            for g in generic
+            if not (
+                (g.issue_type == AnalysisIssueType.SQL_INJECTION_RISK and g.line in sql_lines)
+                or (g.issue_type == AnalysisIssueType.COMMAND_INJECTION and g.line in cmd_lines)
+            )
+        ]
+        return rules + kept
+
     def analyze(self, tree: GenericAST, file_path: str, code: str) -> List[AnalysisIssue]:
         """Analyze code for security vulnerabilities."""
         issues = []
 
         issues.extend(self._check_hardcoded_secrets(tree, file_path, code))
-        issues.extend(self._check_sql_injection(tree, file_path, code))
-        issues.extend(self._check_command_injection(tree, file_path, code))
+        generic = self._check_sql_injection(tree, file_path, code)
+        generic += self._check_command_injection(tree, file_path, code)
+        issues.extend(self._with_language_rules(tree, file_path, generic))
         issues.extend(self._check_eval_usage(tree, file_path, code))
 
         if tree.language == "python":

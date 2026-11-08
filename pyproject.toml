@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hefesto-ai"
-version = "4.20.4"
+version = "4.21.0"
 description = "Release truth engine for AI-generated code: checks that what a project declares matches what it does, plus security and complexity analysis"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -70,6 +70,8 @@ dev = [
     "packaging>=23.0,<25.0",
     "types-PyYAML>=6.0,<7.0",
     "jsonschema>=4.17,<5",
+    "build>=1.2,<2",
+    "anyio>=4.5",
 ]
 ml = [
     "numpy>=1.24.0,<3.0.0",
@@ -89,10 +91,11 @@ format = [
     "black>=24",
 ]
 # Optional: local stdio MCP adapter (`hefesto-mcp`). Core deps stay the same.
+# ToolAnnotations and FastMCP.add_tool(annotations=) arrived in mcp 1.7.
 # `mcp` requires Python >=3.10, below the [project] requires-python floor (3.11),
 # so this extra does not need its own environment marker.
 mcp = [
-    "mcp>=1.2,<2",
+    "mcp>=1.7,<2",
 ]
 ci = [
     "pyyaml>=6.0,<7.0",

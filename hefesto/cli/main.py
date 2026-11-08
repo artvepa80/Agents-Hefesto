@@ -296,6 +296,15 @@ def _load_project_config(paths, config_path, option_names):
     ),
 )
 @click.option(
+    "--experimental",
+    default=None,
+    metavar="NAMES",
+    help=(
+        "Comma-separated experimental features to turn on (known: c-cpp, lang-security). "
+        "Off by default; their results are not measured yet."
+    ),
+)
+@click.option(
     "--include-vendored",
     is_flag=True,
     help=(
@@ -367,6 +376,7 @@ def analyze(
     copybook_paths: Tuple[str, ...],
     lineage: bool,
     include_vendored: bool,
+    experimental: Optional[str],
     enable_memory_budget_gate: bool,
     include_third_party: bool,
     include_generated: bool,
@@ -433,6 +443,7 @@ def analyze(
         if copybook_paths and hasattr(engine, "set_copybook_paths"):
             engine.set_copybook_paths(list(copybook_paths))
         _enable_lineage(engine, lineage, output)
+        _enable_experimental(engine, experimental)
         if include_vendored and hasattr(engine, "set_include_vendored"):
             engine.set_include_vendored(True)
 
@@ -1100,6 +1111,21 @@ def _mount_iris_ingest(app):
             click.echo("  IRIS: ingest endpoints mounted (/v1/ingest/)")
     except ImportError:
         pass  # IRIS not installed — skip silently
+
+
+def _enable_experimental(engine, experimental: Optional[str]) -> None:
+    """``--experimental``: unknown names exit 2; graduated names only warn."""
+    from hefesto.core.experimental import ExperimentalError, parse
+
+    try:
+        enabled, warnings = parse(experimental)
+    except ExperimentalError as exc:
+        click.echo(f"Error: --experimental: {exc}", err=True)
+        _exit(2)
+        return
+    for text in warnings:
+        click.echo(f"Warning: --experimental: {text}", err=True)
+    engine.experimental = enabled
 
 
 def _enable_lineage(engine, lineage: bool, output: str) -> None:

@@ -11,6 +11,7 @@ Detects security issues and anti-patterns in Bash/Shell scripts:
 Copyright 2025 Narapa LLC, Miami, Florida
 """
 
+import bisect
 import re
 from typing import List, Optional, Tuple
 
@@ -19,6 +20,213 @@ from hefesto.core.analysis_models import (
     AnalysisIssueSeverity,
     AnalysisIssueType,
 )
+
+
+class _ScanFrame:
+    """One command context: the outer line, or one ``$(...)`` / backtick body."""
+
+    __slots__ = ("fid", "outside", "quote", "kind", "depth", "word", "cases", "command")
+
+    def __init__(self, fid: int, kind: str) -> None:
+        self.fid = fid
+        self.outside: List[int] = []
+        self.quote = ""
+        self.kind = kind
+        self.depth = 1 if kind == "d" else 0
+        self.word: List[str] = []
+        self.cases = 0
+        self.command = True
+
+
+def _is_command_substitution(text: str, i: int) -> bool:
+    """True for ``$(`` but not arithmetic ``$((``."""
+    return text.startswith("$(", i) and not text.startswith("$((", i)
+
+
+def _scan_line(text: str) -> Tuple[List[List[int]], List[int]]:
+    """Outside-quote indexes for every command context, and each index's context."""
+    outer = _ScanFrame(0, "o")
+    frames = [outer]
+    stack = [0]
+    context_at = [0] * len(text)
+    index = 0
+    while index < len(text):
+        index = _scan_step(text, index, frames, stack, context_at)
+    return [frame.outside for frame in frames], context_at
+
+
+def _scan_step(
+    text: str, i: int, frames: List[_ScanFrame], stack: List[int], context_at: List[int]
+) -> int:
+    frame = frames[stack[-1]]
+    jumped = _escape_or_open(text, i, frame, frames, stack, context_at)
+    if jumped is not None:
+        return jumped
+    return _scan_plain(text, i, frame, stack, context_at)
+
+
+def _escape_or_open(
+    text: str,
+    i: int,
+    frame: _ScanFrame,
+    frames: List[_ScanFrame],
+    stack: List[int],
+    context_at: List[int],
+) -> Optional[int]:
+    escaped = _mark_escape(text, i, frame, context_at)
+    if escaped is not None:
+        return escaped
+    return _mark_open(text, i, frame, frames, stack, context_at)
+
+
+def _mark_escape(text: str, i: int, frame: _ScanFrame, context_at: List[int]) -> Optional[int]:
+    if frame.quote == "'" or text[i] != "\\":
+        return None
+    _note_outside(frame.quote, i, frame.outside)
+    context_at[i] = frame.fid
+    if i + 1 < len(context_at):
+        context_at[i + 1] = frame.fid
+    return i + 2
+
+
+def _mark_open(
+    text: str,
+    i: int,
+    frame: _ScanFrame,
+    frames: List[_ScanFrame],
+    stack: List[int],
+    context_at: List[int],
+) -> Optional[int]:
+    if not _starts_body(frame, text, i):
+        return None
+    _flush_word(frame)
+    _note_outside(frame.quote, i, frame.outside)
+    context_at[i] = frame.fid
+    kind = "b"
+    if text[i] == "$":
+        kind = "d"
+        if i + 1 < len(context_at):
+            context_at[i + 1] = frame.fid
+    opened = _ScanFrame(len(frames), kind)
+    frames.append(opened)
+    stack.append(opened.fid)
+    return i + (2 if kind == "d" else 1)
+
+
+def _starts_body(frame: _ScanFrame, text: str, i: int) -> bool:
+    if frame.quote == "'":
+        return False
+    if text[i] == "`":
+        return not (frame.kind == "b" and frame.quote == "")
+    return _is_command_substitution(text, i)
+
+
+def _close_frame(
+    text: str, i: int, frame: _ScanFrame, stack: List[int], context_at: List[int]
+) -> bool:
+    if not _is_frame_closer(frame, text, i):
+        return False
+    stack.pop()
+    context_at[i] = stack[-1]
+    return True
+
+
+def _is_frame_closer(frame: _ScanFrame, text: str, i: int) -> bool:
+    if frame.kind == "b":
+        return frame.quote == "" and text[i] == "`"
+    if frame.kind != "d":
+        return False
+    if frame.quote or text[i] != ")" or frame.depth != 1:
+        return False
+    return frame.cases == 0
+
+
+def _scan_plain(
+    text: str, i: int, frame: _ScanFrame, stack: List[int], context_at: List[int]
+) -> int:
+    _break_word(text, i, frame)
+    if _close_frame(text, i, frame, stack, context_at):
+        return i + 1
+    if _mark_case_paren(text, i, frame, context_at):
+        return i + 1
+    _scan_ordinary(text, i, frame, context_at)
+    return i + 1
+
+
+def _break_word(text: str, i: int, frame: _ScanFrame) -> None:
+    if frame.quote:
+        return
+    if text[i] in " \t":
+        _flush_word(frame)
+    elif text[i] in ";&|()`\n":
+        _flush_word(frame)
+        frame.command = True
+
+
+def _flush_word(frame: _ScanFrame) -> None:
+    if not frame.word:
+        return
+    word = "".join(frame.word)
+    frame.word.clear()
+    if frame.command and word == "case":
+        frame.cases += 1
+    elif frame.command and word == "esac" and frame.cases:
+        frame.cases -= 1
+    frame.command = word in ShellAnalyzer._COMMAND_PREFIXES
+
+
+def _mark_case_paren(text: str, i: int, frame: _ScanFrame, context_at: List[int]) -> bool:
+    if not _is_case_paren(frame, text, i):
+        return False
+    context_at[i] = frame.fid
+    frame.outside.append(i)
+    frame.command = True
+    return True
+
+
+def _is_case_paren(frame: _ScanFrame, text: str, i: int) -> bool:
+    if frame.kind != "d" or frame.cases == 0:
+        return False
+    return frame.quote == "" and text[i] == ")" and frame.depth == 1
+
+
+def _scan_ordinary(text: str, i: int, frame: _ScanFrame, context_at: List[int]) -> None:
+    context_at[i] = frame.fid
+    if _toggle_quote(frame, text[i]):
+        _flush_word(frame)
+        return
+    if frame.quote:
+        return
+    frame.outside.append(i)
+    _note_word_char(frame, text[i])
+    _track_bare_paren(frame, text[i])
+
+
+def _note_word_char(frame: _ScanFrame, char: str) -> None:
+    if char not in " \t;&|()`\n":
+        frame.word.append(char)
+
+
+def _toggle_quote(frame: _ScanFrame, char: str) -> bool:
+    if char in "'\"" and frame.quote in ("", char):
+        frame.quote = "" if frame.quote else char
+        return True
+    return False
+
+
+def _track_bare_paren(frame: _ScanFrame, char: str) -> None:
+    if frame.kind != "d":
+        return
+    if char == "(":
+        frame.depth += 1
+    elif char == ")":
+        frame.depth -= 1
+
+
+def _note_outside(quote: str, i: int, unquoted: List[int]) -> None:
+    """Record an introducer that sits outside quotes (backslash, backtick, or ``$(``)."""
+    if not quote:
+        unquoted.append(i)
 
 
 class ShellAnalyzer:
@@ -166,8 +374,13 @@ class ShellAnalyzer:
 
     # Single-bracket test with an unquoted variable; [[ ]] does not split words.
     _UNQUOTED_TEST = re.compile(r"(?<!\[)\[\s+-[a-z]\s+\$[A-Za-z_]")
-    # rm / cd as a word (not "perform", not "docker run --rm"); see _is_command.
-    _RM_OR_CD = re.compile(r"(?:^|(?<=[\s;&|(`]))(rm|cd)\s")
+    # rm / cd as the command word: optional path (/bin/rm, ./rm) and an
+    # unquoted backslash (\rm). Not a substring (--rm, perform, rmdir).
+    # A path part may be a name or an unquoted $NAME / ${NAME} ($HOME/bin/rm).
+    _PATH_PART = r"(?:\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*|[\w.+-]+)"
+    _RM_OR_CD = re.compile(
+        r"(?:^|(?<=[\s;&|(`)]))" r"\\?" r"(?:(?:" + _PATH_PART + r")?/)*" r"(rm|cd)(?=\s)"
+    )
     # Words after which the next word is still a command, not an argument.
     _COMMAND_PREFIXES = frozenset(
         {
@@ -191,55 +404,21 @@ class ShellAnalyzer:
     _VAR_NAME = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})")
 
     @staticmethod
-    def _scan_quotes(text: str) -> Tuple[List[int], bool]:
-        """Indexes of the characters of ``text`` outside quotes, and whether it ends inside quotes.
+    def _scan_quotes(text: str) -> Tuple[List[List[int]], List[int]]:
+        """Outside-quote indexes for every command context, and each index's context.
 
-        Backslash escapes are skipped, and so is a ``$( ... )`` body: its inner
-        quotes are its own (``rm -rf "$(path "$v")"`` is quoted).
+        One left-to-right pass. A ``$(...)`` or backtick body is its own context
+        and starts with empty quotes, so quotes around the substitution do not
+        quote the body. ``$((`` is arithmetic and does not open a context. The
+        ``$`` or backtick that is itself outside quotes stays in the parent: an
+        unquoted result still field-splits there.
         """
-        unquoted: List[int] = []
-        quote = ""
-        i = 0
-        while i < len(text):
-            char = text[i]
-            if quote != "'" and (char == "\\" or text.startswith("$(", i)):
-                i = ShellAnalyzer._skip_escape_or_substitution(text, i)
-                continue
-            if char in "'\"" and quote in ("", char):
-                quote = "" if quote else char
-            elif not quote:
-                unquoted.append(i)
-            i += 1
-        return unquoted, bool(quote)
+        return _scan_line(text)
 
-    def _has_unquoted_var(self, args: str) -> bool:
-        """True if ``args`` (up to the next command separator) expands an unquoted $NAME."""
-        for i in self._scan_quotes(args)[0]:
-            if args[i] in ";&|":
-                return False
-            if args[i] == "$" and self._VAR_NAME.match(args, i):
-                return True
-        return False
-
-    @staticmethod
-    def _skip_escape_or_substitution(text: str, i: int) -> int:
-        """Index after the ``\\x`` escape or the ``$( ... )`` that starts at ``i``."""
-        if text[i] == "\\":
-            return i + 2
-        return ShellAnalyzer._skip_command_substitution(text, i + 2)
-
-    @staticmethod
-    def _skip_command_substitution(text: str, start: int) -> int:
-        """Index just after the ``)`` closing a ``$(`` whose body starts at ``start``."""
-        depth = 1
-        i = start
-        while i < len(text) and depth:
-            if text[i] == "(":
-                depth += 1
-            elif text[i] == ")":
-                depth -= 1
-            i += 1
-        return i
+    def _starts_unquoted_expansion(self, args: str, i: int) -> bool:
+        return bool(
+            args[i] == "`" or self._VAR_NAME.match(args, i) or _is_command_substitution(args, i)
+        )
 
     @classmethod
     def _is_command(cls, prefix: str) -> bool:
@@ -248,19 +427,112 @@ class ShellAnalyzer:
         if not words:
             return True
         last = words[-1]
-        return last[-1] in ";&|(`" or last in cls._COMMAND_PREFIXES
+        # ")" closes a case pattern (`*)`, `start)`); the next word is a command.
+        return last[-1] in ";&|()`" or last in cls._COMMAND_PREFIXES
 
     def _rm_or_cd_with_unquoted_var(self, line: str) -> Optional[str]:
-        """``"rm"`` or ``"cd"`` if that command gets an unquoted variable on this line."""
+        """``"rm"`` or ``"cd"`` if that command gets an unquoted expansion on this line.
+
+        The quote scan runs once and keeps each substitution body separate.
+        A match uses only the outside-quote indexes of its own context.
+        """
+        contexts, context_at = self._scan_quotes(line)
+        outside_sets = [set(indexes) for indexes in contexts]
         for match in self._RM_OR_CD.finditer(line):
-            prefix = line[: match.start()]
-            # Skip text inside a string (echo "run: rm $X") and subcommands
-            # (docker image rm $ID, git rm $FILE).
-            if self._scan_quotes(prefix)[1] or not self._is_command(prefix):
-                continue
-            if self._has_unquoted_var(line[match.end() :]):
+            context = context_at[match.start()] if context_at else 0
+            if self._rm_match_reports(line, match, contexts[context], outside_sets[context]):
                 return match.group(1)
         return None
+
+    def _rm_match_reports(
+        self, line: str, match: re.Match, outside: List[int], outside_set: set
+    ) -> bool:
+        if match.start() not in outside_set:
+            return False
+        if not self._command_boundary(line, match.start(), outside_set):
+            return False
+        return self._expansion_from(line, match.end(), outside)
+
+    # POSIX operators and newline. ")" is handled apart from this string: only a
+    # ")" that is outside quotes and substitutions ends a word. Space and tab are
+    # blanks, not operators. Other str.isspace() characters are not separators.
+    _BEFORE_SEPARATORS = ";&|(`\n"
+    _BLANKS = " \t"
+
+    @classmethod
+    def _command_boundary(cls, line: str, start: int, outside: set) -> bool:
+        """True when the command word at ``start`` is not an argument of another word."""
+        if cls._char_introduces_command(line, start, outside):
+            return True
+        if line[start - 1] not in cls._BLANKS:
+            return False
+        return cls._blank_separated_word_introduces(line, start, outside)
+
+    @staticmethod
+    def _char_introduces_command(line: str, start: int, outside: set) -> bool:
+        """True when the character immediately before ``start`` begins a command."""
+        if start == 0:
+            return True
+        prev = line[start - 1]
+        if prev in ShellAnalyzer._BEFORE_SEPARATORS:
+            return True
+        return prev == ")" and (start - 1) in outside
+
+    @classmethod
+    def _blank_separated_word_introduces(cls, line: str, start: int, outside: set) -> bool:
+        """True when the word before the blanks at ``start`` introduces a command.
+
+        The word is never empty. No blank-separated word means the command is
+        at the start of the line once the blanks are skipped.
+        """
+        word = cls._previous_word(line, start)
+        if not word:
+            return True
+        last = cls._last_word_index(line, start)
+        if word[-1] == ")":
+            return last in outside
+        return word[-1] in cls._BEFORE_SEPARATORS or word in cls._COMMAND_PREFIXES
+
+    @staticmethod
+    def _last_word_index(line: str, start: int) -> int:
+        last = start - 1
+        while last > 0 and line[last] in ShellAnalyzer._BLANKS:
+            last -= 1
+        return last
+
+    @staticmethod
+    def _previous_word(line: str, start: int) -> Optional[str]:
+        """Blank-separated word before ``start``, or None when there is none.
+
+        Only space and tab are blanks. The result is never an empty string.
+        """
+        if start == 0 or line[start - 1] not in ShellAnalyzer._BLANKS:
+            return None
+        k = start - 1
+        while k >= 0 and line[k] in ShellAnalyzer._BLANKS:
+            k -= 1
+        if k < 0:
+            return None
+        end = k + 1
+        while k >= 0 and line[k] not in ShellAnalyzer._BLANKS:
+            k -= 1
+        return line[k + 1 : end]
+
+    def _expansion_from(self, line: str, start: int, outside: List[int]) -> bool:
+        pos = bisect.bisect_left(outside, start)
+        while pos < len(outside):
+            i = outside[pos]
+            if line[i] in ";&|":
+                return False
+            if self._index_is_expansion(line, i):
+                return True
+            pos += 1
+        return False
+
+    def _index_is_expansion(self, line: str, i: int) -> bool:
+        if line[i] == "`":
+            return True
+        return line[i] == "$" and self._starts_unquoted_expansion(line, i)
 
     def _check_unquoted_vars(self, file_path: str, line_num: int, line: str) -> List[AnalysisIssue]:
         """Check for unquoted variables in dangerous contexts."""

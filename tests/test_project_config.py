@@ -129,6 +129,7 @@ class TestValidation:
                 "enable_memory_budget_gate": False,
                 "copybook_paths": ["copylib", " ../shared "],
                 "include_vendored": True,
+                "experimental": [" C-CPP "],
             }
         )
         assert values == {
@@ -143,8 +144,14 @@ class TestValidation:
             "enable_memory_budget_gate": False,
             "copybook_paths": ["copylib", "../shared"],
             "include_vendored": True,
+            "experimental": "c-cpp",
         }
         assert set(values) == set(SUPPORTED_KEYS)
+
+    def test_experimental_lang_security_is_its_own_case(self):
+        assert validate_config({"experimental": [" LANG-SECURITY "]}) == {
+            "experimental": "lang-security",
+        }
 
     def test_comma_string_and_dashed_keys(self):
         assert validate_config({"exclude": "a/, b/", "fail-on": "LOW"}) == {

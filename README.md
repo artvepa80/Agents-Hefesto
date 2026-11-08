@@ -1,5 +1,7 @@
 # HefestoAI — release truth engine for AI-generated code
 
+<!-- mcp-name: io.github.artvepa80/hefestoai -->
+
 **English** | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 <p align="center">
@@ -35,13 +37,13 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.20.4` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.21.0` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need `multilang: 'true'` in the Action (opt-in) or the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/mo per user) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
 ---
 
-## Operational Truth Analyzers (v4.20.4)
+## Operational Truth Analyzers (v4.21.0)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -50,7 +52,7 @@ These analyzers look for drift between what your project **declares** and what i
 | **Imports vs Deps** | Python imports not declared in `pyproject.toml` or `requirements.txt` | OT-IMPORTS-001 |
 | **Docs vs Entrypoints** | CLI scripts in `[project.scripts]` missing from README | OT-DOCS-001 |
 | **Packaging Parity** | Version mismatch between `pyproject.toml`, CHANGELOG, and README badges | OT-PKG-001/002 |
-| **Install Artifact Parity** | `action.yml` inputs not consumed; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
+| **Install Artifact Parity** | `action.yml` inputs not read by any `scripts/action_*.sh`; `Dockerfile` COPY sources missing | OT-INSTALL-001/002 |
 | **CI Config Drift** | Python version or flake8 config mismatch between local and CI workflow | OT-CI-001/002/003 |
 
 ```bash
@@ -131,7 +133,7 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
-`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.20.4` (exact tags never move) or a commit SHA, and bump it yourself.
+`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.21.0` (exact tags never move) or a commit SHA, and bump it yourself.
 
 With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
 
@@ -168,6 +170,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `sarif_file` | Path of the SARIF file | `hefesto.sarif` |
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
+| `multilang` | Opt-in. `true`: installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed too (grammars are downloaded on the first run; a file whose grammar cannot be loaded fails `fail_on`) | `false` |
 | `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:
@@ -210,22 +213,25 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
-## Local MCP (stdio) — unreleased
+## Local MCP (stdio)
 
-The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is not on PyPI yet. It needs Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker).
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is published with hefesto-ai 4.21.0: `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
 
 ```bash
-pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
+pip install "hefesto-ai[mcp]"
 ```
 
-Claude Desktop launches it with stdio. `hefesto-mcp` must be on `PATH`. Pass the project directory as `--root` (or set `HEFESTO_MCP_ROOT`). The process refuses to start when that directory resolves to `/` or the home directory. Paths outside it are rejected.
+An MCP client launches it with stdio. Pass the project directory in `HEFESTO_MCP_ROOT` (`--root` still overrides it). Paths outside that directory are rejected.
 
 ```json
 {
   "mcpServers": {
     "hefesto": {
-      "command": "hefesto-mcp",
-      "args": ["--root", "/absolute/path/to/the/project"]
+      "command": "uvx",
+      "args": ["hefesto-mcp"],
+      "env": {
+        "HEFESTO_MCP_ROOT": "/absolute/path/to/the/project"
+      }
     }
   }
 }
@@ -235,7 +241,7 @@ Tools: `analyze_local` (a file or directory inside that root) and `version`. Det
 
 ---
 
-## PR Review (v4.20.4)
+## PR Review (v4.21.0)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -281,12 +287,23 @@ See [`examples/github-actions/README.md`](examples/github-actions/README.md) for
 | Go | TreeSitter | Supported¹ |
 | Rust | TreeSitter | Supported¹ |
 | C# | TreeSitter | Supported¹ |
+| C | TreeSitter | Experimental¹ ³ |
+| C++ | TreeSitter | Experimental¹ ³ |
 
 ¹ TreeSitter languages require the `[multilang]` extra:
 `pip install "hefesto-ai[multilang]"`. Without it, files in these
 languages are skipped at parse time and Hefesto emits a stderr warning
 pointing to the install command (also exposed via
 `report.meta.parser_failures` in JSON output).
+
+³ C and C++ are experimental and off by default: turn them on with
+`--experimental c-cpp` (or `experimental: [c-cpp]` in `.hefesto.yaml`). The generic complexity and size checks run on
+them; with `--experimental c-cpp,lang-security` the C/C++ security rules
+CC001-CC004 also run (docs/ANALYSIS_RULES.md). They are not counted in the
+format total below. `.h` headers are read as C unless they contain C++-only
+syntax or sit next to a C++ source with the same name; headers with
+Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
+[docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
 
 ### DevOps & Configuration
 
@@ -313,7 +330,7 @@ pointing to the install command (also exposed via
 | **Helm Charts** | HelmAnalyzer | Kubernetes Security | v4.7.0 | Yes |
 | **Serverless** | ServerlessAnalyzer | Serverless Framework | v4.7.0 | Yes |
 
-**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs all 22. When a suffix matches more than one format, the precedence table in [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md) chooses one analyzer.
+**Total**: the package ships analyzers for 22 formats (7 code languages + 11 DevOps formats + 4 Cloud formats). `hefesto analyze` (which the GitHub Action and the pre-push hook call) runs all 22, plus C and C++ with `--experimental c-cpp` and `[multilang]`. When a suffix matches more than one format, the precedence table in [docs/design/devops-analyzers-wiring.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/design/devops-analyzers-wiring.md) chooses one analyzer.
 
 ² COBOL: all 16 rules are free; no license is needed. The analyzer is regex-based (no full COBOL parser) and reads `.cbl`, `.cob`, `.cobol`, `.cpy` and `.pco` files (lower or upper case), plus `.dcl`, `.copy`, `.cbk` and extension-less files that a scanned program `COPY`s or `EXEC SQL INCLUDE`s and that hold COBOL data definitions (copybooks get only the data rules COBOL004/COBOL008/COBOL009/COBOL016, COBOL007 and COBOL015 for their own nested `COPY`s; the other rules are not applied to them).
 
@@ -333,15 +350,18 @@ pip install "hefesto-ai[multilang]"
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
 
-# Optional, unreleased: local stdio MCP adapter (not on PyPI yet)
-pip install "hefesto-ai[mcp] @ git+https://github.com/artvepa80/Agents-Hefesto"
+# Optional: local stdio MCP adapter (published with hefesto-ai 4.21.0)
+pip install "hefesto-ai[mcp]"
+
+# or: uvx hefesto-mcp
+# HEFESTO_MCP_ROOT is required (project directory; not / or home).
 ```
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
 
 ---
 
-## CLI Reference (v4.20.4)
+## CLI Reference (v4.21.0)
 
 ```bash
 # Analyze code
@@ -465,7 +485,8 @@ analyzer raised an error, or its tree-sitter grammar could not be loaded, for
 example offline, or with an empty or damaged grammar cache) is never dropped silently: the text report lists it
 under "Not analyzed" with the reason, `--output json` has it in
 `meta.not_analyzed` (`path`, `language`, `reason`: `read_error`,
-`analyzer_error` or `grammar_unavailable`, `exception`; a `grammar_unavailable`
+`analyzer_error`, `grammar_unavailable` or `parse_error` (an experimental C/C++
+file where the grammar recovered no declaration), `exception`; a `grammar_unavailable`
 entry also names the `grammar`), SARIF has an `error` notification for it in
 `invocations[0].toolExecutionNotifications`, and a warning goes to stderr (also
 with `--quiet`). With `--fail-on` such a file fails the gate with "Gate failure:
@@ -483,8 +504,10 @@ A file whose grammar could not be loaded counts as not analyzed even when
 every file hit it, so `--fail-on` with `--allow-no-files` (as in the hooks from
 `hefesto install-hooks`) exits 1 offline with an empty grammar cache. The cache
 is per pack version. To fix it, run once with network access, or
-`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
-or pass `--allow-not-analyzed`.
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`,
+or pass `--allow-not-analyzed`. A grammar that fails to load is tried once
+per run: later files of that language are reported as not analyzed without
+waiting for the download again.
 
 ---
 
@@ -587,7 +610,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.20.4)
+### GitHub Actions — PR Review with Inline Comments (v4.21.0)
 
 ```yaml
 name: Hefesto PR Review
@@ -624,7 +647,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.20.4
+    rev: v4.21.0
     hooks:
       - id: hefesto-analyze
 ```
@@ -690,6 +713,9 @@ enable_memory_budget_gate: false  # --enable-memory-budget-gate
 copybook_paths:             # --copybook-path (COBOL copybook directories outside the scan)
   - ../copylib              # relative paths are resolved from this file's directory
 include_vendored: false     # --include-vendored (analyze vendored/minified JavaScript too)
+experimental:               # --experimental (comma-separated; the CLI value replaces this list)
+  - c-cpp                   # C and C++ files (docs/c-cpp.md)
+  - lang-security           # C#, Go, Rust, C and C++ security rules (docs/ANALYSIS_RULES.md)
 ```
 
 - **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,

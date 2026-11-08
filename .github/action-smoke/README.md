@@ -6,6 +6,9 @@ Action (`uses: ./`) against:
 - `clean.py`: no findings, so the Action must exit 0.
 - `critical_secret.py`: a fake AWS access key ID, so the Action must exit 1
   (`fail_on: CRITICAL`).
+- `clean.ts`: no findings. Job `smoke-multilang` runs it with `multilang`
+  off (the file is skipped, no file is analyzed, exit 1) and with
+  `multilang: 'true'` (1 file analyzed, exit 0).
 
 These files are deliberately **not** under `tests/`. Secret detection skips
 test code, which it recognizes by path segment (`tests/`, `test/`,
