@@ -91,6 +91,7 @@ runs:
         INPUT_UPLOAD_SARIF: ${{ inputs.upload_sarif }}
         INPUT_SARIF_CATEGORY: ${{ inputs.sarif_category }}
         INPUT_TELEMETRY: ${{ inputs.telemetry }}
+        INPUT_MULTILANG: ${{ inputs.multilang }}
       # The virtualenv is put on PATH for this step only (not via GITHUB_PATH),
       # so later steps of the job keep their own python.
       run: PATH="$RUNNER_TEMP/hefesto-venv/bin:$PATH" bash "$GITHUB_ACTION_PATH/scripts/action_entrypoint.sh"

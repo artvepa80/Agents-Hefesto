@@ -129,3 +129,143 @@ def test_a_real_parse_error_is_not_reported_as_a_missing_grammar(tmp_path, monke
 
     assert result.exit_code == 0, result.stderr
     assert _not_analyzed(result) == []
+
+
+def test_a_failed_grammar_is_loaded_once_per_run(tmp_path, monkeypatch):
+    """A hanging network costs one timeout per grammar, not one per file.
+
+    Every file that needs the failed grammar is still reported as not analyzed.
+    """
+    calls = []
+
+    def get_parser(name):
+        calls.append(name)
+        raise DownloadError(f"Download error: timed out fetching {name}")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
+    monkeypatch.setenv("HEFESTO_NO_UPSELL", "1")
+    for i in range(4):
+        (tmp_path / f"a{i}.js").write_text(f"function f{i}(x) {{ return x; }}\n")
+        (tmp_path / f"G{i}.java").write_text(f"public class G{i} {{ }}\n")
+    (tmp_path / "m.py").write_text("def f(x):\n    return x\n")
+
+    result = _analyze(tmp_path, "--fail-on", "LOW")
+
+    assert result.exit_code == 1, result.stderr
+    assert sorted(calls) == ["java", "javascript"]
+    entries = _not_analyzed(result)
+    assert len(entries) == 8
+    assert {e["reason"] for e in entries} == {"grammar_unavailable"}
+    assert {e["grammar"] for e in entries} == {"java", "javascript"}
+
+
+def test_a_new_run_tries_the_failed_grammar_again(tmp_path, monkeypatch):
+    """The failure is remembered for one run only, never across runs."""
+    calls = []
+
+    def get_parser(name):
+        calls.append(name)
+        raise DownloadError(f"Download error: timed out fetching {name}")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    monkeypatch.setenv("HEFESTO_TELEMETRY", "0")
+    (tmp_path / "A.java").write_text("public class A {}\n")
+    (tmp_path / "B.java").write_text("public class B {}\n")
+
+    _analyze(tmp_path)
+    _analyze(tmp_path)
+
+    assert calls == ["java", "java"]
+
+
+def test_concurrent_parser_requests_share_one_failed_load(monkeypatch):
+    """Threads asking for the same grammar wait for one load, not one each."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    from hefesto.core.analyzer_engine import AnalyzerEngine
+    from hefesto.core.language_detector import Language
+
+    calls = []
+
+    def get_parser(name):
+        calls.append(name)
+        time.sleep(0.05)  # a slow download that then fails
+        raise DownloadError(f"Download error: timed out fetching {name}")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    engine = AnalyzerEngine()
+    errors = []
+
+    def worker():
+        try:
+            engine._get_parser(Language.GO)
+        except DownloadError as exc:
+            errors.append(exc)
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for _ in range(6):
+            pool.submit(worker)
+
+    assert calls == ["go"]
+    assert len(errors) == 6
+
+
+def test_a_cached_grammar_failure_is_raised_as_a_new_exception(monkeypatch):
+    """Later files get a fresh exception; the cached one's traceback does not grow."""
+    from hefesto.core.analyzer_engine import AnalyzerEngine, _is_grammar_pack_error
+    from hefesto.core.language_detector import Language
+
+    def get_parser(name):
+        raise DownloadError(f"Download error: timed out fetching {name}")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    engine = AnalyzerEngine()
+
+    def tb_len(exc):
+        n, tb = 0, exc.__traceback__
+        while tb is not None:
+            n, tb = n + 1, tb.tb_next
+        return n
+
+    raised = []
+    for _ in range(5):
+        with pytest.raises(DownloadError) as info:
+            engine._get_parser(Language.GO)
+        raised.append(info.value)
+    cached = engine._grammar_failures[Language.GO]
+    first_len = tb_len(cached)
+    for _ in range(5):
+        with pytest.raises(DownloadError):
+            engine._get_parser(Language.GO)
+
+    assert len({id(e) for e in raised}) == 5
+    assert all(e is not cached for e in raised[1:])
+    assert all(_is_grammar_pack_error(e) for e in raised)
+    assert raised[1].args == cached.args
+    assert tb_len(cached) == first_len
+
+
+def test_a_cached_failure_that_cannot_be_rebuilt_is_still_raised(monkeypatch):
+    """An exception type whose constructor rejects its own args falls back to the cached object."""
+    from hefesto.core.analyzer_engine import AnalyzerEngine
+    from hefesto.core.language_detector import Language
+
+    class OddError(pack.Error):
+        def __init__(self, name, detail):
+            super().__init__(f"{name}: {detail}")
+
+    def get_parser(name):
+        raise OddError(name, "unreachable")
+
+    monkeypatch.setattr(treesitter_parser, "USE_PREBUILT", True)
+    monkeypatch.setattr(treesitter_parser, "get_ts_parser", get_parser)
+    engine = AnalyzerEngine()
+    for _ in range(3):
+        with pytest.raises(OddError):
+            engine._get_parser(Language.GO)

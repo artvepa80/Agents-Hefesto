@@ -100,3 +100,5 @@ def test_action_yml_wires_the_input() -> None:
     install = next(s for s in action["runs"]["steps"] if s.get("name") == "Install HefestoAI")
     assert install["env"]["INPUT_MULTILANG"] == "${{ inputs.multilang }}"
     assert "scripts/action_install.sh" in install["run"]
+    analyze = next(s for s in action["runs"]["steps"] if s.get("id") == "analyze")
+    assert analyze["env"]["INPUT_MULTILANG"] == "${{ inputs.multilang }}"

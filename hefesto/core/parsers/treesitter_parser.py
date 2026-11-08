@@ -36,6 +36,53 @@ _PROPERTY_PARENTS = frozenset({"pair", "property", "property_assignment"})
 _PROPERTY_KEY_TYPES = frozenset({"property_identifier", "identifier", "string"})
 _PARAMETERIZED_NODES = _ANONYMOUS_CAPABLE | {"method_declaration", "function_item"}
 _PARAMETER_LIST_TYPES = frozenset({"formal_parameters", "parameters", "parameter_list"})
+# C/C++: the name and parameters of a function_definition sit in its
+# declarator chain (pointer_declarator -> function_declarator -> identifier).
+_C_FAMILY = frozenset({"c", "cpp"})
+_C_DECLARATOR_NAMES = frozenset(
+    {
+        "identifier",
+        "field_identifier",
+        "qualified_identifier",
+        "destructor_name",
+        "operator_name",
+    }
+)
+_C_RECOVERED_DECLARATIONS = frozenset(
+    {
+        "function_definition",
+        "declaration",
+        "type_definition",
+        "struct_specifier",
+        "class_specifier",
+        "union_specifier",
+        "enum_specifier",
+        "namespace_definition",
+        "template_declaration",
+        "preproc_def",
+        "preproc_function_def",
+        "preproc_include",
+    }
+)
+_C_FAMILY_TYPES = {
+    "function_definition": NodeType.FUNCTION,
+    "struct_specifier": NodeType.CLASS,
+    "union_specifier": NodeType.CLASS,
+    "enum_specifier": NodeType.CLASS,
+    "class_specifier": NodeType.CLASS,
+    "if_statement": NodeType.CONDITIONAL,
+    "switch_statement": NodeType.CONDITIONAL,
+    "for_statement": NodeType.LOOP,
+    "for_range_loop": NodeType.LOOP,
+    "while_statement": NodeType.LOOP,
+    "do_statement": NodeType.LOOP,
+    "call_expression": NodeType.CALL,
+    "return_statement": NodeType.RETURN,
+    "preproc_include": NodeType.IMPORT,
+    "try_statement": NodeType.TRY,
+    "catch_clause": NodeType.CATCH,
+    "throw_expression": NodeType.THROW,
+}
 _PARAMETER_TYPES = frozenset(
     {
         "identifier",
@@ -63,6 +110,8 @@ class TreeSitterParser(CodeParser):
         "go": "go",
         "rust": "rust",
         "c_sharp": "csharp",  # tree-sitter-language-pack manifest uses 'csharp'
+        "c": "c",
+        "cpp": "cpp",
     }
 
     def __init__(self, language: str):
@@ -82,6 +131,8 @@ class TreeSitterParser(CodeParser):
                 "go": "go",
                 "rust": "rust",
                 "c_sharp": "c_sharp",
+                "c": "c",
+                "cpp": "cpp",
             }
             grammar_name = grammar_map.get(language, language)
             self.language = Language(str(build_path), grammar_name)  # type: ignore
@@ -94,7 +145,28 @@ class TreeSitterParser(CodeParser):
         data = code.encode("utf8")
         tree = self.parser.parse(data)
         root = self._convert_treesitter_to_generic(tree.root_node, data, parent=None)
-        return GenericAST(root, self.language, code)
+        ast = GenericAST(root, self.language, code)
+        if self.language in _C_FAMILY:
+            ast.unparseable = self._is_unparseable(tree.root_node)
+        return ast
+
+    @staticmethod
+    def _is_unparseable(root) -> bool:
+        """True when the file has parse errors and the grammar recovered no declaration.
+
+        A partial tree (macros the grammar cannot read, with functions,
+        declarations or types still recovered somewhere, even inside ERROR
+        nodes) is not unparseable; it is analyzed as it is.
+        """
+        if not root.has_error:
+            return False
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            if node.type in _C_RECOVERED_DECLARATIONS:
+                return False
+            stack.extend(node.children)
+        return True
 
     def supports_language(self, language: str) -> bool:
         return language in self.LANG_MAP
@@ -107,6 +179,15 @@ class TreeSitterParser(CodeParser):
     def _convert_treesitter_to_generic(self, node, source: bytes, parent=None) -> GenericNode:
         """Convert TreeSitter node to GenericNode."""
         node_type = self._map_node_type(node.type, self.language)
+        if (
+            node_type == NodeType.FUNCTION
+            and node.type == "function_definition"
+            and self.language in _C_FAMILY
+            and self._c_function_declarator(node) is None
+        ):
+            # ``FMT_BEGIN_NAMESPACE namespace detail { ... }``: a macro the
+            # grammar reads as a return type, not a function.
+            node_type = NodeType.UNKNOWN
 
         children = []
         for child in node.children:
@@ -131,6 +212,7 @@ class TreeSitterParser(CodeParser):
                 "treesitter_type": node.type,
                 "language": self.language,
                 "param_count": param_count,
+                "named": node.is_named,
             },
         )
 
@@ -213,6 +295,9 @@ class TreeSitterParser(CodeParser):
             }
             return mapping.get(ts_type, NodeType.UNKNOWN)
 
+        elif language in _C_FAMILY:
+            return _C_FAMILY_TYPES.get(ts_type, NodeType.UNKNOWN)
+
         elif language == "c_sharp":
             mapping = {
                 "method_declaration": NodeType.METHOD,
@@ -243,6 +328,52 @@ class TreeSitterParser(CodeParser):
                 return cls._node_text(child, source)
         return None
 
+    @classmethod
+    def _field_name_text(cls, node, source: bytes) -> Optional[str]:
+        """Text of the node's ``name`` field when it is a plain identifier."""
+        field = node.child_by_field_name("name")
+        if field is None or not field.type.endswith("identifier"):
+            return None
+        return cls._node_text(field, source)
+
+    @classmethod
+    def _c_function_declarator(cls, node):
+        """The ``function_declarator`` of a C/C++ ``function_definition``, or None."""
+        target = node.child_by_field_name("declarator")
+        while target is not None and target.type != "function_declarator":
+            target = target.child_by_field_name("declarator")
+        return target
+
+    @classmethod
+    def _c_function_name(cls, node, source: bytes) -> Optional[str]:
+        """``alloc_buf``, ``Widget::size``, ``Widget::~Widget`` or ``operator+``."""
+        func = cls._c_function_declarator(node)
+        target = None if func is None else func.child_by_field_name("declarator")
+        if target is None or target.type not in _C_DECLARATOR_NAMES:
+            return None
+        return cls._node_text(target, source)
+
+    @classmethod
+    def _type_block_name(cls, node, source: bytes) -> Optional[str]:
+        """Name of the type a Rust ``impl`` block or Go ``type`` declaration declares.
+
+        Rust: ``impl<T> Tr for Vec<T>`` -> ``Vec``; ``impl a::B`` -> ``B``.
+        Go: ``type Server struct{}`` -> ``Server``; a grouped ``type ( ... )`` is named
+        only when it holds a single spec. With several specs it stays unnamed, so one
+        type's findings are never reported under another type's name.
+        """
+        if node.type == "impl_item":
+            target = node.child_by_field_name("type")
+            while target is not None and target.type != "type_identifier":
+                inner = target.child_by_field_name("type")
+                target = inner if inner is not None else target.child_by_field_name("name")
+            return None if target is None else cls._node_text(target, source)
+        if node.type == "type_declaration":
+            specs = [s for s in node.named_children if s.type in ("type_spec", "type_alias")]
+            if len(specs) == 1:
+                return cls._field_name_text(specs[0], source)
+        return None
+
     def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
         """Infer a function expression's name from its parent context."""
         if parent.type in _IDENTIFIER_PARENTS:
@@ -258,13 +389,29 @@ class TreeSitterParser(CodeParser):
         """
         Extract name from node with smart inference for arrow functions.
 
+        C and C++ ``function_definition`` and class-like specifiers are named
+        from their declarator or tag before this list.
+
         Priority order:
-        1. Direct identifier child (function foo() {})
-        2. Parent variable_declarator, pair/property or assignment name
-        3. Method name
-        4. '<anonymous>' for truly unnamed functions
+        1. The grammar's ``name`` field (C# ``Task Foo()`` -> ``Foo``,
+           Go ``func (s *S) Run()`` -> ``Run``)
+        2. Direct identifier child (function foo() {})
+        3. Parent variable_declarator, pair/property or assignment name
+        4. Method name
+        5. Rust ``impl`` block / Go ``type`` declaration: the declared type's name
+        6. '<anonymous>' for truly unnamed functions
         """
-        name = self._first_child_text(node, source, ("identifier",))
+        if node.type == "function_definition" and self.language in _C_FAMILY:
+            return self._c_function_name(node, source) or "<anonymous>"
+        if self.language in _C_FAMILY and _C_FAMILY_TYPES.get(node.type) == NodeType.CLASS:
+            # ``struct cache_accessor<double>``, ``class ns::Widget``
+            field = node.child_by_field_name("name")
+            return None if field is None else self._node_text(field, source)
+        name = self._field_name_text(node, source)
+        if name is None:
+            name = self._type_block_name(node, source)
+        if name is None:
+            name = self._first_child_text(node, source, ("identifier",))
         if name is None and node.type in _FUNCTION_EXPRESSIONS and parent is not None:
             name = self._name_from_parent(parent, source)
         if name is None and node.type == "method_definition":
@@ -279,6 +426,16 @@ class TreeSitterParser(CodeParser):
 
         Only counts parameters in function declarations, NOT in call expressions.
         """
+        if node.type == "function_definition" and self.language in _C_FAMILY:
+            func = self._c_function_declarator(node)
+            params = None if func is None else func.child_by_field_name("parameters")
+            if params is None:
+                return 0
+            decls = [c for c in params.named_children if c.type != "comment"]
+            # ``f(void)`` declares no parameters
+            if len(decls) == 1 and self._node_text(decls[0], source).strip() == "void":
+                return 0
+            return len(decls)
         if node.type not in _PARAMETERIZED_NODES:
             return 0
         for child in node.children:

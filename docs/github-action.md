@@ -13,7 +13,7 @@ findings to GitHub code scanning as SARIF 2.1.0.
 - Because it follows minors, `@v4` also receives behaviour changes, such as
   the 4.16.0 change that makes a run with no analyzed files fail the gate
   instead of passing (see "Runs that analyze no files" below).
-- If you need exact stability, pin an exact release tag such as `@v4.20.4`
+- If you need exact stability, pin an exact release tag such as `@v4.21.0`
   (exact tags never move) or a commit SHA, and bump it yourself.
 - The Action installs HefestoAI from its own checkout, not from PyPI, so a fix
   reaches a workflow only through a ref that contains it: `@v4.15.0` keeps the
@@ -92,7 +92,7 @@ extra is installed (`multilang: 'true'`, or the CLI with
 `hefesto-ai[multilang]`): with the pack installed, a file whose grammar cannot be loaded (offline, or an empty or
 damaged grammar cache) is listed as not analyzed and fails `--fail-on`.
 To fix it: run once with network access (the grammar cache is per pack version), or
-`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','javascript','typescript'])"`,
+`python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`,
 or pass `--allow-not-analyzed`.
 
 A file that is not valid UTF-8 is not in this group: it is read with the
@@ -105,7 +105,10 @@ A file that is not valid UTF-8 is not in this group: it is read with the
 `pip install "<action path>[multilang]"` instead of the base package. It is
 off by default, so existing `@v4` workflows keep their results: turning it on
 can add findings in those languages, and they count for `fail_on` like any
-other finding. The grammars are downloaded on the first run of a fresh
+other finding. The analysis log prints `Multilang input: yes` or
+`Multilang input: no` (true, 1, or yes, ignoring case and surrounding spaces).
+That line is the input value. It does not mean the extra was installed: the
+Docker image runs the analysis script and does not run the install step. The grammars are downloaded on the first run of a fresh
 runner, so the step needs network access to the grammar source; a file whose
 grammar cannot be downloaded or loaded is listed as not analyzed and fails
 `fail_on` unless `allow_not_analyzed: 'true'` is set.
