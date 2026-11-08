@@ -59,7 +59,21 @@ export HEFESTO_TELEMETRY=0
 export DO_NOT_TRACK=1
 ```
 
-`hefesto telemetry disable` writes `~/.hefesto/telemetry_disabled`. Delete that file to turn telemetry back on. `HEFESTO_TELEMETRY=0` also accepts `false`, `no`, and `off`. Those off values, and `DO_NOT_TRACK`, also skip the PyPI version check. The disable file does not.
+`hefesto telemetry disable` writes `~/.hefesto/telemetry_disabled`. `hefesto telemetry enable` removes that file (deleting it by hand does the same); if `DO_NOT_TRACK` or `HEFESTO_TELEMETRY` still turns telemetry off, `enable` says so. `HEFESTO_TELEMETRY=0` also accepts `false`, `no`, and `off`. Those off values, and `DO_NOT_TRACK`, also skip the PyPI version check. The disable file does not.
+
+## Check the current state
+
+`hefesto telemetry status` prints what the next command does with usage events and which setting decides it. `--json` prints the same as one JSON object for scripts and agents. It only reads: it does not print the notice, write state, or send anything.
+
+| `state` | Meaning |
+|---|---|
+| `off` | An opt-out is set. `off_by` names it: `DO_NOT_TRACK`, `HEFESTO_TELEMETRY` or `telemetry_disabled_file` (checked in that order). Nothing is sent. |
+| `no_destination` | Telemetry is on, but the PostHog key or host is empty or invalid. Nothing is sent. |
+| `notice_pending` | The notice has not been printed yet. The next command prints it and sends nothing. |
+| `debug` | `HEFESTO_TELEMETRY_DEBUG` is set. Events are printed on stderr and not sent. |
+| `on` | Events are sent. |
+
+The JSON object also has `enabled`, `notice_shown`, `debug`, `destination_configured` and `state_dir`.
 
 Debug (prints the event on stderr, does not use the network):
 

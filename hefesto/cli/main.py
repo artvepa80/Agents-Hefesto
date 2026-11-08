@@ -8,6 +8,7 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 """
 
 import functools
+import json
 import os
 import re
 import sys
@@ -994,8 +995,58 @@ def telemetry_disable() -> None:
     disable()
     click.echo(
         "Anonymous telemetry is off on this machine. "
-        "Turn it back on by deleting ~/.hefesto/telemetry_disabled."
+        "Turn it back on with: hefesto telemetry enable"
     )
+
+
+@telemetry_cmd.command("enable")
+def telemetry_enable() -> None:
+    """Undo `hefesto telemetry disable` on this machine."""
+    from hefesto.telemetry.client import enable, opt_out_source
+
+    removed = enable()
+    still_off = opt_out_source()
+    if still_off is not None:
+        click.echo(
+            f"Telemetry is still off: {_TELEMETRY_OFF_REASONS[still_off]}. "
+            "Unset it to turn telemetry on."
+        )
+        return
+    if removed:
+        click.echo("Anonymous telemetry is on on this machine.")
+    else:
+        click.echo("Anonymous telemetry was already on on this machine.")
+
+
+_TELEMETRY_OFF_REASONS = {
+    "DO_NOT_TRACK": "DO_NOT_TRACK is set",
+    "HEFESTO_TELEMETRY": "HEFESTO_TELEMETRY is set to an off value",
+    "telemetry_disabled_file": "hefesto telemetry disable was run on this machine",
+}
+
+_TELEMETRY_STATE_TEXT = {
+    "off": "off ({reason}). Nothing is sent.",
+    "no_destination": "on, but the PostHog key or host is empty. Nothing is sent.",
+    "notice_pending": "on. The next command prints the notice and sends nothing; "
+    "later commands send events.",
+    "debug": "on, debug mode. Events are printed on stderr and not sent.",
+    "on": "on. Anonymous usage events are sent.",
+}
+
+
+@telemetry_cmd.command("status")
+@click.option("--json", "as_json", is_flag=True, help="Print the state as JSON.")
+def telemetry_status(as_json: bool) -> None:
+    """Show whether usage events are sent, and which setting decides it."""
+    from hefesto.telemetry.client import status
+
+    info = status()
+    if as_json:
+        click.echo(json.dumps(info, sort_keys=True))
+        return
+    reason = _TELEMETRY_OFF_REASONS.get(info["off_by"] or "", "")
+    click.echo("Telemetry: " + _TELEMETRY_STATE_TEXT[info["state"]].format(reason=reason))
+    click.echo(f"State directory: {info['state_dir']}")
 
 
 # Register the group

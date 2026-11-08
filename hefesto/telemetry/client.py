@@ -66,13 +66,24 @@ def hefesto_dir() -> Path:
     return Path.home() / ".hefesto"
 
 
+def opt_out_source() -> str | None:
+    """The switch that turns usage events off, or None when they are on.
+
+    Checked in this order: ``DO_NOT_TRACK``, ``HEFESTO_TELEMETRY``, then the
+    ``telemetry_disabled`` file. The first match wins.
+    """
+    if os.getenv("DO_NOT_TRACK", "").strip().lower() in _TRUTHY:
+        return "DO_NOT_TRACK"
+    if os.getenv("HEFESTO_TELEMETRY", "").strip().lower() in _OPT_OUT:
+        return "HEFESTO_TELEMETRY"
+    if (hefesto_dir() / "telemetry_disabled").is_file():
+        return "telemetry_disabled_file"
+    return None
+
+
 def telemetry_enabled() -> bool:
     """True unless the user opted out. Ignores the project key."""
-    if os.getenv("DO_NOT_TRACK", "").strip().lower() in _TRUTHY:
-        return False
-    if os.getenv("HEFESTO_TELEMETRY", "").strip().lower() in _OPT_OUT:
-        return False
-    return not (hefesto_dir() / "telemetry_disabled").is_file()
+    return opt_out_source() is None
 
 
 def disable() -> None:
@@ -80,6 +91,57 @@ def disable() -> None:
     directory = hefesto_dir()
     directory.mkdir(parents=True, exist_ok=True)
     (directory / "telemetry_disabled").write_text("1\n", encoding="utf-8")
+
+
+def enable() -> bool:
+    """Remove the machine opt-out file. True when a file was removed.
+
+    Environment opt-outs (``DO_NOT_TRACK``, ``HEFESTO_TELEMETRY``) still win.
+    """
+    try:
+        (hefesto_dir() / "telemetry_disabled").unlink()
+    except FileNotFoundError:
+        return False
+    return True
+
+
+# What the next ``hefesto`` command does with usage events. Read-only: computing
+# it never prints the notice, writes state, or sends anything.
+STATE_OFF = "off"
+STATE_NO_DESTINATION = "no_destination"
+STATE_NOTICE_PENDING = "notice_pending"
+STATE_DEBUG = "debug"
+STATE_ON = "on"
+STATES = (STATE_OFF, STATE_NO_DESTINATION, STATE_NOTICE_PENDING, STATE_DEBUG, STATE_ON)
+
+
+def status() -> dict[str, Any]:
+    """Named telemetry state and the switch that decides it.
+
+    Follows the same checks, in the same order, as ``capture``: opt-out,
+    then an empty key or host, then the one-time notice, then debug.
+    """
+    off_by = opt_out_source()
+    debug = _debug_enabled()
+    if off_by is not None:
+        state = STATE_OFF
+    elif not _can_deliver() and not debug:
+        state = STATE_NO_DESTINATION
+    elif not _flag("notice_shown"):
+        state = STATE_NOTICE_PENDING
+    elif debug:
+        state = STATE_DEBUG
+    else:
+        state = STATE_ON
+    return {
+        "state": state,
+        "enabled": off_by is None,
+        "off_by": off_by,
+        "notice_shown": _flag("notice_shown"),
+        "debug": debug,
+        "destination_configured": _can_deliver(),
+        "state_dir": str(hefesto_dir()),
+    }
 
 
 def resolve_source() -> str:
