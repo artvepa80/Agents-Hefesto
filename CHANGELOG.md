@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — `docs/INTEGRATION.md` exit code for `--fail-on`
+
+- The CLI example said `hefesto analyze . --fail-on HIGH` exits 2 on a HIGH or CRITICAL finding. It exits 1 (`_determine_exit_code` in `hefesto/cli/main.py`); 2 is a usage error. The README "Exit Codes" section was already correct. Docs only.
+
 ### Added — `hefesto telemetry status` and `hefesto telemetry enable`
 
 - Telemetry on/off was spread over two environment variables, a marker file and a JSON state file, with no command to read it and no command to undo `disable`. `hefesto telemetry status` prints one named state (`off`, `no_destination`, `notice_pending`, `debug`, `on`) and the setting that decides it; `--json` gives the same for scripts and agents. It only reads (no notice, no state write, no event). The states follow the checks `capture` already runs, in the same order, so sending is unchanged.

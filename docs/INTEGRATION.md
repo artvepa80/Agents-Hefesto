@@ -25,7 +25,7 @@ and runs locally; no API key or AI provider is needed.
 ```bash
 hefesto analyze . --severity MEDIUM          # human-readable report
 hefesto analyze . --output json              # machine-readable report on stdout
-hefesto analyze . --fail-on HIGH             # exit code 2 if any HIGH or CRITICAL finding
+hefesto analyze . --fail-on HIGH             # exit code 1 if any HIGH or CRITICAL finding (2 = usage error)
 hefesto analyze . --exclude "build/,dist/"   # skip paths
 hefesto install-hooks                        # pre-commit hook
 ```
