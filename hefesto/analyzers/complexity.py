@@ -20,6 +20,14 @@ from hefesto.core.analysis_models import (
     AnalysisIssueType,
 )
 from hefesto.core.ast.generic_ast import GenericAST, NodeType
+from hefesto.core.complexity_message import complexity_message
+
+# Lowest complexity for each severity, as applied by _get_severity.
+_THRESHOLDS = {
+    AnalysisIssueSeverity.CRITICAL: 21,
+    AnalysisIssueSeverity.HIGH: 11,
+    AnalysisIssueSeverity.MEDIUM: 6,
+}
 
 
 class ComplexityAnalyzer:
@@ -55,7 +63,9 @@ class ComplexityAnalyzer:
                             else AnalysisIssueType.VERY_HIGH_COMPLEXITY
                         ),
                         severity=severity,
-                        message=f"Cyclomatic complexity too high ({complexity})",
+                        message=complexity_message(
+                            complexity, _THRESHOLDS[severity], severity.value
+                        ),
                         function_name=node.name,
                         suggestion=self._get_suggestion(complexity),
                         metadata={"complexity": complexity},
@@ -87,12 +97,9 @@ class ComplexityAnalyzer:
 
     def _get_severity(self, complexity: int) -> Optional[AnalysisIssueSeverity]:
         """Determine severity based on complexity."""
-        if complexity >= 21:
-            return AnalysisIssueSeverity.CRITICAL
-        elif complexity >= 11:
-            return AnalysisIssueSeverity.HIGH
-        elif complexity >= 6:
-            return AnalysisIssueSeverity.MEDIUM
+        for severity, threshold in _THRESHOLDS.items():
+            if complexity >= threshold:
+                return severity
         return None
 
     def _get_suggestion(self, complexity: int) -> str:

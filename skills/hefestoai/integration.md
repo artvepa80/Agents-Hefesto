@@ -6,7 +6,7 @@
 pip install hefesto-ai
 ```
 
-Requires Python >= 3.10. Installs the `hefesto` CLI.
+Requires Python >= 3.11. Installs the `hefesto` CLI.
 
 ## Pre-Commit Hook
 
@@ -17,7 +17,7 @@ hefesto install-hooks         # install into the git hooks directory
 hefesto install-hooks --force # overwrite existing hooks
 ```
 
-In your own project this installs the hooks shipped with the package. Pre-commit analyzes the staged files (`--fail-on HIGH`; the working-tree copy, not the index) and pre-push analyzes the repository (`--fail-on CRITICAL`). Both call the Python that ran `install-hooks` (`python -m hefesto`), fall back to `hefesto` on PATH, and fail if neither is found. Hooks go to `git rev-parse --git-path hooks`. If `core.hooksPath` is set, nothing is written and the command exits 1. The contributor hooks in `scripts/git-hooks/` are used only in a clone of this repository (root `pyproject.toml` with `name = "hefesto-ai"`).
+In your own project this installs the hooks shipped with the package. Pre-commit analyzes the staged files (`--fail-on HIGH`; the staged index content, not the working tree) and pre-push analyzes the repository (`--fail-on CRITICAL`). Both call the Python that ran `install-hooks` (`python -m hefesto`), fall back to `hefesto` on PATH, and fail if neither is found. Hooks go to `git rev-parse --git-path hooks`. If `core.hooksPath` is set, nothing is written and the command exits 1. The contributor hooks in `scripts/git-hooks/` are used only in a clone of this repository (root `pyproject.toml` with `name = "hefesto-ai"`).
 
 ### Bypass
 
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.20.4
+      - uses: artvepa80/Agents-Hefesto@v4   # or an exact release, e.g. @v4.21.0
         with:
           target: '.'
           fail_on: 'CRITICAL'

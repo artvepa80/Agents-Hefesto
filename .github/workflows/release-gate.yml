@@ -1,0 +1,39 @@
+# Release gate (target 4.21.0): a run with no flags must give the same JSON on
+# main and on this branch for each pinned corpus (scripts/release_gate_corpora.txt).
+# Timing fields are ignored. Corpora are fetched by SHA and only read.
+name: Release Gate
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  no-flag-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[multilang]"
+
+      - name: Compare main and this branch with no flags
+        run: python scripts/release_gate.py --base origin/main --head HEAD --work "$RUNNER_TEMP/release-gate"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Verify that README.md accurately reflects installed analyzers
 and that all version references across the repo match pyproject.toml.
 
@@ -70,6 +70,14 @@ VERSION_REFERENCES = [
     ),
     ("llms.txt", [(ACTION_REF, "action ref", ALLOW_MAJOR)]),
     ("server.json", [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "MCP metadata")]),
+    (
+        "packaging/hefesto-mcp/pyproject.toml",
+        [
+            (r'version = "(\d+\.\d+\.\d+)(?![\d.])"', "wrapper version"),
+            (r"hefesto-ai\[mcp\]==(\d+\.\d+\.\d+)(?![\d.])", "wrapper dependency"),
+        ],
+    ),
+    ("Dockerfile", [(r"hefesto-ai\[mcp\]==(\d+\.\d+\.\d+)(?![\d.])", "image pin")]),
     (
         ".well-known/agent-card.json",
         [(r'"version":\s*"(\d+\.\d+\.\d+)(?![\d.])"', "A2A metadata")],

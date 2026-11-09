@@ -138,7 +138,7 @@ def test_body_edit_surfaces_new_high_complexity_like_pr_146(
     assert len(high) == 1, result.findings
     finding = high[0]
     assert finding["severity"] == "HIGH"
-    assert finding["message"] == "Cyclomatic complexity too high (11)"
+    assert finding["message"] == "Cyclomatic complexity too high (11, threshold 11 for HIGH)"
     assert finding["in_hunk"] is True
     assert finding["line"] == _DEF_LINE  # I2: still the def line
     assert finding["anchor_line"] == _FIRST_ADDED  # I3: first added line in the span

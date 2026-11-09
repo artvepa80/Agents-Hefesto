@@ -20,6 +20,7 @@ OMEGA Sports Analytics Foundation
 """
 
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -102,14 +103,31 @@ class BudgetStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class LLMModel(str, Enum):
-    """Supported LLM models."""
+class _LLMModel(str, Enum):
+    """Gemini model names. Unused; deprecated as ``LLMModel``, removed in 5.0."""
 
     GEMINI_2_FLASH_EXP = "gemini-2.0-flash-exp"
     GEMINI_2_FLASH = "gemini-2.0-flash"
     GEMINI_1_5_FLASH = "gemini-1.5-flash"
     GEMINI_1_5_FLASH_8B = "gemini-1.5-flash-8b"
     GEMINI_1_5_PRO = "gemini-1.5-pro"
+
+
+_DEPRECATED = {
+    "LLMModel": (
+        _LLMModel,
+        "hefesto.core.models.LLMModel is deprecated and will be removed in Hefesto 5.0. "
+        "It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled.",
+    ),
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _DEPRECATED:
+        value, message = _DEPRECATED[name]
+        warnings.warn(message, DeprecationWarning, stacklevel=2)
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class SuggestionAction(str, Enum):
@@ -747,7 +765,6 @@ __all__ = [
     "IssueSeverity",
     "ValidationStatus",
     "BudgetStatus",
-    "LLMModel",
     "SuggestionAction",
     # Validation Models
     "ValidationResult",

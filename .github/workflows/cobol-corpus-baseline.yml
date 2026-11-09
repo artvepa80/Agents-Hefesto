@@ -28,10 +28,10 @@ jobs:
       HEFESTO_TELEMETRY: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
           cache: pip
@@ -42,7 +42,7 @@ jobs:
           python -m pip install -e .
 
       - name: Cache pinned corpora
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/hefesto-cobol-corpus
           key: cobol-corpus-${{ hashFiles('scripts/cobol_corpus_baseline.py') }}
@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload the fresh run
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cobol-corpus-run
           path: cobol-corpus-run.json
