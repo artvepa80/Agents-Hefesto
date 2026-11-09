@@ -21,10 +21,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
           cache: pip
@@ -54,17 +54,102 @@ jobs:
           python -m twine check dist/*
 
       - name: Upload dist
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-package-distributions
           path: dist/
+          if-no-files-found: error
+
+      # Wrapper wheel. No id-token here: this job cannot publish.
+      # Tooling is the same install as the engine steps above
+      # (packaging>=23.0, tomli>=2.0.1, build, twine).
+      - name: Verify wrapper version matches the tag
+        run: |
+          python scripts/verify_release_tag.py --tag "${GITHUB_REF_NAME}" \
+            --project-root packaging/hefesto-mcp --project-name hefesto-mcp
+
+      - name: Build wrapper wheel
+        run: |
+          python -m build --outdir dist-mcp packaging/hefesto-mcp
+
+      - name: Twine check wrapper
+        run: |
+          python -m twine check dist-mcp/*
+
+      - name: Check wrapper wheel metadata
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          import zipfile
+          from pathlib import Path
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          requires_python = tomllib.load(open("pyproject.toml", "rb"))["project"]["requires-python"]
+          wheels = sorted(Path("dist-mcp").glob("hefesto_mcp-*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wrapper wheel, found {wheels}")
+          with zipfile.ZipFile(wheels[0]) as archive:
+              names = archive.namelist()
+              entry = next(name for name in names if name.endswith("/entry_points.txt"))
+              text = archive.read(entry).decode("utf-8")
+              if "hefesto-mcp = hefesto.mcp_server:main" not in text:
+                  raise SystemExit("wrapper wheel is missing the hefesto-mcp script")
+              metadata = archive.read(
+                  next(name for name in names if name.endswith("/METADATA"))
+              ).decode("utf-8")
+          lines = metadata.splitlines()
+          dist = f"Requires-Dist: hefesto-ai[mcp]=={version}"
+          if dist not in lines:
+              raise SystemExit(f"missing {dist}")
+          python_line = f"Requires-Python: {requires_python}"
+          if python_line not in lines:
+              raise SystemExit(f"missing {python_line}")
+          print(f"wrapper metadata ok: {wheels[0].name}")
+          PY
+
+      - name: Smoke install wrapper from local wheels
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/mcp-venv"
+          PY="$RUNNER_TEMP/mcp-venv/bin/python"
+          shopt -s nullglob
+          engines=(dist/hefesto_ai-*.whl)
+          wrappers=(dist-mcp/hefesto_mcp-*.whl)
+          if [ "${#engines[@]}" -ne 1 ] || [ "${#wrappers[@]}" -ne 1 ]; then
+            printf 'expected one engine wheel and one wrapper wheel\n' >&2
+            exit 1
+          fi
+          "$PY" -m pip install "${engines[0]}[mcp]"
+          "$PY" -m pip install --no-index --no-deps "${wrappers[0]}"
+          "$PY" -m pip check
+          mkdir -p "$RUNNER_TEMP/proj"
+          cd /
+          # The checkout is not on sys.path here, so this reads the venv install.
+          "$PY" - <<'PY'
+          import importlib.metadata
+
+          recorded = importlib.metadata.distribution("hefesto-ai").read_text("direct_url.json")
+          if not recorded or "file:" not in recorded:
+              raise SystemExit("hefesto-ai has no direct_url.json from the local wheel")
+          PY
+          HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj" \
+            "$RUNNER_TEMP/mcp-venv/bin/hefesto-mcp" --help
+          HEFESTO_MCP_ROOT="$RUNNER_TEMP/proj" \
+            "$PY" -c "from hefesto.mcp_server import build_server; build_server()"
+
+      - name: Upload wrapper dist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hefesto-mcp-distributions
+          path: dist-mcp/
           if-no-files-found: error
 
   # Trusted publishing (OIDC) to PyPI. id-token is set on this job only
   # so the build job cannot mint a PyPI identity. Attestations stay at
   # the action default (PEP 740). The action's default repository is PyPI.
   # https://docs.pypi.org/trusted-publishers/using-a-publisher/
-  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.2/README.md
+  # https://github.com/pypa/gh-action-pypi-publish/blob/v1.14.3/README.md
   publish:
     needs: build
     runs-on: ubuntu-latest
@@ -76,29 +161,53 @@ jobs:
 
     steps:
       - name: Download dist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  # Upload only. The wheel was built in the build job. Same protected
+  # GitHub environment as the engine publish. The PyPI pending publisher
+  # for project hefesto-mcp must name this workflow and environment.
+  publish-hefesto-mcp:
+    needs: publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hefesto-mcp
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wrapper dist
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: hefesto-mcp-distributions
+          path: dist-mcp
+
+      - name: Publish hefesto-mcp to PyPI
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist-mcp
 
   # GitHub Release and the floating v4 tag run only after publish succeeds.
   # contents: write is limited to this job. checkout stays on v5 so the v4
   # push keeps the persisted credentials that step already uses.
   github-release:
-    needs: publish
+    needs: [publish, publish-hefesto-mcp]
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Download dist
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: python-package-distributions
           path: dist/

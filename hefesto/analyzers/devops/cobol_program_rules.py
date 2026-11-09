@@ -735,7 +735,8 @@ def _members(items: List[_DataItem], idx: int) -> List[_DataItem]:
     """``items[idx]`` and every item below it (66/88 entries skipped)."""
     root = items[idx]
     members = [root]
-    for item in items[idx + 1 :]:
+    for pos in range(idx + 1, len(items)):
+        item = items[pos]
         if item.level in (66, 88):
             continue
         if root.level == 77 or item.level <= root.level or item.level == 77:
@@ -973,7 +974,8 @@ def _is_bms_input_map(items: List[_DataItem], idx: int) -> bool:
     root = items[idx]
     names: Set[str] = set()
     lengths: List[str] = []
-    for item in items[idx + 1 :]:
+    for pos in range(idx + 1, len(items)):
+        item = items[pos]
         if item.level <= root.level or item.level in (66, 77):
             break
         names.add(item.name)

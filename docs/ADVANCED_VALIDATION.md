@@ -357,7 +357,7 @@ If any check fails, **the push is blocked** and you see exactly what needs to be
 
 **Meta-Validation Success:**
 
-When we implemented the enhanced pre-push hook, it **caught errors in its own code** before pushing:
+When we implemented the enhanced pre-push hook (since removed, see [Pre-Push Hook](#pre-push-hook)), it **caught errors in its own code** before pushing:
 
 ```
 1️⃣  Running linters...
@@ -384,7 +384,7 @@ This demonstrated the exact problem it was designed to solve: **catching local/C
 ### Prerequisites
 
 ```bash
-# Python 3.10+
+# Python 3.11+
 python --version
 
 # Hefesto installed
@@ -700,20 +700,7 @@ The pre-push hook caught **6 Flake8 errors** in the validator code itself:
 
 ### Pre-Push Hook
 
-```
-┌─────────────────────────────────────────┐
-│  pre_push.py                            │
-├─────────────────────────────────────────┤
-│  1. Run Black formatting check          │
-│  2. Run isort import sorting            │
-│  3. Run Flake8 linting ⭐ NEW           │
-│  4. Run unit tests                      │
-│  5. Run Hefesto code analysis           │
-└─────────────────────────────────────────┘
-         │
-         ├─ If ALL pass → Allow push
-         └─ If ANY fail → Block push + show errors
-```
+The `hefesto/hooks/pre_push.py` module described above was never wired to a command or hook and has been removed. The pre-push hook is the one `hefesto install-hooks` installs: `hefesto analyze . --fail-on CRITICAL --allow-no-files`.
 
 ---
 
@@ -745,7 +732,7 @@ The pre-push hook caught **6 Flake8 errors** in the validator code itself:
 
 ### Q: What Python versions are supported?
 
-**A:** Python 3.10+ (same as Hefesto core)
+**A:** Python 3.11+ (same as Hefesto core)
 
 ---
 

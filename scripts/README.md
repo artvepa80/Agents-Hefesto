@@ -4,6 +4,13 @@ Utility scripts for development and operations.
 
 ## Available Scripts
 
+### `release_gate.py`
+Runs `hefesto analyze --output json` with no flags from main and from the branch on pinned corpora (`release_gate_corpora.txt`, fetched by SHA and only read). It ignores timing fields and exits 1 on any difference. CI: `.github/workflows/release-gate.yml`.
+
+```bash
+python scripts/release_gate.py --base origin/main --head HEAD
+```
+
 ### `test_e2e.sh`
 End-to-end testing suite. Run before launch or after major changes.
 
@@ -82,7 +89,7 @@ hefesto status
 ## Dependencies
 
 Scripts may require:
-- Python 3.10+
+- Python 3.11+
 - Bash (for .sh scripts)
 - Hefesto installed locally (`pip install -e .`)
 
@@ -102,7 +109,7 @@ chmod +x scripts/generate_key.py
 ### Tests failing?
 1. Ensure you're in project root: `cd /path/to/hefesto-standalone`
 2. Install package: `pip install -e .`
-3. Check Python version: `python --version` (need 3.10+)
+3. Check Python version: `python --version` (need 3.11+)
 4. Clear license: `hefesto deactivate` then rerun tests
 
 ---

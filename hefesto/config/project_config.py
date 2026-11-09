@@ -158,6 +158,17 @@ def _issue_type_list(key: str, value: Any) -> str:
     return ",".join(items)
 
 
+def _experimental_list(key: str, value: Any) -> str:
+    from hefesto.core.experimental import ExperimentalError, parse
+
+    items = _string_list(key, value)
+    try:
+        parse(items)
+    except ExperimentalError as exc:
+        raise ConfigError(f"'{key}': {exc}") from exc
+    return ",".join(item.lower() for item in items)
+
+
 # config key -> validator returning the value in the shape the CLI option uses
 _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
     "severity": _choice(_SEVERITIES, upper=True),
@@ -171,6 +182,7 @@ _VALIDATORS: Dict[str, Callable[[str, Any], Any]] = {
     "enable_memory_budget_gate": _bool,
     "copybook_paths": _string_list,
     "include_vendored": _bool,
+    "experimental": _experimental_list,
 }
 
 SUPPORTED_KEYS = tuple(_VALIDATORS)

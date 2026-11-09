@@ -42,6 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import quote
 
 from hefesto.core.analysis_models import AnalysisIssue, AnalysisReport
+from hefesto.core.complexity_message import strip_threshold_clause
 from hefesto.reports.cwe_map import CWE_NAMES, CWE_VERSION, links_for
 
 SARIF_VERSION = "2.1.0"
@@ -92,6 +93,7 @@ class SARIFReporter:
         self._lines: Dict[str, List[str]] = {}
         self._not_analyzed: List[Dict[str, Any]] = []
         self._decoded_with_fallback: List[Dict[str, Any]] = []
+        self._experimental: List[str] = []
 
     def generate(self, report: AnalysisReport) -> str:
         """SARIF log as a JSON string."""
@@ -101,8 +103,10 @@ class SARIFReporter:
         meta = getattr(report, "meta", None) or {}
         self._not_analyzed = list(meta.get("not_analyzed") or [])
         self._decoded_with_fallback = list(meta.get("decoded_with_fallback") or [])
+        self._experimental = list(meta.get("experimental") or [])
+        suppressed: List[AnalysisIssue] = list(getattr(report, "get_suppressed_issues", list)())
         issues = sorted(
-            report.get_all_issues(),
+            [*report.get_all_issues(), *suppressed],
             key=lambda i: (_RANK.get(i.severity.value, 4), i.file_path, i.line, _rule_id(i)),
         )
         notes: List[str] = []
@@ -160,6 +164,8 @@ class SARIFReporter:
         taxonomy = _cwe_taxonomy(rules)
         if taxonomy:
             run["taxonomies"] = [taxonomy]
+        if self._experimental:
+            run["properties"] = {"experimental": list(self._experimental)}
         run["results"] = results
         return {
             "$schema": SARIF_SCHEMA,
@@ -231,6 +237,10 @@ class SARIFReporter:
         if issue.confidence is not None:
             properties["confidence"] = issue.confidence
         result["properties"] = properties
+        if issue.suppression_reason is not None:
+            result["suppressions"] = [
+                {"kind": "inSource", "justification": issue.suppression_reason}
+            ]
         return result
 
     def _related(self, issue: AnalysisIssue) -> List[Dict[str, Any]]:
@@ -266,7 +276,7 @@ class SARIFReporter:
         """Hash of rule, file and flagged text (not the line number) + occurrence."""
         context = self._line_text(issue.file_path, issue.line)
         if not context:
-            context = _DIGITS.sub("#", issue.message)
+            context = _DIGITS.sub("#", strip_threshold_clause(issue.message))
         origin = (issue.metadata or {}).get("expanded_from")
         if isinstance(origin, dict) and origin.get("file"):
             copied = self._line_text(str(origin["file"]), int(origin.get("line") or 0))
@@ -295,11 +305,19 @@ def _rule_id(issue: AnalysisIssue) -> str:
     return issue.rule_id or issue.issue_type.value
 
 
+# Display names that differ from the rule id. HIGH_COMPLEXITY also carries
+# MEDIUM findings (score 6 to 10), so "High complexity" misread as a severity.
+# The id stays HIGH_COMPLEXITY: code scanning matches alerts by rule id.
+_DISPLAY_NAMES: Dict[str, str] = {"HIGH_COMPLEXITY": "Complexity"}
+
+
 def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
     """Reporting descriptor for one rule (its highest severity is the default)."""
     issue = issues[0]
     kind = issue.issue_type.value
-    title = kind.replace("_", " ").capitalize().replace("Cobol ", "COBOL ", 1)
+    title = _DISPLAY_NAMES.get(kind) or (
+        kind.replace("_", " ").capitalize().replace("Cobol ", "COBOL ", 1)
+    )
     security = bool(_SECURITY_WORDS.search(kind))
     tags = ["security" if security else "maintainability"]
     if kind.startswith("COBOL_"):
@@ -320,7 +338,8 @@ def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:
         properties["security-severity"] = SECURITY_SEVERITY.get(severity, "5.5")
     rule: Dict[str, Any] = {
         "id": rid,
-        "name": "".join(part.capitalize() for part in kind.split("_")),
+        "name": _DISPLAY_NAMES.get(kind, "").replace(" ", "")
+        or "".join(part.capitalize() for part in kind.split("_")),
         "shortDescription": {"text": title},
         "fullDescription": {"text": f"{title} ({rid}), reported by HefestoAI."},
         "help": {

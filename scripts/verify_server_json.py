@@ -10,15 +10,19 @@ draft). Confirmed 2026-10-15:
   is ``2025-12-11``.
 
 This script does not publish to the registry. ``version`` must keep matching
-``pyproject.toml`` (4.20.4 at the time of writing). The live registry entry
+``pyproject.toml`` (4.21.0 at the time of writing). The live registry entry
 is updated only by a separate publish, which this check never performs.
 
+``packages`` lists the local stdio adapter (``hefesto-mcp`` on PyPI, ``uvx``,
+stdio). The hosted remote stays as it is. The canonical hosted entry checked
+by ``scripts/check_mcp_registry_entry.py`` is a different file and still has
+no ``packages`` key.
+
 ``repository`` stays on this public repository because it contains the
-``hefesto-ai`` engine that the hosted ``analyze`` tool runs. The hosted MCP
-server itself is closed-source and operated by Narapa LLC; that fact is in
-``description`` (schema maxLength 100). ``repository.subfolder`` is omitted:
-the schema uses it for a server that lives in a monorepo path, and the MCP
-server is not in this repository.
+``hefesto-ai`` engine that the hosted ``analyze`` tool runs. ``description``
+names the local stdio server and the hosted remote (schema maxLength 100)
+and does not lead with closed-source. ``repository.subfolder`` is omitted:
+the local adapter is the PyPI package, not a monorepo path.
 """
 
 from __future__ import annotations
@@ -37,9 +41,9 @@ OFFICIAL_SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11
 SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#"
 
 SERVER_NAME = "io.github.artvepa80/hefestoai"
-# 90 characters. server.schema.json ServerDetail.description maxLength is 100.
+# 88 characters. server.schema.json ServerDetail.description maxLength is 100.
 DESCRIPTION = (
-    "Release-truth gate for AI-generated code. Hosted MCP server is closed-source (Narapa LLC)."
+    "Release-truth gate for AI-generated code: local stdio server (MIT) plus a hosted remote."
 )
 PUBLIC_REPOSITORY_URL = "https://github.com/artvepa80/Agents-Hefesto"
 # GitHub database id from `gh api repos/artvepa80/Agents-Hefesto --jq .id`.
@@ -47,6 +51,8 @@ PUBLIC_REPOSITORY_URL = "https://github.com/artvepa80/Agents-Hefesto"
 REPOSITORY_ID = "1079896229"
 REMOTE_URL = "https://hefestoai.narapallc.com/api/mcp-protocol"
 DESCRIPTION_MAX_LENGTH = 100
+PACKAGE_IDENTIFIER = "hefesto-mcp"
+ROOT_ENV_DESCRIPTION = "Project directory the tools may read (not / or home)"
 
 
 def repo_root() -> Path:
@@ -72,44 +78,91 @@ def check_document(document: dict, package_version: str) -> list[str]:
     The JSON Schema pass is separate so a unit test can reject a dishonest
     document without downloading the schema.
     """
+    errors = _identity_errors(document, package_version)
+    errors.extend(_repository_errors(document.get("repository")))
+    errors.extend(_remote_errors(document.get("remotes")))
+    errors.extend(_package_errors(document, package_version))
+    return errors
+
+
+def _identity_errors(document: dict, package_version: str) -> list[str]:
     errors: list[str] = []
     if document.get("$schema") != OFFICIAL_SCHEMA_URL:
         errors.append(f"$schema must be {OFFICIAL_SCHEMA_URL}")
     if document.get("name") != SERVER_NAME:
         errors.append(f"name must be {SERVER_NAME}")
-    if document.get("description") != DESCRIPTION:
-        errors.append("description must state that the hosted MCP server is closed-source (Narapa)")
-    description = document.get("description")
-    if isinstance(description, str) and len(description) > DESCRIPTION_MAX_LENGTH:
-        errors.append(
-            f"description length {len(description)} exceeds schema maxLength {DESCRIPTION_MAX_LENGTH}"
-        )
+    errors.extend(_description_errors(document.get("description")))
     if document.get("version") != package_version:
         errors.append(
             f"version {document.get('version')!r} must match pyproject.toml {package_version!r}"
         )
-    repository = document.get("repository")
+    return errors
+
+
+def _description_errors(description: object) -> list[str]:
+    errors: list[str] = []
+    if description != DESCRIPTION:
+        errors.append("description must match the registry summary")
+    if isinstance(description, str) and len(description) > DESCRIPTION_MAX_LENGTH:
+        errors.append(
+            f"description length {len(description)} exceeds "
+            f"schema maxLength {DESCRIPTION_MAX_LENGTH}"
+        )
+    return errors
+
+
+def _repository_errors(repository: object) -> list[str]:
     if not isinstance(repository, dict):
-        errors.append("repository must be an object")
-    else:
-        if repository.get("url") != PUBLIC_REPOSITORY_URL:
-            errors.append(f"repository.url must be {PUBLIC_REPOSITORY_URL}")
-        if repository.get("source") != "github":
-            errors.append("repository.source must be github")
-        repo_id = repository.get("id")
-        if repo_id != REPOSITORY_ID or not isinstance(repo_id, str):
-            errors.append(f"repository.id must be the string {REPOSITORY_ID!r}")
-        if "subfolder" in repository:
-            errors.append(
-                "repository.subfolder must be omitted; the MCP server is not in this repository"
-            )
-    remotes = document.get("remotes")
+        return ["repository must be an object"]
+    errors: list[str] = []
+    if repository.get("url") != PUBLIC_REPOSITORY_URL:
+        errors.append(f"repository.url must be {PUBLIC_REPOSITORY_URL}")
+    if repository.get("source") != "github":
+        errors.append("repository.source must be github")
+    errors.extend(_repository_id_errors(repository.get("id")))
+    if "subfolder" in repository:
+        errors.append("repository.subfolder must be omitted; the local adapter is the PyPI package")
+    return errors
+
+
+def _repository_id_errors(repo_id: object) -> list[str]:
+    if repo_id != REPOSITORY_ID or not isinstance(repo_id, str):
+        return [f"repository.id must be the string {REPOSITORY_ID!r}"]
+    return []
+
+
+def _remote_errors(remotes: object) -> list[str]:
     expected_remote = {"type": "streamable-http", "url": REMOTE_URL}
     if remotes != [expected_remote]:
-        errors.append(f"remotes must be [{expected_remote}]")
-    if "packages" in document:
-        errors.append("packages must be omitted; hefesto-ai is the engine, not the MCP server")
-    return errors
+        return [f"remotes must be [{expected_remote}]"]
+    return []
+
+
+def _expected_package(package_version: str) -> dict:
+    return {
+        "registryType": "pypi",
+        "registryBaseUrl": "https://pypi.org",
+        "identifier": PACKAGE_IDENTIFIER,
+        "version": package_version,
+        "runtimeHint": "uvx",
+        "transport": {"type": "stdio"},
+        "environmentVariables": [
+            {
+                "name": "HEFESTO_MCP_ROOT",
+                "description": ROOT_ENV_DESCRIPTION,
+                "isRequired": True,
+                "isSecret": False,
+            }
+        ],
+    }
+
+
+def _package_errors(document: dict, package_version: str) -> list[str]:
+    packages = document.get("packages")
+    expected = _expected_package(package_version)
+    if packages != [expected]:
+        return [f"packages must be [{expected}]"]
+    return []
 
 
 def fetch_schema(url: str) -> dict:

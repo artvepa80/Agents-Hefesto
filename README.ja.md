@@ -6,7 +6,7 @@
 
 HefestoAI は、AI アシスタントがコードを書いた後、そのコードが出荷される前に実行されます。プロジェクトが宣言している内容（依存関係、設定、インストール成果物）が実際の動作と一致しているかを確認し、コード自体のセキュリティと複雑度もチェックします。
 
-オープンソース（MIT）、Python 3.10 以上。パッケージには 22 フォーマットのアナライザー（コード言語 7 + DevOps フォーマット 11 + クラウドフォーマット 4）が含まれ、`hefesto analyze` は 22 すべてを実行します。
+オープンソース（MIT）、Python 3.11 以上。パッケージには 22 フォーマットのアナライザー（コード言語 7 + DevOps フォーマット 11 + クラウドフォーマット 4）が含まれ、`hefesto analyze` は 22 すべてを実行します。
 
 ## インストール
 
@@ -48,7 +48,7 @@ jobs:
           sarif: 'true'
 ```
 
-検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.20.4` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# は CLI と `hefesto-ai[multilang]` が必要です。
+検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.21.0` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# は CLI と `hefesto-ai[multilang]` が必要です。
 
 ## 検出内容（例）
 

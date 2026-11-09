@@ -6,7 +6,7 @@
 
 HefestoAI 在 AI 助手写完代码之后、代码发布之前运行。它检查项目所声明的内容（依赖、配置、安装产物）是否与实际行为一致，并对代码本身执行安全和复杂度检查。
 
-开源（MIT），支持 Python 3.10+。软件包提供 22 种格式的分析器（7 种代码语言 + 11 种 DevOps 格式 + 4 种云格式）；`hefesto analyze` 会运行全部 22 种。
+开源（MIT），支持 Python 3.11+。软件包提供 22 种格式的分析器（7 种代码语言 + 11 种 DevOps 格式 + 4 种云格式）；`hefesto analyze` 会运行全部 22 种。
 
 ## 安装
 
@@ -48,7 +48,7 @@ jobs:
           sarif: 'true'
 ```
 
-检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.20.4` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要使用 CLI 并安装 `hefesto-ai[multilang]`。
+检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.21.0` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要使用 CLI 并安装 `hefesto-ai[multilang]`。
 
 ## 检查内容（示例）
 

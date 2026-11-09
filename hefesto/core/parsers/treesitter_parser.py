@@ -29,6 +29,76 @@ if not USE_PREBUILT:
     from tree_sitter import Language, Parser
 
 
+_FUNCTION_EXPRESSIONS = frozenset({"arrow_function", "function_expression", "function"})
+_ANONYMOUS_CAPABLE = _FUNCTION_EXPRESSIONS | {"function_declaration", "method_definition"}
+_IDENTIFIER_PARENTS = frozenset({"variable_declarator", "assignment_expression"})
+_PROPERTY_PARENTS = frozenset({"pair", "property", "property_assignment"})
+_PROPERTY_KEY_TYPES = frozenset({"property_identifier", "identifier", "string"})
+_PARAMETERIZED_NODES = _ANONYMOUS_CAPABLE | {"method_declaration", "function_item"}
+_PARAMETER_LIST_TYPES = frozenset({"formal_parameters", "parameters", "parameter_list"})
+# C/C++: the name and parameters of a function_definition sit in its
+# declarator chain (pointer_declarator -> function_declarator -> identifier).
+_C_FAMILY = frozenset({"c", "cpp"})
+_C_DECLARATOR_NAMES = frozenset(
+    {
+        "identifier",
+        "field_identifier",
+        "qualified_identifier",
+        "destructor_name",
+        "operator_name",
+    }
+)
+_C_RECOVERED_DECLARATIONS = frozenset(
+    {
+        "function_definition",
+        "declaration",
+        "type_definition",
+        "struct_specifier",
+        "class_specifier",
+        "union_specifier",
+        "enum_specifier",
+        "namespace_definition",
+        "template_declaration",
+        "preproc_def",
+        "preproc_function_def",
+        "preproc_include",
+    }
+)
+_C_FAMILY_TYPES = {
+    "function_definition": NodeType.FUNCTION,
+    "struct_specifier": NodeType.CLASS,
+    "union_specifier": NodeType.CLASS,
+    "enum_specifier": NodeType.CLASS,
+    "class_specifier": NodeType.CLASS,
+    "if_statement": NodeType.CONDITIONAL,
+    "switch_statement": NodeType.CONDITIONAL,
+    "for_statement": NodeType.LOOP,
+    "for_range_loop": NodeType.LOOP,
+    "while_statement": NodeType.LOOP,
+    "do_statement": NodeType.LOOP,
+    "call_expression": NodeType.CALL,
+    "return_statement": NodeType.RETURN,
+    "preproc_include": NodeType.IMPORT,
+    "try_statement": NodeType.TRY,
+    "catch_clause": NodeType.CATCH,
+    "throw_expression": NodeType.THROW,
+}
+_PARAMETER_TYPES = frozenset(
+    {
+        "identifier",
+        "required_parameter",
+        "optional_parameter",
+        "rest_parameter",
+        "parameter",
+        "simple_parameter",
+        "typed_parameter",
+        "default_parameter",
+        "formal_parameter",
+        "spread_element",
+    }
+)
+
+
 class TreeSitterParser(CodeParser):
     """Universal parser using TreeSitter."""
 
@@ -40,6 +110,8 @@ class TreeSitterParser(CodeParser):
         "go": "go",
         "rust": "rust",
         "c_sharp": "csharp",  # tree-sitter-language-pack manifest uses 'csharp'
+        "c": "c",
+        "cpp": "cpp",
     }
 
     def __init__(self, language: str):
@@ -59,6 +131,8 @@ class TreeSitterParser(CodeParser):
                 "go": "go",
                 "rust": "rust",
                 "c_sharp": "c_sharp",
+                "c": "c",
+                "cpp": "cpp",
             }
             grammar_name = grammar_map.get(language, language)
             self.language = Language(str(build_path), grammar_name)  # type: ignore
@@ -66,16 +140,54 @@ class TreeSitterParser(CodeParser):
 
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
-        tree = self.parser.parse(bytes(code, "utf8"))
-        root = self._convert_treesitter_to_generic(tree.root_node, code, parent=None)
-        return GenericAST(root, self.language, code)
+        # tree-sitter offsets are byte offsets into this buffer: encode once and
+        # slice bytes, never the decoded str (a BOM or accented text shifts it).
+        data = code.encode("utf8")
+        tree = self.parser.parse(data)
+        root = self._convert_treesitter_to_generic(tree.root_node, data, parent=None)
+        ast = GenericAST(root, self.language, code)
+        if self.language in _C_FAMILY:
+            ast.unparseable = self._is_unparseable(tree.root_node)
+        return ast
+
+    @staticmethod
+    def _is_unparseable(root) -> bool:
+        """True when the file has parse errors and the grammar recovered no declaration.
+
+        A partial tree (macros the grammar cannot read, with functions,
+        declarations or types still recovered somewhere, even inside ERROR
+        nodes) is not unparseable; it is analyzed as it is.
+        """
+        if not root.has_error:
+            return False
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            if node.type in _C_RECOVERED_DECLARATIONS:
+                return False
+            stack.extend(node.children)
+        return True
 
     def supports_language(self, language: str) -> bool:
         return language in self.LANG_MAP
 
-    def _convert_treesitter_to_generic(self, node, source: str, parent=None) -> GenericNode:
+    @staticmethod
+    def _node_text(node, source: bytes) -> str:
+        """Source text of ``node``: slice the UTF-8 bytes, then decode."""
+        return source[node.start_byte : node.end_byte].decode("utf8", errors="replace")
+
+    def _convert_treesitter_to_generic(self, node, source: bytes, parent=None) -> GenericNode:
         """Convert TreeSitter node to GenericNode."""
         node_type = self._map_node_type(node.type, self.language)
+        if (
+            node_type == NodeType.FUNCTION
+            and node.type == "function_definition"
+            and self.language in _C_FAMILY
+            and self._c_function_declarator(node) is None
+        ):
+            # ``FMT_BEGIN_NAMESPACE namespace detail { ... }``: a macro the
+            # grammar reads as a return type, not a function.
+            node_type = NodeType.UNKNOWN
 
         children = []
         for child in node.children:
@@ -94,16 +206,13 @@ class TreeSitterParser(CodeParser):
             line_end=node.end_point[0] + 1,
             column_start=node.start_point[1],
             column_end=node.end_point[1],
-            text=(
-                source[node.start_byte : node.end_byte]
-                if node.start_byte < len(source.encode("utf8"))
-                else ""
-            ),
+            text=self._node_text(node, source) if node.start_byte < len(source) else "",
             children=children,
             metadata={
                 "treesitter_type": node.type,
                 "language": self.language,
                 "param_count": param_count,
+                "named": node.is_named,
             },
         )
 
@@ -186,6 +295,9 @@ class TreeSitterParser(CodeParser):
             }
             return mapping.get(ts_type, NodeType.UNKNOWN)
 
+        elif language in _C_FAMILY:
+            return _C_FAMILY_TYPES.get(ts_type, NodeType.UNKNOWN)
+
         elif language == "c_sharp":
             mapping = {
                 "method_declaration": NodeType.METHOD,
@@ -208,107 +320,126 @@ class TreeSitterParser(CodeParser):
 
         return NodeType.UNKNOWN
 
-    def _extract_name(self, node, source: str, parent=None) -> Optional[str]:
+    @classmethod
+    def _first_child_text(cls, node, source: bytes, types) -> Optional[str]:
+        """Return the text of the first child whose type is in ``types``."""
+        for child in node.children:
+            if child.type in types:
+                return cls._node_text(child, source)
+        return None
+
+    @classmethod
+    def _field_name_text(cls, node, source: bytes) -> Optional[str]:
+        """Text of the node's ``name`` field when it is a plain identifier."""
+        field = node.child_by_field_name("name")
+        if field is None or not field.type.endswith("identifier"):
+            return None
+        return cls._node_text(field, source)
+
+    @classmethod
+    def _c_function_declarator(cls, node):
+        """The ``function_declarator`` of a C/C++ ``function_definition``, or None."""
+        target = node.child_by_field_name("declarator")
+        while target is not None and target.type != "function_declarator":
+            target = target.child_by_field_name("declarator")
+        return target
+
+    @classmethod
+    def _c_function_name(cls, node, source: bytes) -> Optional[str]:
+        """``alloc_buf``, ``Widget::size``, ``Widget::~Widget`` or ``operator+``."""
+        func = cls._c_function_declarator(node)
+        target = None if func is None else func.child_by_field_name("declarator")
+        if target is None or target.type not in _C_DECLARATOR_NAMES:
+            return None
+        return cls._node_text(target, source)
+
+    @classmethod
+    def _type_block_name(cls, node, source: bytes) -> Optional[str]:
+        """Name of the type a Rust ``impl`` block or Go ``type`` declaration declares.
+
+        Rust: ``impl<T> Tr for Vec<T>`` -> ``Vec``; ``impl a::B`` -> ``B``.
+        Go: ``type Server struct{}`` -> ``Server``; a grouped ``type ( ... )`` is named
+        only when it holds a single spec. With several specs it stays unnamed, so one
+        type's findings are never reported under another type's name.
+        """
+        if node.type == "impl_item":
+            target = node.child_by_field_name("type")
+            while target is not None and target.type != "type_identifier":
+                inner = target.child_by_field_name("type")
+                target = inner if inner is not None else target.child_by_field_name("name")
+            return None if target is None else cls._node_text(target, source)
+        if node.type == "type_declaration":
+            specs = [s for s in node.named_children if s.type in ("type_spec", "type_alias")]
+            if len(specs) == 1:
+                return cls._field_name_text(specs[0], source)
+        return None
+
+    def _name_from_parent(self, parent, source: bytes) -> Optional[str]:
+        """Infer a function expression's name from its parent context."""
+        if parent.type in _IDENTIFIER_PARENTS:
+            # const NAME = () => {}  /  NAME = () => {}
+            return self._first_child_text(parent, source, ("identifier",))
+        if parent.type in _PROPERTY_PARENTS:
+            # { NAME: () => {} }; quotes are removed from string keys
+            name = self._first_child_text(parent, source, _PROPERTY_KEY_TYPES)
+            return None if name is None else name.strip("'\"")
+        return None
+
+    def _extract_name(self, node, source: bytes, parent=None) -> Optional[str]:
         """
         Extract name from node with smart inference for arrow functions.
 
+        C and C++ ``function_definition`` and class-like specifiers are named
+        from their declarator or tag before this list.
+
         Priority order:
-        1. Direct identifier child (function foo() {})
-        2. Parent variable_declarator name (const foo = () => {})
-        3. Property name in object (foo: () => {})
+        1. The grammar's ``name`` field (C# ``Task Foo()`` -> ``Foo``,
+           Go ``func (s *S) Run()`` -> ``Run``)
+        2. Direct identifier child (function foo() {})
+        3. Parent variable_declarator, pair/property or assignment name
         4. Method name
-        5. '<anonymous>' for truly unnamed functions
+        5. Rust ``impl`` block / Go ``type`` declaration: the declared type's name
+        6. '<anonymous>' for truly unnamed functions
         """
-        # 1. Direct identifier child (standard function declaration)
-        for child in node.children:
-            if child.type == "identifier":
-                return source[child.start_byte : child.end_byte]
+        if node.type == "function_definition" and self.language in _C_FAMILY:
+            return self._c_function_name(node, source) or "<anonymous>"
+        if self.language in _C_FAMILY and _C_FAMILY_TYPES.get(node.type) == NodeType.CLASS:
+            # ``struct cache_accessor<double>``, ``class ns::Widget``
+            field = node.child_by_field_name("name")
+            return None if field is None else self._node_text(field, source)
+        name = self._field_name_text(node, source)
+        if name is None:
+            name = self._type_block_name(node, source)
+        if name is None:
+            name = self._first_child_text(node, source, ("identifier",))
+        if name is None and node.type in _FUNCTION_EXPRESSIONS and parent is not None:
+            name = self._name_from_parent(parent, source)
+        if name is None and node.type == "method_definition":
+            name = self._first_child_text(node, source, ("property_identifier",))
+        if name is None and node.type in _ANONYMOUS_CAPABLE:
+            name = "<anonymous>"
+        return name
 
-        # 2. For arrow functions, look at parent context
-        if node.type in ["arrow_function", "function_expression", "function"]:
-            if parent is not None:
-                # Check if parent is variable_declarator: const NAME = () => {}
-                if parent.type == "variable_declarator":
-                    for child in parent.children:
-                        if child.type == "identifier":
-                            return source[child.start_byte : child.end_byte]
-
-                # Check if parent is pair/property: { NAME: () => {} }
-                if parent.type in ["pair", "property", "property_assignment"]:
-                    for child in parent.children:
-                        if child.type in [
-                            "property_identifier",
-                            "identifier",
-                            "string",
-                        ]:
-                            name = source[child.start_byte : child.end_byte]
-                            # Remove quotes from string keys
-                            return name.strip("'\"")
-
-                # Check if parent is assignment: NAME = () => {}
-                if parent.type == "assignment_expression":
-                    for child in parent.children:
-                        if child.type == "identifier":
-                            return source[child.start_byte : child.end_byte]
-
-        # 3. Method definition name
-        if node.type == "method_definition":
-            for child in node.children:
-                if child.type == "property_identifier":
-                    return source[child.start_byte : child.end_byte]
-
-        # 4. Return '<anonymous>' instead of None for unnamed functions
-        if node.type in [
-            "arrow_function",
-            "function_expression",
-            "function",
-            "function_declaration",
-            "method_definition",
-        ]:
-            return "<anonymous>"
-
-        return None
-
-    def _extract_parameter_count(self, node, source: str) -> int:
+    def _extract_parameter_count(self, node, source: bytes) -> int:
         """
         Extract the actual parameter count from formal_parameters.
 
         Only counts parameters in function declarations, NOT in call expressions.
         """
-        if node.type not in [
-            "function_declaration",
-            "arrow_function",
-            "function_expression",
-            "function",
-            "method_definition",
-            "method_declaration",
-            "function_item",  # Rust
-        ]:
+        if node.type == "function_definition" and self.language in _C_FAMILY:
+            func = self._c_function_declarator(node)
+            params = None if func is None else func.child_by_field_name("parameters")
+            if params is None:
+                return 0
+            decls = [c for c in params.named_children if c.type != "comment"]
+            # ``f(void)`` declares no parameters
+            if len(decls) == 1 and self._node_text(decls[0], source).strip() == "void":
+                return 0
+            return len(decls)
+        if node.type not in _PARAMETERIZED_NODES:
             return 0
-
-        # Find formal_parameters child
         for child in node.children:
-            if child.type in [
-                "formal_parameters",
-                "parameters",
-                "parameter_list",
-            ]:
+            if child.type in _PARAMETER_LIST_TYPES:
                 # Count actual parameter nodes, not commas
-                param_count = 0
-                for param in child.children:
-                    if param.type in [
-                        "identifier",
-                        "required_parameter",
-                        "optional_parameter",
-                        "rest_parameter",
-                        "parameter",
-                        "simple_parameter",
-                        "typed_parameter",
-                        "default_parameter",
-                        "formal_parameter",
-                        "spread_element",
-                    ]:
-                        param_count += 1
-                return param_count
-
+                return sum(1 for param in child.children if param.type in _PARAMETER_TYPES)
         return 0

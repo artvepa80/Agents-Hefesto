@@ -327,8 +327,9 @@ def refresh_latest_version() -> None:
 
 def _fetch_pypi_version() -> str:
     request = urllib.request.Request(PYPI_JSON_URL, method="GET")
-    response = urllib.request.urlopen(request, timeout=PYPI_TIMEOUT)
-    payload = json.loads(response.read().decode("utf-8", errors="replace"))
+    with urllib.request.urlopen(request, timeout=PYPI_TIMEOUT) as response:
+        raw = response.read()
+    payload = json.loads(raw.decode("utf-8", errors="replace"))
     if not isinstance(payload, dict):
         return ""
     info = payload.get("info")
@@ -538,7 +539,8 @@ def _schedule_send(payload: Mapping[str, Any]) -> None:
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(request, timeout=1.5)
+            with urllib.request.urlopen(request, timeout=1.5):
+                pass
         except Exception:  # noqa: BLE001 — a telemetry failure must not surface
             return
 

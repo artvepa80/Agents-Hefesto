@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — opt-in `multilang` input for the GitHub Action
+
+- `multilang: 'true'` installs the `[multilang]` extra in the Action, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed in CI as with `pip install "hefesto-ai[multilang]"`. Default `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out). The install step moved from `action.yml` into `scripts/action_install.sh` (same commands; tested with `tests/scripts/test_action_install.py`). `action-smoke.yml` gains a `smoke-multilang` job (not a required check) that runs a TypeScript file with the input off (exit 1, no file analyzed) and on (exit 0, 1 file analyzed). The analysis log prints `Multilang input: yes` or `Multilang input: no` for that same true/1/yes rule. The line is the input value, not a statement that the extra was installed.
+- `OT-INSTALL-001` (an `action.yml` input that no script reads) now reads every `scripts/action_*.sh`, not only `scripts/action_entrypoint.sh`, so the `multilang` input read by `scripts/action_install.sh` is not reported. The message now says "no scripts/action_*.sh reads INPUT_<NAME>". User impact: in a repository whose Action inputs are read by a `scripts/action_*.sh` other than the entrypoint, `OT-INSTALL-001` stops reporting those inputs as unused; an input that no `scripts/action_*.sh` reads is still reported, and repositories without such scripts see no change.
+
 ### Fixed — a broken PRO install no longer crashes `hefesto analyze`
 
 `hefesto/pro_optional.py` caught only `ModuleNotFoundError`, so a `hefesto_pro` that was installed but failed to import (for example an `ImportError` from an incomplete or mismatched install) stopped `hefesto analyze` even when no PRO feature was used. Each PRO block (scope gating, multi-language discovery, enrichment, API hardening) now catches `ImportError`, prints one warning on stderr naming the feature and the error, and falls back as if PRO were absent. A missing PRO (the missing module is `hefesto_pro` or one of its submodules) or a missing license (`ProLicenseRequired`) still falls back silently. A `ModuleNotFoundError` for one of PRO's own dependencies now warns too, so a PRO user does not lose features without notice. Test: `tests/test_pro_optional_broken_install.py`.
@@ -14,6 +19,208 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — enrichment providers from entry points, with limits
 
 `hefesto analyze --enrich ... --enrich-provider NAME` now loads the provider registered as `NAME` in the `hefesto.enrichment_providers` entry-point group; before, the orchestrator always got an empty provider list, so enrichment was always skipped. Only the requested names are imported. A provider is used only if it implements the PRO `EnrichmentProvider` protocol and its `name` equals the entry-point name; a missing, failing or invalid provider is reported on stderr and skipped. The orchestrator now gets the cache built from `--enrich-cache-ttl` / `--enrich-cache-max`. New `--enrich-min-severity` (default `MEDIUM`) and `--enrich-max-findings` (default `50`, highest severity first, `0` = none) bound how many sequential provider calls a run makes. Enrichment still never changes findings, severities or the exit code. If two installed packages register the same provider name, a stderr warning names both distributions and the first by distribution name is used, the same on every run. Requires `hefesto-pro >= 3.10.1` (pending release): with older PRO releases `--enrich-timeout` does not stop the wait and `--enrich local` skips every provider; `--enrich local` runs only providers with `is_local = True`. Not wired into `hefesto serve`, the GitHub Action or `pr-review`. Docs: `docs/enrichment-providers.md`.
+
+## [4.21.0] - 2026-11-07
+
+### Upgrade notes — read first if you use the GitHub Action on `@v4`
+
+`@v4` moves to 4.21.0 when it is released, so workflows on `@v4` pick up these two changes without an edit:
+
+1. **Python 3.11 or newer is required.** The Action now stops with an error when the runner's `python3` is 3.10 (for example on `ubuntu-22.04`). Add `actions/setup-python` with Python 3.11 or newer before the Action, or pin `artvepa80/Agents-Hefesto@v4.20.4`. On Python 3.10, `pip` keeps installing 4.20.x.
+2. **A file whose tree-sitter grammar cannot be loaded now fails `--fail-on` (exit 1).** Such a file used to be skipped as a parse error, so the gate passed over code it never checked. It is now listed in `meta.not_analyzed` with `reason: grammar_unavailable`, and the not-analyzed gate fails the run; `--allow-not-analyzed` opts out. The Action installs the base package without `[multilang]`, so a missing grammar pack is still a skip with an install hint there. The case that changes is a CLI or hook run with `[multilang]` installed, an empty grammar cache and no network.
+
+C and C++ files, and the security rules for C#, Go, Rust, C and C++, stay off. A workflow on `@v4` does not enable them. They run only with `--experimental` (`c-cpp`, `lang-security`, or both). A run that does not pass those names keeps the same output as before.
+
+Also in this release: tree-sitter function and class names are no longer cut or shifted after a UTF-8 BOM or other non-ASCII text; C# methods and Go methods with a receiver are reported under their declared name instead of their return type or `<anonymous>`; Rust `impl` blocks and Go `type` declarations carry their type's name. Finding messages change for those declarations (line numbers, rule types and counts do not), so pull requests that were already reviewed may get those comments once more. Details below.
+
+### Added — experimental features, off by default
+
+- New `--experimental NAMES` option and `experimental:` key in `.hefesto.yaml`. Off by default: a run without them gives unchanged output. The names in this release are `c-cpp` and `lang-security`. A CLI value replaces the config list; an unknown name exits 2; a name that is no longer experimental warns. Enabled names are reported in JSON `meta.experimental` and in the SARIF run `properties.experimental`. The Action has no input for them and the MCP server never enables them.
+
+### Added — C and C++ files (`c-cpp`, experimental)
+
+- Everything in this section applies only with `--experimental c-cpp`. Without it, C and C++ files are not found.
+- `.c` and `.h` files are C; `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh` and `.hxx` files are C++. Both use the tree-sitter `c`/`cpp` grammars from the `[multilang]` extra and run the generic complexity, size and nesting checks. They are not counted in the 22-format total.
+- A `.h` header is C++ when its code (comments and literals removed) has C++-only syntax (`class`/`namespace` at line start, `template <`, `std::`, `using namespace`, an access label, `#include <vector>`-style includes) or a C++ source with the same name sits next to it; otherwise it is C. `extern "C"` alone keeps a header C.
+- A `.h` header with Objective-C syntax (`@interface`, `@protocol`, `@implementation`, `@end`, `@class`, `@property` or `NS_ASSUME_NONNULL_BEGIN` at line start; comments and literals removed; `#import` alone does not count) is treated as an unrecognized file, so it is never analyzed as C or C++, never reported as not analyzed and never fails the gate. Objective-C and C++ syntax together count as Objective-C.
+- Functions are named as declared (`Widget::size`, `Widget::~Widget`, `operator+`), types by their tag (`cache<double>`); `f(void)` has 0 parameters; a macro before `namespace` is not reported as a function.
+- A file with parse errors is analyzed when any declaration was recovered; a file where none was recovered goes to `meta.not_analyzed` with `reason: parse_error`.
+- With `--experimental c-cpp` and `[multilang]` installed, repositories that contain C or C++ files get new findings from these checks, and offline runs with an empty grammar cache report those files as not analyzed (`grammar_unavailable`), which fails `--fail-on` unless `--allow-not-analyzed` is passed. The Action installs the base package and is unchanged.
+- Peak memory with `c-cpp` on: zlib 42→107 MB, fmt 39→122 MB, react-native 175→196 MB (see `docs/c-cpp.md`).
+- On zlib `51b7f2ab` and fmt `12391371`, all 74 and 70 C/C++ files were analyzed (no `parse_error`). See `docs/c-cpp.md`.
+
+### Added — security rules for C#, Go, Rust, C and C++ (`lang-security`, experimental)
+
+- Everything in this section runs only with `--experimental lang-security`. The C and C++ rules also need `--experimental c-cpp` (`--experimental c-cpp,lang-security`).
+- 10 rules that read the syntax tree of `.cs`, `.go` and `.rs` files (needs the `[multilang]` extra): CS001 SQL built from strings, CS002 dangerous .NET formatters, CS003 `Process.Start` with a built string, CS004 MD5/SHA-1 (LOW inventory) or DES/TripleDES/RC2 (MEDIUM); GO001 shell `-c` with a built string, GO003 `crypto/md5`/`sha1` (LOW inventory) or `crypto/des`/`rc4` (MEDIUM), GO004 `InsecureSkipVerify: true`; RS001 `unsafe` inventory (LOW), RS002 `mem::transmute`, RS003 shell `-c` with `format!`. Each finding carries its `rule_id` and a CWE in SARIF. Rules and the generic SQL/command checks no longer report the same line twice.
+- With both flags, four more rules read the syntax tree of C and C++ files (needs the `[multilang]` extra): CC001 `gets` (HIGH, CWE-242), CC002 unbounded copy or write: `strcpy`/`strcat` with a non-literal source, `sprintf` with `%s` and no precision, `scanf` `%s` with no width (MEDIUM, CWE-120), CC003 a non-constant format with no arguments after it, such as `printf(buf)` (MEDIUM, CWE-134), CC004 `system`/`popen` with a command that is not a literal (HIGH, CWE-78). CC002 and CC003 treat ALL-CAPS macros, `"lit" + n`, ternaries of literals and gettext literals as constant. CC003 skips formats forwarded by variadic or `va_list` wrappers. CC002 skips a copy whose source length was checked with `strlen` just before. A CC004 finding replaces the generic command finding on the same line.
+- Test paths are skipped for these rules, including .NET test projects (a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs`). Those .NET paths apply only to these rules. The other checks keep their existing test paths.
+- Measured on pinned repositories (2026-11-03): MD5/SHA-1 at MEDIUM was refuted (0/20 CS004 and 1/24 GO003 hits needed action), so they are LOW inventory now. GO002 (Go SQL built from strings) was dropped because 57/57 hits were non-actionable; see `docs/ANALYSIS_RULES.md`.
+- New issue types `INSECURE_DESERIALIZATION`, `INSECURE_CRYPTOGRAPHY`, `UNSAFE_CODE`, `UNSAFE_BUFFER_FUNCTION` and `FORMAT_STRING_RISK`. CWE names for 120, 134, 242, 295, 327 and 843 added to the SARIF taxonomy.
+- Docs: rule table in `docs/ANALYSIS_RULES.md`, `docs/c-cpp.md`. Tests: `tests/test_lang_security_rules.py`, `tests/test_c_cpp_security_rules.py`.
+
+### Changed — test paths for the experimental language rules
+
+- .NET test projects are test code for the experimental language-security rules: a directory ending in `.Tests`, `.Test`, `.UnitTests` or `.IntegrationTests`, and C# files named `*Tests.cs` or `*Test.cs` (case-sensitive, so `Latest.cs` is not test code). `is_dotnet_test_path` is used only by those rules. Other checks keep their existing test paths.
+
+### Changed — C and C++ helpers stay under the medium complexity threshold
+
+- The `.h` classifier and the C/C++ helpers `_cc_func_name`, `_cc_format_rule` and `_cc_rule` were split so each stays below the medium complexity threshold. Header classification is unchanged: `#import` alone stays C, C++ syntax is decided before any sibling lookup, and an error while checking one sibling suffix leaves the header C. Qualified-name handling, and which calls the rules report, are unchanged.
+
+### Added — release gate: no-flag output must not change
+
+- `scripts/release_gate.py` and the `Release Gate` workflow run main and the branch with no flags on five pinned corpora (Python, JavaScript, Go, C, Rust). They ignore timing fields and fail on any difference in findings, counts or exit code. Opt-in experimental rules cannot change default output unnoticed.
+- `docs/MEASUREMENT_METHOD.md`: how a rule earns a precision claim. Held-out pinned repositories, a recorded random seed, per-repository and per-root-cause counts, label B (actionable) with n ≥ 59 and 0 errors (exact one-sided), Wilson as context, and a second labeller on a blind subset.
+
+
+### Fixed — Rust `impl` blocks and Go `type` declarations carry their type's name
+
+A Rust `impl` block and a Go `type` declaration had no name, so class-level findings on them (for example `GOD_CLASS`) were reported as `<anonymous>`. They now carry the declared type's name: `impl S` and `impl<T> Tr for Vec<T>` give `S` and `Vec`; `impl a::B` gives `B`; `type Server struct{}` and `type ID = int` give `Server` and `ID`; a grouped `type ( ... )` is named only when it holds one spec; with several specs it stays `<anonymous>`, so one type's findings are never reported under another type's name. An `impl` for a tuple or array type keeps no name. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. See "Declaration names in tree-sitter languages" in `docs/ANALYSIS_RULES.md`.
+
+### Changed — lineage ids relative to the root
+
+- With `--lineage`, a program id that carries a path (`program:NAME@path`, used when two files share a name) now uses the path relative to the new `lineage.root` (nearest `.git` above the working directory, else `$GITHUB_WORKSPACE`, else the working directory, as for SARIF), so ids are the same in every checkout. A file outside the root keeps its absolute path. `file` and `source_file` are unchanged. `schema_version` stays 1.
+
+### Documentation — written review summary on every merged PR
+
+- `CONTRIBUTING.md`: every merged PR carries a written review summary as a PR comment (what changed, risks checked, test and CI evidence on the final head, merge timing).
+
+### Added — weekly full-matrix CI run
+
+- New workflow `.github/workflows/weekly-full-matrix.yml` runs against `main` every Monday at 06:17 UTC, and on demand (`workflow_dispatch`), on Python 3.11, 3.12, 3.13, 3.14 and 3.15 (`fail-fast: false`). Job `lint-and-test-full` runs the `lint-and-test` steps of `ci.yml` (without the pull-request commit check and the coverage upload). Job `multilang-smoke-full` runs the steps of `multilang-smoke.yml`: it installs the `[multilang]` extra, prefetches the 6 grammars, parses one sample per language and runs the unit tests that need the grammars. Pull requests and pushes keep testing only 3.11 and 3.15. It is not a required check; actions are pinned by commit SHA like the other workflows.
+- `tests/test_weekly_full_matrix_workflow.py` fails when the steps of either weekly job drift from the workflow they copy.
+
+### Fixed — a file reached through several symlinks is analyzed once
+
+- File discovery now dedupes by the resolved path. Before, a file linked from several directories was analyzed once per link and every finding was repeated (seen as 6 copies of each finding in a repository that symlinks one helper into five crates).
+
+### Fixed — a grammar that fails to load is tried once per run, not once per file
+
+When a tree-sitter grammar cannot be loaded (offline, or a download that hangs until it times out), `hefesto analyze` tried to load it again for every file of that language, so each file paid the full network timeout (three JavaScript files cost three timeouts). The first failure per grammar is now remembered for the rest of the run and every later file of that language is reported straight away. Each later file gets a new exception of the same type and message, so the remembered one does not collect a longer traceback with every file. Every such file is still listed in `meta.not_analyzed` with `reason: grammar_unavailable`, so `--fail-on` still fails the run. The failure is kept in memory for one run only, never written to disk, and the next run tries the download again. Concurrent requests for the same grammar wait for one load. With a simulated 2 s timeout, 3 JavaScript and 3 Java files went from 12.0 s (6 loads) to 4.0 s (2 loads).
+
+### Fixed — tree-sitter declarations use their declared name
+
+The tree-sitter parser took the first identifier inside a declaration as its name. C# methods whose return type is a plain class name were reported under that type name (`public async Task WriteLazy()` gave `Function 'Task'`), and Go methods with a receiver had no name (`<anonymous>`). The parser now reads the grammar's `name` field first and falls back to the previous lookup. **Finding messages and the JSON `function` field change** for these declarations; line numbers, rule types and counts are unchanged. On Newtonsoft.Json 13.0.3, 71 of 727 messages get the method name instead of the return type and 107 `function` fields change; on gin (main at `0f09c3a`), 8 messages and 21 `function` fields change for Go methods; on zod v3.23.8, 2 messages change (class `ZodString`). gson and ripgrep are unchanged. The pr-review dedup key includes the message, so pull requests that were already reviewed may get these comments once more.
+
+### Removed — Python 3.10 support (minimum is now Python 3.11)
+
+- **Breaking for users on Python 3.10:** `requires-python` is now `>=3.11`. Python 3.10 reached end of life in October 2026 (https://www.python.org/downloads/). On 3.10, `pip` will no longer install new releases of `hefesto-ai`; upgrade to Python 3.11 or newer. Releases already published keep working on 3.10.
+- The GitHub Action needs `python3` >= 3.11 on the runner (`ubuntu-latest` has it) and fails with a clear error otherwise.
+- CI (`ci.yml`, `multilang-smoke.yml`) now tests on Python 3.11 (oldest supported) and 3.15 (latest stable CPython, 3.15.2 at the time of the change). 3.10, 3.12, 3.13 and 3.14 are no longer in the matrix. Each workflow gets a summary job (`ci-required` in `ci.yml`, `multilang-smoke-required` in `multilang-smoke.yml`) that needs the whole matrix and fails if any needed job failed, was cancelled or was skipped; branch protection can require only these, so the next Python version change does not need a ruleset change.
+- Released as a minor version (4.21.0), not a major one: `pip` on Python 3.10 keeps installing 4.20.x. Action users on `@v4` get 4.21.0 automatically: on a runner whose `python3` is 3.10 (for example `ubuntu-22.04`), add `actions/setup-python` with Python 3.11 or newer before the Action, or pin `@v4.20.4`.
+- Classifiers: 3.10 removed, 3.15 added. `ruff` `target-version`, `black` `target-version` and `mypy` `python_version` move to 3.11. The `tomli` dependency for `python_version < '3.11'` is dropped (never installed on 3.11+).
+- `hefesto check` (installation check) now reports an error below 3.11, and the 3.10 fallback that read `pyproject.toml` without `tomllib` is removed. `TomlAnalyzer` imports `tomllib` directly (no `tomli` fallback).
+### Fixed — a file whose grammar cannot be loaded fails `--fail-on` instead of passing
+
+With an empty grammar cache and no network, the Java, Go, Rust, C#, JavaScript and TypeScript grammars cannot be downloaded. Those files were counted as parse errors and skipped, so a repo with one Python file next to them printed "Gate passed" under `--fail-on` over files it never checked. Such a file now goes to `meta.not_analyzed` with `reason: grammar_unavailable` and the `grammar` name, the text report and stderr say "tree-sitter grammar 'java' could not be loaded", and the existing not-analyzed gate fails the run; `--allow-not-analyzed` still opts out. When no file of a path was analyzed for this reason, the zero-files warning names the grammars instead of "no supported source files, or every file was excluded". Without `--fail-on` the exit code stays 0. A missing grammar pack (`[multilang]` not installed) is unchanged: still a skip with the install hint, and so is the GitHub Action, which installs the base package without `[multilang]`. Behaviour change: when every file hits a missing grammar, `--fail-on` with `--allow-no-files` (for example `--fail-on LOW --allow-no-files`) now exits 1 (was 0). This affects the hooks written by `hefesto install-hooks` (they pass `--fail-on HIGH`/`CRITICAL --allow-no-files`) for a developer offline with an empty grammar cache; the cache is per pack version, so it is empty again after a pack upgrade. Remedy: run once with network access, or `python -c "import tree_sitter_language_pack as p; p.download(['java','go','rust','csharp','c','cpp','javascript','typescript'])"`, or pass `--allow-not-analyzed`.
+
+### Fixed — tree-sitter names and text no longer shift after non-ASCII text
+
+The tree-sitter parser (Java, Go, Rust, C#, JavaScript, TypeScript) sliced the decoded source string with tree-sitter's byte offsets. After a UTF-8 BOM or any non-ASCII character (an accented comment, a string literal), function and class names in findings were cut or shifted, e.g. `Function 'pulate()' is too long` instead of `Populate`. The parser now encodes the source once and slices bytes before decoding. **Finding messages change** for files with non-ASCII text before a name: names cut or shifted by that text are fixed. Line numbers, rule types and counts are unchanged. On Newtonsoft.Json 13.0.3, 263 of 498 named findings changed their message, and none is cut any more. C# methods whose return type is a plain class name and Go methods with a receiver still had a wrong name after this fix; see the entry above for declared names. The pr-review dedup key includes the message, so these findings get new keys: pull requests that were already reviewed may get these comments once more. The parser is also faster on files with many nodes, because the source is no longer re-encoded for every node: `hefesto analyze` on a 517 KB bundled JavaScript file took 1.2 s instead of 34.5 s, and on Newtonsoft.Json 13.0.3 7.5 s instead of 24.4 s (medians of 15 interleaved runs).
+
+The name and parameter-count helpers in the same parser were split into small lookups (`_extract_name` went from complexity 18 and nesting 5 to below the MEDIUM threshold). Behavior is unchanged: Newtonsoft.Json findings are identical before and after, ignoring timing.
+
+### Fixed — SQL and command injection rules skip code inside Python string literals (#156)
+
+In Python files, `SQL_INJECTION_RISK` and `COMMAND_INJECTION` no longer report code that is data inside a string literal, such as a code template in a triple-quoted string or `'os.system("ls " + cmd)'` in a snippet. The analyzer finds string literals with `tokenize`. A command sink (`os.system`, `os.popen`, `subprocess.*`) inside a literal is skipped. A line that starts inside a literal is not checked for SQL, and text inside literals no longer counts as a `def` or an `.execute(` sink. Real findings are unchanged, including `tests/fixtures/sqli_safe_patterns/true_positive_concat.py`. Only literal text counts as data: in an f-string, code inside `{...}` is still checked, so `f"{os.popen('cat ' + fn).read()}"` is still reported. On Python 3.12+ the literal parts of an f-string are data; on 3.11 and earlier f-strings are never treated as data, so results for f-strings can differ between 3.11 and 3.12+; code the running Python cannot parse is checked as before. A line that starts inside a multi-line literal is skipped as a whole, as before. The literal lookup is a binary search, so the check stays linear in file size. Files that do not tokenize, and other languages, are checked line by line as before. Finding counts can go down.
+
+### Fixed — one MF002 / GJ002 finding per line (#155)
+
+`MF002` (Makefile) and `GJ002` (Jenkinsfile) each had two overlapping patterns, so one `curl ... | sh` line was reported twice. Each analyzer now keeps one finding per line and rule, the one with the highest confidence: `MF002` keeps "Downloading and piping to (sudo) shell is a high-confidence RCE." (0.98) and `GJ002` keeps "Downloading and piping to shell in pipeline is RCE risk." (0.97) when the line is an `sh`/`bat` step, otherwise the generic message (0.95). CRITICAL counts and SARIF results for these files go down; which lines are flagged, and pass/fail, are unchanged. Other rules are not deduplicated.
+
+### Added — local stdio MCP adapter
+
+- Optional extra `mcp` (`mcp>=1.7,<2`, for `ToolAnnotations` and `add_tool(annotations=)`) and console script `hefesto-mcp`. This release publishes both on PyPI: `pip install "hefesto-ai[mcp]"` and `uvx hefesto-mcp`. `HEFESTO_MCP_ROOT` is required for that install: the project directory the tools may read, not `/` or the home directory. Python >= 3.11, the package `requires-python` (`mcp` requires `>=3.10`, which every supported Python meets, so the extra has no separate environment marker).
+- Metadata-only package `packaging/hefesto-mcp`. It depends on `hefesto-ai[mcp]` at the same version as this package, exposes `hefesto-mcp = hefesto.mcp_server:main`, and ships no Python modules of its own.
+- `server.json` keeps the streamable-http remote and adds the PyPI package (`uvx`, stdio, required `HEFESTO_MCP_ROOT`). `Dockerfile` installs `hefesto-ai[mcp]` at that same version, runs `hefesto-mcp --help` and `build_server()` (a pin that does not provide the command, or that does not import `mcp`, fails the build), and runs `hefesto-mcp` as uid 10001 with `HEFESTO_MCP_ROOT=/workspace`. The image can be built once this version is on PyPI.
+- Two read-only tools over stdio: `analyze_local` and `version`. `version` returns the installed engine version string, takes no args, reads no files, and uses no network. `analyze_local` returns JSON for a path inside the sandbox root. Severity is `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL` (default `MEDIUM`). The sandbox root is `--root`, then `HEFESTO_MCP_ROOT`, then the working directory. The process refuses to start when that root resolves to `/` or the home directory, and the stderr message names `HEFESTO_MCP_ROOT` and `--root`. A relative path is joined to that root, not to the process working directory. A path that resolves outside the root, including through `..` or a symlink, is rejected (`Path.resolve()` and `is_relative_to()`). Both tools run with `anyio.to_thread.run_sync`, because FastMCP calls a synchronous tool on the stdio event-loop thread.
+- `server.json` `description` is "Release-truth gate for AI-generated code: local stdio server (MIT) plus a hosted remote." (88 characters; schema maxLength 100). It does not lead with closed-source. `scripts/check_mcp_registry_entry.py` reads that description from this file and requires one `hefesto-mcp` PyPI package (stdio, `uvx`, version equal to the document version, `HEFESTO_MCP_ROOT` required). The remote is unchanged. The hosted file `https://hefestoai.narapallc.com/server.json` is not in this repository.
+- `release.yml` builds the wrapper in the `build` job (no publish token): the wrapper version must equal the tag, `twine check` runs, the wheel `Requires-Dist` is `hefesto-ai[mcp]` at that version and `Requires-Python` matches the engine, and an install smoke installs the local engine wheel by path with the `[mcp]` extra, then the local wrapper wheel with `--no-index --no-deps`, runs `pip check`, requires `direct_url.json` on `hefesto-ai` with a `file:` URL, and from `/` runs `hefesto-mcp --help` and `build_server()`. `publish-hefesto-mcp` only downloads that artifact and publishes it after the `hefesto-ai` publish, on the existing `pypi` environment (`https://pypi.org/p/hefesto-mcp`). The `hefesto-ai` publish steps are unchanged. The GitHub Release waits for both publishes. If the wrapper upload fails, use only "Re-run failed jobs" on that run (the artifact is reused). "Re-run all jobs" would publish the engine again, and PyPI rejects a second upload of the same release. `scripts/check_mcp_registry_entry.py` requires `https://pypi.org/pypi/hefesto-mcp/<version>/json` to return 200, and a `URLError` or a timeout fails that check with a message, so a hosted-only hotfix cannot be registered without publishing the package too.
+- Startup sets `HEFESTO_TELEMETRY=0`, so this process does not send usage telemetry. Engine text is redirected to stderr so stdout stays the MCP stream. The redirect is held under a lock, so two overlapping calls cannot write that text to the real stdout. See [docs/local-mcp.md](docs/local-mcp.md).
+
+### Security — release workflow
+
+- Bump `pypa/gh-action-pypi-publish` from v1.14.2 to v1.14.3 in `.github/workflows/release.yml` (GHSA-5xjx-3w67-w9x9: a revoked CA in the Sigstore chain used by Trusted Publishing and PyPI attestations).
+- Bump `pypa/gh-action-pypi-publish` to v1.14.3 in `.github/workflows/release-testpypi.yml` as well (same advisory).
+- Pin every third-party action in `.github/workflows/` to a full commit SHA, with the version in a trailing comment. `tests/test_release_workflow.py` now checks that property instead of exact versions.
+- Add a `github-actions` entry to `.github/dependabot.yml` so the pinned actions get weekly update PRs.
+- CI only: no published package was changed or rebuilt.
+
+### Added — line suppression comments (Python)
+
+- `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding in `.py` files. The reason is required and several types can be listed (`ignore[A, B] reason`). Suppression runs after analysis (`hefesto/core/suppressions.py`); other languages are not read yet.
+- Findings up to HIGH can be suppressed; CRITICAL findings are never suppressed. A directive without a reason, without `[TYPE]`, whose type matches no finding on that line, or that targets a CRITICAL finding suppresses nothing and prints a warning on stderr (`meta.suppression_warnings` in JSON).
+- Suppressed findings do not count in the summary or for `--fail-on`. Text output shows `Suppressed: N`. JSON lists them per file under `suppressed_issues` with `"suppressed": true` (a boolean) and `"suppression_reason"`. `summary.suppressed` is a new key in the default JSON summary, always present: the count of suppressed findings (`0` when none). SARIF keeps them as results with `suppressions` (`kind: inSource`, `justification`).
+- `hefesto pr-review` adds `new_suppressions` (each suppression comment the diff adds, with its reason) and `--fail-on-new-suppressions`. `scripts/dogfood_changed.py` lists new suppressions in the changed-file gate log and accepts `--fail-on-new-suppressions`.
+- `docs/ANALYSIS_RULES.md` documents the syntax and limits; it no longer says there is no inline suppression.
+
+### Changed — CI gate on new line suppressions
+
+- The changed-file gate (`.github/workflows/dogfood.yml`) now passes `--fail-on-new-suppressions` on pull requests. `scripts/dogfood_changed.py` accepts a new suppression only when the PR body has the line `Suppression approved by Arturo on YYYY-MM-DD: <file>:<line>` for that exact file and line (one line per suppression), read from the event payload at `GITHUB_EVENT_PATH` with no token. It always appends the new suppressions and their approval status to `$GITHUB_STEP_SUMMARY` when set. The workflow also runs on `edited` pull requests so an added approval line re-runs the gate. Pushes to `main` only list new suppressions.
+
+### Added — COBOL: program lineage in the JSON report (`--lineage`)
+
+- `hefesto analyze --output json --lineage` adds a `lineage` section: program nodes, `CALL`/`LINK`/`XCTL` edges to programs of the scan, SQL table edges with their statement type, and direct `COPY`/`EXEC SQL INCLUDE` edges. One edge per (kind, from, to, op, file), with its source lines in `lines`. Targets outside the scan are listed under `references` (`system`: target provided by the system, not by the repo; `kind` says how it is referenced; or `external`; `SYSIBM.*` tables are `system` references, not table nodes); variable targets, ambiguous names and dynamic SQL are listed under `unresolved` with a reason and never become edges. References in a copybook, including one pulled in with `EXEC SQL INCLUDE`, belong to every program that copies it.
+- Opt-in: without `--lineage` no lineage is extracted and the JSON is unchanged (a test compares it with the output from before this change on a COBOL project). With `--output text`, `html` or `sarif`, `--lineage` prints a warning and is ignored.
+- Measured precision on labelled edges (`python scripts/cobol_label_precision.py --lineage ...`, labels in `tests/fixtures/cobol/labels/lineage_labels.json`): CardDemo `CALL` 18/18, `XCTL` 2/2, SQL 14/14; GenApp `LINK` 82/82, SQL 33/33. Every literal `CALL`/`LINK`/`XCTL` target is classified once (CardDemo: 18 program, 43 system service, 2 external, 1 variable `CALL`; 2 program and 31 variable `LINK`/`XCTL`; GenApp: 82 program, 13 variable). Limits: small samples (the CardDemo `CALL` edges go to 2 programs, GenApp is one application, CardDemo navigation is almost all variable `XCTL`); `SELECT ... ASSIGN TO`, `CALL` targets set by `MOVE`/`SET` and dynamic SQL tables are not followed.
+- Cost with `--lineage` (same build with and without the flag, median of 7 interleaved runs): -1 % to +6 % run time on CardDemo, GenApp and zopeneditor-sample (under 0.05 s). On synthetic code with an `EXEC SQL` in every paragraph (10 to 70 times more SQL than those corpora), 15 interleaved rounds: +18.6 % median on the 1.05M-line project (+18.1 % median per-round difference), with peak memory 122 MB instead of 84 MB and a 4.8 MB instead of 3.1 MB JSON, and +15.5 % median on a single 500,000-line program (+13.7 % median per-round difference).
+
+### Changed — neutral SARIF display name for `HIGH_COMPLEXITY`
+
+The SARIF rule `HIGH_COMPLEXITY` is now shown as `Complexity` (`name`, `shortDescription`, `fullDescription` and the help heading) instead of `High complexity`. The rule reports MEDIUM (score 6 to 10) as well as HIGH (11 to 20) findings, so the old title read like a severity. Definition: *Complexity: cyclomatic complexity at or above the MEDIUM threshold (6); the finding's severity says how far above.* The rule id (`HIGH_COMPLEXITY`), the issue type in text and JSON output, severities, messages and fingerprints are unchanged. `VERY_HIGH_COMPLEXITY` keeps its name.
+
+### Fixed — the zero-files warning names a missing parser (#160)
+
+When a path analyzes no files because a parser is not installed, the warning now ends with the cause and the fix, e.g. `Warning: no files were analyzed in a.ts (no supported source files, or every file was excluded); parser unavailable for typescript (pip install "hefesto-ai[multilang]")`. It is printed even with `--quiet`, unlike the skip summary. Exit codes are unchanged: zero files analyzed still fails `--fail-on` (`--allow-no-files` opts out; `--allow-not-analyzed` does not cover this case, as the README now says). Parse errors alone do not suggest `[multilang]`.
+
+### Fixed — `scripts/verify_readme.py` compiles under `python -W error` (#157)
+
+Its module docstring contained `\d` in a non-raw string; it is now a raw string. The engine-side SyntaxWarning leak was fixed in #171.
+
+### Changed — the complexity message names the threshold (#159)
+
+`HIGH_COMPLEXITY` and `VERY_HIGH_COMPLEXITY` findings now read `Cyclomatic complexity too high (22, threshold 21 for CRITICAL)` instead of `Cyclomatic complexity too high (22)`; the threshold is the lowest score for the reported severity (MEDIUM 6, HIGH 11, CRITICAL 21). Scores and severities are unchanged. Text, JSON, HTML and SARIF output show the new message; anything that matches the exact old message text (scripts, saved reports) needs updating. Identity keys do not change: the `hefesto pr-review` `dedup_key` and the SARIF `partialFingerprints` fallback (used when the flagged line cannot be read) drop the threshold clause, so findings already commented on or tracked in code scanning keep their keys. The normal SARIF fingerprint never used the message.
+
+### Fixed — `hefesto pr-review` now runs `NarrowSemanticAnalyzer`
+
+The `pr-review` engine did not register `NarrowSemanticAnalyzer`, so `NS-SWALLOW-001` and `NS-ATTR-001` findings reported by `hefesto analyze` were missing from PR reviews of the same lines (#152). The analyzer is now registered, and a parity test checks that `pr-review` and `analyze` register the same analyzer classes.
+
+### Fixed — pre-commit hooks analyze the staged content
+
+- The pre-commit hook installed by `hefesto install-hooks` (`hefesto/cli/hook_templates.py`) and the contributor hook `scripts/git-hooks/pre-commit` analyzed the working-tree copy of the staged files. A secret that was staged and then removed on disk without `git add` passed and was committed; a clean staged file with a secret only on disk was blocked. Both hooks now export the staged files with `git checkout-index --prefix=<temp dir>/`, keeping repository-relative paths so path-based rules (test paths, `.hefesto.yaml` `exclude`) still apply, analyze that copy, report the real repository paths, and remove the copy on exit. `.hefesto.yaml`/`.hefesto.yml` are taken from the index (or the working tree when untracked). Paths with spaces and delete-only commits are handled. The copy's path is resolved (`pwd -P`) before it is stripped from the output, because hefesto prints resolved paths: with `TMPDIR` behind a symlink (likely macOS, where `/var` links to `/private/var`), findings and the `Config:` line showed the temp copy's path instead of the repository path. Run `hefesto install-hooks --force` to update an installed hook. The README limitation note is removed.
+
+### Fixed — telemetry closes its HTTP responses; contributor pre-commit hook gates staged files
+
+- `hefesto/telemetry/client.py`: the PyPI version check and the background event send now open their `urllib` responses with `with`, so the connection is closed after the call, also when reading the response fails. `hefesto analyze` no longer reports `RELIABILITY_SESSION_LIFECYCLE` at the version check. Requests, timeouts and payloads are unchanged.
+- `scripts/git-hooks/pre-commit` (this repository's contributor hook) never blocked: it ran `hefesto analyze . --severity HIGH` without `--fail-on`, so it exited 0 on any finding; its repeated `--exclude` kept only the last value and replaced the `.hefesto.yaml` excludes. It now analyzes only the staged files, like the hook `hefesto install-hooks` installs, skips staged files matched by `exclude` in `.hefesto.yaml` with the same matcher as `scripts/dogfood_changed.py`, and runs `--severity HIGH --fail-on CRITICAL`: HIGH findings are shown but only CRITICAL blocks (the same threshold as the CI changed-file gate), set in a single `FAIL_ON` variable. It finds its interpreter in `.venv/`, then `venv/` (the directory `CONTRIBUTING.md` creates), then `$VIRTUAL_ENV`, then the interpreter of `hefesto` on PATH; if none can import `hefesto` it exits 1 with a message (bypass once with `SKIP_HEFESTO_HOOKS=1`) instead of printing "Skipping analysis" and letting the commit through.
+
+### Removed
+
+- `hefesto/hooks/` (`pre_push.py` and `__init__.py`). Nothing imported it, it was not a console script or hook target, and `hefesto install-hooks` uses its own templates; it only shipped in the wheel. `docs/ADVANCED_VALIDATION.md` now says so.
+
+### Deprecated
+
+- `LLMModel` (`hefesto.core.models.LLMModel`, also exported from `hefesto.core`) is deprecated and will be removed in 5.0. It lists Gemini model names that nothing in Hefesto uses; no LLM provider is bundled. The class is now `_LLMModel` and `LLMModel` is no longer in `__all__` of either module; `from hefesto.core import LLMModel` and `hefesto.core.models.LLMModel` still return it, with a `DeprecationWarning` attributed to the caller, so a plain script sees it without `-W` (`hefesto.core` raises the warning itself instead of delegating to `hefesto.core.models`).
+
+### Changed — `scripts/validate_aggregates_jsonl.py`: `validate_row()` split into helpers
+
+- `validate_row()` had cyclomatic complexity 22, the one CRITICAL finding (`VERY_HIGH_COMPLEXITY`) left in a full-tree `hefesto analyze` with the `.hefesto.yaml` exclusions plus `tests/` (the set `.github/workflows/hefesto.yml` scans). It now calls one helper per group of checks: identity fields, required metrics (with a shared non-negative count check and an `error_rate` check), optional metrics, and strict mode. The helpers report MEDIUM at most.
+- Output is unchanged: same messages, same order, same exceptions on wrongly typed values. `tests/scripts/test_validate_aggregates_jsonl.py` pins the error list for valid rows, every error type, and `strict` on and off; it passed before and after the split.
+- With this change, that full-tree scan reports no CRITICAL finding, and touching the script no longer fails the changed-file gate (`dogfood-hefesto`). `hefesto.yml` still has `continue-on-error: true`; making it blocking is a separate change.
+
+### Changed — docs: real integration API, real PRO check, real license format
+
+- `docs/INTEGRATION.md` is rewritten around the API that exists: the CLI, `hefesto analyze --output json` (with its real schema), `--fail-on`, and `AnalyzerEngine` (`register_analyzer`, `register_project_analyzer`, `analyze_path`, `analyze_files`). The invented `hefesto.llm.validators`, `get_validator`, `SuggestionValidator`, `enable_validation`, `iris.semantic_analyzer`, `hefesto.config.stripe_config` and BigQuery upload examples are gone. The links to it in `docs/GETTING_STARTED.md` and `docs/ANALYSIS_RULES.md` no longer call it a "Phase 0+1 architecture" guide.
+- `docs/INSTALLATION.md` "Pro features not working" now verifies with `hefesto status` (Pro package and license key) and mentions `HEFESTO_TIER`; `hefesto info` never printed "Pro Features: Enabled".
+- License key placeholders in `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `examples/pro_semantic_analysis.py` use the real format `HFST-XXXX-XXXX-XXXX-XXXX-XXXX` instead of `hef_your_key`.
+
+### Changed — docs: no bundled AI provider, working examples, no inline suppression
+
+- `capabilities.yml`, `docs/INSTALLATION.md`, `docs/QUICK_START.md` and `.env.example` no longer say a Gemini API key is needed. No LLM provider is bundled; AI enrichment providers are brought by the user through the PRO `EnrichmentProvider` contract. The `ai_semantic_analysis` note now describes the real feature: `DUPLICATE_CODE` from local sentence-transformers embeddings, PRO only, with `HEFESTO_TIER=professional` or `omega`. Its `display` field is unchanged. The unused LLM budget variables and the nonexistent `/ping`, `/suggest/refactor` and `/budget` examples are gone from those docs.
+- `examples/basic_usage.py` imported functions that do not exist (`get_validator`, `get_feedback_logger`, `get_budget_tracker`, `BudgetTracker`). It now runs the real `AnalyzerEngine` on a sample file. `examples/pro_semantic_analysis.py` now uses `hefesto_pro.get_semantic_analyzer` and exits cleanly when PRO is not installed.
+- `llms.txt` and `skills/hefestoai/SKILL.md` no longer list `SEMANTIC_DRIFT` as a finding type, and say `DUPLICATE_CODE` uses local embeddings with PRO plus a paid tier. `skills/hefestoai/semantic_drift.md` is now "Patterns that often indicate drift", guidance only.
+- `docs/ANALYSIS_RULES.md` and `docs/INTEGRATION.md` no longer show `# hefesto: ignore` as working; there is no inline suppression. They point to `--exclude`, `--exclude-types` and `exclude` / `exclude_types` in `.hefesto.yaml`.
+- Behaviour is unchanged.
 
 ### Changed — docs: `OT-IMPORTS-001` also skips test and docs paths (#154)
 
@@ -28,11 +235,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 `hefesto.critical_tests.check.check_critical_tests` computes the merge-base, pairs touched mapped test files (following renames), compares them and returns findings tagged with the config entry, requirement and enforcement; parse failures are collected as errors instead of aborting. The per-file work is split into small helpers so no function exceeds the analyzer's complexity threshold; behaviour is unchanged. Not yet called by `hefesto pr-review`. Docs: `docs/critical-tests.md`.
 
+### Fixed — COBOL REDEFINES analysis time was quadratic
+
+COBOL004/COBOL016 copied every data item after a REDEFINES on each layout check (`_members` and `_is_bms_input_map` in `hefesto/analyzers/devops/cobol_program_rules.py` iterated over a list slice, about 19 copies per REDEFINES), so time grew with the square of the program's data items. A program with 8,000 REDEFINES over `COMP-3` fields took 3.7 s and one with 50,000 took about 6 minutes; they now take 0.55 s and 3.7 s. Both functions now walk the list by index. Findings are unchanged: `scripts/cobol_corpus_baseline.py compare` reports no finding changes on CardDemo, GenApp and zopeneditor-sample, and seeded recall stays 39/41. `tests/test_cobol_phase4_performance.py` adds a many-REDEFINES program to the linear-growth check (it fails at about 13x on the old code).
+
+### Added — `critical_tests` git helpers: merge-base, changed files and renames (preview, Refs #175)
+
+`hefesto.critical_tests.git_diff` adds `merge_base`, `changed_files` (`git diff -z --name-status -M --no-ext-diff`, returning `ADDED`, `MODIFIED`, `DELETED_FILE` or `RENAMED` with old and new paths and the similarity score), `read_file_at` and `pair_test_files`. A renamed test file is paired old path to new path, so its tests are compared by content instead of being reported as `DELETED`. Renames are detected even with `diff.renames=false` in the user's git config. Nothing runs the check on pull requests yet. Reference: `docs/critical-tests.md`. Listed under [4.20.4] before; that wheel does not contain `hefesto.critical_tests.git_diff`.
+
 ## [4.20.4] - 2026-10-27
 
 ### Added
 
-- **`critical_tests` git helpers: merge-base, changed files and renames (preview, Refs #175).** `hefesto.critical_tests.git_diff` adds `merge_base`, `changed_files` (`git diff -z --name-status -M --no-ext-diff`, returning `ADDED`, `MODIFIED`, `DELETED_FILE` or `RENAMED` with old and new paths and the similarity score), `read_file_at` and `pair_test_files`. A renamed test file is paired old path to new path, so its tests are compared by content instead of being reported as `DELETED`. Renames are detected even with `diff.renames=false` in the user's git config. Nothing runs the check on pull requests yet. Reference: `docs/critical-tests.md`.
 - **`critical_tests` section in `.hefesto.yaml` and the comparator core (preview, Refs #175).** An optional `critical_tests` section maps requirements to pytest node IDs: `enforcement` (`warn` by default, or `block`) for the section and per entry, and `entries` of `{id, requirement, tests, enforcement}`. Node IDs are `path.py::test` or `path.py::Class::test`, repo-relative with `/`, and without `[param]` suffixes. Unknown keys inside the section, duplicate ids, duplicate tests in an entry and an empty `entries` or `tests` list are config errors (exit 2 from `hefesto analyze`). `hefesto analyze` validates the section and otherwise ignores it, and a config without it behaves as before. `hefesto.critical_tests.comparator.compare_tests` compares one test file's base and head sources (no git) and reports, per mapped test present in the base: `DELETED` (no definition in the head, file deleted, or renamed), `SKIPPED` (a new skip/skipif/xfail marker, `pytest.skip()`/`pytest.xfail()` call, `pytestmark` or `__test__ = False` at function, class or module level; a `skipif` on the platform alone is warn-only), `TRIVIALIZED` (assertions in the base, none that can run in the head) and `ASSERTS_REDUCED` (fewer assertions, always warn-only). Nothing runs the check yet: `hefesto pr-review` integration, rename detection and enforcement come in later releases. Reference: `docs/critical-tests.md`.
 - **CI gates changed files with ruff and `hefesto analyze`.** `.github/workflows/dogfood.yml` (job `dogfood-hefesto`) runs on pull requests against the base commit and on pushes to `main`. It installs this checkout (`pip install -e ".[dev,lint]"`) and runs `scripts/dogfood_changed.py`, which prints each command before running it. Ruff is `python -m ruff check --force-exclude` (no `--fix`) on changed `.py` files, so `[tool.ruff]` `extend-exclude` (`scripts/`, `examples/`) applies to them as it does on a tree walk. Changed files matching the `exclude` list in the repository's `.hefesto.yaml` are not gated. The script reads it with the package's `load_config` and matches with the engine's `path_is_excluded`, the same whole-path-component matcher a full `hefesto analyze .` uses, and filters the changed paths itself because `hefesto analyze` does not apply `exclude` to paths named on the command line. Patterns are path components (`tests/fixtures/`), not globs (`tests/fixtures/**` matches nothing; the script warns). Without a config file the gate falls back to `tests/fixtures/` and `.github/action-smoke/` and logs that; an invalid config exits 2. Those two directories contain planted findings on purpose (the self-check still analyzes `.github/action-smoke/critical_secret.py` by name). Hefesto is `HEFESTO_TELEMETRY=0 python -m hefesto analyze <changed files> --severity medium --fail-on critical --allow-no-files`. Deleted paths are skipped. An empty diff does not call `analyze` (`PATHS` is required) and exits 0. A diff with no supported files still calls `analyze`; `--allow-no-files` keeps that run at exit 0 (without the flag it exits 1). The same job runs `--self-check`: `.github/action-smoke/critical_secret.py` (a fake `AKIA` key) must fail the gate, and `hefesto/` must have no CRITICAL findings, with no file excluded. The PostHog public write-only project key at `hefesto/telemetry/client.py:28` (`docs/telemetry.md`) is reported as a LOW `HARDCODED_SECRET` (known public client key, see Fixed below), so it does not fail the gate. No line-level suppression exists. `# hefesto: ignore` is an example in `docs/ANALYSIS_RULES.md` (specific-rule suppression is described there as a future feature) and the detectors do not read it. `--exclude-types HARDCODED_SECRET` would drop the rule for every file, so it is not used. With the exclusions above, a full-tree run finds one CRITICAL finding, so one tracked file fails the gate when touched: `scripts/validate_aggregates_jsonl.py:48` (CRITICAL `VERY_HIGH_COMPLEXITY`, cyclomatic complexity 22) until that function is split. `ci.yml` is unchanged.
 - **Full-repo HefestoAI scan with SARIF to code scanning (non-blocking).** `.github/workflows/hefesto.yml` (job `hefesto-scan`, on push to `main` and on pull requests to `main`) runs the composite Action `artvepa80/Agents-Hefesto@v4` on `.` with `fail_on: CRITICAL`, `sarif: true` and `sarif_category: hefesto`; findings appear under Security > Code scanning. The scan step has `continue-on-error: true` while a known CRITICAL finding remains (`scripts/validate_aggregates_jsonl.py:48`), so the job stays green; the blocking changed-file gate is `dogfood.yml`. A root `.hefesto.yaml` excludes `tests/fixtures/` and `.github/action-smoke/` (planted findings). `exclude` entries are whole path segments, not globs: `tests/fixtures/**` matches nothing. (#150)
@@ -125,7 +339,6 @@ These seconds are lower than a profile that reported 4.7 s / 8.8 s / 7.9 s for 1
 - **`CLAUDE.md` deployment section** describes the production trusted publisher (environment `pypi`, no `PYPI_API_TOKEN`). A failed publish fails the workflow: the GitHub Release is not created and the floating `v4` tag is not moved. After the first successful production publish, the owner can delete the `PYPI_API_TOKEN` secret.
 
 - **Public copy matches what 4.20.1 detects and what it sends.** `PICKLE_USAGE` is the `import pickle` / `cPickle` line (`pickle.loads()` is not a separate finding) in the READMEs, `skill/issue_types.md`, `SECURITY.md`, `docs/ANALYSIS_RULES.md`, `llms.txt`, and the agent-card example. Telemetry copy names the PostHog opt-out, states that the GitHub Action sends no usage events unless `telemetry: 1`, and states that `hefesto analyze` still asks pypi.org for the latest version (no switch in 4.20.1). The hosted MCP lines no longer name hefesto-ai 4.19.0; this repo has no verified current pin, so they say the hosted MCP runs a recent release. Handoff: `docs/worklog/2026-10-17-copy-overclaims.md`.
-
 
 ## [4.20.1] - 2026-10-17
 
@@ -1261,7 +1474,6 @@ Metadata-only release. No code, test, or behavior changes.
 - **GCP**: Stored PyPI token in Secret Manager for future CI/CD use.
 - **GitHub Action**: Added Docker-based Action support to allow usage via `uses: artvepa80/Agents-Hefesto@v4.8.5` (bypasses PyPI dependency).
 
-
 ## [4.8.4] - 2026-02-13 — Release Parity & CI Hardening
 ### Infrastructure
 - **CI/CD**: Hardened release workflows and updated capabilities verification (post-v4.8.3 fixes).
@@ -1368,8 +1580,6 @@ This release makes the REST API production-ready with layered security that is s
   - Optional `X-API-Key` header enforcement when `HEFESTO_API_KEY` is set
   - Health/ping endpoints bypass authentication
   - Returns `401 Unauthorized` with clear error message
-
-
 
 ## [4.6.0] - 2026-02-09 — Ola 3 Infrastructure & CI Guardrails
 
@@ -1708,7 +1918,6 @@ if TIER_HIERARCHY[user_tier] >= TIER_HIERARCHY[required_tier]:
 - Test coverage for OMEGA accessing PRO features
 - Test coverage for PRO accessing FREE features
 - Regression tests for license validation edge cases
-
 
 ## [4.3.0] - 2025-12-10 ✅ RELEASED
 

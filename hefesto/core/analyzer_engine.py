@@ -14,9 +14,10 @@ Copyright © 2025 Narapa LLC, Miami, Florida
 
 import logging
 import os
+import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, FrozenSet, Iterable, List, Optional, Sequence, Set, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -152,6 +153,8 @@ _SUFFIX_EXCLUDES = frozenset({".egg-info"})
 # analyzes it). Only JavaScript files are affected; a Go or PHP ``vendor/``
 # tree stays in scope.
 _JS_SUFFIXES = (".js", ".mjs", ".cjs")
+# Files of the experimental ``c-cpp`` feature (globs of the C and C++ specs).
+_C_CPP_SUFFIXES = frozenset({".c", ".h", ".cpp", ".cc", ".cxx", ".c++", ".hpp", ".hh", ".hxx"})
 # Directories that only ever hold copied or installed third-party packages.
 _VENDOR_DIRS = frozenset({"vendor", "vendors", "bower_components", "jspm_packages"})
 # Web static-asset roots, and the library directories that hold copied
@@ -182,8 +185,39 @@ def decoded_with_fallback_message(entry: Dict[str, Any]) -> str:
 
 def _not_analyzed_reason(entry: Dict[str, Any]) -> str:
     """One-line reason for a ``meta.not_analyzed`` entry."""
+    if entry.get("reason") == "grammar_unavailable":
+        return (
+            f"tree-sitter grammar '{entry.get('grammar')}' could not be loaded"
+            f" ({entry.get('exception')}; offline, or an empty or damaged grammar cache?)"
+        )
+    if entry.get("reason") == "parse_error":
+        return "the grammar could not parse any declaration in it"
     what = "could not be read" if entry.get("reason") == "read_error" else "analyzer failed"
     return f"{what} ({entry.get('exception')})"
+
+
+def _is_grammar_pack_error(exc: BaseException) -> bool:
+    """True for an error raised by ``tree_sitter_language_pack`` itself."""
+    try:
+        import tree_sitter_language_pack as pack  # type: ignore[import-not-found]
+    except ImportError:
+        return False
+    base = getattr(pack, "Error", None)
+    return isinstance(base, type) and isinstance(exc, base)
+
+
+def _fresh_copy(exc: Exception) -> Exception:
+    """A new exception like ``exc`` (same type and args), or ``exc`` itself.
+
+    Raising the cached object again would chain one more traceback onto it
+    per raise. Falls back to the cached object when its type cannot be rebuilt
+    from its args (a custom ``__init__`` signature).
+    """
+    try:
+        fresh = type(exc)(*exc.args)
+    except Exception:
+        return exc
+    return fresh if type(fresh) is type(exc) else exc
 
 
 def not_analyzed_message(entry: Dict[str, Any]) -> str:
@@ -246,6 +280,13 @@ _SEVERITY_RANK = {
 }
 
 
+def _real_path(file: Path) -> Path:
+    try:
+        return file.resolve()
+    except (OSError, RuntimeError):
+        return file
+
+
 class AnalyzerEngine:
     """Main analysis engine that orchestrates all analyzers."""
 
@@ -273,6 +314,10 @@ class AnalyzerEngine:
                 (highest severity first; 0 disables enrichment calls)
         """
         self.severity_threshold = AnalysisIssueSeverity(severity_threshold)
+        # COBOL program lineage (``--lineage``); off by default so the default run is unchanged.
+        self.collect_lineage = False
+        # ``--experimental`` names; empty by default (MCP and library callers never set it).
+        self._experimental: FrozenSet[str] = frozenset()
         self.analyzers: List[Any] = []
         self._project_analyzers: List[Any] = []
         self.verbose = verbose
@@ -291,6 +336,11 @@ class AnalyzerEngine:
         self._parser_failures: List[Dict[str, Any]] = []  # files skipped due to parser errors
         # Found files that could not be read or whose analyzer raised
         self._not_analyzed: List[Dict[str, Any]] = []
+        # First grammar-load failure per language, kept for this engine (one
+        # run) only, so an offline or hanging download is tried once per
+        # grammar instead of once per file. Never persisted.
+        self._grammar_failures: Dict[Language, Exception] = {}
+        self._grammar_lock = threading.Lock()
         # Found files that are not valid UTF-8, read with FALLBACK_ENCODING
         self._decoded_with_fallback: List[Dict[str, Any]] = []
         # COBOL COPY index (COBOL007/COBOL015). Set for the whole run by
@@ -345,6 +395,14 @@ class AnalyzerEngine:
             self._cobol_index = index
             self._cobol_index_pinned = True
 
+    def cobol_lineage(self) -> Optional[Dict[str, Any]]:
+        """Program lineage of the last COBOL index (None without --lineage or COBOL)."""
+        if not self.collect_lineage or self._cobol_index is None:
+            return None
+        from hefesto.analyzers.devops.cobol_lineage import build_lineage
+
+        return build_lineage(self._cobol_index)
+
     def _build_cobol_index(
         self, files: List[Path], roots: List[Path], exclude_patterns: List[str]
     ) -> Any:
@@ -366,7 +424,10 @@ class AnalyzerEngine:
                 library_copybook_files(self._copybook_paths) if self._copybook_paths else {}
             )
         return CobolProjectIndex.from_paths(
-            cobol, extra, library_names=self._copybook_library_names
+            cobol,
+            extra,
+            library_names=self._copybook_library_names,
+            lineage=self.collect_lineage,
         )
 
     @staticmethod
@@ -410,8 +471,24 @@ class AnalyzerEngine:
     def _is_cobol_path(path: Path) -> bool:
         return path.suffix.lower() in (".cbl", ".cob", ".cobol", ".cpy", ".pco")
 
+    @property
+    def experimental(self) -> FrozenSet[str]:
+        """Enabled ``--experimental`` names."""
+        return self._experimental
+
+    @experimental.setter
+    def experimental(self, names: Iterable[str]) -> None:
+        self._experimental = frozenset(names)
+        for analyzer in self.analyzers:
+            self._apply_experimental(analyzer)
+
+    def _apply_experimental(self, analyzer: Any) -> None:
+        if hasattr(analyzer, "lang_rules"):
+            analyzer.lang_rules = "lang-security" in self._experimental
+
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""
+        self._apply_experimental(analyzer)
         self.analyzers.append(analyzer)
 
     def register_project_analyzer(self, analyzer):
@@ -620,18 +697,14 @@ class AnalyzerEngine:
 
         # If a single file is provided, evaluate support with shebang-aware detection.
         if path.is_file():
-            try:
-                txt = path.read_text(encoding="utf-8", errors="ignore")
-            except Exception:
-                txt = None
-            return [path] if LanguageDetector.is_supported(path, txt) else []
+            return [path] if self._single_file_supported(path) else []
 
         supported_files: List[Path] = []
 
         # Use registry-backed globs to discover files (Dockerfile.*, *.tf.json, etc.)
         for glob in LanguageDetector.get_supported_file_globs():
             for file in path.rglob(glob):
-                if excluded(file) or not file.is_file():
+                if excluded(file) or not self._discoverable(file):
                     continue
                 supported_files.append(file)
 
@@ -644,8 +717,43 @@ class AnalyzerEngine:
                 if LanguageDetector.is_supported(file):
                     supported_files.append(file)
 
-        # Dedupe preserving order
-        return list(dict.fromkeys(supported_files))
+        # Dedupe preserving order. Symlinks that point at the same file are
+        # analyzed once: the file is resolved before analysis, so each link
+        # would otherwise repeat every finding.
+        unique: Dict[Path, Path] = {}
+        for file in supported_files:
+            unique.setdefault(_real_path(file), file)
+        return list(unique.values())
+
+    def _single_file_supported(self, path: Path) -> bool:
+        """A file named on the command line, with shebang-aware detection."""
+        try:
+            txt: Optional[str] = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            txt = None
+        return LanguageDetector.is_supported(path, txt) and self._experiment_allows(path)
+
+    def _discoverable(self, file_path: Path) -> bool:
+        """A regular file that no experimental gate holds back."""
+        return file_path.is_file() and self._experiment_allows(file_path)
+
+    def _experiment_allows(self, file_path: Path) -> bool:
+        """C and C++ files are found only with ``--experimental c-cpp``.
+
+        An Objective-C ``.h`` is then left out like any unrecognized file.
+        """
+        suffix = file_path.suffix.lower()
+        if suffix not in _C_CPP_SUFFIXES:
+            return True
+        if "c-cpp" not in self.experimental:
+            return False
+        if suffix != ".h":
+            return True
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return False
+        return LanguageDetector.detect(file_path, text) != Language.UNKNOWN
 
     def _analyze_file(self, file_path: Path) -> Optional[FileAnalysisResult]:
         """Analyze a single file (multi-language support)."""
@@ -792,18 +900,25 @@ class AnalyzerEngine:
                 return dispatched
 
             try:
-                parser = ParserFactory.get_parser(language)
+                parser = self._get_parser(language)
+            except Exception as exc:
+                if not self._grammar_load_failed(file_path, language, exc):
+                    self._record_parser_failure(file_path, language, exc)
+                return None
+            try:
                 tree = parser.parse(code, str(file_path))
             except Exception as exc:
-                self._parser_failures.append(
+                self._record_parser_failure(file_path, language, exc)
+                return None
+            if getattr(tree, "unparseable", False):
+                self._not_analyzed.append(
                     {
                         "path": str(file_path),
                         "language": language.value,
-                        "category": self._categorize_parser_failure(exc, language),
-                        "exception": type(exc).__name__,
+                        "reason": "parse_error",
+                        "exception": "UnparseableSource",
                     }
                 )
-                logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
                 return None
 
             # LOC already calculated above
@@ -954,6 +1069,72 @@ class AnalyzerEngine:
         threshold_value = severity_order[self.severity_threshold]
 
         return [issue for issue in issues if severity_order[issue.severity] >= threshold_value]
+
+    def _record_parser_failure(self, file_path: Path, language: Language, exc: Exception) -> None:
+        """A parser could not be built or failed to parse: skipped, not gated."""
+        self._parser_failures.append(
+            {
+                "path": str(file_path),
+                "language": language.value,
+                "category": self._categorize_parser_failure(exc, language),
+                "exception": type(exc).__name__,
+            }
+        )
+        logger.debug("Skipping %s: parse failed (%s)", file_path, exc)
+
+    def _get_parser(self, language: Language) -> Any:
+        """``ParserFactory.get_parser``, but a grammar that failed to load is not retried.
+
+        The first grammar-pack error for a language is raised again, as a new
+        exception of the same type and args, for every later file of that
+        language in this run, so each file is still reported as not analyzed
+        and the cached exception's traceback does not grow with each raise.
+        The lock makes concurrent callers wait for the first load instead of
+        starting their own download.
+        """
+        with self._grammar_lock:
+            failed = self._grammar_failures.get(language)
+            if failed is not None:
+                raise _fresh_copy(failed)
+            try:
+                return ParserFactory.get_parser(language)
+            except Exception as exc:
+                if _is_grammar_pack_error(exc):
+                    self._grammar_failures[language] = exc
+                raise
+
+    def _grammar_load_failed(self, file_path: Path, language: Language, exc: Exception) -> bool:
+        """Record a supported file whose tree-sitter grammar could not be loaded.
+
+        With the grammar pack installed (``USE_PREBUILT``), an error of the
+        pack's own family while building the parser (``DownloadError``,
+        ``ChecksumMismatchError``, ``DynamicLoadError``, ...) means the grammar
+        itself could not be loaded or downloaded (empty cache, no network).
+        The file is a supported language that was not checked, so it goes to
+        ``meta.not_analyzed`` and fails ``--fail-on`` like any other file that
+        could not be analyzed.
+        Returns False (not handled) when the pack is missing altogether: that
+        stays a ``parser_unavailable`` skip with the ``[multilang]`` hint.
+        """
+        from hefesto.core.parsers.parser_factory import ParserFactory
+        from hefesto.core.parsers.treesitter_parser import USE_PREBUILT, TreeSitterParser
+
+        if not USE_PREBUILT or language not in ParserFactory.GRAMMAR_NAMES:
+            return False
+        if not _is_grammar_pack_error(exc):
+            return False
+        name = ParserFactory.GRAMMAR_NAMES[language]
+        self._not_analyzed.append(
+            {
+                "path": str(file_path),
+                "language": language.value,
+                "reason": "grammar_unavailable",
+                "grammar": TreeSitterParser.LANG_MAP.get(name, name),
+                "exception": type(exc).__name__,
+            }
+        )
+        logger.debug("Not analyzed: %s (grammar not loaded: %s)", file_path, exc)
+        return True
 
     def _categorize_parser_failure(
         self, exc: Exception, language: Optional["Language"] = None
@@ -1212,6 +1393,8 @@ class AnalyzerEngine:
     def _build_meta(self) -> dict:
         """Assemble the ``meta`` dict for the report from PRO features."""
         meta: dict = {}
+        if self._experimental:
+            meta["experimental"] = sorted(self._experimental)
 
         # Scope gating summary (EPIC 1)
         if self._scope_config is not None and self._scope_skipped:

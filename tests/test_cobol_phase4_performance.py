@@ -66,6 +66,24 @@ def _sectioned_program(paragraphs):
     return "\n".join(lines) + "\n"
 
 
+def _redefines_program(lines):
+    """Many packed fields each overlaid by a REDEFINES (COBOL004): every
+    REDEFINES used to copy the rest of the data items (O(n^2))."""
+    data = []
+    for i in range(lines // 2):
+        data += [
+            _a(f"01  WS-N{i:05d} PIC S9(9)V99 COMP-3."),
+            _a(f"01  WS-X{i:05d} REDEFINES WS-N{i:05d} PIC X(8)."),
+        ]
+    head = [
+        _a("IDENTIFICATION DIVISION."),
+        _a("PROGRAM-ID. REDEFS."),
+        _a("DATA DIVISION."),
+        _a("WORKING-STORAGE SECTION."),
+    ]
+    return "\n".join(head + data + [_a("PROCEDURE DIVISION."), _b("GOBACK.")]) + "\n"
+
+
 def _best_time(source, repeat=3):
     analyzer = CobolGovernanceAnalyzer()
     best = float("inf")
@@ -80,7 +98,10 @@ def _generated_program(lines):
     return "\n".join(bench._program("BIG", lines // 17 + 1, 1)[:lines]) + "\n"
 
 
-@pytest.mark.parametrize("make", [_generated_program, lambda n: _sectioned_program(n // 3)])
+@pytest.mark.parametrize(
+    "make",
+    [_generated_program, lambda n: _sectioned_program(n // 3), _redefines_program],
+)
 def test_analysis_time_grows_linearly(make):
     small = _best_time(make(5_000))
     large = _best_time(make(20_000))
