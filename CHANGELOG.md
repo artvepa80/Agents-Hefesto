@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Japanese and Chinese READMEs: Action `multilang` and Local MCP
+
+- `README.ja.md` and `README.zh-CN.md` now match `README.md` on TypeScript, JavaScript, Java, Go, Rust and C#: the GitHub Action needs `multilang: 'true'` (opt-in) or the CLI needs `pip install "hefesto-ai[multilang]"`. They also document the local stdio MCP adapter (`pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`, with `HEFESTO_MCP_ROOT`).
+
 ### Added — opt-in `multilang` input for the GitHub Action
 
 - `multilang: 'true'` installs the `[multilang]` extra in the Action, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed in CI as with `pip install "hefesto-ai[multilang]"`. Default `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out). The install step moved from `action.yml` into `scripts/action_install.sh` (same commands; tested with `tests/scripts/test_action_install.py`). `action-smoke.yml` gains a `smoke-multilang` job (not a required check) that runs a TypeScript file with the input off (exit 1, no file analyzed) and on (exit 0, 1 file analyzed). The analysis log prints `Multilang input: yes` or `Multilang input: no` for that same true/1/yes rule. The line is the input value, not a statement that the extra was installed.
