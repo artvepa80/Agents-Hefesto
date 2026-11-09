@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 `hefesto analyze --enrich ... --enrich-provider NAME` now loads the provider registered as `NAME` in the `hefesto.enrichment_providers` entry-point group; before, the orchestrator always got an empty provider list, so enrichment was always skipped. Only the requested names are imported. A provider is used only if it implements the PRO `EnrichmentProvider` protocol and its `name` equals the entry-point name; a missing, failing or invalid provider is reported on stderr and skipped. The orchestrator now gets the cache built from `--enrich-cache-ttl` / `--enrich-cache-max`. New `--enrich-min-severity` (default `MEDIUM`) and `--enrich-max-findings` (default `50`, highest severity first, `0` = none) bound how many sequential provider calls a run makes. Enrichment still never changes findings, severities or the exit code. If two installed packages register the same provider name, a stderr warning names both distributions and the first by distribution name is used, the same on every run. Requires `hefesto-pro >= 3.10.1` (pending release): with older PRO releases `--enrich-timeout` does not stop the wait and `--enrich local` skips every provider; `--enrich local` runs only providers with `is_local = True`. Not wired into `hefesto serve`, the GitHub Action or `pr-review`. Docs: `docs/enrichment-providers.md`.
 
+### Removed — maintainer agent guides `CLAUDE.md` and `docs/CLAUDE_HEFESTO.md`
+
+- The two maintainer tooling guides are no longer kept in this repository. Contributors follow `CONTRIBUTING.md`.
+- `scripts/guard_public_repo.py` adds both paths to `BANNED_FILES`, so they cannot be re-added (test: `tests/test_guard_banned_files.py`). Their entries in `scripts/guard_markdown_allowlist.txt` are gone, the positioning and `hefesto init` copy tests no longer read `CLAUDE.md`, and a docstring in `imports_vs_deps.py` and a comment in `release.yml` no longer cite it. Behaviour is unchanged.
+
 ## [4.21.0] - 2026-11-07
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`

@@ -35,7 +35,6 @@ POSITIONING_FILES = [
     ".well-known/agent-card.json",
     "llms.txt",
     "pyproject.toml",
-    "CLAUDE.md",
 ]
 
 
@@ -61,8 +60,6 @@ def test_headlines_say_release_truth_engine():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     description = re.search(r'^description = "([^"]+)"', pyproject, re.M).group(1)
     assert description.startswith("Release truth engine for AI-generated code")
-    claude_h1 = (ROOT / "CLAUDE.md").read_text(encoding="utf-8").splitlines()[0]
-    assert "release truth engine" in claude_h1.lower()
     readme_h1 = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[0]
     assert "release truth engine" in readme_h1.lower()
     assert "release truth engine" in (ROOT / "llms.txt").read_text(encoding="utf-8").lower()
