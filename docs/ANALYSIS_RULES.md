@@ -472,6 +472,30 @@ Python security rules carry a CWE in SARIF 2.1.0 from one mapping (`hefesto/repo
 
 An issue field `metadata.cwe` overrides this table. COBOL rules that already set one keep the same tag text (`external/cwe/cwe-798`, `external/cwe/cwe-20`); those tags are not zero-padded.
 
+### 2.8 Unquoted variable in shell scripts (SHELL_UNQUOTED_VARIABLE)
+
+**Rule id:** `unquoted-var` · **Severity:** MEDIUM · **Analyzer:** shell (`.sh`, `.bash` and files with a shell shebang)
+
+An unquoted `$NAME` or `${NAME}` is split into words and expanded as a glob, so `rm -rf $DIR` with `DIR="my dir"` removes `my` and `dir`. The rule reports one finding per line when such a variable is:
+
+- an argument of `rm` or `cd` used as a command (at the start of the line, after a newline, `;`, `&&`, `||`, `|`, `(`, or after `sudo`, `then`, `do`, `else`, `exec`, `command`, `nohup`, `!`, `{`, `if`, `elif`, `while`, `until`, `time`, `xargs`);
+- the operand of a single-bracket test, e.g. `[ -f $FILE ]`.
+
+An unquoted command substitution in those `rm` or `cd` arguments is reported as well, in either form (`rm $(echo $X)`, ``rm `cat "$LIST"` ``, `cd $(echo $X)`). The shell field-splits and pathname-expands that result when the substitution is not in double quotes (POSIX command substitution, including the backquoted form). `rm "$(echo $X)"` and ``rm "`cat "$LIST"`"`` are not reported. Arithmetic `$((N+1))` is not a command substitution and is not itself reported.
+
+The body of `$(...)` or of backticks is a separate command with its own quotes. Quotes around the substitution do not quote that body: `x="$(cd $DIR && pwd)"` and `` echo "`cd $DIR && pwd`" `` are reported, and `x=$(cd "$DIR" && pwd)` is not. The same rule applies inside the body (`x=$(/bin/rm -f $FILE)`, `x=$(case $Z in *) rm -f $FILE ;; esac)`). A `)` ends the substitution only when it is the substitution's closer; a pattern `)` after a `case` command does not. One finding is still reported per physical line.
+
+The command word may be a path (`/bin/rm`, `./rm`, `$HOME/bin/rm`, `${PREFIX}/bin/rm`) or a backslash-escaped name (`\rm`). A `)` that stands outside quotes and substitutions introduces the next command, with or without a space (`*)rm`, `*) rm`, `foo)rm`, `a)cd`). A `)` that only closes `$(...)` does not (`$(echo hi)rm`, `echo $(echo hi) rm`). Space and tab are the blanks that separate words. A newline separates commands. A vertical tab, form feed, carriage return, or any other character for which Python's `str.isspace()` is true is not a shell separator: the line is left unreported and the scan does not raise.
+
+Not reported: quoted expansions (`rm -f "$TMPFILE"`, `rm -rf "$DIR"/cache`, `rm -rf "$(path "$v")"`), single-quoted text, escaped `\$`, `[[ ... ]]` tests (no word splitting there), `rm`/`cd` inside a string (`echo "run: rm $X"`), and subcommands named `rm` (`docker image rm $ID`, `git rm $FILE`, `docker run --rm`).
+
+```bash
+rm -rf $BUILD_DIR/cache     # reported
+rm -rf "$BUILD_DIR"/cache   # fix
+```
+
+Limits: line-based, no data flow. Text inside a quoted string is not a command, so `bash -c "cd $TMP"`, `echo "rm $X"`, and any other quoted wrapper are not analyzed. A flag or assignment between a prefix and the command is not skipped, so `xargs -0 rm -f $FILE`, `sudo -u root rm -f $FILE`, and `env A=1 rm -f $FILE` are not reported. A shell assignment prefix is not a command prefix either, so `A=1 rm -f $FILE` and `CDPATH= cd $DIR` are not reported. The released checker reports `A=1 rm -f $FILE`. It reports `CDPATH= cd $DIR` when a blank follows the name, as in `CDPATH= cd $DIR && true`; the end-of-line form matches neither checker. `trap 'rm -f $FILE' EXIT` is a quoted command string and is not reported. `$1`, `$@` and other special parameters are not checked. A `)` inside quotes does not end a `$(...)`.
+
 ---
 
 ## 3. Code Smells
