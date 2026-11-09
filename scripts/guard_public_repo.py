@@ -57,6 +57,8 @@ BANNED_FILES = [
     "hefesto/config/config_manager.py",
     "docker-compose.yml",
     "setup.py",
+    "CLAUDE.md",
+    "docs/CLAUDE_HEFESTO.md",
 ]
 
 # Identifiers that MUST NOT appear in any .py file under hefesto/
