@@ -171,7 +171,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
 | `multilang` | Opt-in. `true`: installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed too (grammars are downloaded on the first run; a file whose grammar cannot be loaded fails `fail_on`) | `false` |
-| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one pseudonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:
 
@@ -186,7 +186,13 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 
 HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so risky changes are flagged before merge.
 
-**Add as an MCP server:**
+**Add as a local MCP server:**
+```bash
+uvx hefesto-mcp
+```
+`HEFESTO_MCP_ROOT` is required (the project directory; not `/` or the home directory). See [Local MCP (stdio)](#local-mcp-stdio).
+
+Alternatively, add the hosted MCP server:
 ```bash
 npx @smithery/cli@latest mcp add artvepa80/hefestoai
 ```
@@ -254,7 +260,12 @@ hefesto pr-review --post --pr 42 --repo owner/name
 
 # Include file-level context findings (not just changed lines)
 hefesto pr-review --strict
+
+# Exit 1 if the diff adds a `# hefesto: ignore[TYPE] reason` comment
+hefesto pr-review --fail-on-new-suppressions
 ```
+
+On Python files, `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding. The reason is required. Several types can be listed (`ignore[A, B] reason`). Other languages are not read yet. `hefesto pr-review` includes `new_suppressions` (each suppression comment the diff adds, with its reason). `--fail-on-new-suppressions` exits 1 when the diff adds one.
 
 **How it works:**
 1. Parses `git diff` between base and head (auto-detects `origin/main` or `GITHUB_BASE_REF`)
@@ -304,6 +315,8 @@ format total below. `.h` headers are read as C unless they contain C++-only
 syntax or sit next to a C++ source with the same name; headers with
 Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
+
+With `--experimental lang-security` and `[multilang]`, these security rules also run: CS001–CS004 (C#), GO001, GO003 and GO004 (Go), and RS001–RS003 (Rust). See [docs/ANALYSIS_RULES.md](docs/ANALYSIS_RULES.md).
 
 ### DevOps & Configuration
 
@@ -376,11 +389,22 @@ hefesto analyze . --no-config                 # ignore .hefesto.yaml
 hefesto analyze src/ --copybook-path ../copylib  # COBOL copybooks outside the scan
 hefesto analyze . --include-vendored  # also analyze vendored/minified JS (skipped by default)
 
+# Analyze COBOL with program lineage in the JSON report (JSON only)
+hefesto analyze . --output json --lineage
+
 # PR review (added in v4.10.0)
 hefesto pr-review                              # JSON to stdout
 hefesto pr-review --base main --head HEAD      # explicit refs
 hefesto pr-review --strict                     # file-level findings too
 hefesto pr-review --post --pr 42 --repo o/r    # post via gh CLI
+hefesto pr-review --fail-on-new-suppressions   # exit 1 if the diff adds a suppression
+
+# Check the installation and dependencies
+hefesto check
+
+# License (PRO/OMEGA): print the export or unset line; nothing is stored
+hefesto activate HFST-XXXX-XXXX-XXXX-XXXX-XXXX
+hefesto deactivate
 
 # Check status
 hefesto status
@@ -521,7 +545,7 @@ Automatic validation before every `git push` in this repository:
 # Install the same hooks and print the plans link (PRO $8/mo, OMEGA $19/mo)
 hefesto init
 
-# Install/update hook (copies scripts/git-hooks/pre-push -> .git/hooks/pre-push)
+# Install/update hooks
 hefesto install-hooks
 
 # Update an existing hook
@@ -536,7 +560,7 @@ The hook runs two gates:
 1. **Security gate** — `hefesto analyze` with `--fail-on CRITICAL --exclude-types VERY_HIGH_COMPLEXITY,LONG_FUNCTION` (blocks security issues, ignores complexity debt)
 2. **Fast lint/test gate** — Black, isort, Flake8, and a minimal test suite
 
-> **Note:** Hooks are local to your machine and not committed to git. Run `hefesto install-hooks` after cloning or whenever `scripts/git-hooks/pre-push` is updated.
+> **Note:** Hooks are local to your machine and not committed to git. Run `hefesto install-hooks` after cloning, or `hefesto install-hooks --force` to replace existing hooks.
 
 ---
 
@@ -699,7 +723,7 @@ Put the `hefesto analyze` options you would otherwise repeat on every run in a
 # .hefesto.yaml -- every key is optional and maps to a `hefesto analyze` flag
 severity: MEDIUM            # --severity      LOW | MEDIUM | HIGH | CRITICAL
 fail_on: HIGH               # --fail-on       LOW | MEDIUM | HIGH | CRITICAL
-output: text                # --output        text | json | html
+output: text                # --output        text | json | html | sarif
 exclude:                    # --exclude       list or "a/,b/" string
   - tests/
   - node_modules/
@@ -800,7 +824,7 @@ The full audit and refactor history are tracked internally in our private repo. 
 
 ## Telemetry
 
-The CLI sends anonymous usage events to PostHog by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings or repository names, and no IP field in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless you set `telemetry: 1`. Separately, `hefesto analyze` asks pypi.org for the latest version (1.5 s timeout, cached for 24 hours). `hefesto telemetry disable` does not stop that check. From 4.20.3 the settings below skip it; 4.20.2 and earlier have no setting to disable it. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
+The CLI sends pseudonymous usage events to PostHog by default (a random id; `analyze` also sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood plus pypi or editable — no code, file paths, findings or repository names, and no IP field in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or `DO_NOT_TRACK=1`. The GitHub Action sends no usage events unless you set `telemetry: 1`. Separately, `hefesto analyze` asks pypi.org for the latest version (1.5 s timeout, cached for 24 hours). `hefesto telemetry disable` does not stop that check. From 4.20.3 the settings below skip it; 4.20.2 and earlier have no setting to disable it. Details: [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md).
 
 The PyPI newer-version check is skipped, with no request and no cache write, when `HEFESTO_NO_UPDATE_CHECK` is `1`, `true`, `yes`, or `on`, when `HEFESTO_TELEMETRY` is `0`, `false`, `no`, or `off`, or when `DO_NOT_TRACK` is `1`, `true`, `yes`, or `on`. Usage events stay on by default. The Action's default `telemetry: 0` exports `HEFESTO_TELEMETRY=0`, so that check does not run on runners.
 
