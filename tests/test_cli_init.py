@@ -35,7 +35,6 @@ _BLOCKED_URL = (
 
 _CURRENT_COPY = (
     "README.md",
-    "CLAUDE.md",
     "LICENSE-COMMERCIAL.md",
     "llms.txt",
     "scripts/README.md",

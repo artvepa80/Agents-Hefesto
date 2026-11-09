@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `multilang: 'true'` installs the `[multilang]` extra in the Action, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed in CI as with `pip install "hefesto-ai[multilang]"`. Default `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out). The install step moved from `action.yml` into `scripts/action_install.sh` (same commands; tested with `tests/scripts/test_action_install.py`). `action-smoke.yml` gains a `smoke-multilang` job (not a required check) that runs a TypeScript file with the input off (exit 1, no file analyzed) and on (exit 0, 1 file analyzed). The analysis log prints `Multilang input: yes` or `Multilang input: no` for that same true/1/yes rule. The line is the input value, not a statement that the extra was installed.
 - `OT-INSTALL-001` (an `action.yml` input that no script reads) now reads every `scripts/action_*.sh`, not only `scripts/action_entrypoint.sh`, so the `multilang` input read by `scripts/action_install.sh` is not reported. The message now says "no scripts/action_*.sh reads INPUT_<NAME>". User impact: in a repository whose Action inputs are read by a `scripts/action_*.sh` other than the entrypoint, `OT-INSTALL-001` stops reporting those inputs as unused; an input that no `scripts/action_*.sh` reads is still reported, and repositories without such scripts see no change.
 
+### Removed — maintainer agent guides `CLAUDE.md` and `docs/CLAUDE_HEFESTO.md`
+
+- The two maintainer tooling guides are no longer kept in this repository. Contributors follow `CONTRIBUTING.md`.
+- `scripts/guard_public_repo.py` adds both paths to `BANNED_FILES`, so they cannot be re-added (test: `tests/test_guard_banned_files.py`). Their entries in `scripts/guard_markdown_allowlist.txt` are gone, the positioning and `hefesto init` copy tests no longer read `CLAUDE.md`, and a docstring in `imports_vs_deps.py` and a comment in `release.yml` no longer cite it. Behaviour is unchanged.
+
 ## [4.21.0] - 2026-11-07
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
