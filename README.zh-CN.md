@@ -15,6 +15,11 @@ pip install hefesto-ai
 
 # 分析 TypeScript、JavaScript、Java、Go、Rust、C# 需要：
 pip install "hefesto-ai[multilang]"
+
+# 本地 stdio MCP 适配器（随 hefesto-ai 4.21.0 发布）：
+pip install "hefesto-ai[mcp]"
+# 或: uvx hefesto-mcp
+# 必须设置 HEFESTO_MCP_ROOT（项目目录；不能是 / 或主目录）。
 ```
 
 ## 快速开始
@@ -48,7 +53,7 @@ jobs:
           sarif: 'true'
 ```
 
-检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.21.0` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要使用 CLI 并安装 `hefesto-ai[multilang]`。
+检查结果显示在 **Security > Code scanning** 和 PR 注释中。`@v4` 跟随所有 4.x 版本；如需固定版本，请使用 `artvepa80/Agents-Hefesto@v4.21.0` 或提交 SHA。Action 分析的格式与 `hefesto analyze` 相同：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm 和 Serverless，以及漂移检查；TypeScript、JavaScript、Java、Go、Rust 和 C# 需要在 Action 中设置 `multilang: 'true'`（可选开启），或使用 CLI 并执行 `pip install "hefesto-ai[multilang]"`。
 
 ## 检查内容（示例）
 
@@ -76,6 +81,32 @@ npx @smithery/cli@latest mcp add artvepa80/hefestoai
 按钮通过 `cursor.com/link` 打开 Cursor 的安装提示（GitHub 不渲染 `cursor://` 链接）。直接深度链接：`cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`。同一服务器也写在仓库根目录的 `.mcp.json` 中。无需 API 密钥。
 
 MCP 端点：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP 的 `analyze` 工具运行开源引擎（托管的 MCP 运行近期的 hefesto-ai 版本），处理你发送的文件：最多 20 个文件，每个 100 KB，总计 256 KB，20 秒。不存储任何内容。分析整个仓库请在本地运行 `hefesto analyze .`。托管的 MCP 服务器为闭源，由 Narapa LLC 运营。
+
+## Local MCP (stdio)
+
+`mcp` extra 通过 stdio 运行本地引擎，不会调用托管服务。它随 hefesto-ai 4.21.0 发布：`pip install "hefesto-ai[mcp]"` 或 `uvx hefesto-mcp`。该 extra 需要 `mcp>=1.7,<2` 以及 Python 3.11 或更高版本（即软件包的 `requires-python`）（依赖包 `mcp` 要求 Python >= 3.10，所有受支持的 Python 都满足该要求，因此 extra 没有单独的 environment marker）。必须设置 `HEFESTO_MCP_ROOT`：将其设为工具可以读取的项目目录。该目录不得解析为 `/` 或主目录。相对路径会拼接到该目录，而不是进程的工作目录。
+
+```bash
+pip install "hefesto-ai[mcp]"
+```
+
+MCP 客户端通过 stdio 启动它。请在 `HEFESTO_MCP_ROOT` 中传入项目目录（`--root` 仍会覆盖它）。该目录之外的路径会被拒绝。
+
+```json
+{
+  "mcpServers": {
+    "hefesto": {
+      "command": "uvx",
+      "args": ["hefesto-mcp"],
+      "env": {
+        "HEFESTO_MCP_ROOT": "/absolute/path/to/the/project"
+      }
+    }
+  }
+}
+```
+
+工具：`analyze_local`（该根目录内的文件或目录）和 `version`。详情：[docs/local-mcp.md](docs/local-mcp.md)。
 
 ## 支持的语言
 

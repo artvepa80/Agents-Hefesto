@@ -15,6 +15,11 @@ pip install hefesto-ai
 
 # TypeScript、JavaScript、Java、Go、Rust、C# の解析には：
 pip install "hefesto-ai[multilang]"
+
+# ローカル stdio MCP アダプター（hefesto-ai 4.21.0 で公開）：
+pip install "hefesto-ai[mcp]"
+# または: uvx hefesto-mcp
+# HEFESTO_MCP_ROOT は必須です（プロジェクトディレクトリ。/ やホームディレクトリは不可）。
 ```
 
 ## クイックスタート
@@ -48,7 +53,7 @@ jobs:
           sarif: 'true'
 ```
 
-検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.21.0` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# は CLI と `hefesto-ai[multilang]` が必要です。
+検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.21.0` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# には、Action で `multilang: 'true'`（オプトイン）か、CLI で `pip install "hefesto-ai[multilang]"` が必要です。
 
 ## 検出内容（例）
 
@@ -76,6 +81,32 @@ Cursor にワンクリックで追加：
 ボタンは `cursor.com/link` 経由で Cursor のインストール画面を開きます（GitHub は `cursor://` リンクを表示しません）。直接のディープリンク：`cursor://anysphere.cursor-deeplink/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D`。同じサーバーはリポジトリ直下の `.mcp.json` にもあります。API キーは不要です。
 
 MCP エンドポイント：`https://hefestoai.narapallc.com/api/mcp-protocol`（JSON-RPC 2.0）。MCP の `analyze` ツールは、送信されたファイルに対してオープンソースエンジンを実行します（ホスト型 MCP は最近の hefesto-ai リリースを実行します）。上限は 20 ファイル、各 100 KB、合計 256 KB、20 秒です。内容は保存されません。リポジトリ全体はローカルで `hefesto analyze .` を実行してください。ホスト型 MCP サーバーはクローズドソースで、Narapa LLC が運営しています。
+
+## Local MCP (stdio)
+
+`mcp` extra はローカルエンジンを stdio 経由で実行します。ホスト型サービスは呼び出しません。hefesto-ai 4.21.0 で公開されています：`pip install "hefesto-ai[mcp]"` または `uvx hefesto-mcp`。この extra には `mcp>=1.7,<2` と Python 3.11 以上（パッケージの `requires-python`）が必要です（依存パッケージ `mcp` は Python >= 3.10 を要求しますが、サポート対象の Python はすべてそれを満たすため、この extra に別の environment marker はありません）。`HEFESTO_MCP_ROOT` は必須です。ツールが読み取ってよいプロジェクトディレクトリを設定してください。そのディレクトリは `/` やホームディレクトリに解決されてはいけません。相対パスはそのディレクトリに結合され、プロセスの作業ディレクトリには結合されません。
+
+```bash
+pip install "hefesto-ai[mcp]"
+```
+
+MCP クライアントは stdio でこれを起動します。プロジェクトディレクトリを `HEFESTO_MCP_ROOT` に渡してください（`--root` があればそちらが優先されます）。そのディレクトリ外のパスは拒否されます。
+
+```json
+{
+  "mcpServers": {
+    "hefesto": {
+      "command": "uvx",
+      "args": ["hefesto-mcp"],
+      "env": {
+        "HEFESTO_MCP_ROOT": "/absolute/path/to/the/project"
+      }
+    }
+  }
+}
+```
+
+ツール：`analyze_local`（そのルート内のファイルまたはディレクトリ）と `version`。詳細：[docs/local-mcp.md](docs/local-mcp.md)。
 
 ## 対応言語
 
