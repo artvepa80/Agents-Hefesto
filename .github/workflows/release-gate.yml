@@ -1,4 +1,4 @@
-# Release gate (target 4.21.0): a run with no flags must give the same JSON on
+# Release gate (target 4.21.1): a run with no flags must give the same JSON on
 # main and on this branch for each pinned corpus (scripts/release_gate_corpora.txt).
 # Timing fields are ignored. Corpora are fetched by SHA and only read.
 name: Release Gate

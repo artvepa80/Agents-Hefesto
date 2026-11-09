@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.21.1] - TBD
+
+### Upgrade notes — read first if you use the GitHub Action on `@v4`
+
+`@v4` moves to 4.21.1 when it is released, so workflows on `@v4` pick up this release without an edit:
+
+1. **New optional `multilang` input (default `false`).** `multilang: 'true'` installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed. The default stays `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out).
+
+This release also changes the shell rule `SHELL_UNQUOTED_VARIABLE` so quoted variables are not reported, loads enrichment providers from entry points when `--enrich` is used, and stops a broken PRO install from crashing `hefesto analyze`. Details below.
+
 ### Fixed — `SHELL_UNQUOTED_VARIABLE` no longer reports quoted variables
 
 - The shell rule `unquoted-var` (`SHELL_UNQUOTED_VARIABLE`) reported `rm -f "$TMPFILE"`, the quoted form it recommends: its `rm` pattern let the last letter of the name stand in for "unquoted". It now reads the quoting of the line: a `$NAME` or `${NAME}` argument of `rm` or `cd` is reported only outside quotes. A quoted command substitution is not reported (`rm "$(echo $X)"`, ``rm "`cat "$LIST"`"``). An unquoted one is, in either spelling (`rm $(echo $X)`, ``rm `cat "$LIST"` ``, `cd $(echo $X)`), because the shell field-splits and pathname-expands that result. Arithmetic `$((N+1))` is not a command substitution. A `)` inside quotes does not end the substitution. The body of `$(...)` or backticks is scanned as its own command, so `x=$(cd $DIR && pwd)`, `out=$(rm -f $FILE)`, `x="$(cd $DIR && pwd)"`, and `` x=`cd $DIR && pwd` `` are reported, while `x=$(cd "$DIR" && pwd)` and `out=$(rm -f "$FILE")` are not. Quotes around the substitution do not quote the body. On one line, each command context classifies its arguments once: a row of `rm` commands with no separator does not scan the rest of the line again for every match. The command word includes a path (`/bin/rm`, `./rm`, `$HOME/bin/rm`, `${PREFIX}/bin/rm`), a backslash-escaped name (`\rm`), and the command after a `)` that is outside quotes and substitutions, with or without a space (`*)rm`, `*) rm`, `foo)rm`, `a)cd`). A `)` that only closes `$(...)` does not start a command (`$(echo hi)rm`). Space, tab, and newline are the whitespace that separate commands. Other characters for which Python `str.isspace()` is true are not shell separators. Also no longer reported: `[[ -f $X ]]` (no word splitting inside `[[ ]]`), `rm`/`cd` inside a string, and subcommands named `rm` (`docker image rm $ID`, `git rm`, `docker run --rm`). Newly reported: unquoted `${NAME}` and single-letter names in `rm` arguments (`rm -rf ${DIR}`), and `cd $DIR` at the end of a line.

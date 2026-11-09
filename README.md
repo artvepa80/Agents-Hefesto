@@ -37,13 +37,13 @@ jobs:
           sarif: 'true'
 ```
 
-Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.21.0` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need `multilang: 'true'` in the Action (opt-in) or the CLI with `pip install "hefesto-ai[multilang]"`.
+Findings show up under **Security > Code scanning** and as pull request annotations. Public repositories work as shown; private repositories without GitHub Code Security set `upload_sarif: 'false'` (the SARIF file is still written). `@v4` follows every 4.x release, minors included (4.16.0 made a run that analyzes no files fail the gate). For a fixed version, pin `artvepa80/Agents-Hefesto@v4.21.1` or a commit SHA. The Action runs the same formats as `hefesto analyze`: Python plus YAML, Terraform, Shell, Dockerfile, SQL, PowerShell, JSON, TOML, Makefile, Groovy, COBOL, CloudFormation, ARM, Helm and Serverless, plus the drift checks. TypeScript, JavaScript, Java, Go, Rust and C# need `multilang: 'true'` in the Action (opt-in) or the CLI with `pip install "hefesto-ai[multilang]"`.
 
 Free and MIT. PRO ($8/mo per user) and OMEGA ($19/mo): [plans](https://hefestoai.narapallc.com/?utm_source=github&utm_medium=readme&utm_campaign=growth_q4_2026&utm_content=pricing_quickstart#pricing).
 
 ---
 
-## Operational Truth Analyzers (v4.21.0)
+## Operational Truth Analyzers (v4.21.1)
 
 These analyzers look for drift between what your project **declares** and what it **does**. They run on every `hefesto analyze`. The problems they look for don't live in any single file, so a per-file linter or security scanner won't report them: they show up only when you compare two files.
 
@@ -133,7 +133,7 @@ steps:
       fail_on: 'CRITICAL'
 ```
 
-`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.21.0` (exact tags never move) or a commit SHA, and bump it yourself.
+`@v4` is a floating tag that follows the whole 4.x line, minor releases included: every v4.x.y release moves it, so the workflow gets fixes without edits, and also behaviour changes such as the 4.16.0 change that makes a run with no analyzed files fail `--fail-on` (exit 1; `--allow-no-files` opts out). If you need exact stability, pin an exact release tag such as `artvepa80/Agents-Hefesto@v4.21.1` (exact tags never move) or a commit SHA, and bump it yourself.
 
 With SARIF upload to GitHub code scanning (findings appear under **Security > Code scanning** and as pull request annotations):
 
@@ -221,7 +221,7 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 
 ## Local MCP (stdio)
 
-The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is published with hefesto-ai 4.21.0: `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is published with hefesto-ai 4.21.1: `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
 
 ```bash
 pip install "hefesto-ai[mcp]"
@@ -247,7 +247,7 @@ Tools: `analyze_local` (a file or directory inside that root) and `version`. Det
 
 ---
 
-## PR Review (v4.21.0)
+## PR Review (v4.21.1)
 
 Analyze only the code changed in a pull request and post inline comments on the changed lines. Each finding carries a deterministic dedup key, so a workflow can skip findings it has already posted (the deduped template below does this; the simple one does not).
 
@@ -363,7 +363,7 @@ pip install "hefesto-ai[multilang]"
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
 
-# Optional: local stdio MCP adapter (published with hefesto-ai 4.21.0)
+# Optional: local stdio MCP adapter (published with hefesto-ai 4.21.1)
 pip install "hefesto-ai[mcp]"
 
 # or: uvx hefesto-mcp
@@ -374,7 +374,7 @@ pip install "hefesto-ai[mcp]"
 
 ---
 
-## CLI Reference (v4.21.0)
+## CLI Reference (v4.21.1)
 
 ```bash
 # Analyze code
@@ -634,7 +634,7 @@ jobs:
           category: hefesto
 ```
 
-### GitHub Actions — PR Review with Inline Comments (v4.21.0)
+### GitHub Actions — PR Review with Inline Comments (v4.21.1)
 
 ```yaml
 name: Hefesto PR Review
@@ -671,7 +671,7 @@ jobs:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/artvepa80/Agents-Hefesto
-    rev: v4.21.0
+    rev: v4.21.1
     hooks:
       - id: hefesto-analyze
 ```
