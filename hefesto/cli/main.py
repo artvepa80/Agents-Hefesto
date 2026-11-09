@@ -1005,17 +1005,17 @@ def _is_hefesto_repo(repo_root) -> bool:
 
 @cli.group()
 def telemetry_cmd() -> None:
-    """Anonymous usage telemetry (on by default)."""
+    """Pseudonymous usage telemetry (on by default)."""
 
 
 @telemetry_cmd.command("disable")
 def telemetry_disable() -> None:
-    """Stop anonymous usage telemetry on this machine."""
+    """Stop pseudonymous usage telemetry on this machine."""
     from hefesto.telemetry.client import disable
 
     disable()
     click.echo(
-        "Anonymous telemetry is off on this machine. "
+        "Pseudonymous telemetry is off on this machine. "
         "Turn it back on by deleting ~/.hefesto/telemetry_disabled."
     )
 
