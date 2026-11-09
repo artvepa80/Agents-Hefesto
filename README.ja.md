@@ -70,12 +70,6 @@ uvx hefesto-mcp
 ```
 `HEFESTO_MCP_ROOT` が必要です（プロジェクトディレクトリ。`/` やホームディレクトリは使えません）。
 
-ホスト型サーバーを追加する場合：
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
-
 Cursor にワンクリックで追加：
 
 [![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)

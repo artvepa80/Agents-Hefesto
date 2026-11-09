@@ -70,12 +70,6 @@ uvx hefesto-mcp
 ```
 必须设置 `HEFESTO_MCP_ROOT`（项目目录；不能是 `/` 或主目录）。
 
-若要添加托管服务器：
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
-
 一键添加到 Cursor：
 
 [![Add HefestoAI MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/link/mcp/install?name=hefestoai&config=eyJ1cmwiOiJodHRwczovL2hlZmVzdG9haS5uYXJhcGFsbGMuY29tL2FwaS9tY3AtcHJvdG9jb2wifQ%3D%3D)

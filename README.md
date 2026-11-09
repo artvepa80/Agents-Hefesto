@@ -171,7 +171,7 @@ The Action is a composite action: it installs HefestoAI from the Action's own ch
 | `upload_sarif` | With `sarif: true`, upload the file; `false` only writes it | `true` |
 | `sarif_category` | Code scanning category of the upload | `hefesto` |
 | `multilang` | Opt-in. `true`: installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed too (grammars are downloaded on the first run; a file whose grammar cannot be loaded fails `fail_on`) | `false` |
-| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one pseudonymous ping per run and the CLI sends its usage events. Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
+| `telemetry` | Opt-in. Only `1` or `true` enables telemetry: the Action sends one anonymous ping per run (no id) and the CLI sends its pseudonymous usage events (random install id). Any other value, including the default `0`, sends no telemetry (the CLI still checks pypi.org for a newer version); see [docs/telemetry.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/telemetry.md) | `0` |
 
 **Outputs**:
 
@@ -191,11 +191,6 @@ HefestoAI can run as a pre-commit check or be called by an AI agent over MCP, so
 uvx hefesto-mcp
 ```
 `HEFESTO_MCP_ROOT` is required (the project directory; not `/` or the home directory). See [Local MCP (stdio)](#local-mcp-stdio).
-
-Alternatively, add the hosted MCP server:
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
 
 **Add to Cursor (one click):**
 
@@ -265,7 +260,7 @@ hefesto pr-review --strict
 hefesto pr-review --fail-on-new-suppressions
 ```
 
-On Python files, `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding. The reason is required. Several types can be listed (`ignore[A, B] reason`). Other languages are not read yet. `hefesto pr-review` includes `new_suppressions` (each suppression comment the diff adds, with its reason). `--fail-on-new-suppressions` exits 1 when the diff adds one.
+On Python files, `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding, up to HIGH; CRITICAL findings are never suppressed. The reason is required. Several types can be listed (`ignore[A, B] reason`). A directive with no reason, no `[TYPE]`, or no matching finding suppresses nothing and prints a warning. Other languages are not read yet. `hefesto pr-review` includes `new_suppressions` (each suppression comment the diff adds, with its reason). `--fail-on-new-suppressions` exits 1 when the diff adds one.
 
 **How it works:**
 1. Parses `git diff` between base and head (auto-detects `origin/main` or `GITHUB_BASE_REF`)
@@ -316,7 +311,7 @@ syntax or sit next to a C++ source with the same name; headers with
 Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
 
-With `--experimental lang-security` and `[multilang]`, these security rules also run: CS001–CS004 (C#), GO001, GO003 and GO004 (Go), and RS001–RS003 (Rust). See [docs/ANALYSIS_RULES.md](docs/ANALYSIS_RULES.md).
+With `--experimental lang-security` and `[multilang]`, these security rules also run: CS001–CS004 (C#), GO001, GO003 and GO004 (Go), and RS001–RS003 (Rust); with `--experimental c-cpp,lang-security`, also CC001–CC004 (C and C++). See [docs/ANALYSIS_RULES.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/ANALYSIS_RULES.md).
 
 ### DevOps & Configuration
 
