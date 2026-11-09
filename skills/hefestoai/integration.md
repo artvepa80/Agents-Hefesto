@@ -83,12 +83,6 @@ jobs:
 
 HefestoAI is registered as an MCP server for AI code editors.
 
-### Install via Smithery
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
-
 ### Manual Configuration
 
 Claude Code:
@@ -130,7 +124,6 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 ### Registry IDs
 
 - Official MCP Registry: `io.github.artvepa80/hefestoai`
-- Smithery: `artvepa80/hefestoai`
 
 ## Claude Code Feedback Loop
 
