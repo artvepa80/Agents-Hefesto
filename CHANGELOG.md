@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - README: [Upgrading from 4.17 or earlier](README.md#upgrading-from-417-or-earlier).
+- [docs/local-mcp.md](docs/local-mcp.md): the container image builds from the published PyPI package (`hefesto-ai[mcp]==4.21.0`).
 
 ### Changed — docs no longer list the third-party registry install command
 
