@@ -41,6 +41,8 @@ HefestoAI is available as an MCP (Model Context Protocol) server, allowing AI ag
 uvx hefesto-mcp
 ```
 
+`HEFESTO_MCP_ROOT` is required (the project directory; not `/` or the home directory).
+
 ## What It Detects
 
 - HARDCODED_SECRET (API keys, passwords in code)

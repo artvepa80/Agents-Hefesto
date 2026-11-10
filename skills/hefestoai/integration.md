@@ -110,6 +110,8 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
+Local stdio alternative: `uvx hefesto-mcp` (`HEFESTO_MCP_ROOT` required); see [docs/local-mcp.md](../../docs/local-mcp.md).
+
 ### Available MCP Endpoints
 
 | Endpoint | Protocol | Purpose |
