@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.22.0] - TBD
+
+### Upgrade notes — read first if you use the GitHub Action on `@v4`
+
+`@v4` moves to 4.22.0 when it is released, so workflows on `@v4` pick up this release without an edit:
+
+1. **New optional `multilang` input (default `false`).** `multilang: 'true'` installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed. The default stays `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out).
+
+This release also changes the shell rule `SHELL_UNQUOTED_VARIABLE` so quoted variables are not reported, loads enrichment providers from entry points when `--enrich` is used, and stops a broken PRO install from crashing `hefesto analyze`. Details below.
+
 ### Documentation
 
 - README: [Upgrading from 4.17 or earlier](README.md#upgrading-from-417-or-earlier).
