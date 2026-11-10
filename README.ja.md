@@ -66,8 +66,9 @@ jobs:
 AI エージェントは MCP 経由で HefestoAI を呼び出せます：
 
 ```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
+uvx hefesto-mcp
 ```
+`HEFESTO_MCP_ROOT` が必要です（プロジェクトディレクトリ。`/` やホームディレクトリは使えません）。
 
 Cursor にワンクリックで追加：
 
