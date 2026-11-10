@@ -47,7 +47,7 @@ PRO and OMEGA features ship in the private distribution, not in this tree.
 - **Cloud:** CloudFormation, ARM Templates, Helm Charts, Serverless Framework
 - **PyPI:** `pip install hefesto-ai`
 - **GitHub Action:** `artvepa80/Agents-Hefesto@v4` (floating major tag; exact pins such as `@v4.21.0` also work)
-- **MCP Server:** Registered in Smithery (AI agent ecosystem)
+- **MCP Server:** Official MCP Registry `io.github.artvepa80/hefestoai`; local stdio `uvx hefesto-mcp`
 - **License:** MIT (core), proprietary (PRO/OMEGA features)
 
 ## Tiers

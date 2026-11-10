@@ -66,8 +66,9 @@ jobs:
 AI 代理可以通过 MCP 调用 HefestoAI：
 
 ```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
+uvx hefesto-mcp
 ```
+必须设置 `HEFESTO_MCP_ROOT`（项目目录；不能是 `/` 或主目录）。
 
 一键添加到 Cursor：
 

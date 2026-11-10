@@ -75,7 +75,7 @@ fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.21.0,<5`.
 
 ## MCP (optional)
 
-Registry `io.github.artvepa80/hefestoai` · `npx @smithery/cli@latest mcp add artvepa80/hefestoai`
+Registry `io.github.artvepa80/hefestoai`. Local stdio: `uvx hefesto-mcp` (`HEFESTO_MCP_ROOT` required).
 
 ## Rules
 

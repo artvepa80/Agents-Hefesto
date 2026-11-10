@@ -62,7 +62,7 @@ jobs:
 | fail_on | CRITICAL | Gate severity threshold |
 | min_severity | LOW | Minimum severity to report (CRITICAL, HIGH, MEDIUM, LOW; INFO is treated as LOW) |
 | format | text | Output format: text, json, html, sarif |
-| telemetry | 0 | Opt-in anonymous telemetry: only `1`/`true` sends the per-run ping; anything else sends nothing |
+| telemetry | 0 | Opt-in telemetry (anonymous Action ping, pseudonymous CLI events): only `1`/`true` sends the per-run ping; anything else sends nothing |
 
 ### As a pip Install Step
 
@@ -82,12 +82,6 @@ jobs:
 ## MCP Server (Claude Code / Cursor)
 
 HefestoAI is registered as an MCP server for AI code editors.
-
-### Install via Smithery
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
 
 ### Manual Configuration
 
@@ -116,6 +110,8 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
+Local stdio alternative: `uvx hefesto-mcp` (`HEFESTO_MCP_ROOT` required); see [docs/local-mcp.md](../../docs/local-mcp.md).
+
 ### Available MCP Endpoints
 
 | Endpoint | Protocol | Purpose |
@@ -130,7 +126,6 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 ### Registry IDs
 
 - Official MCP Registry: `io.github.artvepa80/hefestoai`
-- Smithery: `artvepa80/hefestoai`
 
 ## Claude Code Feedback Loop
 
