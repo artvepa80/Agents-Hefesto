@@ -13,7 +13,7 @@ from hefesto.telemetry.client import telemetry_enabled
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAIM = (
-    "The CLI sends anonymous usage events to PostHog by default (a random id; `analyze` also "
+    "The CLI sends pseudonymous usage events to PostHog by default (a random id; `analyze` also "
     "sends file and issue counts, duration, exit code, version, OS, Python, and ci/docker/dogfood "
     "plus pypi or editable — no code, file paths, findings or repository names, and no IP field "
     "in the payload). Turn them off with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0`, or "

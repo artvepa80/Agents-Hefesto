@@ -133,7 +133,7 @@ but different expected outputs. Exits 1 if contradictions found.
 
 ## telemetry
 
-Anonymous usage events are on by default. Turn them off for this machine:
+Pseudonymous usage events (random install id) are on by default. Turn them off for this machine:
 
 ```bash
 hefesto telemetry disable
