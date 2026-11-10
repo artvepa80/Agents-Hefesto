@@ -60,7 +60,7 @@ That image is still in the repository for running the same entrypoint with
 | `upload_sarif` | `true` | With `sarif: true`, `false` writes the file without uploading it |
 | `sarif_category` | `hefesto` | Code scanning category (use one per Hefesto job in the same repository) |
 | `multilang` | `false` | Opt-in. `true`/`1`/`yes`: install the `[multilang]` extra too, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed (see below) |
-| `telemetry` | `0` | Opt-in anonymous telemetry, see the README |
+| `telemetry` | `0` | Opt-in telemetry (anonymous Action ping, pseudonymous CLI events), see the README |
 
 ### Runs that analyze no files
 
