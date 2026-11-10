@@ -49,7 +49,7 @@ PYPI_TIMEOUT = 1.5
 _CACHE_TTL_SECONDS = 86400
 
 NOTICE = (
-    "Hefesto collects anonymous usage data by default (a random id; no code, "
+    "Hefesto collects pseudonymous usage data by default (a random id; no code, "
     "file paths, findings, repository names, or IP addresses). "
     "Disable: hefesto telemetry disable, HEFESTO_TELEMETRY=0, or DO_NOT_TRACK=1."
 )
