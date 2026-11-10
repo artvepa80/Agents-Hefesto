@@ -367,6 +367,29 @@ pip install "hefesto-ai[mcp]"
 
 `pip install hefesto-ai` installs the FREE tier only. For PRO or OMEGA, Narapa sends you an activation code after purchase, and the activation instructions come with it.
 
+### Upgrading from 4.17 or earlier
+
+```bash
+python3 -m pip install --upgrade hefesto-ai
+hefesto --version   # expect 4.21.0 or newer
+```
+
+HefestoAI 4.21.0 requires Python 3.11 or newer. On Python 3.10, the command above succeeds but stays on 4.20.4; upgrade Python first, or pin `hefesto-ai==4.20.4`.
+
+Changes since 4.17 that can affect existing setups (details in [CHANGELOG.md](CHANGELOG.md)):
+
+- **More files are analyzed.** PowerShell, JSON, TOML, Makefile, Groovy, CloudFormation, ARM, Helm and Serverless files are checked (4.20.0), so a `--fail-on` gate that passed before can fail.
+- **Files that were found but not analyzed fail `--fail-on`** (4.20.1, 4.21.0). Pass `--allow-not-analyzed` (Action: `allow_not_analyzed: 'true'`) to keep the old exit code; such files are still listed.
+- **Telemetry.** Anonymous usage events go to PostHog and are on by default (4.18.0). `hefesto telemetry status` and `clear` were removed. Opt out with `hefesto telemetry disable`, `HEFESTO_TELEMETRY=0` or `DO_NOT_TRACK=1`.
+- **Messages.** For tree-sitter languages (C#, Go, Rust, TypeScript and others), some finding messages and the JSON `function` field now name the declared method or type (4.21.0). Line numbers, rule types and counts are unchanged, but `hefesto pr-review` may post comments again on pull requests it already reviewed.
+
+**GitHub Action pinned to `@v4.17.x`:**
+
+- To keep an exact pin, change it to `artvepa80/Agents-Hefesto@v4.21.0` (or that release's commit SHA). To follow every 4.x release, including minor releases that change behaviour, use `@v4`.
+- Either way, the runner needs `python3` 3.11 or newer. `ubuntu-latest` has it. On `ubuntu-22.04`, add `actions/setup-python` with `python-version: '3.11'` before the Action.
+
+Older than 4.17? Also read the CHANGELOG entries for the releases in between (for example, since 4.16.0 a run that analyzes no files fails `--fail-on`; `--allow-no-files` opts out).
+
 ---
 
 ## CLI Reference (v4.21.0)
