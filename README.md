@@ -216,7 +216,7 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 
 ## Local MCP (stdio)
 
-The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is published with hefesto-ai 4.22.0: `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
+The `mcp` extra runs the local engine over stdio. It does not call the hosted service. It is on PyPI since hefesto-ai 4.21.0: `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`. The extra requires `mcp>=1.7,<2` and Python 3.11 or newer, the package `requires-python` (the `mcp` dependency requires Python >= 3.10, which every supported Python meets, so the extra has no separate environment marker). `HEFESTO_MCP_ROOT` is required: set it to the project directory the tools may read. That directory must not resolve to `/` or the home directory. A relative path is joined to that directory, not to the process working directory.
 
 ```bash
 pip install "hefesto-ai[mcp]"
@@ -358,7 +358,7 @@ pip install "hefesto-ai[multilang]"
 # Optional: Black, for `hefesto analyze --format-check`
 pip install "hefesto-ai[format]"
 
-# Optional: local stdio MCP adapter (published with hefesto-ai 4.22.0)
+# Optional: local stdio MCP adapter (on PyPI since hefesto-ai 4.21.0)
 pip install "hefesto-ai[mcp]"
 
 # or: uvx hefesto-mcp

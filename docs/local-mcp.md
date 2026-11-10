@@ -2,7 +2,7 @@
 
 `hefesto-mcp` is a local, read-only [MCP](https://modelcontextprotocol.io) server over stdio. It is part of the MIT-licensed `hefesto-ai` package. It does not talk to a hosted service and it does not open network connections.
 
-This extra is published on PyPI with hefesto-ai 4.22.0. Install it with `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`.
+This extra is on PyPI since hefesto-ai 4.21.0. Install it with `pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`.
 
 ## Install
 

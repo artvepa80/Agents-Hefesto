@@ -65,7 +65,7 @@ Languages: Python, JS/TS, Java, Go, Rust, C#, YAML, Shell, Dockerfile, Terraform
 The Hefesto Code Gate skills for Claude Code, Codex and Cursor now live in
 [artvepa80/hefesto-code-gate](https://github.com/artvepa80/hefesto-code-gate)
 (v1.0.0). They run this CLI on a PR, a diff or a repo, triage each finding,
-fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.22.0,<5`.
+fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.21.0,<5`.
 
 - Claude Code: `/plugin marketplace add artvepa80/hefesto-code-gate`, then
   `/plugin install hefesto-code-gate@hefestoai`
