@@ -83,12 +83,6 @@ jobs:
 
 HefestoAI is registered as an MCP server for AI code editors.
 
-### Install via Smithery
-
-```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
-```
-
 ### Manual Configuration
 
 Claude Code:
@@ -116,6 +110,8 @@ The MCP `analyze` tool (and `POST /api/analyze`) runs the open-source engine (`h
 
 The hosted MCP server is closed-source and operated by Narapa LLC. `server.json` keeps `repository` on this public repository because it contains the open-source `hefesto-ai` engine that `analyze` runs.
 
+Local stdio alternative: `uvx hefesto-mcp` (`HEFESTO_MCP_ROOT` required); see [docs/local-mcp.md](../../docs/local-mcp.md).
+
 ### Available MCP Endpoints
 
 | Endpoint | Protocol | Purpose |
@@ -130,7 +126,6 @@ The hosted MCP server is closed-source and operated by Narapa LLC. `server.json`
 ### Registry IDs
 
 - Official MCP Registry: `io.github.artvepa80/hefestoai`
-- Smithery: `artvepa80/hefestoai`
 
 ## Claude Code Feedback Loop
 

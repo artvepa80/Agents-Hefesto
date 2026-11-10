@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — docs no longer list the third-party registry install command
+
+- Discovery and skill docs (`docs/ai-discovery.md`, `llms.txt`, `skills/hefestoai/SKILL.md`, `skills/hefestoai/integration.md`, `.github/copilot-instructions.md`) no longer list the third-party registry install command or that registry's listing. Where an install command was the only MCP pointer, they now show `uvx hefesto-mcp`. The official MCP Registry entry `io.github.artvepa80/hefestoai` is unchanged.
+
 ### Changed — telemetry notice wording
 
 - The CLI first-run notice and `hefesto telemetry disable` help now say usage events are pseudonymous (a random install id), matching `docs/telemetry.md`. The GitHub Action ping remains described as anonymous (no id).
