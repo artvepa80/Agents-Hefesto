@@ -11,10 +11,14 @@ DEFINITION = (
     "measured yet, and a run without them gives the same output as before."
 )
 
+# Provisional. The owner has not approved this name; keep the wiring to this constant.
+JS_SECURITY = "js-security"
+
 # name -> what it turns on
 FEATURES: Dict[str, str] = {
     "c-cpp": "analyze C and C++ files (.c, .h, .cpp, .cc, .cxx, .c++, .hpp, .hh, .hxx)",
     "lang-security": "run the C#, Go, Rust, C and C++ security rules (docs/ANALYSIS_RULES.md)",
+    JS_SECURITY: "run the JavaScript and TypeScript security rules (docs/ANALYSIS_RULES.md)",
 }
 
 # name -> release where it became on by default (a warning, not an error)
@@ -49,4 +53,4 @@ def parse(value: Union[str, Iterable[str], None]) -> Tuple[FrozenSet[str], List[
     return frozenset(n for n in names if n in FEATURES), warnings
 
 
-__all__ = ["DEFINITION", "FEATURES", "GRADUATED", "ExperimentalError", "parse"]
+__all__ = ["DEFINITION", "FEATURES", "GRADUATED", "JS_SECURITY", "ExperimentalError", "parse"]
