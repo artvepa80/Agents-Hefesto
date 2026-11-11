@@ -516,6 +516,76 @@ def test_go_sql_value_injection(code: str, expected) -> None:
     assert _rules("go", code) == expected
 
 
+def test_go_package_const_string_in_the_same_file_is_not_go005() -> None:
+    """A package-level const string is a constant, even when declared below the use."""
+    code = "\n".join(
+        [
+            "package p",
+            "func f(a string) {",
+            "db.Query(query)",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", name))",
+            "db.Query(quoted)",
+            'db.Query("SELECT id FROM t WHERE name=\'" + name + "\'")',
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", also))",
+            "go func() {",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", title))",
+            "}()",
+            "}",
+            "const (",
+            'query = "SELECT id FROM t WHERE id=1"',
+            'name = "admin"',
+            'quoted = "SELECT id FROM t WHERE name=\'" + name + "\'"',
+            "also",
+            ")",
+            'const title = "admin"',
+            "",
+        ]
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_package_const_format_with_a_variable_is_go005() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            "const format = \"SELECT id FROM t WHERE name='%s'\"",
+            "func f(a string) {",
+            "db.Query(fmt.Sprintf(format, a))",
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == [("GO005", 4, "HIGH")]
+
+
+def test_go_parameter_shadows_package_const_string() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            'const name = "admin"',
+            "func f(name string) {",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", name))",
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == [("GO005", 4, "HIGH")]
+
+
+def test_go_package_const_string_is_not_a_shell_value() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            'const dir = "/tmp"',
+            "func f() {",
+            'exec.Command("sh", "-c", fmt.Sprintf("ls %s", dir))',
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == []
+
+
 def test_go_sql_parameter_and_other_function_are_not_tracked() -> None:
     param = "package p\n\nfunc f(q string) {\ndb.Query(q)\n}\n"
     assert _rules("go", param) == []

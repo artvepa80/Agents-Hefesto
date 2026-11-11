@@ -4,6 +4,7 @@ Walks each function in source order and remembers how local strings were built.
 A closure does not see the outer function's facts. The last straight-line
 assignment wins. The two arms of an ``if`` are joined: if either arm built the
 string, the name stays built. An inner ``:=`` shadows the outer name.
+A package-level ``const`` string in the same file is a constant.
 """
 
 from __future__ import annotations
@@ -424,8 +425,9 @@ def _eval_call(node: GenericNode, env: _Env, on_call: _Call, classify: _Classify
     return _call_fact(func, facts, classify)
 
 
-def _eval_func(node: GenericNode, _env: _Env, on_call: _Call, classify: _Classify) -> _GoString:
-    _exec_function_body(node, on_call, classify)
+def _eval_func(node: GenericNode, env: _Env, on_call: _Call, classify: _Classify) -> _GoString:
+    constants = dict(env.scopes[0]) if env.scopes else {}
+    _exec_function_body(node, on_call, classify, constants)
     return _UNKNOWN
 
 
@@ -476,9 +478,10 @@ def _declare_names(env: _Env, names: List[str], values: List[_GoString], type_na
         env.declare(name, fact)
 
 
-def _exec_spec(spec: GenericNode, env: _Env, on_call: _Call, classify: _Classify) -> None:
+def _collect_spec(spec: GenericNode, env: _Env, on_call: _Call, classify: _Classify) -> tuple:
+    """Names, value facts (``None`` when the expression is omitted), and type."""
     names: List[str] = []
-    values: List[_GoString] = []
+    values: Optional[List[_GoString]] = None
     type_name = ""
     for child in _named(spec):
         kind = _ts(child)
@@ -490,7 +493,34 @@ def _exec_spec(spec: GenericNode, env: _Env, on_call: _Call, classify: _Classify
             type_name = child.text
         else:
             _eval_expr(child, env, on_call, classify)
-    _declare_names(env, names, values, type_name)
+    return names, values, type_name
+
+
+def _exec_spec(spec: GenericNode, env: _Env, on_call: _Call, classify: _Classify) -> None:
+    names, values, type_name = _collect_spec(spec, env, on_call, classify)
+    _declare_names(env, names, values or [], type_name)
+
+
+def _bind_const_spec(
+    spec: GenericNode,
+    env: _Env,
+    on_call: _Call,
+    classify: _Classify,
+    previous: List[_GoString],
+) -> List[_GoString]:
+    """Bind one const spec. An omitted expression repeats the previous one."""
+    names, values, type_name = _collect_spec(spec, env, on_call, classify)
+    chosen = previous if values is None and previous else values
+    facts = _facts_for(names, chosen or [], type_name)
+    for name, fact in zip(names, facts):
+        env.declare(name, fact)
+    return facts
+
+
+def _exec_const_decl(node: GenericNode, env: _Env, on_call: _Call, classify: _Classify) -> None:
+    previous: List[_GoString] = []
+    for spec in _spec_nodes(node):
+        previous = _bind_const_spec(spec, env, on_call, classify, previous)
 
 
 def _spec_nodes(node: GenericNode) -> List[GenericNode]:
@@ -707,8 +737,21 @@ def _body_block(node: GenericNode) -> Optional[GenericNode]:
     return None
 
 
-def _exec_function_body(node: GenericNode, on_call: _Call, classify: _Classify) -> None:
+def _env_with(constants: Optional[Dict[str, _GoString]]) -> _Env:
     env = _Env()
+    if constants:
+        env.scopes[0].update(constants)
+    return env
+
+
+def _exec_function_body(
+    node: GenericNode,
+    on_call: _Call,
+    classify: _Classify,
+    constants: Optional[Dict[str, _GoString]] = None,
+) -> None:
+    env = _env_with(constants)
+    env.push()
     for name in _param_names(node):
         env.declare(name, _UNKNOWN)
     body = _body_block(node)
@@ -716,21 +759,57 @@ def _exec_function_body(node: GenericNode, on_call: _Call, classify: _Classify) 
         _exec_block(body, env, on_call, classify)
 
 
+def _silent_call(
+    _node: GenericNode,
+    _func: GenericNode,
+    _args: List[GenericNode],
+    _facts: List[_GoString],
+) -> None:
+    return None
+
+
+def _const_decls(root: GenericNode) -> List[GenericNode]:
+    return [node for node in _named(root) if _ts(node) == "const_declaration"]
+
+
+def _apply_consts(decls: List[GenericNode], env: _Env, on_call: _Call, classify: _Classify) -> None:
+    for decl in decls:
+        _exec_const_decl(decl, env, on_call, classify)
+
+
+def _file_const_facts(
+    root: GenericNode, on_call: _Call, classify: _Classify
+) -> Dict[str, _GoString]:
+    """Package-level const facts. Later declarations are visible to earlier ones."""
+    decls = _const_decls(root)
+    env = _Env()
+    for _ in range(max(1, len(decls))):
+        before = dict(env.scopes[0])
+        _apply_consts(decls, env, _silent_call, classify)
+        if env.scopes[0] == before:
+            break
+    _apply_consts(decls, env, on_call, classify)
+    return dict(env.scopes[0])
+
+
 def visit_go_calls(root: GenericNode, on_call: _Call, classify: Optional[_Classify] = None) -> None:
     """Visit Go calls with the string fact of each argument.
 
     ``classify`` maps a built string to the SQL-risk bit. The default never
-    sets that bit.
+    sets that bit. Package-level const strings in this file are constants.
     """
     chosen = _no_sql if classify is None else classify
+    constants = _file_const_facts(root, on_call, chosen)
     for node in _named(root):
         kind = _ts(node)
         if kind in ("function_declaration", "method_declaration"):
-            _exec_function_body(node, on_call, chosen)
-        elif kind in ("var_declaration", "const_declaration"):
-            _exec_decl(node, _Env(), on_call, chosen)
+            _exec_function_body(node, on_call, chosen, constants)
+        elif kind == "const_declaration":
+            continue
+        elif kind == "var_declaration":
+            _exec_decl(node, _env_with(constants), on_call, chosen)
         else:
-            _exec_stmt(node, _Env(), on_call, chosen)
+            _exec_stmt(node, _env_with(constants), on_call, chosen)
 
 
 _EXPRS = {
@@ -756,7 +835,7 @@ _STMTS = {
     "block": _exec_block,
     "labeled_statement": _exec_labeled,
     "var_declaration": _exec_decl,
-    "const_declaration": _exec_decl,
+    "const_declaration": _exec_const_decl,
     "var_spec": _exec_spec,
     "const_spec": _exec_spec,
     "assignment_statement": _exec_assign,
