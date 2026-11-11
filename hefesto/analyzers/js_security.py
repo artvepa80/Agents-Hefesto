@@ -17,6 +17,9 @@ counts at a later ``__html: clean``. A second assignment does not.
   then lowercase). ``javascript:void(0)``, ``javascript:void(0);``, and
   ``javascript:;`` are not reported. A template that substitutes the rest of
   the URL is reported. A non-literal value is not reported.
+* JS002 ``innerHTML`` / ``outerHTML`` assignment, ``insertAdjacentHTML``, and
+  ``document.write`` / ``document.writeln`` with HTML that is not a constant
+  and not an imported sanitizer.
 * JS001 ``exec`` from ``shelljs`` (default import, ``import * as``,
   ``import { exec }``, ``require``, and a renamed export) when the command is
   a template with a substitution or a concatenation that is not all constant.
@@ -41,6 +44,8 @@ from hefesto.core.ast.generic_ast import GenericAST, GenericNode
 _SANITIZER_OBJECTS = frozenset({"dompurify", "isomorphic-dompurify"})
 _SANITIZER_FUNCTIONS = frozenset({"sanitize-html"})
 _SHELLJS = "shelljs"
+_HTML_PROPS = frozenset({"innerHTML", "outerHTML"})
+_WRITE = frozenset({"write", "writeln"})
 _LINK_ATTRS = frozenset({"href", "src", "action", "xlinkHref"})
 _NO_OP_JS_URLS = frozenset(
     {
@@ -480,6 +485,15 @@ def _javascript_url(node: Optional[GenericNode]) -> bool:
     return normalized not in _NO_OP_JS_URLS
 
 
+def _member_prop(node: GenericNode) -> Optional[str]:
+    if _ts(node) != "member_expression":
+        return None
+    parts = _named(node)
+    if len(parts) == 2 and _ts(parts[1]) in ("property_identifier", "identifier"):
+        return _text(parts[1])
+    return None
+
+
 def _template_prefix(node: GenericNode) -> str:
     parts: List[str] = []
     for child in node.children:
@@ -645,12 +659,28 @@ def _argument_list(node: GenericNode) -> Optional[GenericNode]:
     return None
 
 
+def _check_assignment(report: _Report, node: GenericNode) -> None:
+    kids = _named(node)
+    if len(kids) < 2:
+        return
+    prop = _member_prop(kids[0])
+    if prop in _HTML_PROPS and _unsafe_html(kids[-1], report.bindings):
+        report.add(
+            node,
+            "JS002",
+            f"Unsanitized HTML assigned to {prop}",
+            _HTML_SUGGESTION,
+        )
+
+
 def _check_call(report: _Report, node: GenericNode) -> None:
     callee = _first_named(node)
     arguments = _argument_list(node)
     if callee is None or arguments is None:
         return
-    _check_shell_call(report, node, callee, _named(arguments))
+    args = _named(arguments)
+    _check_shell_call(report, node, callee, args)
+    _check_dom_call(report, node, callee, args)
 
 
 def _check_shell_call(
@@ -670,6 +700,60 @@ def _check_shell_call(
     )
 
 
+def _check_dom_call(
+    report: _Report, node: GenericNode, callee: GenericNode, args: List[GenericNode]
+) -> None:
+    if _ts(callee) != "member_expression":
+        return
+    parts = _named(callee)
+    if len(parts) != 2:
+        return
+    _check_dom_prop(report, node, parts, _text(parts[1]), args)
+
+
+def _writes_document(
+    prop: str, parts: List[GenericNode], args: List[GenericNode], bindings: _Bindings
+) -> bool:
+    if prop not in _WRITE or not args:
+        return False
+    if not _is_document(parts):
+        return False
+    return _unsafe_html(args[0], bindings)
+
+
+def _check_dom_prop(
+    report: _Report,
+    node: GenericNode,
+    parts: List[GenericNode],
+    prop: str,
+    args: List[GenericNode],
+) -> None:
+    if prop == "insertAdjacentHTML":
+        _check_insert_html(report, node, args)
+        return
+    if _writes_document(prop, parts, args, report.bindings):
+        report.add(
+            node,
+            "JS002",
+            f"Unsanitized HTML passed to document.{prop}",
+            _HTML_SUGGESTION,
+        )
+
+
+def _check_insert_html(report: _Report, node: GenericNode, args: List[GenericNode]) -> None:
+    if len(args) >= 2 and _unsafe_html(args[1], report.bindings):
+        report.add(
+            node,
+            "JS002",
+            "Unsanitized HTML passed to insertAdjacentHTML",
+            _HTML_SUGGESTION,
+        )
+
+
+def _is_document(parts: List[GenericNode]) -> bool:
+    return _ts(parts[0]) == "identifier" and _text(parts[0]) == "document"
+
+
 def _record_binding(bindings: _Bindings, node: GenericNode) -> None:
     kind = _ts(node)
     if kind == "import_statement":
@@ -684,6 +768,8 @@ def _report_node(report: _Report, node: GenericNode) -> None:
     kind = _ts(node)
     if kind == "jsx_attribute":
         _check_attribute(report, node)
+    elif kind in ("assignment_expression", "augmented_assignment_expression"):
+        _check_assignment(report, node)
     elif kind == "call_expression":
         _check_call(report, node)
 

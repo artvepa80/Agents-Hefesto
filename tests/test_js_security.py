@@ -1,4 +1,4 @@
-"""Experimental JavaScript and TypeScript rules (JSX001, JSX002, JS001)."""
+"""Experimental JavaScript and TypeScript rules (JSX001, JSX002, JS002, JS001)."""
 
 from __future__ import annotations
 
@@ -30,6 +30,16 @@ _EXPECTED = {
         ("JSX002", 53),
         ("JSX002", 55),
     },
+    "dom.js": {
+        ("JS002", 11),
+        ("JS002", 15),
+        ("JS002", 16),
+        ("JS002", 17),
+        ("JS002", 18),
+        ("JS002", 21),
+        ("JS002", 23),
+    },
+    "require_sanitize.js": {("JS002", 10), ("JS002", 11)},
     "xss.tsx": {("JSX001", 9), ("JSX001", 11)},
     "local_sanitize.jsx": {("JSX001", 9), ("JSX001", 10)},
     "require_sanitize.jsx": {("JSX001", 17), ("JSX001", 18)},
@@ -156,6 +166,7 @@ def test_flag_off_reports_nothing() -> None:
 def test_test_paths_are_skipped() -> None:
     assert _issues("xss.jsx", "tests/fixtures/js_security/xss.jsx") == []
     assert _issues("sanitize_flow.jsx", "examples/widget/sanitize_flow.jsx") == []
+    assert _issues("dom.js", "examples/widget/dom.js") == []
 
 
 def test_import_type_does_not_create_a_sanitizer() -> None:
