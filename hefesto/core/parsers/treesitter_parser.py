@@ -115,7 +115,11 @@ class TreeSitterParser(CodeParser):
     }
 
     def __init__(self, language: str):
+        # Kept as a string. The manual-build path below replaces ``self.language``
+        # with a tree-sitter Language object; grammar choice uses this name.
+        self._language_name = language
         self.language = language
+        self._extra_parsers: dict = {}
 
         if USE_PREBUILT:
             ts_lang = self.LANG_MAP.get(language, language)
@@ -138,12 +142,31 @@ class TreeSitterParser(CodeParser):
             self.language = Language(str(build_path), grammar_name)  # type: ignore
             self.parser.set_language(self.language)
 
+    def _parser_for(self, file_path: str):
+        """Grammar for this file.
+
+        ``.tsx`` uses the ``tsx`` grammar. ``.ts`` stays on ``typescript``:
+        the ``tsx`` grammar rejects TypeScript ``<T>expr`` casts. Other
+        languages keep the parser built in ``__init__``.
+        """
+        if (
+            not USE_PREBUILT
+            or self._language_name != "typescript"
+            or Path(file_path).suffix.lower() != ".tsx"
+        ):
+            return self.parser
+        extra = self._extra_parsers.get("tsx")
+        if extra is None:
+            extra = get_ts_parser("tsx")  # type: ignore[misc]
+            self._extra_parsers["tsx"] = extra
+        return extra
+
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
         # tree-sitter offsets are byte offsets into this buffer: encode once and
         # slice bytes, never the decoded str (a BOM or accented text shifts it).
         data = code.encode("utf8")
-        tree = self.parser.parse(data)
+        tree = self._parser_for(file_path).parse(data)
         root = self._convert_treesitter_to_generic(tree.root_node, data, parent=None)
         ast = GenericAST(root, self.language, code)
         if self.language in _C_FAMILY:
