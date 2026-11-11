@@ -311,7 +311,7 @@ syntax or sit next to a C++ source with the same name; headers with
 Objective-C syntax (`@interface`, `@class`, ...) are skipped. Details:
 [docs/c-cpp.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/c-cpp.md).
 
-With `--experimental lang-security` and `[multilang]`, these security rules also run: CS001–CS004 (C#), GO001, GO003, GO004 and GO005 (Go), and RS001–RS003 (Rust); with `--experimental c-cpp,lang-security`, also CC001–CC004 (C and C++). See [docs/ANALYSIS_RULES.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/ANALYSIS_RULES.md).
+With `--experimental lang-security` and `[multilang]`, these security rules also run: CS001–CS004 (C#), GO001, GO003 and GO004 (Go), and RS001–RS003 (Rust); with `--experimental c-cpp,lang-security`, also CC001–CC004 (C and C++). See [docs/ANALYSIS_RULES.md](https://github.com/artvepa80/Agents-Hefesto/blob/main/docs/ANALYSIS_RULES.md).
 
 ### DevOps & Configuration
 
