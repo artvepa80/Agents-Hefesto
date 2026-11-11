@@ -285,7 +285,7 @@ RS_FLOW = [
     ),
     (
         'fn helper(d: &str) -> String { format!("{}", d) }\n'
-        'fn f(d: &str) {\n    let cmd = helper(d);\n'
+        "fn f(d: &str) {\n    let cmd = helper(d);\n"
         '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
         [],
         "src/app.rs",
@@ -304,7 +304,7 @@ RS_FLOW = [
         "src/app.rs",
     ),
     (
-        "fn f() {\n    let mut cmd = String::new();\n    cmd.push_str(\"ls\");\n"
+        'fn f() {\n    let mut cmd = String::new();\n    cmd.push_str("ls");\n'
         '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
         [],
         "src/app.rs",
