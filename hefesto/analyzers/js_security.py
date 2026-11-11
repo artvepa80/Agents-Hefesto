@@ -17,6 +17,11 @@ those modules is still reported.
 * JS002 ``innerHTML`` / ``outerHTML`` assignment, ``insertAdjacentHTML``, and
   ``document.write`` / ``document.writeln`` with HTML that is not a constant
   and not an imported sanitizer.
+* JS001 ``exec`` from ``shelljs`` (default import, ``import * as``,
+  ``import { exec }``, ``require``, and a renamed export) when the command is
+  a template with a substitution or a concatenation that is not all constant.
+  A string, a template with no substitution, and a bare identifier are not
+  reported. Issue type ``COMMAND_INJECTION`` (CWE-78).
 
 Off unless the experimental flag is on. Test and example paths are skipped.
 """
@@ -35,6 +40,7 @@ from hefesto.core.ast.generic_ast import GenericAST, GenericNode
 
 _SANITIZER_OBJECTS = frozenset({"dompurify", "isomorphic-dompurify"})
 _SANITIZER_FUNCTIONS = frozenset({"sanitize-html"})
+_SHELLJS = "shelljs"
 _HTML_PROPS = frozenset({"innerHTML", "outerHTML"})
 _WRITE = frozenset({"write", "writeln"})
 _LINK_ATTRS = frozenset({"href", "src"})
@@ -159,6 +165,8 @@ class _Bindings:
     def __init__(self) -> None:
         self.sanitizer_fns: Set[str] = set()
         self.sanitizer_objects: Set[str] = set()
+        self.shell_objects: Set[str] = set()
+        self.shell_execs: Set[str] = set()
         self.functions: Dict[str, List[GenericNode]] = {}
 
     def _bind(self, module: str, local: str, exported: Optional[str]) -> None:
@@ -173,6 +181,11 @@ class _Bindings:
             exported is None or exported in ("sanitize", "default")
         ):
             self.sanitizer_fns.add(local)
+        elif module == _SHELLJS:
+            if exported is None or exported == "default":
+                self.shell_objects.add(local)
+            elif exported == "exec":
+                self.shell_execs.add(local)
 
     def import_statement(self, node: GenericNode) -> None:
         if any(_ts(child) == "type" for child in node.children):
@@ -373,6 +386,8 @@ class _Report:
         rule_id: str,
         message: str,
         suggestion: str,
+        issue_type: AnalysisIssueType = AnalysisIssueType.XSS_RISK,
+        cwe: str = "CWE-79",
     ) -> None:
         key = (rule_id, node.line_start, node.column_start)
         if key in self.seen:
@@ -383,12 +398,12 @@ class _Report:
                 file_path=self.file_path,
                 line=node.line_start,
                 column=node.column_start,
-                issue_type=AnalysisIssueType.XSS_RISK,
+                issue_type=issue_type,
                 severity=AnalysisIssueSeverity.HIGH,
                 message=message,
                 suggestion=suggestion,
                 code_snippet=node.text.splitlines()[0][:200] if node.text else None,
-                metadata={"language": "javascript", "cwe": "CWE-79"},
+                metadata={"language": "javascript", "cwe": cwe},
                 engine="internal:security",
                 rule_id=rule_id,
                 source="code",
@@ -436,15 +451,55 @@ def _check_assignment(report: _Report, node: GenericNode) -> None:
         )
 
 
+def _dynamic_command(node: Optional[GenericNode]) -> bool:
+    """A command built in this expression: a template substitution, or ``+`` with a variable."""
+    node = _unwrap(node)
+    if node is None:
+        return False
+    kind = _ts(node)
+    if kind == "template_string":
+        return any(_ts(child) == "template_substitution" for child in node.children)
+    if kind == "binary_expression" and any(child.text == "+" for child in node.children):
+        return not _is_constant(node)
+    return False
+
+
+def _is_shell_exec(callee: GenericNode, bindings: _Bindings) -> bool:
+    if _ts(callee) == "identifier":
+        return _text(callee) in bindings.shell_execs
+    if _ts(callee) != "member_expression":
+        return False
+    parts = _named(callee)
+    return (
+        len(parts) == 2
+        and _ts(parts[0]) == "identifier"
+        and _text(parts[1]) == "exec"
+        and _text(parts[0]) in bindings.shell_objects
+    )
+
+
 def _check_call(report: _Report, node: GenericNode) -> None:
     kids = _named(node)
-    if len(kids) < 2 or _ts(kids[0]) != "member_expression" or _ts(kids[1]) != "arguments":
+    callee = kids[0] if kids else None
+    arguments = next((child for child in kids if _ts(child) == "arguments"), None)
+    if callee is None or arguments is None:
         return
-    parts = _named(kids[0])
+    args = _named(arguments)
+    if args and _is_shell_exec(callee, report.bindings) and _dynamic_command(args[0]):
+        report.add(
+            node,
+            "JS001",
+            "shelljs exec runs a command built from a template or concatenation",
+            "Keep the command a constant, or pass arguments separately from the program name.",
+            issue_type=AnalysisIssueType.COMMAND_INJECTION,
+            cwe="CWE-78",
+        )
+    if _ts(callee) != "member_expression":
+        return
+    parts = _named(callee)
     if len(parts) != 2:
         return
     prop = _text(parts[1])
-    args = _named(kids[1])
     if prop == "insertAdjacentHTML" and len(args) >= 2 and _unsafe_html(args[1], report.bindings):
         report.add(
             node,
@@ -492,7 +547,7 @@ def find_js_security_issues(tree: GenericAST, file_path: str) -> List[AnalysisIs
 
 
 class JsSecurityAnalyzer:
-    """JavaScript and TypeScript XSS rules. Off unless ``js_rules`` is set."""
+    """JavaScript and TypeScript security rules. Off unless ``js_rules`` is set."""
 
     # ``--experimental js-security``: set by the engine; off by default.
     js_rules = False

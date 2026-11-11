@@ -71,6 +71,29 @@ def test_fixture_reports_only_the_unsafe_sinks(name: str) -> None:
         assert issue.engine == "internal:security"
 
 
+def test_shelljs_exec_covers_every_import_form() -> None:
+    """require, default import, ``import * as``, and ``import { exec }`` (plus aliases)."""
+    from hefesto.analyzers.js_security import JsSecurityAnalyzer
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    code = (_FIXTURES / "shell.ts").read_text(encoding="utf-8")
+    tree = TreeSitterParser("typescript").parse(code, "src/shell.ts")
+    issues = _analyzer().analyze(tree, "src/shell.ts", code)
+    assert {(i.rule_id, i.line) for i in issues} == {
+        ("JS001", 15),
+        ("JS001", 16),
+        ("JS001", 17),
+        ("JS001", 18),
+        ("JS001", 19),
+        ("JS001", 20),
+    }
+    for issue in issues:
+        assert issue.issue_type.value == "COMMAND_INJECTION"
+        assert issue.severity.value == "HIGH"
+        assert issue.metadata["cwe"] == "CWE-78"
+    assert JsSecurityAnalyzer().analyze(tree, "src/shell.ts", code) == []
+
+
 def test_local_function_named_sanitize_is_still_reported() -> None:
     """The local name is not an allowlist. Only the import origin is."""
     issues = _issues("local_sanitize.jsx")
