@@ -151,7 +151,9 @@ def _language_from_so(path: Path, grammar_name: str):
     from tree_sitter import Language
 
     if hasattr(Language, "build_library"):
-        return Language(str(path), grammar_name)
+        # tree-sitter < 0.22: Language(path, name). Current stubs only model
+        # Language(capsule), so the two-argument form is invisible to mypy.
+        return Language(str(path), grammar_name)  # type: ignore[call-overload]
     pointer = _so_symbol(path, grammar_name)
     if not pointer:
         raise OSError(f"{grammar_name} is not in {path}")
