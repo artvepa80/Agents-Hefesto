@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- RS003 (`--experimental lang-security`) follows a string built in the same function into `Command::new` on `sh`/`bash` with `-c`. The build is `format!` with a non-constant hole, or `+=` / `push_str` of such a value, including `&cmd`, `cmd.as_str()` and `.args(["-c", &cmd])`. The last `=` wins; one `if` or `match` branch that builds the string is enough; the nearest `let` wins. A literal, `String::from` of a literal, `concat!` of literals, a parameter, and a value returned from another function or closure are not reported. A `format!` written in the same call chain is unchanged. The rule stays experimental.
+
 ## [4.22.0] - TBD
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
