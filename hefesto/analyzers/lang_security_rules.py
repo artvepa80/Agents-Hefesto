@@ -9,8 +9,9 @@ finding per construct with a stable ``rule_id``:
   cipher (MEDIUM).
 * Go: GO001 shell ``-c`` with a string built in the same function, GO003
   ``crypto/md5``, ``crypto/sha1`` (LOW inventory), ``crypto/des`` or
-  ``crypto/rc4`` (MEDIUM), GO004 ``InsecureSkipVerify: true``. GO002 (SQL
-  built from strings) was dropped from v1: every measured hit was non-actionable.
+  ``crypto/rc4`` (MEDIUM), GO004 ``InsecureSkipVerify: true``, GO005 a SQL
+  value built in the same function. GO002 (SQL built from strings) was
+  dropped from v1: every measured hit was non-actionable.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
   ``-c`` with a ``format!`` string.
 * C and C++: CC001 ``gets``, CC002 unbounded copy or write (``strcpy``,
@@ -26,7 +27,7 @@ from __future__ import annotations
 import re
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
-from hefesto.analyzers.lang_go_flow import _GoString, visit_go_calls
+from hefesto.analyzers.lang_go_flow import _HOLE, _GoString, visit_go_calls
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -444,6 +445,247 @@ def _go_keyed(ctx: _Ctx, node: GenericNode) -> None:
         )
 
 
+_GO_SQL_ARG = {
+    "Query": 0,
+    "QueryRow": 0,
+    "Exec": 0,
+    "Prepare": 0,
+    "Raw": 0,
+    "Queryx": 0,
+    "QueryRowx": 0,
+    "NamedQuery": 0,
+    "NamedExec": 0,
+    "MustExec": 0,
+    "QueryContext": 1,
+    "QueryRowContext": 1,
+    "ExecContext": 1,
+    "PrepareContext": 1,
+    "QueryxContext": 1,
+    "QueryRowxContext": 1,
+    "NamedQueryContext": 1,
+    "NamedExecContext": 1,
+    "MustExecContext": 1,
+}
+_GO_SQL_START = re.compile(r"(?is)^\s*(SELECT|INSERT|UPDATE|DELETE)\b")
+_GO_SQL_MAINT = re.compile(r"(?i)\b(?:setval|PRAGMA|VACUUM)\b")
+_GO_PLACEHOLDER = re.compile(r"\?|\$\d+|@[A-Za-z_][A-Za-z0-9_]*")
+_GO_NON_SQL = re.compile(r"(?i)kubernetes|k8s\.io|clientset|docker|containerd|podman|kube")
+_GO_QUOTES = "'\""
+_GO_WS = " \t\r\n"
+
+
+def _go_migration(path: str) -> bool:
+    return "migrations" in path.replace("\\", "/").split("/")
+
+
+def _skip_sql_string(text: str, start: int) -> int:
+    quote = text[start]
+    i = start + 1
+    n = len(text)
+    while i < n:
+        if text[i] == "\\":
+            i += 2
+            continue
+        if text[i] != quote:
+            i += 1
+            continue
+        if quote == "'" and i + 1 < n and text[i + 1] == "'":
+            i += 2
+            continue
+        return i + 1
+    return n
+
+
+def _mask_sql_strings(text: str) -> str:
+    out: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] not in _GO_QUOTES:
+            out.append(text[i])
+            i += 1
+            continue
+        end = _skip_sql_string(text, i)
+        out.append(text[i])
+        out.append(" " * max(end - i - 1, 0))
+        i = end
+    return "".join(out)
+
+
+def _has_placeholder(text: str) -> bool:
+    return _GO_PLACEHOLDER.search(_mask_sql_strings(text)) is not None
+
+
+def _word_edge(ch: str) -> bool:
+    return not (ch.isalnum() or ch == "_")
+
+
+def _at_in(text: str, i: int) -> bool:
+    if i + 2 > len(text) or text[i : i + 2].lower() != "in":
+        return False
+    before = text[i - 1] if i else " "
+    after = text[i + 2] if i + 2 < len(text) else " "
+    return _word_edge(before) and _word_edge(after)
+
+
+def _skip_ws(text: str, i: int) -> int:
+    while i < len(text) and text[i] in _GO_WS:
+        i += 1
+    return i
+
+
+def _skip_ws_back(text: str, i: int) -> int:
+    while i >= 0 and text[i] in _GO_WS:
+        i -= 1
+    return i
+
+
+def _paren_delta(ch: str) -> int:
+    if ch == "(":
+        return 1
+    if ch == ")":
+        return -1
+    return 0
+
+
+def _close_paren(text: str, open_at: int) -> int:
+    depth = 0
+    i = open_at
+    while i < len(text):
+        if text[i] in _GO_QUOTES:
+            i = _skip_sql_string(text, i)
+            continue
+        depth += _paren_delta(text[i])
+        if depth == 0:
+            return i
+        i += 1
+    return len(text)
+
+
+def _take_in_span(text: str, i: int, spans: List[Tuple[int, int]]) -> int:
+    j = _skip_ws(text, i + 2)
+    if j < len(text) and text[j] == "(":
+        spans.append((j + 1, _close_paren(text, j)))
+        return j + 1
+    return i + 2
+
+
+def _in_spans(text: str) -> List[Tuple[int, int]]:
+    spans: List[Tuple[int, int]] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] in _GO_QUOTES:
+            i = _skip_sql_string(text, i)
+            continue
+        if _at_in(text, i):
+            i = _take_in_span(text, i, spans)
+            continue
+        i += 1
+    return spans
+
+
+def _hole_positions(text: str) -> List[int]:
+    found: List[int] = []
+    start = 0
+    while True:
+        pos = text.find(_HOLE, start)
+        if pos < 0:
+            return found
+        found.append(pos)
+        start = pos + len(_HOLE)
+
+
+def _holes_only_in_in(text: str) -> bool:
+    spans = _in_spans(text)
+    positions = _hole_positions(text)
+    if not spans or not positions:
+        return False
+    return all(any(start <= pos < end for start, end in spans) for pos in positions)
+
+
+def _in_sql_string(text: str, pos: int) -> bool:
+    i = 0
+    while i < pos:
+        if text[i] not in _GO_QUOTES:
+            i += 1
+            continue
+        nxt = _skip_sql_string(text, i)
+        if nxt > pos:
+            return True
+        i = nxt
+    return False
+
+
+def _values_before(text: str, paren: int) -> bool:
+    end = _skip_ws_back(text, paren - 1)
+    start = end - 5
+    if start < 0 or text[start : end + 1].lower() != "values":
+        return False
+    before = text[start - 1] if start else " "
+    return _word_edge(before)
+
+
+def _after_value_mark(text: str, pos: int) -> bool:
+    j = _skip_ws_back(text, pos - 1)
+    if j < 0:
+        return False
+    if text[j] in "=<>!":
+        return True
+    if text[j] == "(":
+        return _values_before(text, j)
+    return False
+
+
+def _has_value_hole(text: str) -> bool:
+    for pos in _hole_positions(text):
+        if _in_sql_string(text, pos) or _after_value_mark(text, pos):
+            return True
+    return False
+
+
+def _go_sql_shaped(fact: _GoString) -> bool:
+    """True when ``fact`` is a DML string with a value inserted in this function."""
+    text = fact.text
+    if text is None or _HOLE not in text or fact.quote_ident_holes:
+        return False
+    if _GO_SQL_START.match(text) is None or _GO_SQL_MAINT.search(text):
+        return False
+    if _has_placeholder(text) or _holes_only_in_in(text):
+        return False
+    return _has_value_hole(text)
+
+
+def _go_field_name(func: GenericNode) -> str:
+    for child in _named(func):
+        if _ts(child) == "field_identifier":
+            return child.text
+    return ""
+
+
+def _go_sql_index(func: GenericNode) -> Optional[int]:
+    if _ts(func) != "selector_expression":
+        return None
+    return _GO_SQL_ARG.get(_go_field_name(func))
+
+
+def _report_go_sql(ctx: _Ctx, node: GenericNode, func: GenericNode, facts: List[_GoString]) -> None:
+    if _go_migration(ctx.file_path) or _GO_NON_SQL.search(func.text):
+        return
+    index = _go_sql_index(func)
+    if index is None or index >= len(facts) or not facts[index].sql_risk:
+        return
+    ctx.add(
+        node,
+        "GO005",
+        AnalysisIssueType.SQL_INJECTION_RISK,
+        AnalysisIssueSeverity.HIGH,
+        "SQL query built from strings and passed to a query function",
+        "Use placeholders (? or $1) and pass values as arguments.",
+        "CWE-89",
+    )
+
+
 def _on_go_flow(
     ctx: _Ctx,
     node: GenericNode,
@@ -452,6 +694,7 @@ def _on_go_flow(
     facts: List[_GoString],
 ) -> None:
     _report_go_shell(ctx, node, func, args, facts)
+    _report_go_sql(ctx, node, func, facts)
 
 
 def _check_go(ctx: _Ctx, root: GenericNode) -> None:
@@ -462,7 +705,7 @@ def _check_go(ctx: _Ctx, root: GenericNode) -> None:
             _go_call(ctx, node, imports)
         elif t == "keyed_element":
             _go_keyed(ctx, node)
-    visit_go_calls(root, lambda *parts: _on_go_flow(ctx, *parts))
+    visit_go_calls(root, lambda *parts: _on_go_flow(ctx, *parts), _go_sql_shaped)
 
 
 # --- Rust ----------------------------------------------------------------------

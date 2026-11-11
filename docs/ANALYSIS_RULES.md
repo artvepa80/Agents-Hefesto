@@ -1185,6 +1185,7 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C a
 | GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash`/`zsh`/`dash` `-c` with a string built by `fmt.Sprintf`, `+` or `+=`, including a variable assigned that way earlier in the same function | `COMMAND_INJECTION` | HIGH | 78 |
 | GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | LOW for md5/sha1 (inventory); MEDIUM for des/rc4 | 327 |
 | GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
+| GO005 | `Query`, `QueryRow`, `Exec`, `Prepare`, `Raw`, `Queryx`, `QueryRowx`, `NamedQuery`, `NamedExec` or `MustExec` (and the same names with `Context`) whose query was built in the same function and inserts a string value into `SELECT`, `INSERT`, `UPDATE` or `DELETE` | `SQL_INJECTION_RISK` | HIGH | 89 |
 | RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
 | RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
 | RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
@@ -1205,7 +1206,8 @@ Known limits:
   - 11 were a table name interpolated, with values passed as placeholders.
   - 5 were `setval('%s')` sequence names.
   - 3 were `%d` row counts.
-  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. Go SQL lines get the generic SQL check, as without the feature.
+  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. GO002 stays retired.
+- GO005 is a separate, narrower check and stays experimental: it has not been measured to the bar in `docs/MEASUREMENT_METHOD.md`. It reports the call when the query text is built in the same function with `fmt.Sprintf`, `+` or `+=`, starts with `SELECT`, `INSERT`, `UPDATE` or `DELETE`, and inserts a string value (inside quotes, after `=`, `<`, `>` or `!`, or in `VALUES (`). It does not report a placeholder (`?`, `$1`, `@name`), a `Sprintf` verb other than `%s` and `%q` (`%d`, `%t`, `%f`, `%x` and `%v` are not values), DDL (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`), `setval`, `PRAGMA`, `VACUUM`, a literal or const query, an `IN (...)` list whose only inserted pieces sit inside that list (including a subquery written there), `pq.QuoteIdentifier`, a call whose text matches a Kubernetes or container client (`kubernetes`, `k8s.io`, `clientset`, `docker`, `containerd`, `podman`, `kube`), a SQL keyword that is not at the start of the string, or an identifier-only format such as `DELETE FROM %s`. `Get` and `Select` are not sinks. A file under a `migrations` directory is skipped for GO005 only. The same-function limits of GO001 apply. A name declared with `var x string` is an empty string, so `+=` on it is visible.
 - Deserialization has two issue types, both CWE-502 in SARIF (`external/cwe/cwe-502`). **INSECURE_DESERIALIZATION**: deserializing untrusted data with a formatter that can create arbitrary types (CWE-502). New languages use this type; Python keeps `PICKLE_USAGE`, which flags the `import pickle` line (precision `low`).
 
   | Language | Rule | Issue type | What is flagged | CWE |
@@ -1215,7 +1217,7 @@ Known limits:
 
 C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::f(...)`) count; `obj.f(...)` and `p->f(...)` do not. Macros are not expanded, so a call hidden behind a macro is not seen, and a macro named like a function (`#define strcpy safe_strcpy`) is still reported. Bounded calls (`snprintf`, `strncpy`, `strlcpy`, `%31s`, `%.8s`) and literal commands (`system("ls")`) are not reported.
 
-Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL argument that is a plain variable (`db.Query(q)`); a shell `-c` argument that is a function parameter or comes from another function; `Process.Start` with fixed arguments.
+Not reported on purpose: a Go query or shell `-c` argument that is a function parameter or comes from another function (`db.Query(q)`, `exec.Command("sh", "-c", cmd)` when that name is not built in the same function); `Process.Start` with fixed arguments. GO002 stays retired. GO005 is the narrower check above.
 
 ## 📊 Quick Reference
 
