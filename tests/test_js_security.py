@@ -80,18 +80,34 @@ def test_shelljs_exec_covers_every_import_form() -> None:
     tree = TreeSitterParser("typescript").parse(code, "src/shell.ts")
     issues = _analyzer().analyze(tree, "src/shell.ts", code)
     assert {(i.rule_id, i.line) for i in issues} == {
+        ("JS001", 13),
+        ("JS001", 14),
         ("JS001", 15),
         ("JS001", 16),
         ("JS001", 17),
         ("JS001", 18),
-        ("JS001", 19),
-        ("JS001", 20),
     }
     for issue in issues:
         assert issue.issue_type.value == "COMMAND_INJECTION"
         assert issue.severity.value == "HIGH"
         assert issue.metadata["cwe"] == "CWE-78"
     assert JsSecurityAnalyzer().analyze(tree, "src/shell.ts", code) == []
+
+
+def test_child_process_exec_is_not_js001() -> None:
+    """``child_process`` is the existing eval rule. JS001 is shelljs only."""
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    code = (
+        'import { exec as childExec } from "child_process";\n'
+        'const { exec: notShell } = require("child_process");\n'
+        "export function ping(host: string) {\n"
+        "  childExec(`ping -c 1 ${host}`);\n"
+        "  notShell(`ping -c 1 ${host}`);\n"
+        "}\n"
+    )
+    tree = TreeSitterParser("typescript").parse(code, "src/child.ts")
+    assert _analyzer().analyze(tree, "src/child.ts", code) == []
 
 
 def test_local_function_named_sanitize_is_still_reported() -> None:

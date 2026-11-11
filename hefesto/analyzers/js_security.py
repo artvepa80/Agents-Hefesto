@@ -173,19 +173,27 @@ class _Bindings:
         if not local:
             return
         if module in _SANITIZER_OBJECTS:
-            if exported is None:
-                self.sanitizer_objects.add(local)
-            elif exported == "sanitize":
-                self.sanitizer_fns.add(local)
-        elif module in _SANITIZER_FUNCTIONS and (
-            exported is None or exported in ("sanitize", "default")
-        ):
-            self.sanitizer_fns.add(local)
+            self._bind_sanitizer_object(local, exported)
+        elif module in _SANITIZER_FUNCTIONS:
+            self._bind_sanitize_html(local, exported)
         elif module == _SHELLJS:
-            if exported is None or exported == "default":
-                self.shell_objects.add(local)
-            elif exported == "exec":
-                self.shell_execs.add(local)
+            self._bind_shelljs(local, exported)
+
+    def _bind_sanitizer_object(self, local: str, exported: Optional[str]) -> None:
+        if exported is None:
+            self.sanitizer_objects.add(local)
+        elif exported == "sanitize":
+            self.sanitizer_fns.add(local)
+
+    def _bind_sanitize_html(self, local: str, exported: Optional[str]) -> None:
+        if exported is None or exported in ("sanitize", "default"):
+            self.sanitizer_fns.add(local)
+
+    def _bind_shelljs(self, local: str, exported: Optional[str]) -> None:
+        if exported is None or exported == "default":
+            self.shell_objects.add(local)
+        elif exported == "exec":
+            self.shell_execs.add(local)
 
     def import_statement(self, node: GenericNode) -> None:
         if any(_ts(child) == "type" for child in node.children):
@@ -196,22 +204,28 @@ class _Bindings:
             return
         module = _string_content(source)
         for child in clause.children:
-            kind = _ts(child)
-            if kind == "identifier":
-                self._bind(module, _text(child), None)
-            elif kind == "namespace_import":
-                names = [c for c in _named(child) if _ts(c) == "identifier"]
-                if names:
-                    self._bind(module, _text(names[-1]), None)
-            elif kind == "named_imports":
-                for spec in _named(child):
-                    if _ts(spec) != "import_specifier" or any(
-                        _ts(c) == "type" for c in spec.children
-                    ):
-                        continue
-                    names = [c for c in spec.children if _ts(c) == "identifier"]
-                    if names:
-                        self._bind(module, _text(names[-1]), _text(names[0]))
+            self._bind_import_child(module, child)
+
+    def _bind_import_child(self, module: str, child: GenericNode) -> None:
+        kind = _ts(child)
+        if kind == "identifier":
+            self._bind(module, _text(child), None)
+        elif kind == "namespace_import":
+            names = [c for c in _named(child) if _ts(c) == "identifier"]
+            if names:
+                self._bind(module, _text(names[-1]), None)
+        elif kind == "named_imports":
+            for spec in _named(child):
+                self._bind_specifier(module, spec)
+
+    def _bind_specifier(self, module: str, spec: GenericNode) -> None:
+        if _ts(spec) != "import_specifier":
+            return
+        if any(_ts(child) == "type" for child in spec.children):
+            return
+        names = [child for child in spec.children if _ts(child) == "identifier"]
+        if names:
+            self._bind(module, _text(names[-1]), _text(names[0]))
 
     def declarator(self, node: GenericNode) -> None:
         kids = _named(node)
