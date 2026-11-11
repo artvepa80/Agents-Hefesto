@@ -1216,6 +1216,25 @@ C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::
 
 Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
 
+## JavaScript and TypeScript (`--experimental js-security`)
+
+Off by default. These rules are not measured and are not part of `lang-security`. Turning the flag on does not change the C#, Go, Rust, C, or C++ rules, and leaving it off leaves JavaScript and TypeScript findings exactly as they were. The flag is `js-security`. JSX001 and JSX002 use issue type `XSS_RISK`.
+
+Sanitizers are recognised by the module they come from, not by the local name. A value counts as sanitized when the sink calls it directly, or when an identifier was assigned that call in one step (`const clean = DOMPurify.sanitize(html)`, then `__html: clean`). A second assignment, a property, or a parameter is not followed.
+
+- `dompurify` and `isomorphic-dompurify`: `Binding.sanitize(...)` when `Binding` is the default import, the namespace import, `require()` of the whole module, or the result of calling `createDOMPurify` (the default export or the named export) from that module. A named import whose exported name is `sanitize` also counts (the local alias may differ).
+- `sanitize-html`: a call of the default import, `require()` of the whole module, or a named import of `sanitize` or `default`.
+
+`import type` does not create a binding. A local function named `sanitize`, or a local object named `DOMPurify`, is still reported. `import { addHook as sanitize } from "dompurify"` is still reported, because the exported name is `addHook`. A local function named `createDOMPurify` is not a factory.
+
+| Rule | What is flagged | Not flagged |
+|------|-----------------|-------------|
+| JSX001 | `dangerouslySetInnerHTML` whose `{ __html }` value is not a constant and not a sanitizer. A call of a function in the same file is flagged only when that function returns `{ __html: ... }` and the returned value is itself unsafe. | A string or a template with no substitution, `"<b>" + "</b>"`, an imported sanitizer call, `const clean = DOMPurify.sanitize(html)` used as `__html: clean`, a `createDOMPurify(...)` instance's `sanitize` call, a helper in the same file that returns a sanitizer call, a bare identifier that was not assigned a sanitizer call, and a call whose body is not visible in the file. |
+| JSX002 | `href`, `src`, `action`, or `xlinkHref` (including `xlink:href`) whose value is a string or template whose static prefix is `javascript:` after trim and lowercase. Includes `javascript:alert(1)` and `` `javascript:${code}` ``. | `javascript:void(0)`, `javascript:void(0);`, and `javascript:;` (trim, then lowercase). Any other URL, a non-literal value (`href={user}`), and concatenation (`"javascript:" + user`). |
+| JS001 | `exec` imported from `shelljs` (default import, `import * as`, `import { exec }` including a rename, `require("shelljs")`, and `const { exec } = require("shelljs")`) when the command is a template with a substitution or a `+` concatenation that is not all constant. | A string, a template with no substitution, a concatenation of constants, a bare identifier, and `exec` from any other module. |
+
+JSX001 and JSX002 use issue type `XSS_RISK`, severity HIGH, and CWE-79. JS001 uses the existing `COMMAND_INJECTION` type and CWE-78. Test and example paths are skipped. `const cmd = \`ping ${host}\`; shell.exec(cmd)` is not reported. SQL built with a JavaScript template is not covered here. `innerHTML`, `outerHTML`, `insertAdjacentHTML`, and `document.write` are not covered here.
+
 ## 📊 Quick Reference
 
 ### All Rules Summary

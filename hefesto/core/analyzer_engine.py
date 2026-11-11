@@ -485,6 +485,10 @@ class AnalyzerEngine:
     def _apply_experimental(self, analyzer: Any) -> None:
         if hasattr(analyzer, "lang_rules"):
             analyzer.lang_rules = "lang-security" in self._experimental
+        if hasattr(analyzer, "js_rules"):
+            from hefesto.core.experimental import JS_SECURITY
+
+            analyzer.js_rules = JS_SECURITY in self._experimental
 
     def register_analyzer(self, analyzer):
         """Register an analyzer instance."""

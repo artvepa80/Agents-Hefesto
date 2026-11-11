@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`.tsx` files are parsed with the `tsx` grammar.** `.ts` files stay on the `typescript` grammar. JSX in a `.tsx` file is now part of the syntax tree, so tree-based findings (complexity, nesting, calls) on those files can change. An angle-bracket cast (`<T>expr`) belongs in a `.ts` file; the `tsx` grammar does not accept it. The `build/languages.so` fallback uses the same split. It used to load the `tsx` grammar for every TypeScript file.
 
+### Added — experimental JavaScript and TypeScript security rules
+
+- `--experimental js-security` adds JSX001, JSX002, and JS001. Off by default, so a run that does not pass the flag is unchanged. JSX001 and JSX002 use issue type `XSS_RISK` (CWE-79). JSX001 reports `dangerouslySetInnerHTML` when the HTML is not a constant, not a direct call of a sanitizer imported from `dompurify`, `isomorphic-dompurify`, or `sanitize-html`, and not an identifier assigned in one step from such a call (`const clean = DOMPurify.sanitize(html)`). Calling `createDOMPurify` from those modules (the default export or the named export) produces a sanitizer object. JSX002 reports a `javascript:` string or template on `href`, `src`, `action`, or `xlinkHref` (and `xlink:href`). It does not report `javascript:void(0)`, `javascript:void(0);`, or `javascript:;`. A template that substitutes the rest of the URL is still reported. JS001 reports `shelljs` `exec` when the command is a template with a substitution or a concatenation that is not all constant (`COMMAND_INJECTION`, CWE-78). Test and example paths are skipped. These rules are not measured and are not part of `lang-security`.
+
 ## [4.22.0] - TBD
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
