@@ -6,17 +6,17 @@ Rules read the tree-sitter syntax tree, so text inside strings and comments
 does not match. Sanitizers are recognised by the module they are imported
 from (``dompurify``, ``isomorphic-dompurify``, ``sanitize-html``), not by the
 local name. A function named ``sanitize`` that is not imported from one of
-those modules is still reported.
+those modules is still reported. ``createDOMPurify(...)`` from one of the
+DOMPurify modules is a sanitizer object. ``const clean = DOMPurify.sanitize(html)``
+counts at a later ``__html: clean``. A second assignment does not.
 
 * JSX001 ``dangerouslySetInnerHTML`` whose HTML is not a constant and not a
   call of an imported sanitizer. A call of a function in the same file is
   reported only when that function returns ``{ __html: ... }`` and the value
   is itself unsafe.
-* JSX002 ``href`` or ``src`` whose URL is a ``javascript:`` literal or template
-  (trim, then lowercase). A non-literal value is not reported.
-* JS002 ``innerHTML`` / ``outerHTML`` assignment, ``insertAdjacentHTML``, and
-  ``document.write`` / ``document.writeln`` with HTML that is not a constant
-  and not an imported sanitizer.
+* JSX002 ``href``, ``src``, ``action``, or ``xlinkHref`` (including
+  ``xlink:href``) whose URL is a ``javascript:`` literal or template (trim,
+  then lowercase). A non-literal value is not reported.
 * JS001 ``exec`` from ``shelljs`` (default import, ``import * as``,
   ``import { exec }``, ``require``, and a renamed export) when the command is
   a template with a substitution or a concatenation that is not all constant.
@@ -41,9 +41,7 @@ from hefesto.core.ast.generic_ast import GenericAST, GenericNode
 _SANITIZER_OBJECTS = frozenset({"dompurify", "isomorphic-dompurify"})
 _SANITIZER_FUNCTIONS = frozenset({"sanitize-html"})
 _SHELLJS = "shelljs"
-_HTML_PROPS = frozenset({"innerHTML", "outerHTML"})
-_WRITE = frozenset({"write", "writeln"})
-_LINK_ATTRS = frozenset({"href", "src"})
+_LINK_ATTRS = frozenset({"href", "src", "action", "xlinkHref"})
 _UNWRAP = frozenset(
     {
         "parenthesized_expression",
@@ -175,6 +173,8 @@ class _Bindings:
     def __init__(self) -> None:
         self.sanitizer_fns: Set[str] = set()
         self.sanitizer_objects: Set[str] = set()
+        self.sanitizer_factories: Set[str] = set()
+        self.sanitized_values: Set[str] = set()
         self.shell_objects: Set[str] = set()
         self.shell_execs: Set[str] = set()
         self.functions: Dict[str, List[GenericNode]] = {}
@@ -194,6 +194,8 @@ class _Bindings:
             self.sanitizer_objects.add(local)
         elif exported == "sanitize":
             self.sanitizer_fns.add(local)
+        elif exported == "createDOMPurify":
+            self.sanitizer_factories.add(local)
 
     def _bind_sanitize_html(self, local: str, exported: Optional[str]) -> None:
         if exported is None or exported in ("sanitize", "default"):
@@ -252,7 +254,22 @@ class _Bindings:
         if module:
             self._bind_require(target, module)
             return
+        if self._bind_sanitized_value(target, value):
+            return
         self._bind_local_function(target, value)
+
+    def _bind_sanitized_value(self, target: GenericNode, value: GenericNode) -> bool:
+        """One assignment: a sanitizer call, or a ``createDOMPurify(...)`` instance."""
+        if _ts(target) != "identifier":
+            return False
+        name = _text(target)
+        if _is_sanitizer_call(value, self):
+            self.sanitized_values.add(name)
+            return True
+        if _is_factory_call(value, self):
+            self.sanitizer_objects.add(name)
+            return True
+        return False
 
     def _bind_require(self, target: GenericNode, module: str) -> None:
         if _ts(target) == "identifier":
@@ -350,9 +367,38 @@ def _member_is_sanitizer(callee: GenericNode, bindings: _Bindings) -> bool:
     return _text(parts[0]) in bindings.sanitizer_objects
 
 
+def _call_callee(node: Optional[GenericNode]) -> Optional[GenericNode]:
+    node = _unwrap(node)
+    if node is None or _ts(node) != "call_expression":
+        return None
+    kids = _named(node)
+    if not kids:
+        return None
+    return kids[0]
+
+
+def _is_factory_call(node: Optional[GenericNode], bindings: _Bindings) -> bool:
+    """``createDOMPurify(...)`` or a call of the default DOMPurify export."""
+    callee = _call_callee(node)
+    if callee is None or _ts(callee) != "identifier":
+        return False
+    name = _text(callee)
+    return name in bindings.sanitizer_factories or name in bindings.sanitizer_objects
+
+
+def _is_sanitized_name(node: Optional[GenericNode], bindings: _Bindings) -> bool:
+    """An identifier assigned in one step from a sanitizer call."""
+    node = _unwrap(node)
+    if node is None or _ts(node) != "identifier":
+        return False
+    return _text(node) in bindings.sanitized_values
+
+
 def _unsafe_html(node: Optional[GenericNode], bindings: _Bindings) -> bool:
     """True when ``node`` is HTML that is neither a constant nor an imported sanitizer."""
     if _is_sanitizer_call(node, bindings) or _is_constant(node):
+        return False
+    if _is_sanitized_name(node, bindings):
         return False
     return _unwrap(node) is not None
 
@@ -409,27 +455,45 @@ def _template_prefix(node: GenericNode) -> str:
     return "".join(parts)
 
 
-def _member_prop(node: GenericNode) -> Optional[str]:
-    if _ts(node) != "member_expression":
-        return None
-    parts = _named(node)
-    if len(parts) == 2 and _ts(parts[1]) in ("property_identifier", "identifier"):
-        return _text(parts[1])
+def _namespace_attr(node: GenericNode) -> str:
+    parts = [_text(child) for child in _named(node) if _ts(child) == "identifier"]
+    if parts == ["xlink", "href"]:
+        return "xlinkHref"
+    return ""
+
+
+def _attr_name(node: GenericNode) -> str:
+    kind = _ts(node)
+    if kind in ("property_identifier", "identifier"):
+        return _text(node)
+    if kind == "jsx_namespace_name":
+        return _namespace_attr(node)
+    return ""
+
+
+def _expr_value(node: GenericNode) -> Optional[GenericNode]:
+    inner = _named(node)
+    if inner:
+        return inner[-1]
     return None
+
+
+def _take_attr(
+    name: str, value: Optional[GenericNode], child: GenericNode
+) -> Tuple[str, Optional[GenericNode]]:
+    found = _attr_name(child)
+    if not name and found:
+        return found, value
+    if _ts(child) == "jsx_expression":
+        return name, _expr_value(child)
+    return name, child
 
 
 def _attribute_value(node: GenericNode) -> Tuple[str, Optional[GenericNode]]:
     name = ""
     value: Optional[GenericNode] = None
     for child in _named(node):
-        if not name and _ts(child) in ("property_identifier", "identifier"):
-            name = _text(child)
-            continue
-        if _ts(child) == "jsx_expression":
-            inner = _named(child)
-            value = inner[-1] if inner else None
-        else:
-            value = child
+        name, value = _take_attr(name, value, child)
     return name, value
 
 
@@ -477,10 +541,7 @@ _HTML_SUGGESTION = (
 )
 
 
-def _check_attribute(report: _Report, node: GenericNode) -> None:
-    name, value = _attribute_value(node)
-    if value is None:
-        return
+def _check_html_attr(report: _Report, node: GenericNode, name: str, value: GenericNode) -> None:
     if name == "dangerouslySetInnerHTML" and _unsafe_prop(value, report.bindings):
         report.add(
             node,
@@ -488,27 +549,24 @@ def _check_attribute(report: _Report, node: GenericNode) -> None:
             "Unsanitized HTML passed to dangerouslySetInnerHTML",
             _HTML_SUGGESTION,
         )
-    elif name in _LINK_ATTRS and _javascript_url(value):
+
+
+def _check_link_attr(report: _Report, node: GenericNode, name: str, value: GenericNode) -> None:
+    if name in _LINK_ATTRS and _javascript_url(value):
         report.add(
             node,
             "JSX002",
-            "Link href or src uses a javascript: URL",
+            "javascript: URL in href, src, action, or xlinkHref",
             "Use an http(s) URL, or a button with an event handler.",
         )
 
 
-def _check_assignment(report: _Report, node: GenericNode) -> None:
-    kids = _named(node)
-    if len(kids) < 2:
+def _check_attribute(report: _Report, node: GenericNode) -> None:
+    name, value = _attribute_value(node)
+    if value is None:
         return
-    prop = _member_prop(kids[0])
-    if prop in _HTML_PROPS and _unsafe_html(kids[-1], report.bindings):
-        report.add(
-            node,
-            "JS002",
-            f"Unsanitized HTML assigned to {prop}",
-            _HTML_SUGGESTION,
-        )
+    _check_html_attr(report, node, name, value)
+    _check_link_attr(report, node, name, value)
 
 
 def _dynamic_command(node: Optional[GenericNode]) -> bool:
@@ -538,15 +596,26 @@ def _is_shell_exec(callee: GenericNode, bindings: _Bindings) -> bool:
     )
 
 
-def _check_call(report: _Report, node: GenericNode) -> None:
+def _first_named(node: GenericNode) -> Optional[GenericNode]:
     kids = _named(node)
-    callee = kids[0] if kids else None
-    arguments = next((child for child in kids if _ts(child) == "arguments"), None)
+    if kids:
+        return kids[0]
+    return None
+
+
+def _argument_list(node: GenericNode) -> Optional[GenericNode]:
+    for child in _named(node):
+        if _ts(child) == "arguments":
+            return child
+    return None
+
+
+def _check_call(report: _Report, node: GenericNode) -> None:
+    callee = _first_named(node)
+    arguments = _argument_list(node)
     if callee is None or arguments is None:
         return
-    args = _named(arguments)
-    _check_shell_call(report, node, callee, args)
-    _check_dom_call(report, node, callee, args)
+    _check_shell_call(report, node, callee, _named(arguments))
 
 
 def _check_shell_call(
@@ -566,50 +635,6 @@ def _check_shell_call(
     )
 
 
-def _check_dom_call(
-    report: _Report, node: GenericNode, callee: GenericNode, args: List[GenericNode]
-) -> None:
-    if _ts(callee) != "member_expression":
-        return
-    parts = _named(callee)
-    if len(parts) != 2:
-        return
-    _check_dom_prop(report, node, parts, _text(parts[1]), args)
-
-
-def _check_dom_prop(
-    report: _Report,
-    node: GenericNode,
-    parts: List[GenericNode],
-    prop: str,
-    args: List[GenericNode],
-) -> None:
-    if prop == "insertAdjacentHTML":
-        _check_insert_html(report, node, args)
-        return
-    if prop in _WRITE and _is_document(parts) and args and _unsafe_html(args[0], report.bindings):
-        report.add(
-            node,
-            "JS002",
-            f"Unsanitized HTML passed to document.{prop}",
-            _HTML_SUGGESTION,
-        )
-
-
-def _check_insert_html(report: _Report, node: GenericNode, args: List[GenericNode]) -> None:
-    if len(args) >= 2 and _unsafe_html(args[1], report.bindings):
-        report.add(
-            node,
-            "JS002",
-            "Unsanitized HTML passed to insertAdjacentHTML",
-            _HTML_SUGGESTION,
-        )
-
-
-def _is_document(parts: List[GenericNode]) -> bool:
-    return _ts(parts[0]) == "identifier" and _text(parts[0]) == "document"
-
-
 def _record_binding(bindings: _Bindings, node: GenericNode) -> None:
     kind = _ts(node)
     if kind == "import_statement":
@@ -624,8 +649,6 @@ def _report_node(report: _Report, node: GenericNode) -> None:
     kind = _ts(node)
     if kind == "jsx_attribute":
         _check_attribute(report, node)
-    elif kind in ("assignment_expression", "augmented_assignment_expression"):
-        _check_assignment(report, node)
     elif kind == "call_expression":
         _check_call(report, node)
 

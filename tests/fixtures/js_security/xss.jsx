@@ -44,6 +44,15 @@ export function View(user, ticket) {
       <a href={"javascript:" + user}>n</a>
       <img src={`javascript:${user}`} />
       <img src={"https://example.com/a.png"} />
+      <form action="javascript:alert(1)" />
+      <form action="javascript:void(0)" />
+      <form action="javascript:;" />
+      <form action="https://example.com" />
+      <form action={user} />
+      <use xlinkHref="javascript:alert(1)" />
+      <use xlinkHref={`javascript:${user}`} />
+      <use xlinkHref="https://example.com/icon.svg" />
+      <use xlink:href="javascript:alert(1)" />
     </div>
   );
 }

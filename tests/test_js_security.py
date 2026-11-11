@@ -1,4 +1,4 @@
-"""Experimental JavaScript and TypeScript XSS rules (JSX001, JSX002, JS002)."""
+"""Experimental JavaScript and TypeScript rules (JSX001, JSX002, JS001)."""
 
 from __future__ import annotations
 
@@ -26,19 +26,17 @@ _EXPECTED = {
         ("JSX002", 40),
         ("JSX002", 41),
         ("JSX002", 45),
+        ("JSX002", 47),
+        ("JSX002", 48),
+        ("JSX002", 49),
+        ("JSX002", 52),
+        ("JSX002", 53),
+        ("JSX002", 55),
     },
     "xss.tsx": {("JSX001", 9), ("JSX001", 11)},
-    "dom.js": {
-        ("JS002", 11),
-        ("JS002", 15),
-        ("JS002", 16),
-        ("JS002", 17),
-        ("JS002", 18),
-        ("JS002", 21),
-        ("JS002", 23),
-    },
     "local_sanitize.jsx": {("JSX001", 9), ("JSX001", 10)},
-    "require_sanitize.js": {("JS002", 10), ("JS002", 11)},
+    "require_sanitize.jsx": {("JSX001", 17), ("JSX001", 18)},
+    "sanitize_flow.jsx": {("JSX001", 24), ("JSX001", 26), ("JSX001", 27)},
 }
 
 
@@ -128,7 +126,7 @@ def test_flag_off_reports_nothing() -> None:
 
 def test_test_paths_are_skipped() -> None:
     assert _issues("xss.jsx", "tests/fixtures/js_security/xss.jsx") == []
-    assert _issues("dom.js", "examples/widget/dom.js") == []
+    assert _issues("sanitize_flow.jsx", "examples/widget/sanitize_flow.jsx") == []
 
 
 def test_import_type_does_not_create_a_sanitizer() -> None:
@@ -136,13 +134,13 @@ def test_import_type_does_not_create_a_sanitizer() -> None:
 
     code = (
         'import type { sanitize } from "sanitize-html";\n'
-        "export function paint(el: HTMLElement, html: string) {\n"
-        "  el.innerHTML = sanitize(html);\n"
+        "export function View(html: string) {\n"
+        "  return <div dangerouslySetInnerHTML={{ __html: sanitize(html) }} />;\n"
         "}\n"
     )
-    tree = TreeSitterParser("typescript").parse(code, "src/paint.ts")
-    issues = _analyzer().analyze(tree, "src/paint.ts", code)
-    assert [(i.rule_id, i.line) for i in issues] == [("JS002", 3)]
+    tree = TreeSitterParser("typescript").parse(code, "src/paint.tsx")
+    issues = _analyzer().analyze(tree, "src/paint.tsx", code)
+    assert [(i.rule_id, i.line) for i in issues] == [("JSX001", 3)]
 
 
 def test_other_languages_are_ignored() -> None:
