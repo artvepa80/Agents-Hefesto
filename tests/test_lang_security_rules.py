@@ -120,6 +120,200 @@ def test_go_rules_skip_test_files() -> None:
     assert _rules("go", code, path="pkg/client_test.go") == []
 
 
+# Same-function assignments. The line numbers are the call, not the build.
+GO_FLOW = [
+    (
+        _go('command := fmt.Sprintf("ls %s", d)\nexec.Command("sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go('command := "rm " + d\nexec.Command("sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go('command := "ls "\ncommand += d\nexec.Command("sh", "-c", command)'),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go('command := fmt.Sprintf("ls %s", d)\nexec.CommandContext(d, "sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\nalias := command\nexec.Command("sh", "-c", alias)'
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go('exec.Command("sh", "-c", ("rm " + d))'),
+        [("GO001", 4, "HIGH")],
+    ),
+    (
+        _go('exec.Command("sh", "-c", fmt.Sprintf("ls %d", a))'),
+        [("GO001", 4, "HIGH")],
+    ),
+    (
+        _go(
+            'command := "ls -la"\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go(
+            "var command string\n"
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls -la"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 10, "HIGH")],
+    ),
+    (
+        _go(
+            'command := "ls -la"\n'
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 10, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'if d == "" {\n'
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 8, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            "{\n"
+            'command := "ls -la"\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 9, "HIGH")],
+    ),
+    (
+        _go(
+            "go func() {\n"
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}()"
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go(
+            'if command := fmt.Sprintf("ls %s", d); command != "" {\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}"
+        ),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go(
+            "var command string\n"
+            "switch d {\n"
+            'case "a":\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "default:\n"
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 11, "HIGH")],
+    ),
+    # Negatives: literal, last write is a literal, parameter, const sprintf.
+    (_go('command := "ls -la"\nexec.Command("sh", "-c", command)'), []),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'command = "ls -la"\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'if d != "" {\n'
+            'command = "ls"\n'
+            "} else {\n"
+            'command = "ls -la"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (
+        _go(
+            "var command string\n"
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls"\n'
+            "}\n"
+            'command = "ls -la"\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (_go('exec.Command("sh", "-c", fmt.Sprintf("ls %s", "tmp"))'), []),
+    (_go('const command = "ls -la"\nexec.Command("sh", "-c", command)'), []),
+]
+
+
+@pytest.mark.parametrize("code, expected", GO_FLOW)
+def test_go_command_follows_same_function_assignments(code: str, expected) -> None:
+    assert _rules("go", code) == expected
+
+
+def test_go_command_parameter_is_not_tracked() -> None:
+    code = 'package p\n\nfunc f(command string) {\nexec.Command("sh", "-c", command)\n}\n'
+    assert _rules("go", code) == []
+
+
+def test_go_command_from_another_function_is_not_tracked() -> None:
+    code = (
+        "package p\n\n"
+        "func helper(d string) string {\n"
+        'return fmt.Sprintf("ls %s", d)\n'
+        "}\n\n"
+        "func f(d string) {\n"
+        "command := helper(d)\n"
+        'exec.Command("sh", "-c", command)\n'
+        "}\n"
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_command_closure_does_not_see_outer_build() -> None:
+    code = _go(
+        'command := fmt.Sprintf("ls %s", d)\n'
+        "go func() {\n"
+        'exec.Command("sh", "-c", command)\n'
+        "}()"
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_command_flow_skips_test_files() -> None:
+    code = _go('command := fmt.Sprintf("ls %s", d)\nexec.Command("sh", "-c", command)')
+    assert _rules("go", code, path="pkg/f_test.go") == []
+
+
 # --- Rust -------------------------------------------------------------------
 
 RS_CASES = [

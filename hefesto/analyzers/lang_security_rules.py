@@ -7,10 +7,10 @@ finding per construct with a stable ``rule_id``:
 * C#: CS001 SQL built from strings, CS002 dangerous formatters, CS003
   ``Process.Start`` with a built string, CS004 MD5/SHA-1 (LOW inventory) or broken
   cipher (MEDIUM).
-* Go: GO001 shell ``-c`` with a built string, GO003 ``crypto/md5``,
-  ``crypto/sha1`` (LOW inventory), ``crypto/des`` or ``crypto/rc4`` (MEDIUM),
-  GO004 ``InsecureSkipVerify: true``. GO002 (SQL built from strings) was
-  dropped from v1: every measured hit was non-actionable.
+* Go: GO001 shell ``-c`` with a string built in the same function, GO003
+  ``crypto/md5``, ``crypto/sha1`` (LOW inventory), ``crypto/des`` or
+  ``crypto/rc4`` (MEDIUM), GO004 ``InsecureSkipVerify: true``. GO002 (SQL
+  built from strings) was dropped from v1: every measured hit was non-actionable.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
   ``-c`` with a ``format!`` string.
 * C and C++: CC001 ``gets``, CC002 unbounded copy or write (``strcpy``,
@@ -26,6 +26,7 @@ from __future__ import annotations
 import re
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+from hefesto.analyzers.lang_go_flow import _GoString, visit_go_calls
 from hefesto.core.analysis_models import (
     AnalysisIssue,
     AnalysisIssueSeverity,
@@ -375,11 +376,23 @@ def _go_imports(root: GenericNode) -> Dict[str, str]:
     return out
 
 
-def _go_shell(ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode]) -> None:
-    rest = args[1:] if func == "exec.CommandContext" else args
-    if len(rest) < 3 or _string_value(rest[0]) not in _SHELLS:
+def _report_go_shell(
+    ctx: _Ctx,
+    node: GenericNode,
+    func: GenericNode,
+    args: List[GenericNode],
+    facts: List[_GoString],
+) -> None:
+    """``exec.Command("sh", "-c", cmd)`` when ``cmd`` was built in this function."""
+    name = "".join(func.text.split())
+    if name not in ("exec.Command", "exec.CommandContext"):
         return
-    if _string_value(rest[1]) == "-c" and any(_built_string(a) for a in rest[2:]):
+    offset = 1 if name == "exec.CommandContext" else 0
+    if len(args) < offset + 3 or _string_value(args[offset]) not in _SHELLS:
+        return
+    if _string_value(args[offset + 1]) != "-c":
+        return
+    if any(item.built for item in facts[offset + 2 :]):
         ctx.add(
             node,
             "GO001",
@@ -411,11 +424,8 @@ def _go_call(ctx: _Ctx, node: GenericNode, imports: Dict[str, str]) -> None:
     if not parts:
         return
     func = parts[0].text.replace(" ", "")
-    args = _args(node)
-    if func in ("exec.Command", "exec.CommandContext"):
-        _go_shell(ctx, node, func, args)
-    elif _ts(parts[0]) == "selector_expression" and "." in func:
-        _go_method_call(ctx, node, func, args, imports)
+    if _ts(parts[0]) == "selector_expression" and "." in func:
+        _go_method_call(ctx, node, func, _args(node), imports)
 
 
 def _go_keyed(ctx: _Ctx, node: GenericNode) -> None:
@@ -434,6 +444,16 @@ def _go_keyed(ctx: _Ctx, node: GenericNode) -> None:
         )
 
 
+def _on_go_flow(
+    ctx: _Ctx,
+    node: GenericNode,
+    func: GenericNode,
+    args: List[GenericNode],
+    facts: List[_GoString],
+) -> None:
+    _report_go_shell(ctx, node, func, args, facts)
+
+
 def _check_go(ctx: _Ctx, root: GenericNode) -> None:
     imports = _go_imports(root)
     for node in _walk(root):
@@ -442,6 +462,7 @@ def _check_go(ctx: _Ctx, root: GenericNode) -> None:
             _go_call(ctx, node, imports)
         elif t == "keyed_element":
             _go_keyed(ctx, node)
+    visit_go_calls(root, lambda *parts: _on_go_flow(ctx, *parts))
 
 
 # --- Rust ----------------------------------------------------------------------

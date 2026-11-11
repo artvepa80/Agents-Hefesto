@@ -1182,7 +1182,7 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C a
 | CS002 | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | `INSECURE_DESERIALIZATION` | HIGH | 502 |
 | CS003 | `Process.Start(...)` or `new ProcessStartInfo(...)` with an argument built from strings | `COMMAND_INJECTION` | MEDIUM | 78 |
 | CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | LOW for MD5/SHA-1 (inventory); MEDIUM for DES/TripleDES/RC2 | 327 |
-| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` | `COMMAND_INJECTION` | HIGH | 78 |
+| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash`/`zsh`/`dash` `-c` with a string built by `fmt.Sprintf`, `+` or `+=`, including a variable assigned that way earlier in the same function | `COMMAND_INJECTION` | HIGH | 78 |
 | GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | LOW for md5/sha1 (inventory); MEDIUM for des/rc4 | 327 |
 | GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
 | RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
@@ -1199,6 +1199,7 @@ Known limits:
 
 - Rust unit tests that live in the same file under `#[cfg(test)]` are **not** skipped: only the path decides what is test code, so `unsafe` blocks and `transmute` calls in an in-file `mod tests` are reported like any other code.
 - CS004 and GO003 report every use of MD5 and SHA-1 as LOW "(inventory)", the same way RS001 lists `unsafe`. The earlier MEDIUM claim was refuted by measurement. On pinned repositories (MailKit, ShareX, jellyfin, gitea, rclone; 2026-11-03), 0/20 CS004 hits and 1/24 sampled GO003 hits needed action. The rest were protocol-mandated digests (SASL DIGEST-MD5/CRAM-MD5/SCRAM-SHA-1, APOP, OAuth 1, S3 Content-MD5 and SSE-C, storage APIs) or non-security checksums and cache keys. DES, TripleDES, RC2 and RC4 stay MEDIUM. The tree does not show why a hash is computed, so the default `--severity MEDIUM` hides the inventory; use `--severity LOW` to list it. Inline `hefesto: ignore[...]` comments apply to Python files only, so they cannot silence these findings yet; `--exclude` removes a whole path and `--exclude-types INSECURE_CRYPTOGRAPHY` removes the type.
+- GO001 follows string assignments in the same function only. The last straight-line assignment wins. If one branch builds the string and another assigns a literal, the call is reported. A `:=` in an inner block shadows the outer name; the nearest declaration wins. A function parameter, a result from another function, and a name used inside a nested function literal are not tracked (the literal does not see the outer value). Building the command and passing it to `-c` inside the same literal is reported. `exec.Command(args[0], ...)` where the program itself is not a constant is not reported.
 - GO002 (Go SQL built with `fmt.Sprintf` or `+`) was dropped from v1. All 57 hits on gitea were non-actionable:
   - 38 were DDL with internal schema identifiers.
   - 11 were a table name interpolated, with values passed as placeholders.
@@ -1214,7 +1215,7 @@ Known limits:
 
 C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::f(...)`) count; `obj.f(...)` and `p->f(...)` do not. Macros are not expanded, so a call hidden behind a macro is not seen, and a macro named like a function (`#define strcpy safe_strcpy`) is still reported. Bounded calls (`snprintf`, `strncpy`, `strlcpy`, `%31s`, `%.8s`) and literal commands (`system("ls")`) are not reported.
 
-Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
+Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL argument that is a plain variable (`db.Query(q)`); a shell `-c` argument that is a function parameter or comes from another function; `Process.Start` with fixed arguments.
 
 ## 📊 Quick Reference
 
