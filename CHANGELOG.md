@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade notes
 
-- **`.tsx` files are parsed with the `tsx` grammar.** `.ts` files stay on the `typescript` grammar. JSX in a `.tsx` file is now part of the syntax tree, so tree-based findings (complexity, nesting, calls) on those files can change. An angle-bracket cast (`<T>expr`) belongs in a `.ts` file; the `tsx` grammar does not accept it.
+- **`.tsx` files are parsed with the `tsx` grammar.** `.ts` files stay on the `typescript` grammar. JSX in a `.tsx` file is now part of the syntax tree, so tree-based findings (complexity, nesting, calls) on those files can change. An angle-bracket cast (`<T>expr`) belongs in a `.ts` file; the `tsx` grammar does not accept it. The `build/languages.so` fallback uses the same split. It used to load the `tsx` grammar for every TypeScript file.
 
 ### Added — experimental JavaScript and TypeScript security rules
 
