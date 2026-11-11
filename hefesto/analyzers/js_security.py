@@ -1,7 +1,5 @@
 """Experimental JavaScript and TypeScript security rules (``--experimental js-security``).
 
-The flag name and the ``XSS_RISK`` issue type are provisional.
-
 Rules read the tree-sitter syntax tree, so text inside strings and comments
 does not match. Sanitizers are recognised by the module they are imported
 from (``dompurify``, ``isomorphic-dompurify``, ``sanitize-html``), not by the
@@ -16,7 +14,9 @@ counts at a later ``__html: clean``. A second assignment does not.
   is itself unsafe.
 * JSX002 ``href``, ``src``, ``action``, or ``xlinkHref`` (including
   ``xlink:href``) whose URL is a ``javascript:`` literal or template (trim,
-  then lowercase). A non-literal value is not reported.
+  then lowercase). ``javascript:void(0)``, ``javascript:void(0);``, and
+  ``javascript:;`` are not reported. A template that substitutes the rest of
+  the URL is reported. A non-literal value is not reported.
 * JS001 ``exec`` from ``shelljs`` (default import, ``import * as``,
   ``import { exec }``, ``require``, and a renamed export) when the command is
   a template with a substitution or a concatenation that is not all constant.
@@ -42,6 +42,13 @@ _SANITIZER_OBJECTS = frozenset({"dompurify", "isomorphic-dompurify"})
 _SANITIZER_FUNCTIONS = frozenset({"sanitize-html"})
 _SHELLJS = "shelljs"
 _LINK_ATTRS = frozenset({"href", "src", "action", "xlinkHref"})
+_NO_OP_JS_URLS = frozenset(
+    {
+        "javascript:void(0)",
+        "javascript:void(0);",
+        "javascript:;",
+    }
+)
 _UNWRAP = frozenset(
     {
         "parenthesized_expression",
@@ -430,19 +437,47 @@ def _helper_call_unsafe(node: GenericNode, bindings: _Bindings) -> bool:
     return any(_unsafe_html(html, bindings) for html in htmls)
 
 
-def _javascript_url(node: Optional[GenericNode]) -> bool:
-    """Literal or template whose static prefix is ``javascript:`` after trim and lowercase."""
-    node = _unwrap(node)
+def _static_js_text(node: Optional[GenericNode]) -> Optional[str]:
+    """String or template text up to the first substitution."""
     if node is None:
-        return False
+        return None
     kind = _ts(node)
     if kind == "string":
-        text = _string_content(node)
-    elif kind == "template_string":
-        text = _template_prefix(node)
-    else:
+        return _string_content(node)
+    if kind == "template_string":
+        return _template_prefix(node)
+    return None
+
+
+def _template_builds_url(node: GenericNode) -> bool:
+    return any(_ts(child) == "template_substitution" for child in node.children)
+
+
+def _normalized_js_url(node: Optional[GenericNode]) -> Optional[str]:
+    text = _static_js_text(_unwrap(node))
+    if text is None:
+        return None
+    normalized = text.strip().lower()
+    if normalized.startswith("javascript:"):
+        return normalized
+    return None
+
+
+def _built_javascript_url(node: Optional[GenericNode]) -> bool:
+    node = _unwrap(node)
+    if node is None or _ts(node) != "template_string":
         return False
-    return text.strip().lower().startswith("javascript:")
+    return _template_builds_url(node)
+
+
+def _javascript_url(node: Optional[GenericNode]) -> bool:
+    """``javascript:`` literal or template, except the three no-op spellings."""
+    normalized = _normalized_js_url(node)
+    if normalized is None:
+        return False
+    if _built_javascript_url(node):
+        return True
+    return normalized not in _NO_OP_JS_URLS
 
 
 def _template_prefix(node: GenericNode) -> str:

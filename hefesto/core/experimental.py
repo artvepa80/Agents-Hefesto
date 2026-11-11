@@ -11,7 +11,7 @@ DEFINITION = (
     "measured yet, and a run without them gives the same output as before."
 )
 
-# Provisional. The owner has not approved this name; keep the wiring to this constant.
+# JavaScript and TypeScript security rules. Off by default.
 JS_SECURITY = "js-security"
 
 # name -> what it turns on

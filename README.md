@@ -758,7 +758,7 @@ include_vendored: false     # --include-vendored (analyze vendored/minified Java
 experimental:               # --experimental (comma-separated; the CLI value replaces this list)
   - c-cpp                   # C and C++ files (docs/c-cpp.md)
   - lang-security           # C#, Go, Rust, C and C++ security rules (docs/ANALYSIS_RULES.md)
-  - js-security             # JavaScript and TypeScript rules (provisional name; docs/ANALYSIS_RULES.md)
+  - js-security             # JavaScript and TypeScript rules (docs/ANALYSIS_RULES.md)
 ```
 
 - **Excluded by default:** `.venv/`, `venv/`, `.tox/`, `node_modules/`,

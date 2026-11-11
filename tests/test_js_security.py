@@ -23,12 +23,9 @@ _EXPECTED = {
         ("JSX001", 35),
         ("JSX001", 36),
         ("JSX002", 39),
-        ("JSX002", 40),
         ("JSX002", 41),
         ("JSX002", 45),
         ("JSX002", 47),
-        ("JSX002", 48),
-        ("JSX002", 49),
         ("JSX002", 52),
         ("JSX002", 53),
         ("JSX002", 55),
@@ -113,6 +110,38 @@ def test_local_function_named_sanitize_is_still_reported() -> None:
     issues = _issues("local_sanitize.jsx")
     assert {i.line for i in issues} == {9, 10}
     assert all(i.rule_id == "JSX001" for i in issues)
+
+
+def test_noop_javascript_urls_are_not_reported() -> None:
+    """``javascript:void(0)``, ``javascript:void(0);``, and ``javascript:;`` stay quiet."""
+    from hefesto.core.parsers.treesitter_parser import TreeSitterParser
+
+    code = "\n".join(
+        [
+            "export function View(code) {",
+            "  return (",
+            "    <div>",
+            '      <a href="javascript:void(0)" />',
+            '      <a href="javascript:void(0);" />',
+            '      <a href="javascript:;" />',
+            '      <a href="  JavaScript:Void(0);  " />',
+            "      <a href={`javascript:void(0)`} />",
+            '      <a href="javascript:alert(1)" />',
+            "      <a href={`javascript:${code}`} />",
+            "      <a href={`javascript:void(0);${code}`} />",
+            "    </div>",
+            "  );",
+            "}",
+            "",
+        ]
+    )
+    tree = TreeSitterParser("javascript").parse(code, "src/links.jsx")
+    issues = _analyzer().analyze(tree, "src/links.jsx", code)
+    assert [(i.rule_id, i.line) for i in issues] == [
+        ("JSX002", 9),
+        ("JSX002", 10),
+        ("JSX002", 11),
+    ]
 
 
 def test_flag_off_reports_nothing() -> None:

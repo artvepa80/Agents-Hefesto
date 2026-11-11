@@ -100,7 +100,7 @@ class AnalysisIssueType(str, Enum):
     UNSAFE_CODE = "UNSAFE_CODE"
     UNSAFE_BUFFER_FUNCTION = "UNSAFE_BUFFER_FUNCTION"
     FORMAT_STRING_RISK = "FORMAT_STRING_RISK"
-    # Provisional name for the experimental js-security rules. Owner decision pending.
+    # JavaScript and TypeScript XSS (JSX001, JSX002). CWE-79.
     XSS_RISK = "XSS_RISK"
 
     # Dockerfile Security
