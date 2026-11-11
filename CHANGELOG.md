@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.22.0] - TBD
+## [4.22.0] - 2026-11-11
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
 
