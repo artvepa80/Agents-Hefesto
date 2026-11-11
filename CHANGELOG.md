@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Go shell and SQL rules follow a same-block value (`lang-security`)
+
+- With `--experimental lang-security`, GO001 also reports `exec.Command` / `exec.CommandContext` of `sh` / `bash` `-c` when the command is a variable assigned in the same block from `fmt.Sprintf` or `+` with a non-constant part. A constant command, and a variable with no such assignment, stay unreported. An assignment in another block does not count outside that block.
+- GO005 reports a non-constant argument placed in a SQL value position (`'%s'`, or a string verb or `+` after `=` / `<` / `>` / `!`) of a DML statement passed to `Query`, `QueryRow`, `Exec`, `Prepare`, or the `Context` forms, inline or through a same-block variable. Identifier interpolation, DDL, `setval`, numeric verbs, and placeholder queries whose SQL text is constant are not reported. GO002 stays retired: that id was dropped after 57/57 non-actionable hits, and reusing it would mix the new rule with that result.
+
 ## [4.22.0] - TBD
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`

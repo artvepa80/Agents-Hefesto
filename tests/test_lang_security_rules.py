@@ -1,4 +1,4 @@
-"""C#, Go and Rust security rules (CS001-CS004, GO001-GO004, RS001-RS003)."""
+"""C#, Go and Rust security rules (CS001-CS004, GO001, GO003-GO005, RS001-RS003)."""
 
 from __future__ import annotations
 
@@ -90,11 +90,25 @@ GO_CASES = [
     ('exec.Command("ls", d)', []),
     ('exec.Command("sh", "-c", "ls -la")', []),
     ('exec.Command("sh", "-c", d)', []),
-    # GO002 was dropped from v1 (57/57 non-actionable on the measured corpus).
-    ('db.Query("SELECT * FROM t WHERE a=" + a)', []),
-    ('db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))', []),
+    ('exec.Command("sh", "-c", fmt.Sprintf("ls %s", "tmp"))', []),
+    # Value positions of a non-constant argument. GO002 stayed retired.
+    ('db.Query("SELECT * FROM t WHERE a=" + a)', [("GO005", 4, "HIGH")]),
+    (
+        'db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))',
+        [("GO005", 4, "HIGH")],
+    ),
+    ('db.Query("SELECT name FROM t WHERE name=\'" + a + "\'")', [("GO005", 4, "HIGH")]),
+    # Identifier slots, numeric verbs, placeholders, and non-SQL text are not SQL values.
     ('tx.Exec(fmt.Sprintf("DELETE FROM %s", d))', []),
+    ('db.Query(fmt.Sprintf("SELECT * FROM %s WHERE id = ?", d), a)', []),
+    ('db.Query(fmt.Sprintf("SELECT * FROM t WHERE id = %d", a))', []),
+    ("db.Exec(fmt.Sprintf(\"SELECT setval('%s', 1, false)\", d))", []),
+    ("db.Query(fmt.Sprintf(\"SELECT sql FROM sqlite_master WHERE tbl_name='%s'\", d))", []),
+    ('db.Exec(fmt.Sprintf("ALTER TABLE `%s` RENAME TO `%s`", d, a))', []),
+    ('db.Query(fmt.Sprintf("SELECT \'%s\'", "fixed"))', []),
     ('db.Query("SELECT * FROM t WHERE a=$1", a)', []),
+    ('db.Query("SELECT * FROM t WHERE a=?", a)', []),
+    ('db.Prepare("SELECT * FROM t WHERE a=?")', []),
     ('r.Exec(fmt.Sprintf("hello %s", d))', []),
     ("_ = tls.Config{InsecureSkipVerify: true}", [("GO004", 4, "HIGH")]),
     ("_ = tls.Config{InsecureSkipVerify: false}", []),
@@ -113,6 +127,11 @@ def test_go_weak_hash_only_from_crypto_packages() -> None:
     assert _rules("go", code) == [("GO003", 8, "LOW"), ("GO003", 9, "LOW")]
     # A local package that happens to be called md5 is not crypto/md5.
     assert _rules("go", _go("_ = md5.Sum([]byte(d))", 'import "example.com/md5"\n')) == []
+
+
+def test_go_sprintf_alias_is_the_fmt_package() -> None:
+    code = _go('exec.Command("sh", "-c", f.Sprintf("ls %s", d))', 'import f "fmt"\n')
+    assert _rules("go", code) == [("GO001", 5, "HIGH")]
 
 
 def test_go_rules_skip_test_files() -> None:
@@ -182,12 +201,60 @@ def test_weak_hash_message_says_inventory() -> None:
     assert len(msgs) == 1 and "(inventory)" in msgs[0]
 
 
-def test_go_sql_has_no_rule_finding() -> None:
+def test_go_sql_value_is_go005() -> None:
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     code = _go('db.Query("SELECT * FROM t WHERE a=" + a)')
     tree = TreeSitterParser("go").parse(code, "a.go")
-    assert [i.rule_id for i in _analyzer().analyze(tree, "a.go", code) if i.rule_id] == []
+    found = [i for i in _analyzer().analyze(tree, "a.go", code) if i.rule_id]
+    assert [(i.rule_id, i.issue_type.value, i.metadata.get("cwe")) for i in found] == [
+        ("GO005", "SQL_INJECTION_RISK", "CWE-89")
+    ]
+
+
+def test_go_same_block_variable_reaches_shell_and_sql() -> None:
+    """The build is on the previous line. A later constant assignment clears it."""
+    shell = _go('command := fmt.Sprintf("ls -la %s", d)\nexec.Command("sh", "-c", command)')
+    assert _rules("go", shell) == [("GO001", 5, "HIGH")]
+    copied = _go(
+        'built := fmt.Sprintf("ls %s", d)\ncommand := built\nexec.Command("sh", "-c", command)'
+    )
+    assert _rules("go", copied) == [("GO001", 6, "HIGH")]
+    sql = _go('query := fmt.Sprintf("SELECT id FROM account WHERE id=%s", a)\ndb.Query(query)')
+    assert _rules("go", sql) == [("GO005", 5, "HIGH")]
+    quoted = _go(
+        "query := fmt.Sprintf(\"SELECT title FROM note WHERE title='%s'\", a)\ndb.Exec(query)"
+    )
+    assert _rules("go", quoted) == [("GO005", 5, "HIGH")]
+    raw = _go("q := fmt.Sprintf(`SELECT id FROM account WHERE id=%s`, a)\nDB.Query(q)")
+    assert _rules("go", raw) == [("GO005", 5, "HIGH")]
+
+
+def test_go_constant_and_other_block_are_not_followed() -> None:
+    assert _rules("go", _go('command := "ls -la"\nexec.Command("sh", "-c", command)')) == []
+    cleared = _go(
+        'command := fmt.Sprintf("ls %s", d)\ncommand = "ls -la"\nexec.Command("sh", "-c", command)'
+    )
+    assert _rules("go", cleared) == []
+    other = _go(
+        'command := "ls"\nif cond {\ncommand = fmt.Sprintf("ls %s", d)\n}\n'
+        'exec.Command("sh", "-c", command)'
+    )
+    assert _rules("go", other) == []
+    safe_sql = _go('q := "SELECT id FROM account WHERE id = ?"\ndb.Query(q, a)')
+    assert _rules("go", safe_sql) == []
+    cleared_sql = _go('q := fmt.Sprintf("SELECT \'%s\'", a)\nq = "SELECT 1"\ndb.Query(q)')
+    assert _rules("go", cleared_sql) == []
+
+
+def test_go_outer_assignment_is_visible_inside_a_nested_block() -> None:
+    body = 'command := fmt.Sprintf("ls %s", d)\nif cond {\nexec.Command("sh", "-c", command)\n}'
+    assert _rules("go", _go(body)) == [("GO001", 6, "HIGH")]
+    init = (
+        'if command := fmt.Sprintf("ls %s", d); cond {\nexec.Command("sh", "-c", command)\n}\n'
+        'exec.Command("sh", "-c", command)'
+    )
+    assert _rules("go", _go(init)) == [("GO001", 5, "HIGH")]
 
 
 def test_strings_and_comments_never_match() -> None:

@@ -7,10 +7,12 @@ finding per construct with a stable ``rule_id``:
 * C#: CS001 SQL built from strings, CS002 dangerous formatters, CS003
   ``Process.Start`` with a built string, CS004 MD5/SHA-1 (LOW inventory) or broken
   cipher (MEDIUM).
-* Go: GO001 shell ``-c`` with a built string, GO003 ``crypto/md5``,
-  ``crypto/sha1`` (LOW inventory), ``crypto/des`` or ``crypto/rc4`` (MEDIUM),
-  GO004 ``InsecureSkipVerify: true``. GO002 (SQL built from strings) was
-  dropped from v1: every measured hit was non-actionable.
+* Go: GO001 shell ``-c`` with a built string (including a variable assigned
+  in the same block), GO003 ``crypto/md5``, ``crypto/sha1`` (LOW inventory),
+  ``crypto/des`` or ``crypto/rc4`` (MEDIUM), GO004 ``InsecureSkipVerify: true``,
+  GO005 a SQL value built from a non-constant argument. GO002 (any SQL built
+  from strings) was dropped from v1: every measured hit was non-actionable.
+  GO005 does not reuse that id.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
   ``-c`` with a ``format!`` string.
 * C and C++: CC001 ``gets``, CC002 unbounded copy or write (``strcpy``,
@@ -24,7 +26,7 @@ Test files are skipped.
 from __future__ import annotations
 
 import re
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from hefesto.core.analysis_models import (
     AnalysisIssue,
@@ -375,20 +377,416 @@ def _go_imports(root: GenericNode) -> Dict[str, str]:
     return out
 
 
-def _go_shell(ctx: _Ctx, node: GenericNode, func: str, args: List[GenericNode]) -> None:
+class _GoFact:
+    """What a local name was last assigned in this block.
+
+    ``built`` is a shell string from ``fmt.Sprintf`` or ``+`` with a
+    non-constant part. ``sql`` is a DML value slot filled by one.
+    ``constant`` is a literal (or a name copied from one).
+    """
+
+    __slots__ = ("built", "sql", "constant")
+
+    def __init__(self, built: bool = False, sql: bool = False, constant: bool = False) -> None:
+        self.built = built
+        self.sql = sql
+        self.constant = constant
+
+
+_GoEnv = Dict[str, _GoFact]
+_GoVisit = Callable[["_Ctx", GenericNode, _GoEnv, Dict[str, str], Set[str]], None]
+
+# database/sql methods. The Context forms take the query as the second argument.
+_GO_SQL_ARG = {
+    "Query": 0,
+    "QueryRow": 0,
+    "Exec": 0,
+    "Prepare": 0,
+    "QueryContext": 1,
+    "QueryRowContext": 1,
+    "ExecContext": 1,
+    "PrepareContext": 1,
+}
+_GO_DML = re.compile(r"(?is)^\s*(select|insert|update|delete|replace|with)\b")
+_GO_SETVAL = re.compile(r"(?is)\bsetval\s*\(")
+# Catalog lookups interpolate schema names. That was the non-actionable class.
+_GO_CATALOG = re.compile(
+    r"(?i)\b(sqlite_master|sqlite_schema|sqlite_temp_master|information_schema|pg_catalog)\b"
+)
+# ``%%`` is a literal percent. ``%[n]`` is an explicit argument index.
+# ``*`` width or precision consumes an extra argument, so those formats are skipped.
+_GO_VERB = re.compile(
+    r"%(?P<esc>%)"
+    r"|%(?P<index>\[\d+\])?(?P<flags>[#+\- 0]*)(?P<width>\d+|\*)?"
+    r"(?P<prec>\.(?:\d+|\*))?(?P<verb>[A-Za-z])"
+)
+_GO_STRING_VERBS = frozenset({"s", "q", "v"})
+_GO_VALUE_OPS = ("=", "<", ">", "!")
+_GO_SCOPE = frozenset(
+    {
+        "block",
+        "if_statement",
+        "expression_switch_statement",
+        "type_switch_statement",
+        "select_statement",
+        "expression_case",
+        "default_case",
+        "type_case",
+        "communication_case",
+    }
+)
+
+
+def _go_fmt_aliases(root: GenericNode) -> Set[str]:
+    """Local names of the ``fmt`` package. ``fmt`` itself always counts.
+
+    Fixtures call ``fmt.Sprintf`` without an import spec. An alias
+    (``import f "fmt"``) is added when the file has one.
+    """
+    names = {"fmt"}
+    for node in _walk(root):
+        if _ts(node) != "import_spec":
+            continue
+        parts = _named(node)
+        if not parts or parts[-1].text.strip('"`') != "fmt":
+            continue
+        # The alias is a package_identifier, not an identifier.
+        if len(parts) == 2:
+            names.add(parts[0].text.strip())
+    return names
+
+
+def _go_string_literal(node: GenericNode) -> Optional[str]:
+    """Contents of a Go string literal, quotes removed, escapes left in place."""
+    text = node.text
+    kind = _ts(node)
+    if kind == "interpreted_string_literal" and len(text) >= 2 and text[0] == text[-1] == '"':
+        return text[1:-1]
+    if kind == "raw_string_literal" and len(text) >= 2 and text[0] == text[-1] == "`":
+        return text[1:-1]
+    return None
+
+
+def _go_sql_escaped_quote(text: str, index: int, single: bool) -> bool:
+    return single and text[index] == "'" and index + 1 < len(text) and text[index + 1] == "'"
+
+
+def _go_quote_step(text: str, index: int, single: bool, tick: bool) -> Tuple[bool, bool, int]:
+    char = text[index]
+    if tick:
+        return single, char != "`", index + 1
+    if char == "`":
+        return single, True, index + 1
+    if char == "\\" or _go_sql_escaped_quote(text, index, single):
+        return single, tick, index + 2
+    if char == "'":
+        return not single, tick, index + 1
+    return single, tick, index + 1
+
+
+def _go_inside_single(text: str) -> bool:
+    """True when text inserted after ``text`` sits in a SQL single-quoted string."""
+    single = False
+    tick = False
+    index = 0
+    while index < len(text):
+        single, tick, index = _go_quote_step(text, index, single, tick)
+    return single and not tick
+
+
+def _go_dml_text(text: str) -> bool:
+    """DML that is not a sequence reset or a catalog lookup."""
+    if _GO_SETVAL.search(text) or _GO_CATALOG.search(text):
+        return False
+    return _GO_DML.match(text) is not None
+
+
+def _go_hole_is_value(before: str) -> bool:
+    """True when inserted text is inside quotes or directly after =, <, > or !."""
+    return _go_inside_single(before) or before.rstrip().endswith(_GO_VALUE_OPS)
+
+
+def _go_percents_covered(fmt: str) -> bool:
+    cursor = 0
+    for match in _GO_VERB.finditer(fmt):
+        if fmt.find("%", cursor, match.start()) != -1:
+            return False
+        cursor = match.end()
+    return fmt.find("%", cursor) == -1
+
+
+def _go_one_slot(match: "re.Match[str]", next_arg: int) -> Optional[Tuple[str, int, int, int]]:
+    """``(verb, value-arg index, start, next sequential arg)``, or None if ``*`` is used."""
+    if match.group("esc"):
+        return ("%", 0, match.start(), next_arg)
+    precision = match.group("prec") or ""
+    if match.group("width") == "*" or "*" in precision:
+        return None
+    index = match.group("index")
+    if index:
+        return (match.group("verb"), int(index[1:-1]) - 1, match.start(), next_arg)
+    return (match.group("verb"), next_arg, match.start(), next_arg + 1)
+
+
+def _go_format_slots(fmt: str) -> Optional[List[Tuple[str, int, int]]]:
+    """``(verb, value-arg index, start)`` for each verb. None if the format is not simple."""
+    if not _go_percents_covered(fmt):
+        return None
+    slots: List[Tuple[str, int, int]] = []
+    next_arg = 0
+    for match in _GO_VERB.finditer(fmt):
+        slot = _go_one_slot(match, next_arg)
+        if slot is None:
+            return None
+        verb, arg_index, start, next_arg = slot
+        if verb != "%":
+            slots.append((verb, arg_index, start))
+    return slots
+
+
+def _go_nonconst(node: GenericNode, env: _GoEnv) -> bool:
+    """True when ``node`` is not a literal and not a name assigned from one."""
+    if _is_literal(node):
+        return False
+    kind = _ts(node)
+    if kind == "parenthesized_expression":
+        named = _named(node)
+        return len(named) == 1 and _go_nonconst(named[0], env)
+    if kind != "identifier":
+        return True
+    fact = env.get(node.text.strip())
+    return fact is None or not fact.constant
+
+
+def _go_is_sprintf(node: GenericNode, fmt_names: Set[str]) -> bool:
+    parts = _named(node)
+    if not parts or "." not in parts[0].text:
+        return False
+    owner, method = parts[0].text.replace(" ", "").rsplit(".", 1)
+    return method == "Sprintf" and owner in fmt_names
+
+
+def _go_plus_parts(node: GenericNode) -> List[GenericNode]:
+    if _ts(node) != "binary_expression":
+        return [node]
+    ops = [child.text for child in node.children if not child.metadata.get("named", True)]
+    named = _named(node)
+    if "+" not in ops or len(named) != 2:
+        return [node]
+    return _go_plus_parts(named[0]) + [named[1]]
+
+
+def _go_command_built_expr(node: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> bool:
+    """``fmt.Sprintf`` or ``+`` whose result depends on a non-constant part."""
+    kind = _ts(node)
+    if kind == "parenthesized_expression":
+        named = _named(node)
+        return len(named) == 1 and _go_command_built_expr(named[0], env, fmt_names)
+    if kind == "binary_expression" and _concat_builds_string(node):
+        return any(
+            _go_nonconst(part, env) for part in _go_plus_parts(node) if not _is_literal(part)
+        )
+    if kind == "call_expression" and _go_is_sprintf(node, fmt_names):
+        return any(_go_nonconst(arg, env) for arg in _args(node)[1:])
+    return False
+
+
+def _go_concat_prefix(parts: List[GenericNode]) -> Optional[str]:
+    """DML text of a ``+`` chain, or None when the chain is not a SQL value build."""
+    if not parts:
+        return None
+    first = _go_string_literal(parts[0])
+    if first is None or not _go_dml_text(first):
+        return None
+    joined = "".join(_go_string_literal(part) or "" for part in parts)
+    if not _go_dml_text(joined):
+        return None
+    return first
+
+
+def _go_concat_has_value(parts: List[GenericNode], before: str, env: _GoEnv) -> bool:
+    for part in parts:
+        literal = _go_string_literal(part)
+        if literal is not None:
+            before += literal
+            continue
+        if _go_hole_is_value(before) and _go_nonconst(part, env):
+            return True
+    return False
+
+
+def _go_concat_sql(node: GenericNode, env: _GoEnv) -> bool:
+    parts = _go_plus_parts(node)
+    first = _go_concat_prefix(parts)
+    if first is None:
+        return False
+    return _go_concat_has_value(parts[1:], first, env)
+
+
+def _go_sprintf_format(
+    node: GenericNode, fmt_names: Set[str]
+) -> Optional[Tuple[str, List[GenericNode]]]:
+    if not _go_is_sprintf(node, fmt_names):
+        return None
+    args = _args(node)
+    if len(args) < 2:
+        return None
+    fmt = _go_string_literal(args[0])
+    if fmt is None or not _go_dml_text(fmt):
+        return None
+    return fmt, args
+
+
+def _go_sprintf_slot_risky(
+    fmt: str, args: List[GenericNode], verb: str, arg_index: int, start: int, env: _GoEnv
+) -> bool:
+    if verb not in _GO_STRING_VERBS or not _go_hole_is_value(fmt[:start]):
+        return False
+    if arg_index < 0 or arg_index >= len(args) - 1:
+        return False
+    return _go_nonconst(args[arg_index + 1], env)
+
+
+def _go_sprintf_sql(node: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> bool:
+    parsed = _go_sprintf_format(node, fmt_names)
+    if parsed is None:
+        return False
+    fmt, args = parsed
+    slots = _go_format_slots(fmt)
+    if slots is None:
+        return False
+    return any(
+        _go_sprintf_slot_risky(fmt, args, verb, arg_index, start, env)
+        for verb, arg_index, start in slots
+    )
+
+
+def _go_sql_expr(node: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> bool:
+    kind = _ts(node)
+    if kind == "parenthesized_expression":
+        named = _named(node)
+        return len(named) == 1 and _go_sql_risky(named[0], env, fmt_names)
+    if kind == "binary_expression":
+        return _go_concat_sql(node, env)
+    if kind == "call_expression":
+        return _go_sprintf_sql(node, env, fmt_names)
+    return False
+
+
+def _go_sql_risky(node: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> bool:
+    if _ts(node) == "parenthesized_expression":
+        named = _named(node)
+        return len(named) == 1 and _go_sql_risky(named[0], env, fmt_names)
+    if _ts(node) == "identifier":
+        fact = env.get(node.text.strip())
+        return bool(fact and fact.sql)
+    return _go_sql_expr(node, env, fmt_names)
+
+
+def _go_fact(expr: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> _GoFact:
+    kind = _ts(expr)
+    if kind == "identifier":
+        return env.get(expr.text.strip(), _GoFact())
+    if kind == "parenthesized_expression":
+        named = _named(expr)
+        if len(named) == 1:
+            return _go_fact(named[0], env, fmt_names)
+        return _GoFact()
+    if _is_literal(expr):
+        return _GoFact(constant=True)
+    return _GoFact(
+        built=_go_command_built_expr(expr, env, fmt_names),
+        sql=_go_sql_expr(expr, env, fmt_names),
+    )
+
+
+def _go_bind_pair(env: _GoEnv, left: GenericNode, right: GenericNode, fmt_names: Set[str]) -> None:
+    if _ts(left) != "identifier":
+        return
+    name = left.text.strip()
+    if name and name != "_":
+        env[name] = _go_fact(right, env, fmt_names)
+
+
+def _go_bind_lists(env: _GoEnv, node: GenericNode, fmt_names: Set[str]) -> None:
+    lists = [child for child in _named(node) if _ts(child) == "expression_list"]
+    if len(lists) != 2:
+        return
+    left, right = _named(lists[0]), _named(lists[1])
+    if len(left) != len(right):
+        return
+    for lhs, rhs in zip(left, right):
+        _go_bind_pair(env, lhs, rhs, fmt_names)
+
+
+def _go_bind_spec(env: _GoEnv, node: GenericNode, fmt_names: Set[str]) -> None:
+    names = [child for child in _named(node) if _ts(child) == "identifier"]
+    values: List[GenericNode] = []
+    for child in _named(node):
+        if _ts(child) == "expression_list":
+            values = _named(child)
+    if len(names) == len(values):
+        for lhs, rhs in zip(names, values):
+            _go_bind_pair(env, lhs, rhs, fmt_names)
+
+
+def _go_shell_risky(arg: GenericNode, env: _GoEnv, fmt_names: Set[str]) -> bool:
+    if _ts(arg) == "parenthesized_expression":
+        named = _named(arg)
+        return len(named) == 1 and _go_shell_risky(named[0], env, fmt_names)
+    if _ts(arg) == "identifier":
+        fact = env.get(arg.text.strip())
+        return bool(fact and fact.built)
+    return _go_command_built_expr(arg, env, fmt_names)
+
+
+def _go_shell(
+    ctx: _Ctx,
+    node: GenericNode,
+    func: str,
+    args: List[GenericNode],
+    env: _GoEnv,
+    fmt_names: Set[str],
+) -> None:
     rest = args[1:] if func == "exec.CommandContext" else args
     if len(rest) < 3 or _string_value(rest[0]) not in _SHELLS:
         return
-    if _string_value(rest[1]) == "-c" and any(_built_string(a) for a in rest[2:]):
-        ctx.add(
-            node,
-            "GO001",
-            AnalysisIssueType.COMMAND_INJECTION,
-            AnalysisIssueSeverity.HIGH,
-            "Shell command built from strings and run with -c",
-            "Call the program directly with exec.Command(name, args...).",
-            "CWE-78",
-        )
+    risky = _string_value(rest[1]) == "-c" and any(
+        _go_shell_risky(arg, env, fmt_names) for arg in rest[2:]
+    )
+    if not risky:
+        return
+    ctx.add(
+        node,
+        "GO001",
+        AnalysisIssueType.COMMAND_INJECTION,
+        AnalysisIssueSeverity.HIGH,
+        "Shell command built from strings and run with -c",
+        "Call the program directly with exec.Command(name, args...).",
+        "CWE-78",
+    )
+
+
+def _go_sql_sink(
+    ctx: _Ctx,
+    node: GenericNode,
+    func: str,
+    args: List[GenericNode],
+    env: _GoEnv,
+    fmt_names: Set[str],
+) -> None:
+    index = _GO_SQL_ARG.get(func.rsplit(".", 1)[-1])
+    if index is None or index >= len(args) or not _go_sql_risky(args[index], env, fmt_names):
+        return
+    ctx.add(
+        node,
+        "GO005",
+        AnalysisIssueType.SQL_INJECTION_RISK,
+        AnalysisIssueSeverity.HIGH,
+        "SQL value built from a non-constant argument",
+        "Pass the value as a placeholder (? or $1) and keep the SQL text fixed.",
+        "CWE-89",
+    )
 
 
 def _go_weak(ctx: _Ctx, node: GenericNode, path: str) -> None:
@@ -406,15 +804,21 @@ def _go_method_call(
         _go_weak(ctx, node, path)
 
 
-def _go_call(ctx: _Ctx, node: GenericNode, imports: Dict[str, str]) -> None:
+def _go_call(
+    ctx: _Ctx, node: GenericNode, imports: Dict[str, str], env: _GoEnv, fmt_names: Set[str]
+) -> None:
     parts = _named(node)
     if not parts:
         return
     func = parts[0].text.replace(" ", "")
     args = _args(node)
     if func in ("exec.Command", "exec.CommandContext"):
-        _go_shell(ctx, node, func, args)
-    elif _ts(parts[0]) == "selector_expression" and "." in func:
+        _go_shell(ctx, node, func, args, env, fmt_names)
+        return
+    if func.rsplit(".", 1)[-1] in _GO_SQL_ARG:
+        _go_sql_sink(ctx, node, func, args, env, fmt_names)
+        return
+    if _ts(parts[0]) == "selector_expression" and "." in func:
         _go_method_call(ctx, node, func, args, imports)
 
 
@@ -434,14 +838,114 @@ def _go_keyed(ctx: _Ctx, node: GenericNode) -> None:
         )
 
 
+def _go_children(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    for child in node.children:
+        _go_visit(ctx, child, env, imports, fmt_names)
+
+
+def _go_visit_scoped(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    _go_children(ctx, node, dict(env), imports, fmt_names)
+
+
+def _go_visit_assign(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    _go_children(ctx, node, env, imports, fmt_names)
+    _go_bind_lists(env, node, fmt_names)
+
+
+def _go_visit_spec(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    _go_children(ctx, node, env, imports, fmt_names)
+    _go_bind_spec(env, node, fmt_names)
+
+
+def _go_visit_call(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    _go_call(ctx, node, imports, env, fmt_names)
+    _go_children(ctx, node, env, imports, fmt_names)
+
+
+def _go_visit_keyed(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    _go_keyed(ctx, node)
+    _go_children(ctx, node, env, imports, fmt_names)
+
+
+def _go_visit_function(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    """Each function starts empty: only assignments inside it are followed."""
+    for child in node.children:
+        if _ts(child) == "block":
+            _go_visit(ctx, child, {}, imports, fmt_names)
+        else:
+            _go_visit(ctx, child, env, imports, fmt_names)
+
+
+def _go_for_clause(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    """Bind the init, not the post statement (that runs after the body)."""
+    named = _named(node)
+    post = len(named) == 3 and _ts(named[2]) in ("assignment_statement", "inc_statement")
+    if not post:
+        _go_children(ctx, node, env, imports, fmt_names)
+        return
+    _go_visit(ctx, named[0], env, imports, fmt_names)
+    _go_visit(ctx, named[1], env, imports, fmt_names)
+    saved = dict(env)
+    _go_visit(ctx, named[2], env, imports, fmt_names)
+    env.clear()
+    env.update(saved)
+
+
+def _go_visit_for(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    inner = dict(env)
+    for child in node.children:
+        if _ts(child) == "for_clause":
+            _go_for_clause(ctx, child, inner, imports, fmt_names)
+        else:
+            _go_visit(ctx, child, inner, imports, fmt_names)
+
+
+_GO_VISIT: Dict[str, _GoVisit] = {}
+
+
+def _go_visit(
+    ctx: _Ctx, node: GenericNode, env: _GoEnv, imports: Dict[str, str], fmt_names: Set[str]
+) -> None:
+    handler = _GO_VISIT.get(_ts(node))
+    if handler is not None:
+        handler(ctx, node, env, imports, fmt_names)
+        return
+    _go_children(ctx, node, env, imports, fmt_names)
+
+
 def _check_go(ctx: _Ctx, root: GenericNode) -> None:
-    imports = _go_imports(root)
-    for node in _walk(root):
-        t = _ts(node)
-        if t == "call_expression":
-            _go_call(ctx, node, imports)
-        elif t == "keyed_element":
-            _go_keyed(ctx, node)
+    _go_visit(ctx, root, {}, _go_imports(root), _go_fmt_aliases(root))
+
+
+for _go_kind in _GO_SCOPE:
+    _GO_VISIT[_go_kind] = _go_visit_scoped
+_GO_VISIT["for_statement"] = _go_visit_for
+_GO_VISIT["function_declaration"] = _go_visit_function
+_GO_VISIT["method_declaration"] = _go_visit_function
+_GO_VISIT["short_var_declaration"] = _go_visit_assign
+_GO_VISIT["assignment_statement"] = _go_visit_assign
+_GO_VISIT["var_spec"] = _go_visit_spec
+_GO_VISIT["const_spec"] = _go_visit_spec
+_GO_VISIT["call_expression"] = _go_visit_call
+_GO_VISIT["keyed_element"] = _go_visit_keyed
 
 
 # --- Rust ----------------------------------------------------------------------

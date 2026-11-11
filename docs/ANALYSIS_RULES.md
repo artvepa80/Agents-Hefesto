@@ -1182,9 +1182,10 @@ With the feature on, these rules run on `.cs`, `.go` and `.rs` files, and on C a
 | CS002 | `new BinaryFormatter()`, `SoapFormatter`, `NetDataContractSerializer`, `LosFormatter`, `ObjectStateFormatter` | `INSECURE_DESERIALIZATION` | HIGH | 502 |
 | CS003 | `Process.Start(...)` or `new ProcessStartInfo(...)` with an argument built from strings | `COMMAND_INJECTION` | MEDIUM | 78 |
 | CS004 | `MD5`, `SHA1`, `DES`, `TripleDES`, `RC2` `.Create()`/`.HashData()`, and the `*CryptoServiceProvider` / `SHA1Managed` classes | `INSECURE_CRYPTOGRAPHY` | LOW for MD5/SHA-1 (inventory); MEDIUM for DES/TripleDES/RC2 | 327 |
-| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` | `COMMAND_INJECTION` | HIGH | 78 |
+| GO001 | `exec.Command` / `exec.CommandContext` running `sh`/`bash` `-c` with a string built by `fmt.Sprintf` or `+` with a non-constant part, or a variable assigned that build in the same block | `COMMAND_INJECTION` | HIGH | 78 |
 | GO003 | `md5.New`/`Sum`, `sha1.New`/`Sum`, `des.NewCipher`/`NewTripleDESCipher`, `rc4.NewCipher`, only when the package is imported from `crypto/...` | `INSECURE_CRYPTOGRAPHY` | LOW for md5/sha1 (inventory); MEDIUM for des/rc4 | 327 |
 | GO004 | `InsecureSkipVerify: true` | `INSECURE_COMMUNICATION` | HIGH | 295 |
+| GO005 | `Query` / `QueryRow` / `Exec` / `Prepare` (and the `Context` forms) whose SQL places a non-constant argument in a value position of a DML statement, inline or via a variable assigned in the same block | `SQL_INJECTION_RISK` | HIGH | 89 |
 | RS001 | `unsafe { ... }` blocks and `unsafe fn` (inventory) | `UNSAFE_CODE` | LOW | — |
 | RS002 | `mem::transmute` (any path, with or without turbofish) | `UNSAFE_CODE` | MEDIUM | 843 |
 | RS003 | `Command::new("sh"/"bash")` with `-c` and a `format!` string in the same call chain | `COMMAND_INJECTION` | HIGH | 78 |
@@ -1204,7 +1205,9 @@ Known limits:
   - 11 were a table name interpolated, with values passed as placeholders.
   - 5 were `setval('%s')` sequence names.
   - 3 were `%d` row counts.
-  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. Go SQL lines get the generic SQL check, as without the feature.
+  A narrower form (value positions only, no DDL, no `%d`) still kept 5 FP and had no true positive to keep, so it was not shipped. The id stays retired. A new hit under GO002 would be mixed up with that 0/57 result, so the value-position rule below is GO005.
+- GO001 follows a variable only when the same block assigned it from `fmt.Sprintf` or `+` and at least one part of that build is not a literal, and no later assignment in that block replaced it. A format whose value arguments are all literals is a constant command and is not reported. An assignment in another block (`if`, `for`, a `switch` case) does not apply outside that block. The post statement of a `for` is not the value the body sees. A plain variable with no such assignment is still not reported. Fields and package-level variables are not followed.
+- GO005 reports a non-constant argument in a SQL **value** position of `SELECT` / `INSERT` / `UPDATE` / `DELETE` / `REPLACE` / `WITH`, passed to `Query`, `QueryRow`, `Exec`, `Prepare`, or the same names with `Context`. A value position is text inside SQL single quotes, or a `+` / `%s` / `%q` / `%v` that sits immediately after `=`, `<`, `>`, or `!`. The build may be the argument itself or a variable assigned in the same block (same limits as GO001). Not reported, because those were the non-actionable gitea hits: DDL; `setval` with a quoted sequence name; a query that reads `sqlite_master`, `sqlite_schema`, `information_schema` or `pg_catalog`; identifier interpolation (`FROM %s`, a backtick-quoted name, `DELETE FROM %s`); numeric and other non-string verbs (`%d`); a constant SQL string, including one that uses `?` or `$1`; a format with a stray `%` or a `*` width. A placeholder query is ignored when its SQL text is constant. A placeholder next to a real value slot (`'%s' AND id = ?`) is still reported.
 - Deserialization has two issue types, both CWE-502 in SARIF (`external/cwe/cwe-502`). **INSECURE_DESERIALIZATION**: deserializing untrusted data with a formatter that can create arbitrary types (CWE-502). New languages use this type; Python keeps `PICKLE_USAGE`, which flags the `import pickle` line (precision `low`).
 
   | Language | Rule | Issue type | What is flagged | CWE |
@@ -1214,7 +1217,7 @@ Known limits:
 
 C and C++ (CC001-CC004): only direct calls by name (`f(...)`, `std::f(...)`, `::f(...)`) count; `obj.f(...)` and `p->f(...)` do not. Macros are not expanded, so a call hidden behind a macro is not seen, and a macro named like a function (`#define strcpy safe_strcpy`) is still reported. Bounded calls (`snprintf`, `strncpy`, `strlcpy`, `%31s`, `%.8s`) and literal commands (`system("ls")`) are not reported.
 
-Not reported on purpose: Go SQL built from strings (GO002 was dropped, see above); a SQL or command argument that is a plain variable (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`), because the tree does not show where the value came from; `Process.Start` with fixed arguments.
+Not reported on purpose: Go SQL that is only an identifier, DDL, `setval`, or a numeric verb (GO002 stays retired; GO005 is the value-position rule above); a SQL or command argument that is a plain variable with no same-block assignment from a non-constant build (`db.Query(q)`, `exec.Command("sh", "-c", cmd)`); `Process.Start` with fixed arguments.
 
 ## 📊 Quick Reference
 
