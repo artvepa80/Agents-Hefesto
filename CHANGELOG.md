@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — same-function Go shell strings and experimental GO005
+
+- GO001 (`--experimental lang-security`) follows a shell command built in the same function with `fmt.Sprintf`, `+` or `+=` and then passed to `exec.Command` or `exec.CommandContext` with `sh`, `bash`, `zsh` or `dash` and `-c`. The last straight-line assignment wins. If one branch builds the string and another assigns a literal, the call is reported. The nearest declaration wins when a name is shadowed. A function parameter, a value from another function, and a name used inside a nested function literal are not tracked. A package-level `const` string in the same file is a constant. A non-constant program name (`exec.Command(args[0], ...)`) is not reported.
+- GO005 (`--experimental lang-security`) reports `Query`, `QueryRow`, `Exec`, `Prepare`, `Raw`, `Queryx`, `QueryRowx`, `NamedQuery`, `NamedExec` and `MustExec`, and those names with `Context`, when the query was built in the same function and a string value is inserted into `SELECT`, `INSERT`, `UPDATE` or `DELETE`. It does not report a placeholder (`?`, `$1`, `@name`), a `Sprintf` verb other than `%s` and `%q`, DDL (`CREATE`, `ALTER`, `DROP`, `TRUNCATE`), `setval`, `PRAGMA`, `VACUUM`, a literal or const query, a package-level `const` string in the same file, an `IN (...)` list whose only inserted pieces sit inside that list, `sqlx.In` / `Rebind`, `pq.QuoteIdentifier`, a Kubernetes or container client, a SQL keyword that is not at the start of the string, an identifier-only format such as `DELETE FROM %s`, `Get` / `Select`, or a file under a `migrations` directory. GO002 stays retired. GO005 has not been measured to the bar in `docs/MEASUREMENT_METHOD.md`.
+
 ## [4.22.0] - TBD
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
