@@ -1,8 +1,8 @@
 # Retired inline GO002 sites on gitea.
-# sha: 4d00ed2a1e2f4d32b66a71c3eecabc6d6703f6c0
+# sha: 5c723ee0fd8954e11ebef8b2868745ee1e98e7f7
 # repo: https://github.com/go-gitea/gitea
-# The original measurement pin is not in this repository.
-# This list is gitea main as of 2026-11-03.
+# Public commit 5c723ee0fd8954e11ebef8b2868745ee1e98e7f7 (2026-11-03).
+# These 57 file:line sites are the retired inline GO002 hits at that commit.
 # GO005 must report none of these file:line pairs.
 # modelmigration/base/db.go:348 is intentionally absent and must stay reported.
 modelmigration/base/db.go:155

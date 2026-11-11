@@ -3,10 +3,10 @@
 
 The 57 file:line pairs live in
 ``tests/fixtures/go005/gitea_retired_go002_sites.txt``, pinned to gitea
-``4d00ed2a1e2f4d32b66a71c3eecabc6d6703f6c0`` (main as of 2026-11-03; the
-original measurement pin is not in this repository). GO005 must report none
-of those lines. ``modelmigration/base/db.go:348`` is not in the list and must
-stay reported.
+``5c723ee0fd8954e11ebef8b2868745ee1e98e7f7`` (2026-11-03). GO005 must report
+none of those lines. ``modelmigration/base/db.go:348`` is not in the list and
+must stay reported. The script reads ``git rev-parse HEAD`` in the checkout
+and exits with an error when that commit is different.
 
 CI does not fetch gitea. ``tests/fixtures/go005/gitea_retired_go002_result.txt``
 is the recorded result of this script. Refresh it with a local checkout:
@@ -17,6 +17,7 @@ is the recorded result of this script. Refresh it with a local checkout:
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -24,8 +25,35 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SITES = ROOT / "tests" / "fixtures" / "go005" / "gitea_retired_go002_sites.txt"
 RESULT = ROOT / "tests" / "fixtures" / "go005" / "gitea_retired_go002_result.txt"
-SHA = "4d00ed2a1e2f4d32b66a71c3eecabc6d6703f6c0"
+SHA = "5c723ee0fd8954e11ebef8b2868745ee1e98e7f7"
 KEPT = "modelmigration/base/db.go:348"
+
+
+class CheckoutPinError(RuntimeError):
+    """The checkout HEAD is not the pinned gitea commit."""
+
+
+def read_head(root: Path) -> str:
+    """Return ``git rev-parse HEAD`` for ``root``."""
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or "git rev-parse HEAD failed"
+        raise CheckoutPinError(f"{root}: {detail}")
+    return proc.stdout.strip()
+
+
+def require_pin(root: Path) -> str:
+    """Exit path for a checkout that is not ``SHA``. Returns the HEAD when it matches."""
+    head = read_head(root)
+    if head != SHA:
+        raise CheckoutPinError(f"checkout HEAD {head} is not the pinned commit {SHA}")
+    return head
 
 
 def load_sites(path: Path = SITES) -> list[tuple[str, int]]:
@@ -53,6 +81,7 @@ def _go005_lines(root: Path, rel: str) -> set[int]:
 
 def check(root: Path, sites: list[tuple[str, int]] | None = None) -> dict[str, object]:
     """Report GO005 lines that land on retired sites, and whether the kept hit remains."""
+    require_pin(root)
     chosen = load_sites() if sites is None else sites
     by_file: dict[str, set[int]] = defaultdict(set)
     for rel, line in chosen:
@@ -116,7 +145,11 @@ def main(argv: list[str]) -> int:
         help="write tests/fixtures/go005/gitea_retired_go002_result.txt",
     )
     args = parser.parse_args(argv)
-    report = check(args.checkout)
+    try:
+        report = check(args.checkout)
+    except CheckoutPinError as exc:
+        print(f"go005 gitea regression: {exc}", file=sys.stderr)
+        return 1
     text = format_result(report)
     if args.write_result:
         RESULT.write_text(text, encoding="utf-8")
