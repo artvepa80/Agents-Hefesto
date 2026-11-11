@@ -46,6 +46,8 @@ def test_recorded_gitea_result_has_zero_go005_on_retired_sites() -> None:
     assert "go005_on_retired_sites: 0" in text
     assert f"kept_hit: {KEPT}" in text
     assert "kept_hit_reported: true" in text
+    assert "label: A=yes B=FP (internal table name)" in text
+    assert len(SHA) == 40
     assert "CI does not fetch gitea" in text
 
 

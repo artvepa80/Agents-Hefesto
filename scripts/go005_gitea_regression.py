@@ -3,10 +3,11 @@
 
 The 57 file:line pairs live in
 ``tests/fixtures/go005/gitea_retired_go002_sites.txt``, pinned to gitea
-``5c723ee0fd8954e11ebef8b2868745ee1e98e7f7`` (2026-11-03). GO005 must report
-none of those lines. ``modelmigration/base/db.go:348`` is not in the list and
-must stay reported. The script reads ``git rev-parse HEAD`` in the checkout
-and exits with an error when that commit is different.
+``5c723ee0fd8954e11ebef8b2868745ee1e98e7f7`` (2026-11-03 pins.txt). GO005 must
+report none of those lines. ``modelmigration/base/db.go:348`` is not in the
+list and must stay reported. Its recorded label is
+``A=yes B=FP (internal table name)``. The script reads ``git rev-parse HEAD``
+in the checkout and exits with an error unless that value is this full SHA.
 
 CI does not fetch gitea. ``tests/fixtures/go005/gitea_retired_go002_result.txt``
 is the recorded result of this script. Refresh it with a local checkout:
@@ -27,6 +28,7 @@ SITES = ROOT / "tests" / "fixtures" / "go005" / "gitea_retired_go002_sites.txt"
 RESULT = ROOT / "tests" / "fixtures" / "go005" / "gitea_retired_go002_result.txt"
 SHA = "5c723ee0fd8954e11ebef8b2868745ee1e98e7f7"
 KEPT = "modelmigration/base/db.go:348"
+KEPT_LABEL = "A=yes B=FP (internal table name)"
 
 
 class CheckoutPinError(RuntimeError):
@@ -49,7 +51,9 @@ def read_head(root: Path) -> str:
 
 
 def require_pin(root: Path) -> str:
-    """Exit path for a checkout that is not ``SHA``. Returns the HEAD when it matches."""
+    """Return HEAD when it is the full pinned SHA. Any other value is an error."""
+    if len(SHA) != 40 or any(char not in "0123456789abcdef" for char in SHA):
+        raise CheckoutPinError(f"pinned commit must be the full SHA, got {SHA}")
     head = read_head(root)
     if head != SHA:
         raise CheckoutPinError(f"checkout HEAD {head} is not the pinned commit {SHA}")
@@ -124,6 +128,7 @@ def format_result(report: dict[str, object]) -> str:
         f"go005_on_retired_sites: {len(hits)}",
         f"kept_hit: {report['kept_hit']}",
         f"kept_hit_reported: {str(report['kept_hit_reported']).lower()}",
+        f"label: {KEPT_LABEL}",
         "ci: CI does not fetch gitea. This file is the recorded result of",
         "scripts/go005_gitea_regression.py on a local checkout of the sha above.",
     ]
