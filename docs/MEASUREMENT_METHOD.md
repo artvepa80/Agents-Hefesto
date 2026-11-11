@@ -29,6 +29,6 @@ A second labeller labels a blind random subset (file, line and pinned SHA only, 
 - A rule below the bar is reported with its numbers and stays experimental. A rule whose B is near 0 is narrowed, moved to LOW as an inventory, or dropped. The decision and its reasons go in `docs/ANALYSIS_RULES.md`.
 
 ## Release gate
-Opt-in rules must not change default output. `scripts/release_gate.py` runs main and the branch with **no flags** on the pinned corpora in `scripts/release_gate_corpora.txt`, ignores timing fields, and fails on any difference in findings, counts or exit code. The `Release Gate` workflow runs it on pull requests to main. It is required for the 4.21.0 release.
+Opt-in rules must not change default output. `scripts/release_gate.py` runs main and the branch with **no flags** on the pinned corpora in `scripts/release_gate_corpora.txt`, ignores timing fields, and fails on any difference in findings, counts or exit code. The `Release Gate` workflow runs it on pull requests to main. It is required for the 4.22.0 release.
 
 When a pull request intentionally changes default analyzer output, a red `no-flag-diff` job on that pull request is expected. The pull request description must state the exact expected difference (corpus, file, line, rule, and old and new issue counts). The reviewer checks that difference against the job log; everything else must match exactly, and `CHANGELOG.md` must carry an upgrade note for users of the `@v4` Action. The comparison is never disabled, and no expected-delta file is used.
