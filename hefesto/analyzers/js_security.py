@@ -139,25 +139,35 @@ def _walk_body(fn: GenericNode) -> Iterator[GenericNode]:
         stack.extend(reversed(current.children))
 
 
+def _consider_html(expr: Optional[GenericNode], found: List[GenericNode]) -> None:
+    expr = _unwrap(expr)
+    if expr is None or _ts(expr) != "object":
+        return
+    html = _object_html(expr)
+    if html is not None:
+        found.append(html)
+
+
+def _returned_html(fn: GenericNode, found: List[GenericNode]) -> None:
+    for node in _walk_body(fn):
+        if _ts(node) != "return_statement":
+            continue
+        kids = _named(node)
+        if kids:
+            _consider_html(kids[-1], found)
+
+
+def _expression_html(fn: GenericNode, found: List[GenericNode]) -> None:
+    for child in _named(fn):
+        if _ts(child) not in _SKIP_FN_CHILD:
+            _consider_html(child, found)
+
+
 def _html_returns(fn: GenericNode) -> List[GenericNode]:
     """``__html`` values returned by ``fn`` (block returns and expression body)."""
     found: List[GenericNode] = []
-
-    def consider(expr: Optional[GenericNode]) -> None:
-        expr = _unwrap(expr)
-        if expr is not None and _ts(expr) == "object":
-            html = _object_html(expr)
-            if html is not None:
-                found.append(html)
-
-    for node in _walk_body(fn):
-        if _ts(node) == "return_statement":
-            kids = _named(node)
-            if kids:
-                consider(kids[-1])
-    for child in _named(fn):
-        if _ts(child) not in _SKIP_FN_CHILD:
-            consider(child)
+    _returned_html(fn, found)
+    _expression_html(fn, found)
     return found
 
 
@@ -211,12 +221,18 @@ class _Bindings:
         if kind == "identifier":
             self._bind(module, _text(child), None)
         elif kind == "namespace_import":
-            names = [c for c in _named(child) if _ts(c) == "identifier"]
-            if names:
-                self._bind(module, _text(names[-1]), None)
+            self._bind_namespace(module, child)
         elif kind == "named_imports":
-            for spec in _named(child):
-                self._bind_specifier(module, spec)
+            self._bind_named(module, child)
+
+    def _bind_namespace(self, module: str, child: GenericNode) -> None:
+        names = [c for c in _named(child) if _ts(c) == "identifier"]
+        if names:
+            self._bind(module, _text(names[-1]), None)
+
+    def _bind_named(self, module: str, child: GenericNode) -> None:
+        for spec in _named(child):
+            self._bind_specifier(module, spec)
 
     def _bind_specifier(self, module: str, spec: GenericNode) -> None:
         if _ts(spec) != "import_specifier":
@@ -234,15 +250,24 @@ class _Bindings:
         target, value = kids[0], kids[1]
         module = _require_module(value)
         if module:
-            if _ts(target) == "identifier":
-                self._bind(module, _text(target), None)
-            elif _ts(target) == "object_pattern":
-                for exported, local in _pattern_entries(target):
-                    self._bind(module, local, exported)
+            self._bind_require(target, module)
             return
+        self._bind_local_function(target, value)
+
+    def _bind_require(self, target: GenericNode, module: str) -> None:
+        if _ts(target) == "identifier":
+            self._bind(module, _text(target), None)
+            return
+        if _ts(target) != "object_pattern":
+            return
+        for exported, local in _pattern_entries(target):
+            self._bind(module, local, exported)
+
+    def _bind_local_function(self, target: GenericNode, value: GenericNode) -> None:
         fn = value if _ts(value) in _NESTED_FN else _unwrap(value)
-        if _ts(target) == "identifier" and fn is not None and _ts(fn) in _NESTED_FN:
-            self.functions.setdefault(_text(target), []).extend(_html_returns(fn))
+        if _ts(target) != "identifier" or fn is None or _ts(fn) not in _NESTED_FN:
+            return
+        self.functions.setdefault(_text(target), []).extend(_html_returns(fn))
 
     def function_decl(self, node: GenericNode) -> None:
         ident = next((c for c in _named(node) if _ts(c) == "identifier"), None)
@@ -279,19 +304,25 @@ def _is_constant(node: Optional[GenericNode]) -> bool:
     if node is None:
         return False
     kind = _ts(node)
-    if kind == "string":
+    if kind in ("string", "number", "true", "false", "null", "undefined"):
         return True
     if kind == "template_string":
-        return not any(_ts(child) == "template_substitution" for child in node.children)
-    if kind in ("number", "true", "false", "null", "undefined"):
-        return True
+        return _template_is_constant(node)
+    return _operator_is_constant(node, kind)
+
+
+def _template_is_constant(node: GenericNode) -> bool:
+    return not any(_ts(child) == "template_substitution" for child in node.children)
+
+
+def _operator_is_constant(node: GenericNode, kind: str) -> bool:
     if kind == "binary_expression" and any(child.text == "+" for child in node.children):
         parts = _named(node)
         return bool(parts) and all(_is_constant(part) for part in parts)
-    if kind in ("ternary_expression", "conditional_expression"):
-        parts = _named(node)
-        return len(parts) >= 3 and _is_constant(parts[-2]) and _is_constant(parts[-1])
-    return False
+    if kind not in ("ternary_expression", "conditional_expression"):
+        return False
+    parts = _named(node)
+    return len(parts) >= 3 and _is_constant(parts[-2]) and _is_constant(parts[-1])
 
 
 def _is_sanitizer_call(node: Optional[GenericNode], bindings: _Bindings) -> bool:
@@ -301,19 +332,22 @@ def _is_sanitizer_call(node: Optional[GenericNode], bindings: _Bindings) -> bool
     kids = _named(node)
     if not kids:
         return False
-    callee = kids[0]
+    return _callee_is_sanitizer(kids[0], bindings)
+
+
+def _callee_is_sanitizer(callee: GenericNode, bindings: _Bindings) -> bool:
     if _ts(callee) == "identifier":
         return _text(callee) in bindings.sanitizer_fns
-    if _ts(callee) == "member_expression":
-        parts = _named(callee)
-        if (
-            len(parts) == 2
-            and _ts(parts[0]) == "identifier"
-            and _text(parts[1]) == "sanitize"
-            and _text(parts[0]) in bindings.sanitizer_objects
-        ):
-            return True
-    return False
+    if _ts(callee) != "member_expression":
+        return False
+    return _member_is_sanitizer(callee, bindings)
+
+
+def _member_is_sanitizer(callee: GenericNode, bindings: _Bindings) -> bool:
+    parts = _named(callee)
+    if len(parts) != 2 or _ts(parts[0]) != "identifier" or _text(parts[1]) != "sanitize":
+        return False
+    return _text(parts[0]) in bindings.sanitizer_objects
 
 
 def _unsafe_html(node: Optional[GenericNode], bindings: _Bindings) -> bool:
@@ -329,8 +363,16 @@ def _unsafe_prop(node: Optional[GenericNode], bindings: _Bindings) -> bool:
     if node is None:
         return False
     if _ts(node) == "object":
-        html = _object_html(node)
-        return html is not None and _unsafe_html(html, bindings)
+        return _object_html_unsafe(node, bindings)
+    return _helper_call_unsafe(node, bindings)
+
+
+def _object_html_unsafe(node: GenericNode, bindings: _Bindings) -> bool:
+    html = _object_html(node)
+    return html is not None and _unsafe_html(html, bindings)
+
+
+def _helper_call_unsafe(node: GenericNode, bindings: _Bindings) -> bool:
     if _ts(node) != "call_expression":
         return False
     kids = _named(node)
@@ -351,16 +393,20 @@ def _javascript_url(node: Optional[GenericNode]) -> bool:
     if kind == "string":
         text = _string_content(node)
     elif kind == "template_string":
-        parts: List[str] = []
-        for child in node.children:
-            if _ts(child) == "template_substitution":
-                break
-            if _ts(child) == "string_fragment":
-                parts.append(child.text)
-        text = "".join(parts)
+        text = _template_prefix(node)
     else:
         return False
     return text.strip().lower().startswith("javascript:")
+
+
+def _template_prefix(node: GenericNode) -> str:
+    parts: List[str] = []
+    for child in node.children:
+        if _ts(child) == "template_substitution":
+            break
+        if _ts(child) == "string_fragment":
+            parts.append(child.text)
+    return "".join(parts)
 
 
 def _member_prop(node: GenericNode) -> Optional[str]:
@@ -499,35 +545,49 @@ def _check_call(report: _Report, node: GenericNode) -> None:
     if callee is None or arguments is None:
         return
     args = _named(arguments)
-    if args and _is_shell_exec(callee, report.bindings) and _dynamic_command(args[0]):
-        report.add(
-            node,
-            "JS001",
-            "shelljs exec runs a command built from a template or concatenation",
-            "Keep the command a constant, or pass arguments separately from the program name.",
-            issue_type=AnalysisIssueType.COMMAND_INJECTION,
-            cwe="CWE-78",
-        )
+    _check_shell_call(report, node, callee, args)
+    _check_dom_call(report, node, callee, args)
+
+
+def _check_shell_call(
+    report: _Report, node: GenericNode, callee: GenericNode, args: List[GenericNode]
+) -> None:
+    if not args or not _is_shell_exec(callee, report.bindings):
+        return
+    if not _dynamic_command(args[0]):
+        return
+    report.add(
+        node,
+        "JS001",
+        "shelljs exec runs a command built from a template or concatenation",
+        "Keep the command a constant, or pass arguments separately from the program name.",
+        issue_type=AnalysisIssueType.COMMAND_INJECTION,
+        cwe="CWE-78",
+    )
+
+
+def _check_dom_call(
+    report: _Report, node: GenericNode, callee: GenericNode, args: List[GenericNode]
+) -> None:
     if _ts(callee) != "member_expression":
         return
     parts = _named(callee)
     if len(parts) != 2:
         return
-    prop = _text(parts[1])
-    if prop == "insertAdjacentHTML" and len(args) >= 2 and _unsafe_html(args[1], report.bindings):
-        report.add(
-            node,
-            "JS002",
-            "Unsanitized HTML passed to insertAdjacentHTML",
-            _HTML_SUGGESTION,
-        )
-    elif (
-        prop in _WRITE
-        and _ts(parts[0]) == "identifier"
-        and _text(parts[0]) == "document"
-        and args
-        and _unsafe_html(args[0], report.bindings)
-    ):
+    _check_dom_prop(report, node, parts, _text(parts[1]), args)
+
+
+def _check_dom_prop(
+    report: _Report,
+    node: GenericNode,
+    parts: List[GenericNode],
+    prop: str,
+    args: List[GenericNode],
+) -> None:
+    if prop == "insertAdjacentHTML":
+        _check_insert_html(report, node, args)
+        return
+    if prop in _WRITE and _is_document(parts) and args and _unsafe_html(args[0], report.bindings):
         report.add(
             node,
             "JS002",
@@ -536,27 +596,49 @@ def _check_call(report: _Report, node: GenericNode) -> None:
         )
 
 
+def _check_insert_html(report: _Report, node: GenericNode, args: List[GenericNode]) -> None:
+    if len(args) >= 2 and _unsafe_html(args[1], report.bindings):
+        report.add(
+            node,
+            "JS002",
+            "Unsanitized HTML passed to insertAdjacentHTML",
+            _HTML_SUGGESTION,
+        )
+
+
+def _is_document(parts: List[GenericNode]) -> bool:
+    return _ts(parts[0]) == "identifier" and _text(parts[0]) == "document"
+
+
+def _record_binding(bindings: _Bindings, node: GenericNode) -> None:
+    kind = _ts(node)
+    if kind == "import_statement":
+        bindings.import_statement(node)
+    elif kind == "variable_declarator":
+        bindings.declarator(node)
+    elif kind == "function_declaration":
+        bindings.function_decl(node)
+
+
+def _report_node(report: _Report, node: GenericNode) -> None:
+    kind = _ts(node)
+    if kind == "jsx_attribute":
+        _check_attribute(report, node)
+    elif kind in ("assignment_expression", "augmented_assignment_expression"):
+        _check_assignment(report, node)
+    elif kind == "call_expression":
+        _check_call(report, node)
+
+
 def find_js_security_issues(tree: GenericAST, file_path: str) -> List[AnalysisIssue]:
     """XSS findings for one JavaScript or TypeScript tree. The caller gates the flag."""
-    bindings = _Bindings()
     nodes = tree.walk()
+    bindings = _Bindings()
     for node in nodes:
-        kind = _ts(node)
-        if kind == "import_statement":
-            bindings.import_statement(node)
-        elif kind == "variable_declarator":
-            bindings.declarator(node)
-        elif kind == "function_declaration":
-            bindings.function_decl(node)
+        _record_binding(bindings, node)
     report = _Report(file_path, bindings)
     for node in nodes:
-        kind = _ts(node)
-        if kind == "jsx_attribute":
-            _check_attribute(report, node)
-        elif kind in ("assignment_expression", "augmented_assignment_expression"):
-            _check_assignment(report, node)
-        elif kind == "call_expression":
-            _check_call(report, node)
+        _report_node(report, node)
     return report.issues
 
 
