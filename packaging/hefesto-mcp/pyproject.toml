@@ -10,9 +10,27 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 dependencies = ["hefesto-ai[mcp]==4.22.0"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Quality Assurance",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Operating System :: OS Independent",
+]
 
 [project.scripts]
 hefesto-mcp = "hefesto.mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/artvepa80/Agents-Hefesto"
+Documentation = "https://github.com/artvepa80/Agents-Hefesto#readme"
+Repository = "https://github.com/artvepa80/Agents-Hefesto"
+Issues = "https://github.com/artvepa80/Agents-Hefesto/issues"
 
 # Metadata-only distribution: the script lives in hefesto-ai.
 # bypass-selection makes the wheel include empty (no Python modules).
