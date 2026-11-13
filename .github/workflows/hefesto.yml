@@ -54,7 +54,7 @@ jobs:
       - name: HefestoAI full scan
         # Floating major tag. Pin a commit if policy requires it:
         # artvepa80/Agents-Hefesto@2b72fd0910edc46ab92afc6dbeb068d6856ae3a1 # v4.20.2
-        uses: artvepa80/Agents-Hefesto@113b91b82eb7cf29267fef99a74534c7b60f5c54 # v4.20.4
+        uses: artvepa80/Agents-Hefesto@e2e93a2c82b88b9ca19a3180e50939c8cebc5b00 # v4.21.0
         continue-on-error: true  # remove to make the gate blocking
         with:
           target: .
