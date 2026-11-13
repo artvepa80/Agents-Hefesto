@@ -1,4 +1,4 @@
-"""C#, Go and Rust security rules (CS001-CS004, GO001-GO004, RS001-RS003)."""
+"""C#, Go and Rust security rules (CS001-CS004, GO001-GO005, RS001-RS003)."""
 
 from __future__ import annotations
 
@@ -90,9 +90,13 @@ GO_CASES = [
     ('exec.Command("ls", d)', []),
     ('exec.Command("sh", "-c", "ls -la")', []),
     ('exec.Command("sh", "-c", d)', []),
-    # GO002 was dropped from v1 (57/57 non-actionable on the measured corpus).
-    ('db.Query("SELECT * FROM t WHERE a=" + a)', []),
-    ('db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))', []),
+    # A value inserted into DML is GO005. Identifier-only text, placeholders and
+    # non-SQL text are not. GO002 stays retired.
+    ('db.Query("SELECT * FROM t WHERE a=" + a)', [("GO005", 4, "HIGH")]),
+    (
+        'db.QueryRowContext(ctx, fmt.Sprintf("SELECT * FROM t WHERE a=%s", a))',
+        [("GO005", 4, "HIGH")],
+    ),
     ('tx.Exec(fmt.Sprintf("DELETE FROM %s", d))', []),
     ('db.Query("SELECT * FROM t WHERE a=$1", a)', []),
     ('r.Exec(fmt.Sprintf("hello %s", d))', []),
@@ -118,6 +122,497 @@ def test_go_weak_hash_only_from_crypto_packages() -> None:
 def test_go_rules_skip_test_files() -> None:
     code = _go("_ = tls.Config{InsecureSkipVerify: true}")
     assert _rules("go", code, path="pkg/client_test.go") == []
+
+
+# Same-function assignments. The line numbers are the call, not the build.
+GO_FLOW = [
+    (
+        _go('command := fmt.Sprintf("ls %s", d)\nexec.Command("sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go('command := "rm " + d\nexec.Command("sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go('command := "ls "\ncommand += d\nexec.Command("sh", "-c", command)'),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go('command := fmt.Sprintf("ls %s", d)\nexec.CommandContext(d, "sh", "-c", command)'),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\nalias := command\nexec.Command("sh", "-c", alias)'
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go('exec.Command("sh", "-c", ("rm " + d))'),
+        [("GO001", 4, "HIGH")],
+    ),
+    (
+        _go('exec.Command("sh", "-c", fmt.Sprintf("ls %d", a))'),
+        [("GO001", 4, "HIGH")],
+    ),
+    (
+        _go(
+            'command := "ls -la"\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go(
+            "var command string\n"
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls -la"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 10, "HIGH")],
+    ),
+    (
+        _go(
+            'command := "ls -la"\n'
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 10, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'if d == "" {\n'
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 8, "HIGH")],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            "{\n"
+            'command := "ls -la"\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 9, "HIGH")],
+    ),
+    (
+        _go(
+            "go func() {\n"
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}()"
+        ),
+        [("GO001", 6, "HIGH")],
+    ),
+    (
+        _go(
+            'if command := fmt.Sprintf("ls %s", d); command != "" {\n'
+            'exec.Command("sh", "-c", command)\n'
+            "}"
+        ),
+        [("GO001", 5, "HIGH")],
+    ),
+    (
+        _go(
+            "var command string\n"
+            "switch d {\n"
+            'case "a":\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "default:\n"
+            'command = "ls"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [("GO001", 11, "HIGH")],
+    ),
+    # Negatives: literal, last write is a literal, parameter, const sprintf.
+    (_go('command := "ls -la"\nexec.Command("sh", "-c", command)'), []),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'command = "ls -la"\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (
+        _go(
+            'command := fmt.Sprintf("ls %s", d)\n'
+            'if d != "" {\n'
+            'command = "ls"\n'
+            "} else {\n"
+            'command = "ls -la"\n'
+            "}\n"
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (
+        _go(
+            "var command string\n"
+            'if d != "" {\n'
+            'command = fmt.Sprintf("ls %s", d)\n'
+            "} else {\n"
+            'command = "ls"\n'
+            "}\n"
+            'command = "ls -la"\n'
+            'exec.Command("sh", "-c", command)'
+        ),
+        [],
+    ),
+    (_go('exec.Command("sh", "-c", fmt.Sprintf("ls %s", "tmp"))'), []),
+    (_go('const command = "ls -la"\nexec.Command("sh", "-c", command)'), []),
+]
+
+
+@pytest.mark.parametrize("code, expected", GO_FLOW)
+def test_go_command_follows_same_function_assignments(code: str, expected) -> None:
+    assert _rules("go", code) == expected
+
+
+def test_go_command_parameter_is_not_tracked() -> None:
+    code = 'package p\n\nfunc f(command string) {\nexec.Command("sh", "-c", command)\n}\n'
+    assert _rules("go", code) == []
+
+
+def test_go_command_from_another_function_is_not_tracked() -> None:
+    code = (
+        "package p\n\n"
+        "func helper(d string) string {\n"
+        'return fmt.Sprintf("ls %s", d)\n'
+        "}\n\n"
+        "func f(d string) {\n"
+        "command := helper(d)\n"
+        'exec.Command("sh", "-c", command)\n'
+        "}\n"
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_command_closure_does_not_see_outer_build() -> None:
+    code = _go(
+        'command := fmt.Sprintf("ls %s", d)\n'
+        "go func() {\n"
+        'exec.Command("sh", "-c", command)\n'
+        "}()"
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_command_flow_skips_test_files() -> None:
+    code = _go('command := fmt.Sprintf("ls %s", d)\nexec.Command("sh", "-c", command)')
+    assert _rules("go", code, path="pkg/f_test.go") == []
+
+
+_GO005 = [("GO005", 4, "HIGH")]
+
+# Synthetic shapes. Not copies of the measured repositories.
+GO_SQL = [
+    (
+        _go("q := fmt.Sprintf(`SELECT id FROM t WHERE id=%s`, a)\nDB.Query(q)"),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go("query := fmt.Sprintf(\"SELECT '%s' AS '%s'\", a, \"col\")\nsi.db.Exec(query)"),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go("query := fmt.Sprintf(\"SELECT name FROM t WHERE name = '%s'\", a)\ns.db.Query(query)"),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go('q := "SELECT id FROM t WHERE id="\nq += a\ndb.Query(q)'),
+        [("GO005", 6, "HIGH")],
+    ),
+    (
+        _go("q := fmt.Sprintf(\"UPDATE t SET name='%s'\", a)\ntx.Exec(q)"),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go('q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\ndb.QueryRowContext(d, q)'),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go('q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\ndb.Raw(q)'),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go("q := fmt.Sprintf(\"UPDATE t SET name='%s'\", a)\ndb.Exec(q)"),
+        [("GO005", 5, "HIGH")],
+    ),
+    (_go('db.Prepare(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), _GO005),
+    (_go('db.Queryx(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), _GO005),
+    (_go("db.MustExec(fmt.Sprintf(\"INSERT INTO t VALUES ('%s')\", a))"), _GO005),
+    (_go('db.Exec(fmt.Sprintf("INSERT INTO t VALUES (%s)", a))'), _GO005),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE n>%s", a))'), _GO005),
+    (_go('db.Query(fmt.Sprintf("select id from t where id=%s", a))'), _GO005),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%q", a))'), _GO005),
+    (
+        _go("db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE id='%s' AND note='use $1'\", a))"),
+        _GO005,
+    ),
+    (
+        _go("db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE note='IN (' AND id='%s'\", a))"),
+        _GO005,
+    ),
+    (
+        _go(
+            "q := fmt.Sprintf(\"SELECT id FROM t WHERE id IN (%s) AND name='%s'\", a, d)\n"
+            "db.Query(q)"
+        ),
+        [("GO005", 5, "HIGH")],
+    ),
+    (
+        _go(
+            "var q string\n"
+            'if d != "" {\n'
+            'q = fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+            "} else {\n"
+            'q = "SELECT 1"\n'
+            "}\n"
+            "db.Query(q)"
+        ),
+        [("GO005", 10, "HIGH")],
+    ),
+    (
+        _go(
+            'q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+            "{\n"
+            'q := "SELECT 1"\n'
+            "db.Query(q)\n"
+            "}\n"
+            "db.Query(q)"
+        ),
+        [("GO005", 9, "HIGH")],
+    ),
+    (
+        _go(
+            "go func() {\n"
+            'q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+            "db.Query(q)\n"
+            "}()"
+        ),
+        [("GO005", 6, "HIGH")],
+    ),
+    (
+        _go(
+            'q := fmt.Sprintf("SELECT id FROM %s WHERE id=%s", pq.QuoteIdentifier(a), d)\n'
+            "db.Query(q)"
+        ),
+        [("GO005", 5, "HIGH")],
+    ),
+    # Placeholders, numeric verbs, DDL, maintenance, consts.
+    (_go("db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE id=? AND name='%s'\", a))"), []),
+    (
+        _go("q := fmt.Sprintf(\"SELECT id FROM t WHERE id=$1 AND name='%s'\", a)\ndb.Query(q)"),
+        [],
+    ),
+    (_go('q := "SELECT id FROM t WHERE id=@name AND name=\'" + a\ndb.Query(q)'), []),
+    (_go('db.Exec(fmt.Sprintf("UPDATE t SET n=%d", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("SELECT %t", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("SELECT %f", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("SELECT %x", a))'), []),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%v", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("CREATE TABLE %s (id int)", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("ALTER TABLE %s ADD name text", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("DROP TABLE %s", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("TRUNCATE %s", a))'), []),
+    (_go('db.Exec("CREATE TABLE users (id int)")'), []),
+    (_go("db.Exec(fmt.Sprintf(\"SELECT setval('%s', 1)\", a))"), []),
+    (_go('db.Exec(fmt.Sprintf("PRAGMA table_info(%s)", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("VACUUM %s", a))'), []),
+    (_go('const q = "SELECT id FROM t"\ndb.Query(q)'), []),
+    (_go('db.Query("SELECT id FROM t WHERE id=1")'), []),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%s", "1"))'), []),
+    (_go('db.Prepare("SELECT id FROM t WHERE id=?")'), []),
+    # IN lists, QuoteIdentifier, other clients, keyword not at the start.
+    (
+        _go('q := "SELECT id FROM t WHERE id IN ("\nq += a\nq += ")"\ndb.Query(q)'),
+        [],
+    ),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE id IN (%s)", a))'), []),
+    (_go("db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE id IN ('%s')\", a))"), []),
+    (_go('q := "SELECT id FROM t WHERE id IN (" + a\ndb.Query(q)'), []),
+    (_go('q := "SELECT id FROM t WHERE id IN (" + a\ndb.Query(sqlx.In(q, a))'), []),
+    (
+        _go(
+            "q := fmt.Sprintf(\"SELECT id FROM t WHERE id='%s'\", a)\n"
+            "q = db.Rebind(q)\n"
+            "db.Query(q)"
+        ),
+        [],
+    ),
+    (
+        _go(
+            "q := fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", pq.QuoteIdentifier(a))\n"
+            "db.Query(q)"
+        ),
+        [],
+    ),
+    (
+        _go(
+            "id := pq.QuoteIdentifier(a)\n"
+            "q := fmt.Sprintf(\"DELETE FROM t WHERE name='%s'\", id)\n"
+            "tx.Exec(q)"
+        ),
+        [],
+    ),
+    (_go('dockerClient.Exec(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), []),
+    (_go('kubeClient.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), []),
+    (_go("clientset.Exec(fmt.Sprintf(\"UPDATE t SET name='%s'\", a))"), []),
+    (_go('q := "note SELECT " + a\ndb.Query(q)'), []),
+    (_go('db.Query(fmt.Sprintf("-- SELECT %s", a))'), []),
+    (_go('db.Exec(fmt.Sprintf("UPDATE %s SET a=1", d))'), []),
+    (_go('db.Query(fmt.Sprintf("SELECT id FROM %s", d))'), []),
+    (_go('db.Exec(fmt.Sprintf("INSERT INTO %s VALUES (1)", d))'), []),
+    (_go('db.Get(out, fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), []),
+    (_go('db.Select(out, fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'), []),
+    (
+        _go(
+            'q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n' 'q = "SELECT 1"\n' "db.Query(q)"
+        ),
+        [],
+    ),
+    (
+        _go(
+            'q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+            'if d != "" {\n'
+            'q = "SELECT 1"\n'
+            "} else {\n"
+            'q = "SELECT 2"\n'
+            "}\n"
+            "db.Query(q)"
+        ),
+        [],
+    ),
+    (
+        _go(
+            'q := fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+            "go func() {\n"
+            "db.Query(q)\n"
+            "}()"
+        ),
+        [],
+    ),
+]
+
+
+@pytest.mark.parametrize("code, expected", GO_SQL)
+def test_go_sql_value_injection(code: str, expected) -> None:
+    assert _rules("go", code) == expected
+
+
+def test_go_package_const_string_in_the_same_file_is_not_go005() -> None:
+    """A package-level const string is a constant, even when declared below the use."""
+    code = "\n".join(
+        [
+            "package p",
+            "func f(a string) {",
+            "db.Query(query)",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", name))",
+            "db.Query(quoted)",
+            'db.Query("SELECT id FROM t WHERE name=\'" + name + "\'")',
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", also))",
+            "go func() {",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", title))",
+            "}()",
+            "}",
+            "const (",
+            'query = "SELECT id FROM t WHERE id=1"',
+            'name = "admin"',
+            'quoted = "SELECT id FROM t WHERE name=\'" + name + "\'"',
+            "also",
+            ")",
+            'const title = "admin"',
+            "",
+        ]
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_package_const_format_with_a_variable_is_go005() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            "const format = \"SELECT id FROM t WHERE name='%s'\"",
+            "func f(a string) {",
+            "db.Query(fmt.Sprintf(format, a))",
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == [("GO005", 4, "HIGH")]
+
+
+def test_go_parameter_shadows_package_const_string() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            'const name = "admin"',
+            "func f(name string) {",
+            "db.Query(fmt.Sprintf(\"SELECT id FROM t WHERE name='%s'\", name))",
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == [("GO005", 4, "HIGH")]
+
+
+def test_go_package_const_string_is_not_a_shell_value() -> None:
+    code = "\n".join(
+        [
+            "package p",
+            'const dir = "/tmp"',
+            "func f() {",
+            'exec.Command("sh", "-c", fmt.Sprintf("ls %s", dir))',
+            "}",
+            "",
+        ]
+    )
+    assert _rules("go", code) == []
+
+
+def test_go_sql_parameter_and_other_function_are_not_tracked() -> None:
+    param = "package p\n\nfunc f(q string) {\ndb.Query(q)\n}\n"
+    assert _rules("go", param) == []
+    other = (
+        "package p\n\n"
+        "func helper(a string) string {\n"
+        'return fmt.Sprintf("SELECT id FROM t WHERE id=%s", a)\n'
+        "}\n\n"
+        "func f(a string) {\n"
+        "q := helper(a)\n"
+        "db.Query(q)\n"
+        "}\n"
+    )
+    assert _rules("go", other) == []
+
+
+def test_go_sql_skips_test_files_and_migration_directories() -> None:
+    code = _go('db.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))')
+    assert _rules("go", code, path="pkg/q_test.go") == []
+    assert _rules("go", code, path="db/migrations/001.go") == []
+    assert _rules("go", code, path="db/migrations.go") == _GO005
+    both = _go(
+        'command := fmt.Sprintf("ls %s", d)\n'
+        'exec.Command("sh", "-c", command)\n'
+        'db.Query(fmt.Sprintf("SELECT id FROM t WHERE id=%s", a))'
+    )
+    assert _rules("go", both, path="db/migrations/001.go") == [("GO001", 5, "HIGH")]
 
 
 # --- Rust -------------------------------------------------------------------
@@ -365,12 +860,16 @@ def test_weak_hash_message_says_inventory() -> None:
     assert len(msgs) == 1 and "(inventory)" in msgs[0]
 
 
-def test_go_sql_has_no_rule_finding() -> None:
+def test_go_sql_value_is_go005_and_identifier_is_not() -> None:
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
     code = _go('db.Query("SELECT * FROM t WHERE a=" + a)')
     tree = TreeSitterParser("go").parse(code, "a.go")
-    assert [i.rule_id for i in _analyzer().analyze(tree, "a.go", code) if i.rule_id] == []
+    issues = [i for i in _analyzer().analyze(tree, "a.go", code) if i.rule_id]
+    assert [(i.rule_id, i.issue_type.value, i.metadata.get("cwe")) for i in issues] == [
+        ("GO005", "SQL_INJECTION_RISK", "CWE-89")
+    ]
+    assert _rules("go", _go('tx.Exec(fmt.Sprintf("DELETE FROM %s", d))')) == []
 
 
 def test_strings_and_comments_never_match() -> None:

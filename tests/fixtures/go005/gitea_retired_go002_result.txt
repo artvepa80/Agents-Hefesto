@@ -1,0 +1,8 @@
+sha: 5c723ee0fd8954e11ebef8b2868745ee1e98e7f7
+retired_sites: 57
+go005_on_retired_sites: 0
+kept_hit: modelmigration/base/db.go:348
+kept_hit_reported: true
+label: A=yes B=FP (internal table name)
+ci: CI does not fetch gitea. This file is the recorded result of
+scripts/go005_gitea_regression.py on a local checkout of the sha above.

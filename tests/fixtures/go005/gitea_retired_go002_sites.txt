@@ -1,0 +1,64 @@
+# Retired inline GO002 sites on gitea.
+# sha: 5c723ee0fd8954e11ebef8b2868745ee1e98e7f7
+# repo: https://github.com/go-gitea/gitea
+# Public commit 5c723ee0fd8954e11ebef8b2868745ee1e98e7f7 (2026-11-03).
+# These 57 file:line sites are the retired inline GO002 hits at that commit.
+# GO005 must report none of these file:line pairs.
+# modelmigration/base/db.go:348 is intentionally absent and must stay reported.
+modelmigration/base/db.go:155
+modelmigration/base/db.go:165
+modelmigration/base/db.go:181
+modelmigration/base/db.go:192
+modelmigration/base/db.go:232
+modelmigration/base/db.go:238
+modelmigration/base/db.go:253
+modelmigration/base/db.go:269
+modelmigration/base/db.go:276
+modelmigration/base/db.go:282
+modelmigration/base/db.go:288
+modelmigration/base/db.go:296
+modelmigration/base/db.go:338
+modelmigration/base/db.go:393
+modelmigration/base/db.go:398
+modelmigration/base/db.go:410
+modelmigration/base/db.go:423
+modelmigration/base/db.go:438
+modelmigration/base/db.go:456
+modelmigration/base/db.go:467
+modelmigration/base/db.go:472
+modelmigration/v1_13/v145.go:45
+modelmigration/v1_13/v145.go:63
+modelmigration/v1_13/v145.go:67
+modelmigration/v1_13/v145.go:75
+modelmigration/v1_13/v151.go:41
+modelmigration/v1_13/v151.go:45
+modelmigration/v1_13/v151.go:172
+modelmigration/v1_13/v151.go:184
+modelmigration/v1_14/v175.go:42
+modelmigration/v1_14/v175.go:46
+modelmigration/v1_20/v245.go:57
+modelmigration/v1_22/v283.go:29
+modelmigration/v1_22/v286.go:56
+modelmigration/v1_22/v286.go:58
+modelmigration/v1_22/v286.go:60
+modelmigration/v1_22/v294.go:33
+modelmigration/v1_26/v329.go:49
+models/db/collation.go:147
+models/db/collation.go:151
+models/db/convert.go:27
+models/db/convert.go:37
+models/db/convert.go:41
+models/db/engine.go:176
+models/db/index.go:29
+models/db/index.go:39
+models/db/index.go:57
+models/db/index.go:70
+models/db/index.go:88
+models/db/index.go:128
+models/db/index.go:138
+models/db/index.go:139
+models/db/sequence.go:61
+models/db/sequence.go:64
+models/unittest/fixtures_loader.go:125
+models/unittest/fixtures_loader.go:172
+models/unittest/testdb.go:177
