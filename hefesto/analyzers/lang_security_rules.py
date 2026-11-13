@@ -13,7 +13,8 @@ finding per construct with a stable ``rule_id``:
   value built in the same function. GO002 (SQL built from strings) was
   dropped from v1: every measured hit was non-actionable.
 * Rust: RS001 ``unsafe`` inventory, RS002 ``mem::transmute``, RS003 shell
-  ``-c`` with a ``format!`` string.
+  ``-c`` with a ``format!`` string in the same call or built earlier in the
+  same function.
 * C and C++: CC001 ``gets``, CC002 unbounded copy or write (``strcpy``,
   ``strcat``, ``sprintf`` with ``%s``, ``scanf`` ``%s`` without a width),
   CC003 format string that is not a literal, CC004 ``system``/``popen`` with
@@ -715,6 +716,31 @@ _RS_TRANSMUTE = frozenset(
 )
 _RS_SHELL_CHAIN = re.compile(r'Command::new\(\s*"(?:/bin/)?(?:sh|bash|zsh|dash)"\s*\)')
 _RS_DASH_C = re.compile(r'(?:\.arg\(\s*"-c"\s*\)|\.args\(\s*[\[&]*\s*"-c")')
+_RS_SHELLS = frozenset(
+    {"sh", "bash", "zsh", "dash", "/bin/sh", "/bin/bash", "/bin/zsh", "/bin/dash"}
+)
+_RS_PASSTHROUGH = frozenset(
+    {"as_str", "as_mut_str", "as_ref", "to_string", "to_owned", "into", "trim"}
+)
+_RS_BUILT = "built"
+_RS_CONST = "const"
+_RS_UNKNOWN = "unknown"
+_RS_HOLE = re.compile(r"\{([^{}]*)\}")
+_RS_LET_SKIP = frozenset(
+    {
+        "mutable_specifier",
+        "identifier",
+        "type_identifier",
+        "generic_type",
+        "reference_type",
+        "primitive_type",
+        "scoped_type_identifier",
+        "tuple_type",
+        "array_type",
+        "function_type",
+        "lifetime",
+    }
+)
 
 
 def _walk_with_parent(root: GenericNode) -> Iterator[Tuple[GenericNode, str]]:
@@ -756,29 +782,497 @@ def _rs_transmute(ctx: _Ctx, node: GenericNode) -> None:
         )
 
 
-def _rs_shell(ctx: _Ctx, node: GenericNode) -> None:
+def _rs_report_shell(ctx: _Ctx, node: GenericNode) -> None:
+    ctx.add(
+        node,
+        "RS003",
+        AnalysisIssueType.COMMAND_INJECTION,
+        AnalysisIssueSeverity.HIGH,
+        "Shell command built with format! and run with -c",
+        "Call the program directly with Command::new(program).args(...).",
+        "CWE-78",
+    )
+
+
+class _RsBindings:
+    """Names bound in one function. ``True`` was built with ``format!``.
+
+    A closure reads the enclosing function but its assignments stay local:
+    the closure may not run. A nested function does not see the outer names.
+    """
+
+    def __init__(self, parent: Optional["_RsBindings"] = None, local_only: bool = False) -> None:
+        self.parent = parent
+        self.local_only = local_only
+        self.vals: Dict[str, Optional[bool]] = {}
+
+    def get(self, name: str) -> Optional[bool]:
+        if name in self.vals:
+            return self.vals[name]
+        if self.parent is not None:
+            return self.parent.get(name)
+        return None
+
+    def let_name(self, name: str, built: Optional[bool]) -> None:
+        self.vals[name] = built
+
+    def assign(self, name: str, built: Optional[bool]) -> None:
+        if self.local_only or name in self.vals or self.parent is None:
+            self.vals[name] = built
+            return
+        self.parent.assign(name, built)
+
+
+def _rs_merge(kinds: List[str]) -> str:
+    """One built branch makes the value built; every branch constant keeps it constant."""
+    if any(kind == _RS_BUILT for kind in kinds):
+        return _RS_BUILT
+    if kinds and all(kind == _RS_CONST for kind in kinds):
+        return _RS_CONST
+    return _RS_UNKNOWN
+
+
+def _rs_stored(kind: str) -> Optional[bool]:
+    if kind == _RS_BUILT:
+        return True
+    if kind == _RS_CONST:
+        return False
+    return None
+
+
+def _rs_string_body(node: GenericNode) -> Optional[str]:
+    if _ts(node) not in ("string_literal", "raw_string_literal"):
+        return None
+    return "".join(c.text for c in node.children if _ts(c) == "string_content")
+
+
+def _rs_class(node: Optional[GenericNode], scope: _RsBindings) -> str:
+    """``built`` when a ``format!`` hole is not a constant; calls are not opened."""
+    if node is None:
+        return _RS_UNKNOWN
+    kind = _RS_CLASS.get(_ts(node))
+    if kind is None:
+        return _RS_UNKNOWN
+    return kind(node, scope)
+
+
+def _rs_const_literal(node: GenericNode, scope: _RsBindings) -> str:
+    return _RS_CONST
+
+
+def _rs_ident_class(node: GenericNode, scope: _RsBindings) -> str:
+    known = scope.get(node.text)
+    if known is True:
+        return _RS_BUILT
+    if known is False:
+        return _RS_CONST
+    return _RS_UNKNOWN
+
+
+def _rs_unwrap_class(node: GenericNode, scope: _RsBindings) -> str:
+    kids = _named(node)
+    return _rs_class(kids[0], scope) if kids else _RS_UNKNOWN
+
+
+def _rs_block_tail(node: GenericNode) -> Optional[GenericNode]:
+    skipped = {
+        "let_declaration",
+        "expression_statement",
+        "use_declaration",
+        "function_item",
+        "const_item",
+        "attribute_item",
+        "inner_attribute_item",
+    }
+    for child in reversed(_named(node)):
+        if _ts(child) not in skipped:
+            return child
+    return None
+
+
+def _rs_block_class(node: GenericNode, scope: _RsBindings) -> str:
+    return _rs_class(_rs_block_tail(node), scope)
+
+
+def _rs_if_class(node: GenericNode, scope: _RsBindings) -> str:
+    branches: List[GenericNode] = []
+    for child in _named(node):
+        if _ts(child) == "block":
+            branches.append(child)
+        elif _ts(child) == "else_clause":
+            inner = _named(child)
+            if inner:
+                branches.append(inner[-1])
+    return _rs_merge([_rs_class(branch, scope) for branch in branches])
+
+
+def _rs_match_class(node: GenericNode, scope: _RsBindings) -> str:
+    block = next((c for c in _named(node) if _ts(c) == "match_block"), None)
+    if block is None:
+        return _RS_UNKNOWN
+    kinds: List[str] = []
+    for arm in _named(block):
+        if _ts(arm) != "match_arm":
+            continue
+        values = [c for c in _named(arm) if _ts(c) != "match_pattern"]
+        kinds.append(_rs_class(values[-1], scope) if values else _RS_UNKNOWN)
+    return _rs_merge(kinds)
+
+
+def _rs_binary_class(node: GenericNode, scope: _RsBindings) -> str:
+    ops = [c.text for c in node.children if not c.metadata.get("named", True)]
+    if "+" not in ops:
+        return _RS_UNKNOWN
+    return _rs_merge([_rs_class(c, scope) for c in _named(node)])
+
+
+def _rs_call_name(func: GenericNode) -> str:
+    return func.text.replace(" ", "")
+
+
+def _rs_passthrough_class(func: GenericNode, args: List[GenericNode], scope: _RsBindings) -> str:
+    named = _named(func)
+    if len(named) < 2 or named[-1].text not in _RS_PASSTHROUGH or args:
+        return _RS_UNKNOWN
+    return _rs_class(named[0], scope)
+
+
+def _rs_call_class(node: GenericNode, scope: _RsBindings) -> str:
+    """A call is not a build. ``as_str``/``String::from`` keep the receiver's kind."""
+    parts = _named(node)
+    if len(parts) < 1:
+        return _RS_UNKNOWN
+    func, args = parts[0], _args(node)
+    if _ts(func) == "field_expression":
+        return _rs_passthrough_class(func, args, scope)
+    name = _rs_call_name(func)
+    if (name == "String::from" or name.endswith("::String::from")) and len(args) == 1:
+        return _rs_class(args[0], scope)
+    if name == "String::new" or name.endswith("::String::new"):
+        return _RS_CONST
+    return _RS_UNKNOWN
+
+
+def _rs_token_items(token: GenericNode) -> List[GenericNode]:
+    return [c for c in token.children if _ts(c) not in ("(", ")", ",")]
+
+
+def _rs_macro_parts(node: GenericNode) -> Tuple[str, List[GenericNode]]:
+    named = _named(node)
+    name = named[0].text if named else ""
+    token = next((c for c in named if _ts(c) == "token_tree"), None)
+    return name, [] if token is None else _rs_token_items(token)
+
+
+def _rs_named_arg(items: List[GenericNode], index: int) -> bool:
+    return (
+        _ts(items[index]) == "identifier"
+        and index + 2 < len(items)
+        and items[index + 1].text == "="
+    )
+
+
+def _rs_format_lists(items: List[GenericNode]) -> Tuple[List[GenericNode], Dict[str, GenericNode]]:
+    """Positional arguments, and ``name = value`` arguments, after the template."""
+    positional: List[GenericNode] = []
+    named: Dict[str, GenericNode] = {}
+    index = 0
+    while index < len(items):
+        if _rs_named_arg(items, index):
+            named[items[index].text] = items[index + 2]
+            index += 3
+            continue
+        positional.append(items[index])
+        index += 1
+    return positional, named
+
+
+def _rs_hole_dynamic(
+    body: str,
+    positional: List[GenericNode],
+    named: Dict[str, GenericNode],
+    scope: _RsBindings,
+    cursor: List[int],
+) -> bool:
+    head = body.split(":", 1)[0].strip()
+    if head.isdigit():
+        arg = positional[int(head)] if int(head) < len(positional) else None
+        return arg is None or _rs_class(arg, scope) != _RS_CONST
+    if head == "":
+        arg = positional[cursor[0]] if cursor[0] < len(positional) else None
+        cursor[0] += 1
+        return arg is None or _rs_class(arg, scope) != _RS_CONST
+    if head in named:
+        return _rs_class(named[head], scope) != _RS_CONST
+    # ``format!("{name}")`` reads ``name`` from the function. A known constant does not.
+    return scope.get(head) is not False
+
+
+def _rs_format_class(node: GenericNode, scope: _RsBindings) -> str:
+    _name, items = _rs_macro_parts(node)
+    if not items or _rs_string_body(items[0]) is None:
+        return _RS_UNKNOWN
+    body = _rs_string_body(items[0]) or ""
+    holes = _RS_HOLE.findall(body.replace("{{", "").replace("}}", ""))
+    if not holes:
+        return _RS_CONST
+    positional, named = _rs_format_lists(items[1:])
+    cursor = [0]
+    dynamic = any(_rs_hole_dynamic(hole, positional, named, scope, cursor) for hole in holes)
+    return _RS_BUILT if dynamic else _RS_CONST
+
+
+def _rs_macro_class(node: GenericNode, scope: _RsBindings) -> str:
+    name, items = _rs_macro_parts(node)
+    if name == "format":
+        return _rs_format_class(node, scope)
+    if name == "concat":
+        bodies = [_rs_string_body(item) for item in items]
+        return _RS_CONST if bodies and all(body is not None for body in bodies) else _RS_UNKNOWN
+    return _RS_UNKNOWN
+
+
+_RS_CLASS: Dict[str, Callable[[GenericNode, _RsBindings], str]] = {
+    "string_literal": _rs_const_literal,
+    "raw_string_literal": _rs_const_literal,
+    "integer_literal": _rs_const_literal,
+    "char_literal": _rs_const_literal,
+    "float_literal": _rs_const_literal,
+    "identifier": _rs_ident_class,
+    "reference_expression": _rs_unwrap_class,
+    "parenthesized_expression": _rs_unwrap_class,
+    "block": _rs_block_class,
+    "if_expression": _rs_if_class,
+    "match_expression": _rs_match_class,
+    "binary_expression": _rs_binary_class,
+    "call_expression": _rs_call_class,
+    "macro_invocation": _rs_macro_class,
+}
+
+
+def _rs_let_name(node: GenericNode) -> Optional[str]:
+    for child in _named(node):
+        if _ts(child) == "identifier":
+            return child.text
+    return None
+
+
+def _rs_let_value(node: GenericNode) -> Optional[GenericNode]:
+    for child in _named(node):
+        if _ts(child) not in _RS_LET_SKIP:
+            return child
+    return None
+
+
+def _rs_chain(call: GenericNode) -> List[Tuple[str, List[GenericNode]]]:
+    """Method chain from the inside out: ``(Command::new, args)`` then ``.arg``."""
+    links: List[Tuple[str, List[GenericNode]]] = []
+    current: Optional[GenericNode] = call
+    while current is not None and _ts(current) == "call_expression":
+        named = _named(current)
+        if not named:
+            break
+        func = named[0]
+        if _ts(func) == "field_expression":
+            field = _named(func)
+            method = field[-1].text if field else ""
+            links.append((method, _args(current)))
+            current = field[0] if field else None
+            continue
+        links.append((_rs_call_name(func), _args(current)))
+        break
+    links.reverse()
+    return links
+
+
+def _rs_is_shell_name(node: GenericNode) -> bool:
+    return _rs_string_body(node) in _RS_SHELLS
+
+
+def _rs_array_after_dash_c(node: GenericNode) -> List[GenericNode]:
+    if _ts(node) == "reference_expression":
+        kids = _named(node)
+        return _rs_array_after_dash_c(kids[0]) if kids else []
+    if _ts(node) != "array_expression":
+        return []
+    elems = _named(node)
+    for index, elem in enumerate(elems):
+        if _rs_string_body(elem) == "-c" and index + 1 < len(elems):
+            return [elems[index + 1]]
+    return []
+
+
+def _rs_one_payload(
+    method: str, args: List[GenericNode], expect: bool
+) -> Tuple[List[GenericNode], bool]:
+    """The ``-c`` command from one ``.arg`` or ``.args`` link, and whether the next is it."""
+    if method == "arg" and args and _rs_string_body(args[0]) == "-c":
+        return [], True
+    if method == "arg" and expect and args:
+        return [args[0]], False
+    if method == "args" and args:
+        return _rs_array_after_dash_c(args[0]), False
+    return [], False
+
+
+def _rs_shell_payloads(call: GenericNode) -> List[GenericNode]:
+    links = _rs_chain(call)
+    if not links or "Command::new" not in links[0][0]:
+        return []
+    head_args = links[0][1]
+    if not head_args or not _rs_is_shell_name(head_args[0]):
+        return []
+    payloads: List[GenericNode] = []
+    expect = False
+    for method, args in links[1:]:
+        found, expect = _rs_one_payload(method, args, expect)
+        payloads.extend(found)
+    return payloads
+
+
+def _rs_payload_built(call: GenericNode, scope: _RsBindings) -> bool:
+    return any(_rs_class(payload, scope) == _RS_BUILT for payload in _rs_shell_payloads(call))
+
+
+def _rs_shell_flow(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
     text = node.text
-    if _RS_SHELL_CHAIN.search(text) and _RS_DASH_C.search(text) and "format!" in text:
-        ctx.add(
-            node,
-            "RS003",
-            AnalysisIssueType.COMMAND_INJECTION,
-            AnalysisIssueSeverity.HIGH,
-            "Shell command built with format! and run with -c",
-            "Call the program directly with Command::new(program).args(...).",
-            "CWE-78",
-        )
+    if not (_RS_SHELL_CHAIN.search(text) and _RS_DASH_C.search(text)):
+        return
+    # ``format!`` anywhere in the chain keeps the previous same-call behaviour.
+    if "format!" in text or _rs_payload_built(node, scope):
+        _rs_report_shell(ctx, node)
 
 
-def _rs_call(ctx: _Ctx, node: GenericNode, parent_type: str) -> None:
+def _rs_push_receiver(node: GenericNode) -> Optional[str]:
+    """The identifier ``push_str`` is called on, or None."""
+    named = _named(node)
+    if len(named) < 2 or _ts(named[0]) != "field_expression":
+        return None
+    field = _named(named[0])
+    if len(field) < 2 or field[-1].text != "push_str":
+        return None
+    receiver = field[0]
+    if _ts(receiver) == "reference_expression":
+        inner = _named(receiver)
+        receiver = inner[0] if inner else receiver
+    return receiver.text if _ts(receiver) == "identifier" else None
+
+
+def _rs_push_str(node: GenericNode, scope: _RsBindings) -> None:
+    name = _rs_push_receiver(node)
+    args = _args(node)
+    if name and args and _rs_class(args[0], scope) == _RS_BUILT:
+        scope.assign(name, True)
+
+
+def _rs_bind_let(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    value = _rs_let_value(node)
+    if value is not None:
+        _rs_exec(ctx, value, scope)
+    name = _rs_let_name(node)
+    if name:
+        scope.let_name(name, _rs_stored(_rs_class(value, scope)))
+
+
+def _rs_bind_assign(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    parts = _named(node)
+    if len(parts) < 2:
+        return
+    _rs_exec(ctx, parts[-1], scope)
+    if _ts(parts[0]) == "identifier":
+        scope.assign(parts[0].text, _rs_stored(_rs_class(parts[-1], scope)))
+
+
+def _rs_bind_append(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    if not any(child.text == "+=" for child in node.children):
+        _rs_exec_children(ctx, node, scope)
+        return
+    parts = _named(node)
+    if len(parts) < 2:
+        return
+    _rs_exec(ctx, parts[-1], scope)
+    if _ts(parts[0]) == "identifier" and _rs_class(parts[-1], scope) == _RS_BUILT:
+        scope.assign(parts[0].text, True)
+
+
+def _rs_exec_children(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    parent = _ts(node)
+    for child in node.children:
+        _rs_exec(ctx, child, scope, parent)
+
+
+def _rs_exec_call(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    # One finding per chain: inner ``.arg`` calls are not reported again.
+    if parent not in ("field_expression", "call_expression"):
+        _rs_shell_flow(ctx, node, scope)
+    _rs_push_str(node, scope)
+    _rs_exec_children(ctx, node, scope)
+
+
+def _rs_exec_block(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    _rs_exec_children(ctx, node, _RsBindings(scope))
+
+
+def _rs_exec_closure(ctx: _Ctx, node: GenericNode, scope: _RsBindings) -> None:
+    _rs_exec_children(ctx, node, _RsBindings(scope, local_only=True))
+
+
+def _rs_exec_fn(ctx: _Ctx, node: GenericNode) -> None:
+    fresh = _RsBindings(None)
+    for child in node.children:
+        if _ts(child) == "block":
+            _rs_exec_block(ctx, child, fresh)
+
+
+def _rs_exec(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str = "") -> None:
+    handler = _RS_EXEC.get(_ts(node))
+    if handler is not None:
+        handler(ctx, node, scope, parent)
+        return
+    _rs_exec_children(ctx, node, scope)
+
+
+def _rs_on_let(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_bind_let(ctx, node, scope)
+
+
+def _rs_on_assign(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_bind_assign(ctx, node, scope)
+
+
+def _rs_on_append(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_bind_append(ctx, node, scope)
+
+
+def _rs_on_block(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_exec_block(ctx, node, scope)
+
+
+def _rs_on_closure(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_exec_closure(ctx, node, scope)
+
+
+def _rs_on_fn(ctx: _Ctx, node: GenericNode, scope: _RsBindings, parent: str) -> None:
+    _rs_exec_fn(ctx, node)
+
+
+_RS_EXEC: Dict[str, Callable[[_Ctx, GenericNode, _RsBindings, str], None]] = {
+    "function_item": _rs_on_fn,
+    "closure_expression": _rs_on_closure,
+    "block": _rs_on_block,
+    "let_declaration": _rs_on_let,
+    "assignment_expression": _rs_on_assign,
+    "compound_assignment_expr": _rs_on_append,
+    "call_expression": _rs_exec_call,
+}
+
+
+def _rs_call(ctx: _Ctx, node: GenericNode) -> None:
     _rs_transmute(ctx, node)
-    # Only the outermost call of a method chain, so one chain gives one finding.
-    if parent_type not in ("field_expression", "call_expression"):
-        _rs_shell(ctx, node)
 
 
 def _check_rust(ctx: _Ctx, root: GenericNode) -> None:
-    for node, parent_type in _walk_with_parent(root):
+    for node, _parent_type in _walk_with_parent(root):
         t = _ts(node)
         if t == "unsafe_block":
             _rs_unsafe(
@@ -792,7 +1286,8 @@ def _check_rust(ctx: _Ctx, root: GenericNode) -> None:
                 ctx, node, "unsafe fn", "Document the caller's obligations in a # Safety section."
             )
         elif t == "call_expression":
-            _rs_call(ctx, node, parent_type)
+            _rs_call(ctx, node)
+    _rs_exec(ctx, root, _RsBindings(None))
 
 
 # --- C and C++ -------------------------------------------------------------------
