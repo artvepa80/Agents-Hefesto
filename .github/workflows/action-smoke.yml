@@ -13,7 +13,7 @@ jobs:
   smoke-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       # Test Case A: Clean Scan (Expect Exit Code 0)
       - name: Test Action (Clean)
@@ -83,7 +83,7 @@ jobs:
   smoke-multilang:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Default (multilang off): the .ts file is skipped (parser unavailable),
       # so no file is analyzed and the gate fails (exit 1), as in 4.20.x.
