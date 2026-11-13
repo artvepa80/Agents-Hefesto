@@ -152,6 +152,189 @@ def test_rust_unsafe_fn_is_inventoried() -> None:
     assert _rules("rust", "unsafe fn raw() {}\n") == [("RS001", 1, "LOW")]
 
 
+# Same-function flow into sh -c. A value from another call is not a build.
+RS_FLOW = [
+    (
+        'fn f(d: &str) {\n    let command = format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(command).output();\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(&cmd).output();\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n'
+        '    Command::new("bash").arg("-c").arg(cmd.as_str()).status();\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{d}");\n'
+        '    Command::new("sh").args(["-c", &cmd]).output();\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        "fn f(d: &str) {\n    let mut cmd = String::new();\n"
+        '    cmd += &format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(&cmd).output();\n}\n',
+        [("RS003", 4, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        "fn f(d: &str) {\n    let mut cmd = String::new();\n"
+        '    cmd.push_str(&format!("{}", d));\n'
+        '    Command::new("sh").arg("-c").arg(cmd.as_str()).output();\n}\n',
+        [("RS003", 4, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let command = format!("{d}");\n    {\n'
+        '        Command::new("sh").arg("-c").arg(command).output();\n    }\n}\n',
+        [("RS003", 4, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let mut cmd = String::from("ls");\n'
+        '    cmd = format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [("RS003", 4, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        "fn f(d: &str) {\n"
+        '    let cmd = if d.is_empty() { format!("{}", d) } else { "ls".to_string() };\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = match d {\n        "a" => "ls",\n'
+        '        _ => format!("{}", d),\n    };\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [("RS003", 6, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n    {\n'
+        '        let cmd = "safe".to_string();\n'
+        '        Command::new("sh").arg("-c").arg(cmd).output();\n    }\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [("RS003", 7, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = "ls";\n    {\n'
+        '        let cmd = format!("{}", d);\n'
+        '        Command::new("sh").arg("-c").arg(&cmd).output();\n    }\n}\n',
+        [("RS003", 5, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n'
+        '    let _run = || { Command::new("sh").arg("-c").arg(&cmd).output(); };\n}\n',
+        [("RS003", 3, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let mut cmd = format!("{}", d);\n'
+        '    cmd = "ls".to_string();\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let mut cmd = format!("{}", d);\n'
+        '    cmd = String::from("ls");\n    cmd += &format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [("RS003", 5, "HIGH")],
+        "src/app.rs",
+    ),
+    (
+        'fn f() {\n    let cmd = "ls -la";\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f() {\n    let cmd = String::from("ls");\n'
+        '    Command::new("sh").arg("-c").arg(&cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f() {\n    let cmd = concat!("ls", " -la");\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f() {\n    let cmd = format!("ls -la");\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(cmd: &str) {\n    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn helper(d: &str) -> String { format!("{}", d) }\n'
+        "fn f(d: &str) {\n    let cmd = helper(d);\n"
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = (|| format!("{}", d))();\n'
+        '    Command::new("sh").arg("-c").arg(&cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let mut cmd = String::from("ls");\n'
+        '    let _c = || { cmd += &format!("{}", d); };\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f() {\n    let mut cmd = String::new();\n    cmd.push_str("ls");\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    Command::new("sh").arg("-c").arg(cmd).output();\n'
+        '    let cmd = format!("{}", d);\n}\n',
+        [],
+        "src/app.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "tests/cmd.rs",
+    ),
+    (
+        'fn f(d: &str) {\n    let cmd = format!("{}", d);\n'
+        '    Command::new("sh").arg("-c").arg(cmd).output();\n}\n',
+        [],
+        "src/cmd_test.rs",
+    ),
+]
+
+
+@pytest.mark.parametrize("code, expected, path", RS_FLOW)
+def test_rust_shell_follows_same_function_binding(code: str, expected, path: str) -> None:
+    assert _rules("rust", code, path) == expected
+
+
 def test_rule_issue_types_and_cwe() -> None:
     from hefesto.core.parsers.treesitter_parser import TreeSitterParser
 
