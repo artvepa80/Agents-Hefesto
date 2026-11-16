@@ -73,7 +73,7 @@ AI エージェントは MCP 経由で HefestoAI を呼び出せます：
 ```bash
 uvx hefesto-mcp
 ```
-`HEFESTO_MCP_ROOT` が必要です（プロジェクトディレクトリ。`/` やホームディレクトリは使えません）。
+`HEFESTO_MCP_ROOT` が必要です（プロジェクトディレクトリ。`/` やホームディレクトリは使えません）。詳細は [Local MCP (stdio)](#local-mcp-stdio) を参照してください。
 
 Cursor にワンクリックで追加：
 

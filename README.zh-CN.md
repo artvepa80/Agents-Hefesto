@@ -73,7 +73,7 @@ AI 代理可以通过 MCP 调用 HefestoAI：
 ```bash
 uvx hefesto-mcp
 ```
-必须设置 `HEFESTO_MCP_ROOT`（项目目录；不能是 `/` 或主目录）。
+必须设置 `HEFESTO_MCP_ROOT`（项目目录；不能是 `/` 或主目录）。参见 [Local MCP (stdio)](#local-mcp-stdio)。
 
 一键添加到 Cursor：
 
