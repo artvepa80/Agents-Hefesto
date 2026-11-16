@@ -13,7 +13,7 @@ license: MIT
 HefestoAI (`hefesto-ai` on PyPI) is an independent quality gate for AI-generated
 code.
 
-Package: `hefesto-ai` (PyPI) | Version: 4.21.0 | License: MIT | Python >= 3.11
+Package: `hefesto-ai` (PyPI) | Version: 4.22.0 | License: MIT | Python >= 3.11
 
 ## Required workflow (do this before commit)
 
@@ -27,7 +27,7 @@ Package: `hefesto-ai` (PyPI) | Version: 4.21.0 | License: MIT | Python >= 3.11
    ```yaml
    repos:
      - repo: https://github.com/artvepa80/Agents-Hefesto
-       rev: v4.21.0
+       rev: v4.22.0
        hooks:
          - id: hefesto-analyze
    ```
@@ -75,7 +75,7 @@ fix the real ones and add the gate to CI. Requires `hefesto-ai>=4.21.0,<5`.
 
 ## MCP (optional)
 
-Registry `io.github.artvepa80/hefestoai` · `npx @smithery/cli@latest mcp add artvepa80/hefestoai`
+Registry `io.github.artvepa80/hefestoai`. Local stdio: `uvx hefesto-mcp` (`HEFESTO_MCP_ROOT` required).
 
 ## Rules
 

@@ -48,7 +48,7 @@ jobs:
           sarif: 'true'
 ```
 
-検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.21.0` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# は CLI と `hefesto-ai[multilang]` が必要です。
+検出結果は **Security > Code scanning** と PR のアノテーションに表示されます。`@v4` はすべての 4.x リリースに追従します。バージョンを固定する場合は `artvepa80/Agents-Hefesto@v4.22.0` またはコミット SHA を指定してください。Action は `hefesto analyze` と同じ形式を解析します：Python、YAML、Terraform、Shell、Dockerfile、SQL、PowerShell、JSON、TOML、Makefile、Groovy、COBOL、CloudFormation、ARM、Helm、Serverless とドリフトチェック。TypeScript、JavaScript、Java、Go、Rust、C# は CLI と `hefesto-ai[multilang]` が必要です。
 
 ## 検出内容（例）
 
@@ -66,8 +66,9 @@ jobs:
 AI エージェントは MCP 経由で HefestoAI を呼び出せます：
 
 ```bash
-npx @smithery/cli@latest mcp add artvepa80/hefestoai
+uvx hefesto-mcp
 ```
+`HEFESTO_MCP_ROOT` が必要です（プロジェクトディレクトリ。`/` やホームディレクトリは使えません）。
 
 Cursor にワンクリックで追加：
 
