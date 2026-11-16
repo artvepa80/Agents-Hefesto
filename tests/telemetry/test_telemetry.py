@@ -147,6 +147,12 @@ def test_notice_is_printed_before_any_send(
     assert client.NOTICE not in capsys.readouterr().err
 
 
+def test_notice_describes_cli_events_as_pseudonymous() -> None:
+    """CLI usage events carry a random install id, so the notice is not anonymous."""
+    assert "pseudonymous" in client.NOTICE.lower()
+    assert "anonymous" not in client.NOTICE.lower()
+
+
 def test_send_returns_before_a_slow_socket(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _seed_noticed(tmp_path)
     entered = threading.Event()

@@ -7,9 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- RS003 (`--experimental lang-security`) follows a string built in the same function into `Command::new` on `sh`/`bash` with `-c`. The build is `format!` with a non-constant hole, or `+=` / `push_str` of such a value, including `&cmd`, `cmd.as_str()` and `.args(["-c", &cmd])`. The last `=` wins; one `if` or `match` branch that builds the string is enough; the nearest `let` wins. A literal, `String::from` of a literal, `concat!` of literals, a parameter, and a value returned from another function or closure are not reported. A `format!` written in the same call chain is unchanged. The rule stays experimental.
+
+### Changed
+
+- `hefesto-mcp` now declares Homepage, Documentation, Repository, and Issues URLs, plus the applicable PyPI classifiers from `hefesto-ai`. The links will appear on PyPI in the next release.
+
 ### Changed — Japanese and Chinese READMEs: Action `multilang` and Local MCP
 
 - `README.ja.md` and `README.zh-CN.md` now match `README.md` on TypeScript, JavaScript, Java, Go, Rust and C#: the GitHub Action needs `multilang: 'true'` (opt-in) or the CLI needs `pip install "hefesto-ai[multilang]"`. They also document the local stdio MCP adapter (`pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`, with `HEFESTO_MCP_ROOT`).
+
+## [4.22.0] - 2026-11-11
+
+### Upgrade notes — read first if you use the GitHub Action on `@v4`
+
+`@v4` moves to 4.22.0 when it is released, so workflows on `@v4` pick up this release without an edit:
+
+1. **New optional `multilang` input (default `false`).** `multilang: 'true'` installs the `[multilang]` extra, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed. The default stays `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out).
+2. **SHELL_UNQUOTED_VARIABLE (MEDIUM) findings change in shell scripts.** Quoted variables in `rm` and `cd` arguments are no longer reported. Some unquoted forms are now reported: `${NAME}` and single-letter names in `rm` arguments (`rm -rf ${DIR}`), and `cd $DIR` at the end of a line. With the default `fail_on: CRITICAL` the gate result does not change; a workflow with `fail_on: MEDIUM` or `LOW` can fail where it passed, and code scanning can close some alerts and open others.
+
+This release also loads enrichment providers from entry points when `--enrich` is used, and stops a broken PRO install from crashing `hefesto analyze`. Details below.
+
+### Documentation
+
+- README: [Upgrading from 4.17 or earlier](README.md#upgrading-from-417-or-earlier).
+
+### Changed — docs no longer list the third-party registry install command
+
+- Discovery and skill docs (`docs/ai-discovery.md`, `llms.txt`, `skills/hefestoai/SKILL.md`, `skills/hefestoai/integration.md`, `.github/copilot-instructions.md`) no longer list the third-party registry install command or that registry's listing. Where an install command was the only MCP pointer, they now show `uvx hefesto-mcp`. The official MCP Registry entry `io.github.artvepa80/hefestoai` is unchanged.
+
+### Changed — telemetry notice wording
+
+- The CLI first-run notice and `hefesto telemetry disable` help now say usage events are pseudonymous (a random install id), matching `docs/telemetry.md`. The GitHub Action ping remains described as anonymous (no id).
 
 ### Fixed — `SHELL_UNQUOTED_VARIABLE` no longer reports quoted variables
 
@@ -21,10 +50,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `multilang: 'true'` installs the `[multilang]` extra in the Action, so TypeScript, JavaScript, Java, Go, Rust and C# files are analyzed in CI as with `pip install "hefesto-ai[multilang]"`. Default `false`: the Action installs the base package and those files are skipped (parser unavailable), as before, so existing `@v4` workflows keep their results. With the input on, a file whose grammar cannot be downloaded or loaded is listed as not analyzed and fails `fail_on` (`allow_not_analyzed: 'true'` opts out). The install step moved from `action.yml` into `scripts/action_install.sh` (same commands; tested with `tests/scripts/test_action_install.py`). `action-smoke.yml` gains a `smoke-multilang` job (not a required check) that runs a TypeScript file with the input off (exit 1, no file analyzed) and on (exit 0, 1 file analyzed). The analysis log prints `Multilang input: yes` or `Multilang input: no` for that same true/1/yes rule. The line is the input value, not a statement that the extra was installed.
 - `OT-INSTALL-001` (an `action.yml` input that no script reads) now reads every `scripts/action_*.sh`, not only `scripts/action_entrypoint.sh`, so the `multilang` input read by `scripts/action_install.sh` is not reported. The message now says "no scripts/action_*.sh reads INPUT_<NAME>". User impact: in a repository whose Action inputs are read by a `scripts/action_*.sh` other than the entrypoint, `OT-INSTALL-001` stops reporting those inputs as unused; an input that no `scripts/action_*.sh` reads is still reported, and repositories without such scripts see no change.
 
+### Fixed — a broken PRO install no longer crashes `hefesto analyze`
+
+`hefesto/pro_optional.py` caught only `ModuleNotFoundError`, so a `hefesto_pro` that was installed but failed to import (for example an `ImportError` from an incomplete or mismatched install) stopped `hefesto analyze` even when no PRO feature was used. Each PRO block (scope gating, multi-language discovery, enrichment, API hardening) now catches `ImportError`, prints one warning on stderr naming the feature and the error, and falls back as if PRO were absent. A missing PRO (the missing module is `hefesto_pro` or one of its submodules) or a missing license (`ProLicenseRequired`) still falls back silently. A `ModuleNotFoundError` for one of PRO's own dependencies now warns too, so a PRO user does not lose features without notice. Test: `tests/test_pro_optional_broken_install.py`.
+
+### Added — enrichment providers from entry points, with limits
+
+`hefesto analyze --enrich ... --enrich-provider NAME` now loads the provider registered as `NAME` in the `hefesto.enrichment_providers` entry-point group; before, the orchestrator always got an empty provider list, so enrichment was always skipped. Only the requested names are imported. A provider is used only if it implements the PRO `EnrichmentProvider` protocol and its `name` equals the entry-point name; a missing, failing or invalid provider is reported on stderr and skipped. The orchestrator now gets the cache built from `--enrich-cache-ttl` / `--enrich-cache-max`. New `--enrich-min-severity` (default `MEDIUM`) and `--enrich-max-findings` (default `50`, highest severity first, `0` = none) bound how many sequential provider calls a run makes. Enrichment still never changes findings, severities or the exit code. If two installed packages register the same provider name, a stderr warning names both distributions and the first by distribution name is used, the same on every run. Requires `hefesto-pro >= 3.10.1` (pending release): with older PRO releases `--enrich-timeout` does not stop the wait and `--enrich local` skips every provider; `--enrich local` runs only providers with `is_local = True`. Not wired into `hefesto serve`, the GitHub Action or `pr-review`. Docs: `docs/enrichment-providers.md`.
+
 ### Removed — maintainer agent guides `CLAUDE.md` and `docs/CLAUDE_HEFESTO.md`
 
 - The two maintainer tooling guides are no longer kept in this repository. Contributors follow `CONTRIBUTING.md`.
 - `scripts/guard_public_repo.py` adds both paths to `BANNED_FILES`, so they cannot be re-added (test: `tests/test_guard_banned_files.py`). Their entries in `scripts/guard_markdown_allowlist.txt` are gone, the positioning and `hefesto init` copy tests no longer read `CLAUDE.md`, and a docstring in `imports_vs_deps.py` and a comment in `release.yml` no longer cite it. Behaviour is unchanged.
+
+### Fixed — documentation corrections for 4.21.0
+
+- Since 4.21.0, `# hefesto: ignore[TYPE] reason` on the line a finding is reported on suppresses that finding (up to HIGH; CRITICAL is never suppressed) in `.py` files (see the 4.21.0 section "Added — line suppression comments (Python)"). Two older sentences are obsolete and are left as written: "there is no inline suppression" in the 4.21.0 block "Changed — docs: no bundled AI provider, working examples, no inline suppression", and "No line-level suppression exists" in the 4.20.4 dogfood paragraph. The 4.20.4 Fixed note "There is still no line-level suppression" is obsolete for the same reason.
+- README: telemetry wording "anonymous" becomes "pseudonymous", matching the 4.20.4 documentation note and `docs/telemetry.md`. The Action `telemetry` input description says the Action ping is anonymous (no id) and the CLI events it enables are pseudonymous. The `.hefesto.yaml` `output` comment lists `text | json | html | sarif`. The PR Review section documents `# hefesto: ignore[TYPE] reason` and `hefesto pr-review --fail-on-new-suppressions`. The CLI Reference adds COBOL `--lineage` (JSON only; present since 4.21.0), `hefesto check`, `hefesto activate` and `hefesto deactivate`. Code Languages names the `--experimental lang-security` rules CS001–CS004, GO001, GO003, GO004 and RS001–RS003 and CC001–CC004 with c-cpp. The MCP section leads with `uvx hefesto-mcp` and no longer lists the third-party registry install command. The Pre-push section no longer tells external users to copy `scripts/git-hooks/pre-push` (that script is not shipped in the package; `hefesto install-hooks` writes the templates from the package, and uses `scripts/git-hooks/` only in a clone of this repository).
 
 ## [4.21.0] - 2026-11-07
 
