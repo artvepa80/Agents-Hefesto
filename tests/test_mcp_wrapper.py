@@ -40,6 +40,14 @@ def test_wrapper_metadata_matches_the_engine_release():
     assert project["readme"] == "README.md"
     assert project["dependencies"] == [f"hefesto-ai[mcp]=={version}"]
     assert project["scripts"] == {"hefesto-mcp": "hefesto.mcp_server:main"}
+    assert project["urls"] == engine["urls"]
+    assert project["urls"] == {
+        "Homepage": "https://github.com/artvepa80/Agents-Hefesto",
+        "Documentation": "https://github.com/artvepa80/Agents-Hefesto#readme",
+        "Repository": "https://github.com/artvepa80/Agents-Hefesto",
+        "Issues": "https://github.com/artvepa80/Agents-Hefesto/issues",
+    }
+    assert set(project["classifiers"]).issubset(set(engine["classifiers"]))
     wrapper = _load_toml(WRAPPER / "pyproject.toml")
     assert wrapper["build-system"]["build-backend"] == "hatchling.build"
     assert wrapper["tool"]["hatch"]["build"]["targets"]["wheel"]["bypass-selection"] is True
@@ -86,3 +94,5 @@ def test_wrapper_wheel_has_the_script_and_no_python_modules(tmp_path):
         ).decode("utf-8")
     assert f"Requires-Dist: hefesto-ai[mcp]=={version}" in metadata
     assert f"Requires-Python: {requires_python}" in metadata
+    for label, url in wrapper_project["urls"].items():
+        assert f"Project-URL: {label}, {url}" in metadata
