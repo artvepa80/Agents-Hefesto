@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `hefesto-mcp` now declares Homepage, Documentation, Repository, and Issues URLs, plus the applicable PyPI classifiers from `hefesto-ai`. The links will appear on PyPI in the next release.
 
+### Changed — docs: CI matrix examples in ADVANCED_VALIDATION use Python 3.11
+
+- The example `check-ci-parity` output in `docs/ADVANCED_VALIDATION.md` listed a CI matrix starting at 3.10 and suggested `pyenv install 3.10`. The package minimum is Python 3.11 (`requires-python` in `pyproject.toml`). The examples now start at 3.11.
+
+### Changed — Japanese and Chinese READMEs: Action `multilang` and Local MCP
+
+- `README.ja.md` and `README.zh-CN.md` now match `README.md` on TypeScript, JavaScript, Java, Go, Rust and C#: the GitHub Action needs `multilang: 'true'` (opt-in) or the CLI needs `pip install "hefesto-ai[multilang]"`. They also document the local stdio MCP adapter (`pip install "hefesto-ai[mcp]"` or `uvx hefesto-mcp`, with `HEFESTO_MCP_ROOT`).
+
 ## [4.22.0] - 2026-11-11
 
 ### Upgrade notes — read first if you use the GitHub Action on `@v4`
