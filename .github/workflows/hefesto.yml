@@ -1,11 +1,10 @@
 # Full-repository HefestoAI scan with results in Security > Code scanning.
 #
-# Non-blocking for now: the scan step has continue-on-error, so the job stays
-# green while a known CRITICAL finding remains on main
-# (scripts/validate_aggregates_jsonl.py:48, complexity 22). The SARIF upload
-# inside the Action runs even when the gate fails, so every finding still
-# reaches code scanning. To make this gate blocking, delete the
-# continue-on-error line. The blocking changed-file gate is dogfood.yml.
+# Non-blocking: the scan step has continue-on-error, so the job stays green
+# even when the gate fails. The SARIF upload inside the Action runs either
+# way, so every finding still reaches code scanning. To make this gate
+# blocking, delete the continue-on-error line. The blocking changed-file gate
+# is dogfood.yml.
 #
 # Paths excluded from the scan live in .hefesto.yaml. This scan also leaves
 # out tests/ (step "Leave tests/ out of code scanning" below).
@@ -52,8 +51,8 @@ jobs:
           cat .hefesto.yaml
 
       - name: HefestoAI full scan
-        # Floating major tag. Pin a commit if policy requires it:
-        # artvepa80/Agents-Hefesto@2b72fd0910edc46ab92afc6dbeb068d6856ae3a1 # v4.20.2
+        # Pinned to the commit of a release tag. Dependabot proposes updates
+        # (.github/dependabot.yml, github-actions ecosystem).
         uses: artvepa80/Agents-Hefesto@ca4aa1f1945fab3ffa2c96812ed316c4b27117c7 # v4.22.0
         continue-on-error: true  # remove to make the gate blocking
         with:
