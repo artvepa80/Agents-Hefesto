@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade notes
 
-- **`.tsx` files are parsed with the `tsx` grammar.** `.ts` files stay on the `typescript` grammar. JSX in a `.tsx` file is now part of the syntax tree, so tree-based findings (complexity, nesting, calls) on those files can change. An angle-bracket cast (`<T>expr`) belongs in a `.ts` file; the `tsx` grammar does not accept it. The `build/languages.so` fallback uses the same split. It used to load the `tsx` grammar for every TypeScript file.
+- **`.tsx` files are parsed with the `tsx` grammar.** `.ts` files stay on the `typescript` grammar. JSX in a `.tsx` file is now part of the syntax tree, so tree-based findings (complexity, nesting, calls) on those files can change. An angle-bracket cast (`<T>expr`) belongs in a `.ts` file; the `tsx` grammar does not accept it. The `build/languages.so` fallback uses the same split. It used to load the `tsx` grammar for every TypeScript file. With the `[multilang]` extra, or `multilang: 'true'` in the GitHub Action, a large `.tsx` component can now be reported with CRITICAL complexity, so a workflow on `@v4` with the default `fail_on: CRITICAL` can fail where it passed. On the pinned `sonner` corpus, a run with no flags goes from 10 to 26 findings, including two CRITICAL (`Toast`, complexity 57, and `Toaster`, complexity 32); no finding is removed.
 
 ### Changed
 
