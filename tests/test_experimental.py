@@ -157,7 +157,7 @@ def test_unknown_cli_name_exits_2(tmp_path: Path) -> None:
         result = _run(root, "--experimental", name)
         assert result.exit_code == 2
         assert "unknown experimental feature(s): bogus" in (result.stderr or result.output)
-        assert "known: c-cpp, lang-security" in (result.stderr or result.output)
+        assert "known: c-cpp, js-security, lang-security" in (result.stderr or result.output)
 
 
 def test_unknown_config_name_exits_2(tmp_path: Path) -> None:

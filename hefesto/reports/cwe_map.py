@@ -26,6 +26,7 @@ CWE_NAMES: Dict[int, str] = {
         "Improper Neutralization of Special Elements used in an OS Command "
         "('OS Command Injection')"
     ),
+    79: ("Improper Neutralization of Input During Web Page Generation " "('Cross-site Scripting')"),
     89: ("Improper Neutralization of Special Elements used in an SQL Command " "('SQL Injection')"),
     95: (
         "Improper Neutralization of Directives in Dynamically Evaluated Code " "('Eval Injection')"

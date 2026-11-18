@@ -75,7 +75,7 @@ _SECURITY_WORDS = re.compile(
     r"|PUBLIC_ACCESS|OPEN_SECURITY_GROUP|OVERLY_PERMISSIVE|MISSING_ENCRYPTION"
     r"|INSECURE|MISCONFIGURATION|EXECUTION_POLICY|REMOTE_CODE|INVOKE_EXPRESSION"
     r"|ROOT_USER|CURL_BASH|MISSING_USER|WEAK_PERMISSIONS|ACCEPT_UNVALIDATED"
-    r"|CONNECT_LITERAL|MISSING_SAFETY"
+    r"|CONNECT_LITERAL|MISSING_SAFETY|XSS"
 )
 _CWE = re.compile(r"CWE-(\d+)", re.I)
 _DIGITS = re.compile(r"\d+")
@@ -308,7 +308,7 @@ def _rule_id(issue: AnalysisIssue) -> str:
 # Display names that differ from the rule id. HIGH_COMPLEXITY also carries
 # MEDIUM findings (score 6 to 10), so "High complexity" misread as a severity.
 # The id stays HIGH_COMPLEXITY: code scanning matches alerts by rule id.
-_DISPLAY_NAMES: Dict[str, str] = {"HIGH_COMPLEXITY": "Complexity"}
+_DISPLAY_NAMES: Dict[str, str] = {"HIGH_COMPLEXITY": "Complexity", "XSS_RISK": "XSS"}
 
 
 def _rule(rid: str, issues: List[AnalysisIssue]) -> Dict[str, Any]:

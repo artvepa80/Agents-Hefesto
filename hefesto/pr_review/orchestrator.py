@@ -307,6 +307,7 @@ def _build_default_engine() -> AnalyzerEngine:
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
         ComplexityAnalyzer,
+        JsSecurityAnalyzer,
         NarrowSemanticAnalyzer,
         SecurityAnalyzer,
     )
@@ -326,6 +327,7 @@ def _build_default_engine() -> AnalyzerEngine:
     engine.register_analyzer(BestPracticesAnalyzer())
     engine.register_analyzer(ResourceSafetyAnalyzer())
     engine.register_analyzer(NarrowSemanticAnalyzer())
+    engine.register_analyzer(JsSecurityAnalyzer())
     engine.register_project_analyzer(ImportsVsDepsAnalyzer())
     engine.register_project_analyzer(DocsVsEntrypointsAnalyzer())
     engine.register_project_analyzer(PackagingParityAnalyzer())

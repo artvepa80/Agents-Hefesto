@@ -300,7 +300,8 @@ def _load_project_config(paths, config_path, option_names):
     default=None,
     metavar="NAMES",
     help=(
-        "Comma-separated experimental features to turn on (known: c-cpp, lang-security). "
+        "Comma-separated experimental features to turn on "
+        "(known: c-cpp, js-security, lang-security). "
         "Off by default; their results are not measured yet."
     ),
 )
@@ -1183,6 +1184,7 @@ def _setup_analyzer_engine(
         BestPracticesAnalyzer,
         CodeSmellAnalyzer,
         ComplexityAnalyzer,
+        JsSecurityAnalyzer,
         NarrowSemanticAnalyzer,
         SecurityAnalyzer,
     )
@@ -1220,6 +1222,9 @@ def _setup_analyzer_engine(
 
         # Phase 4: Narrow Semantic checks (Python-only)
         engine.register_analyzer(NarrowSemanticAnalyzer())
+
+        # Experimental JavaScript and TypeScript rules (off unless js-security).
+        engine.register_analyzer(JsSecurityAnalyzer())
 
         # Phase 1a: Operational Truth (project-level analyzers)
         # Phase 1b: CiParityAnalyzer adapts validators/ci_parity into the pipeline
