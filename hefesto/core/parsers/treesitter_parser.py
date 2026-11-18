@@ -25,10 +25,6 @@ except ImportError:
     except ImportError:
         pass
 
-if not USE_PREBUILT:
-    from tree_sitter import Language, Parser
-
-
 _FUNCTION_EXPRESSIONS = frozenset({"arrow_function", "function_expression", "function"})
 _ANONYMOUS_CAPABLE = _FUNCTION_EXPRESSIONS | {"function_declaration", "method_definition"}
 _IDENTIFIER_PARENTS = frozenset({"variable_declarator", "assignment_expression"})
@@ -97,6 +93,79 @@ _PARAMETER_TYPES = frozenset(
         "spread_element",
     }
 )
+# Symbol names inside build/languages.so. ``.ts`` uses ``typescript`` so
+# ``<T>expr`` stays a type assertion. ``.tsx`` loads ``tsx`` separately.
+_MANUAL_GRAMMARS = {
+    "typescript": "typescript",
+    "javascript": "javascript",
+    "java": "java",
+    "go": "go",
+    "rust": "rust",
+    "c_sharp": "c_sharp",
+    "c": "c",
+    "cpp": "cpp",
+}
+_SO_LIBS: dict = {}
+
+
+def _languages_so() -> Path:
+    """Shared library written by ``build_grammars.py``."""
+    return Path(__file__).resolve().parents[3] / "build" / "languages.so"
+
+
+def _bind_parser_language(parser, language):
+    """Attach ``language`` on tree-sitter 0.21 (``set_language``) and 0.22+."""
+    if hasattr(parser, "set_language"):
+        parser.set_language(language)
+        return parser
+    parser.language = language
+    return parser
+
+
+def _capsule_for(pointer: int):
+    """Wrap a ``TSLanguage *`` the way current grammar packages do."""
+    import ctypes
+
+    new = ctypes.pythonapi.PyCapsule_New
+    new.restype = ctypes.py_object
+    new.argtypes = (ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
+    return new(pointer, b"tree_sitter.Language", None)
+
+
+def _so_symbol(path: Path, grammar_name: str) -> int:
+    """``tree_sitter_<grammar>`` from ``languages.so``. The library stays loaded."""
+    import ctypes
+
+    key = str(path)
+    lib = _SO_LIBS.get(key)
+    if lib is None:
+        lib = ctypes.CDLL(key)
+        _SO_LIBS[key] = lib
+    func = getattr(lib, f"tree_sitter_{grammar_name}")
+    func.restype = ctypes.c_void_p
+    return int(func() or 0)
+
+
+def _language_from_so(path: Path, grammar_name: str):
+    """One grammar from ``languages.so``, on the old path/name API or the new one."""
+    from tree_sitter import Language
+
+    if hasattr(Language, "build_library"):
+        # tree-sitter < 0.22: Language(path, name). Current stubs only model
+        # Language(capsule), so the two-argument form is invisible to mypy.
+        return Language(str(path), grammar_name)  # type: ignore[call-overload]
+    pointer = _so_symbol(path, grammar_name)
+    if not pointer:
+        raise OSError(f"{grammar_name} is not in {path}")
+    return Language(_capsule_for(pointer))
+
+
+def _manual_parser(grammar_name: str):
+    """Parser for one grammar inside ``build/languages.so``."""
+    from tree_sitter import Parser
+
+    language = _language_from_so(_languages_so(), grammar_name)
+    return _bind_parser_language(Parser(), language)
 
 
 class TreeSitterParser(CodeParser):
@@ -115,35 +184,51 @@ class TreeSitterParser(CodeParser):
     }
 
     def __init__(self, language: str):
+        # Stays a string on both the prebuilt path and the languages.so path.
+        # Grammar choice uses ``_language_name`` plus the file suffix.
+        self._language_name = language
         self.language = language
+        self._extra_parsers: dict = {}
 
         if USE_PREBUILT:
             ts_lang = self.LANG_MAP.get(language, language)
             self.parser = get_ts_parser(ts_lang)  # type: ignore[misc]
-        else:
-            self.parser = Parser()
-            build_path = Path(__file__).parent.parent.parent.parent / "build" / "languages.so"
+            return
+        grammar_name = _MANUAL_GRAMMARS.get(language, language)
+        self.parser = _manual_parser(grammar_name)
 
-            grammar_map = {
-                "typescript": "tsx",
-                "javascript": "javascript",
-                "java": "java",
-                "go": "go",
-                "rust": "rust",
-                "c_sharp": "c_sharp",
-                "c": "c",
-                "cpp": "cpp",
-            }
-            grammar_name = grammar_map.get(language, language)
-            self.language = Language(str(build_path), grammar_name)  # type: ignore
-            self.parser.set_language(self.language)
+    def _wants_tsx(self, file_path: str) -> bool:
+        """``.tsx`` only. A ``.ts`` file keeps the typescript grammar."""
+        return self._language_name == "typescript" and Path(file_path).suffix.lower() == ".tsx"
+
+    def _tsx_parser(self):
+        """The ``tsx`` grammar, from the pack or from ``languages.so``."""
+        if USE_PREBUILT:
+            return get_ts_parser("tsx")  # type: ignore[misc]
+        return _manual_parser("tsx")
+
+    def _parser_for(self, file_path: str):
+        """Grammar for this file.
+
+        ``.tsx`` uses the ``tsx`` grammar. ``.ts`` stays on ``typescript``:
+        the ``tsx`` grammar rejects TypeScript ``<T>expr`` casts. Other
+        languages keep the parser built in ``__init__``. The same split
+        applies when the prebuilt pack is missing and ``languages.so`` is used.
+        """
+        if not self._wants_tsx(file_path):
+            return self.parser
+        extra = self._extra_parsers.get("tsx")
+        if extra is None:
+            extra = self._tsx_parser()
+            self._extra_parsers["tsx"] = extra
+        return extra
 
     def parse(self, code: str, file_path: str) -> GenericAST:
         """Parse code using TreeSitter."""
         # tree-sitter offsets are byte offsets into this buffer: encode once and
         # slice bytes, never the decoded str (a BOM or accented text shifts it).
         data = code.encode("utf8")
-        tree = self.parser.parse(data)
+        tree = self._parser_for(file_path).parse(data)
         root = self._convert_treesitter_to_generic(tree.root_node, data, parent=None)
         ast = GenericAST(root, self.language, code)
         if self.language in _C_FAMILY:

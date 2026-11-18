@@ -5,3 +5,4 @@ cors https://github.com/expressjs/cors 5317ebe670db2aaebc1d496eb5d33493deefb3ed
 gin https://github.com/gin-gonic/gin 0f09c3a9b4626d9fe9979cf4d0521d6ae32ab646
 jq https://github.com/jqlang/jq 5c001b18d7237cce1fdba63608732163f978dd23
 memchr https://github.com/BurntSushi/memchr bd6068c30e9074a90c285e47912fa0b047d07597
+sonner https://github.com/emilkowalski/sonner 8e4662b39255120b62138312058f5d77c0139a5e
