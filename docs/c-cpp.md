@@ -19,8 +19,27 @@ not have it (C and C++ files are not even found). A name given on the command
 line replaces the list in `.hefesto.yaml`. An unknown name stops the run with
 exit code 2; a name that is no longer experimental only prints a warning. When
 the feature is on, the JSON report lists it in `meta.experimental` and the SARIF
-run in `properties.experimental`. The GitHub Action has no input for it, and the
-MCP server never turns it on.
+run in `properties.experimental`. The MCP server never turns it on.
+
+The GitHub Action has no input for it. It runs `hefesto analyze`, which reads
+the nearest `.hefesto.yaml`, so put the list there and set `multilang: 'true'`:
+
+```yaml
+# .hefesto.yaml in the analyzed repository
+experimental:
+  - c-cpp
+  - lang-security   # optional: the C/C++ security rules CC001-CC004
+```
+
+```yaml
+- uses: artvepa80/Agents-Hefesto@v4
+  with:
+    multilang: 'true'
+```
+
+Without the `experimental` list, C and C++ files are not found, so a workflow
+on `@v4` does not start analyzing them. Job `smoke-c-cpp` in
+`.github/workflows/action-smoke.yml` runs this setup on every pull request.
 
 C and C++ files are parsed with the tree-sitter `c` and `cpp` grammars from the
 `[multilang]` extra (`pip install "hefesto-ai[multilang]"`). Without the extra

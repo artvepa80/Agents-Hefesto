@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Action smoke test for C and C++ through `.hefesto.yaml`
+
+- The GitHub Action has no input for experimental features. C and C++ are analyzed in the Action when the repository's nearest `.hefesto.yaml` lists `experimental: [c-cpp]` (add `lang-security` for CC001-CC004) and the workflow sets `multilang: 'true'`; the Action's `hefesto analyze` reads that file. New job `smoke-c-cpp` in `.github/workflows/action-smoke.yml` checks it: a `gets()` call under `.github/action-smoke/c-cpp/` fails `fail_on: HIGH` with CC001 in the SARIF, and the same file outside that config is not found. Not a required check (it downloads the C grammar). `docs/c-cpp.md`, `README.md` and `.github/action-smoke/README.md` describe the setup. No change to the Action or the analyzer.
+
 - RS003 (`--experimental lang-security`) follows a string built in the same function into `Command::new` on `sh`/`bash` with `-c`. The build is `format!` with a non-constant hole, or `+=` / `push_str` of such a value, including `&cmd`, `cmd.as_str()` and `.args(["-c", &cmd])`. The last `=` wins; one `if` or `match` branch that builds the string is enough; the nearest `let` wins. A literal, `String::from` of a literal, `concat!` of literals, a parameter, and a value returned from another function or closure are not reported. A `format!` written in the same call chain is unchanged. The rule stays experimental.
 
 ### Changed
