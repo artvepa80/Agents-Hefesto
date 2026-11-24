@@ -1,0 +1,6 @@
+# Action smoke fixture (job smoke-c-cpp in .github/workflows/action-smoke.yml).
+# C and C++ have no Action input: they are turned on here, in the nearest
+# .hefesto.yaml, which the Action's `hefesto analyze` reads.
+experimental:
+  - c-cpp
+  - lang-security

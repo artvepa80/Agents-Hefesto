@@ -110,3 +110,49 @@ jobs:
           echo "multilang off: exit ${{ steps.ts_off.outputs.exit_code }}; on: exit ${{ steps.ts_on.outputs.exit_code }}"
           test "${{ steps.ts_off.outputs.exit_code }}" = "1" || { echo "::error::multilang off must skip the .ts file (exit 1)"; exit 1; }
           test "${{ steps.ts_on.outputs.exit_code }}" = "0" || { echo "::error::multilang on must analyze the .ts file (exit 0)"; exit 1; }
+
+  # C and C++ in the Action: there is no input for them; the Action reads the
+  # nearest .hefesto.yaml, so `experimental: [c-cpp, lang-security]` there
+  # plus multilang: 'true' turns them on. Not a required check: it downloads
+  # the C grammar from the network on a cold runner.
+  smoke-c-cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # With .github/action-smoke/c-cpp/.hefesto.yaml: gets() is CC001 (HIGH),
+      # so fail_on HIGH fails the gate (exit 1) and the SARIF names CC001.
+      - name: Test Action (C, experimental in .hefesto.yaml)
+        id: c_on
+        uses: ./
+        with:
+          target: '.github/action-smoke/c-cpp'
+          fail_on: 'HIGH'
+          multilang: 'true'
+          sarif: 'true'
+          sarif_file: 'c-cpp.sarif'
+          upload_sarif: 'false'
+        continue-on-error: true
+
+      # Same file without that config (the repo root .hefesto.yaml applies):
+      # C files are not found, nothing is analyzed, allow_no_files -> exit 0.
+      - name: Copy the C file outside the experimental config
+        run: mkdir -p smoke-c-off && cp .github/action-smoke/c-cpp/unsafe.c smoke-c-off/
+
+      - name: Test Action (C, no experimental config)
+        id: c_off
+        uses: ./
+        with:
+          target: 'smoke-c-off'
+          fail_on: 'HIGH'
+          multilang: 'true'
+          allow_no_files: 'true'
+        continue-on-error: true
+
+      - name: Verify C/C++ through .hefesto.yaml
+        if: always()
+        run: |
+          echo "experimental config: exit ${{ steps.c_on.outputs.exit_code }}; no config: exit ${{ steps.c_off.outputs.exit_code }}"
+          test "${{ steps.c_on.outputs.exit_code }}" = "1" || { echo "::error::with experimental c-cpp the gets() call must fail fail_on HIGH (exit 1)"; exit 1; }
+          test "${{ steps.c_off.outputs.exit_code }}" = "0" || { echo "::error::without the config the .c file must not be found (exit 0 with allow_no_files)"; exit 1; }
+          python3 -c 'import json; run = json.load(open("c-cpp.sarif"))["runs"][0]; ids = [r["ruleId"] for r in run["results"]]; assert "CC001" in ids, ids; assert "c-cpp" in run["properties"]["experimental"], run.get("properties"); print("OK: CC001 reported, experimental", run["properties"]["experimental"])'
